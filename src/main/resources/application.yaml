@@ -58,24 +58,27 @@ mybatis-plus:
       logic-not-delete-value: null
 sparkle:
   root-url: "http://127.0.0.1:7799"
+  captcha:
+    pow:
+      difficulty-bits: 5
+      algorithm: SHA-256
   ping:
     config:
       min-protocol-version: 20
       max-protocol-version: 20
     sync-banhistory:
+      pow-captcha: false
       endpoint: "${sparkle.root-url}/ping/syncBanHistory"
       random-initial-delay: 3000
       interval: 10000
     sync-swarm:
+      pow-captcha: false
       endpoint: "${sparkle.root-url}/ping/syncSwarm"
       random-initial-delay: 3000
       interval: 10000
     rule-ip-denylist:
+      pow-captcha: false
       endpoint: "${sparkle.root-url}/ping/ruleIpDenylist"
-      random-initial-delay: 3000
-      interval: 10000
-    rule-ip-allowlist:
-      endpoint: "${sparkle.root-url}/ping/ruleIpAllowlist"
       random-initial-delay: 3000
       interval: 10000
     reconfigure:

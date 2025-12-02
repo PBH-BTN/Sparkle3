@@ -84,6 +84,9 @@ public class PingRuleIpController extends BasePingController {
         @Value("${sparkle.ping.rule-ip-denylist.random-initial-delay}")
         @JsonProperty("random_initial_delay")
         private long randomInitialDelay;
+        @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
+        @JsonProperty("pow_captcha")
+        private boolean powCaptcha;
 
         @Override
         public String getConfigKey() {

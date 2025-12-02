@@ -18,4 +18,11 @@ public class BtnConfig {
     private int maxProtocolVersion;
     @JsonProperty("ability")
     private Map<String, SparkleBtnAbility> ability;
+    @JsonProperty("proof_of_work_captcha")
+    private ProofOfWorkConfig proofOfWorkConfig;
+
+    public static class ProofOfWorkConfig{
+        @JsonProperty("endpoint")
+        private String endpoint;
+    }
 }

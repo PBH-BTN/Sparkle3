@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.security.ClientAuthenticationCredential;
+import com.ghostchu.btn.sparkle.service.IPowCaptchaService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,17 @@ public class BasePingController {
     protected HttpServletRequest request;
     @Autowired
     private IUserappService userappService;
+    @Autowired
+    private IPowCaptchaService pingCaptchaService;
+
+    public boolean validatePowCaptcha() {
+        String powId = request.getHeader("X-BTN-PowID");
+        String powSolution = request.getHeader("X-BTN-PowSolution");
+        if (powId == null || powSolution == null) {
+            return false;
+        }
+        return pingCaptchaService.validateSession(powId, powSolution);
+    }
 
     public boolean isAcceptablePublicIp(@NotNull String ip) {
         try {

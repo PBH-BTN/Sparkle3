@@ -86,6 +86,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         @Value("${sparkle.ping.sync-banhistory.random-initial-delay}")
         @JsonProperty("random_initial_delay")
         private long randomInitialDelay;
+        @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
+        @JsonProperty("pow_captcha")
+        private boolean powCaptcha;
 
         @Override
         public String getConfigKey() {
