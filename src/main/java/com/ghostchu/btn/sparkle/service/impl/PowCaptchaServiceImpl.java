@@ -35,7 +35,7 @@ public class PowCaptchaServiceImpl implements IPowCaptchaService {
         if (challenge == null) {
             return false;
         }
-        boolean result = poWServer.verify(challenge.getBytes(StandardCharsets.UTF_8), solution.getBytes(StandardCharsets.UTF_8));
+        boolean result = poWServer.verify(challenge.getBytes(StandardCharsets.ISO_8859_1), solution.getBytes(StandardCharsets.ISO_8859_1));
         if (result) {
             redisTemplate.delete("sparkle:powcaptcha:" + id);
         }
@@ -52,6 +52,4 @@ public class PowCaptchaServiceImpl implements IPowCaptchaService {
         }
         return sb.toString();
     }
-
-
 }
