@@ -35,5 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+application.yaml
 application-local.yaml
 application-production.yaml

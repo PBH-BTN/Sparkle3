@@ -35,7 +35,9 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     @Nullable
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret) {
         Userapp loggedInUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
-        userAppsRedisTemplate.opsForValue().set("sparkle:userapps:lastaccess:" + loggedInUserApp.getId(), System.currentTimeMillis());
+        if(loggedInUserApp != null) {
+            userAppsRedisTemplate.opsForValue().set("sparkle:userapps:lastaccess:" + loggedInUserApp.getId(), System.currentTimeMillis());
+        }
         return loggedInUserApp;
     }
 
