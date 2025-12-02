@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnConfig;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
@@ -17,7 +18,7 @@ public class PingConfigController extends BasePingController {
     private IUserappConfigService userappConfigService;
 
     @GetMapping("/ping/config")
-    public ResponseEntity<@NotNull BtnConfig> config() throws UserApplicationBannedException, UserApplicationNotFoundException {
+    public ResponseEntity<@NotNull BtnConfig> config() throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
         Userapp userapp = verifyUserApplicationFailSafe();
         BtnConfig config;
         if (userapp == null) {

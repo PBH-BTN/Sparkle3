@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.security.ClientAuthenticationCredential;
@@ -32,7 +33,7 @@ public class BasePingController {
     }
 
     @NotNull
-    public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException {
+    public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
         var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret());
@@ -46,7 +47,7 @@ public class BasePingController {
     }
 
     @Nullable
-    public Userapp verifyUserApplicationFailSafe() {
+    public Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
         return userappService.loginViaCredential(cred.appId(), cred.appSecret());

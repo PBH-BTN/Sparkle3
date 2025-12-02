@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.security;
 
+import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
+
 import java.io.Serializable;
 
 public class ClientAuthenticationCredential implements Serializable {
@@ -23,9 +25,9 @@ public class ClientAuthenticationCredential implements Serializable {
         return appId != null && appSecret != null;
     }
 
-    public void verifyOrThrow() {
+    public void verifyOrThrow() throws AccessDeniedException {
         if (!isValid()) {
-            throw new IllegalArgumentException("请求未鉴权，客户端实现必须进行登录鉴权：https://github.com/PBH-BTN/BTN-Spec");
+            throw new AccessDeniedException("请求未鉴权，客户端实现必须进行登录鉴权：https://github.com/PBH-BTN/BTN-Spec");
         }
     }
 }
