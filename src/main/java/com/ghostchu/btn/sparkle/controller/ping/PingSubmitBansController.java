@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBanPing;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
@@ -27,7 +28,7 @@ public class PingSubmitBansController extends BasePingController {
 
     @PostMapping("/ping/syncBanHistory")
     @Transactional
-    public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException {
+    public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         Userapp userapp = verifyUserApplication();
         var bans = ping.getBans();
         var it = bans.iterator();

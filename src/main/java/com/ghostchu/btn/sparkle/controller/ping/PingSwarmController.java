@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarmPeerPing;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
@@ -28,7 +29,7 @@ public class PingSwarmController extends BasePingController {
 
     @PostMapping("/ping/syncSwarm")
     @Transactional
-    public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException {
+    public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
         var it = swarms.iterator();
