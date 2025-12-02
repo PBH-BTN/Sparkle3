@@ -26,7 +26,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
     @Value("${sparkle.analyse.concurrent-download-analyse.threshold-userapps}")
     private double thresholdUserapps;
     @Autowired
-    @Qualifier("genericStringStringTemplate")
+    @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")

@@ -7,6 +7,9 @@ import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +28,20 @@ import java.util.UUID;
  */
 @Service
 public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> implements IUserappService {
+    @Qualifier("stringLongRedisTemplate")
+    @Autowired
+    private RedisTemplate<String, Long> userAppsRedisTemplate;
+
     @Nullable
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret) {
-        return baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
+        Userapp loggedInUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
+        userAppsRedisTemplate.opsForValue().set("sparkle:userapps:lastaccess:" + loggedInUserApp.getId(), System.currentTimeMillis());
+        return loggedInUserApp;
+    }
+
+    @Nullable
+    public Long getUserAppLastAccess(long userAppId) {
+        return userAppsRedisTemplate.opsForValue().get("sparkle:userapps:lastaccess:" + userAppId);
     }
 
     @Override

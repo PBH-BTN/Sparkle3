@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> implements ITorrentService {
     @Autowired
-    @Qualifier("torrentIdRedisTemplate")
+    @Qualifier("stringLongRedisTemplate")
     private RedisTemplate<String, Long> torrentIdRedisTemplate;
 
     // all parmas as lock4j keys

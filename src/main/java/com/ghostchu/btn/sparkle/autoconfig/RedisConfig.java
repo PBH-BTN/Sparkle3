@@ -9,15 +9,15 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Configuration
 public class RedisConfig {
 
-    @Bean("genericStringStringTemplate")
-    public RedisTemplate<String, String> redisTemplateGenericStringString(@NotNull RedisConnectionFactory factory) {
+    @Bean("stringStringRedisTemplate")
+    public RedisTemplate<String, String> stringStringRedisTemplate(@NotNull RedisConnectionFactory factory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
         return template;
     }
 
-    @Bean("torrentIdRedisTemplate")
-    public RedisTemplate<String, Long> redisTemplateTorrentId(@NotNull RedisConnectionFactory factory) {
+    @Bean("stringLongRedisTemplate")
+    public RedisTemplate<String, Long> stringLongRedisTemplate(@NotNull RedisConnectionFactory factory) {
         RedisTemplate<String, Long> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
         return template;

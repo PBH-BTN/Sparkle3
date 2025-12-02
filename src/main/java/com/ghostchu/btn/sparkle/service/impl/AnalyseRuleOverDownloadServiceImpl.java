@@ -25,7 +25,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     @Value("${sparkle.analyse.overdownload-analyse.threshold}")
     private double threshold;
     @Autowired
-    @Qualifier("genericStringStringTemplate")
+    @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")

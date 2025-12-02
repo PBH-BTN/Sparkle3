@@ -42,7 +42,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     private int ipv6MinBanCountVote;
 
     @Autowired
-    @Qualifier("genericStringStringTemplate")
+    @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")

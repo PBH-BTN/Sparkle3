@@ -27,7 +27,7 @@ import java.util.StringJoiner;
 public class PingRuleIpController extends BasePingController {
 
     @Autowired
-    @Qualifier("genericStringStringTemplate")
+    @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
 
     @SuppressWarnings("UnstableApiUsage")
