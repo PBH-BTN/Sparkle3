@@ -36,7 +36,7 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
         if (cachedTorrentId != null) return cachedTorrentId;
         Torrent torrent = baseMapper.findTorrentByIdentifier(identifier);
         if (torrent != null) {
-            torrentIdRedisTemplate.opsForValue().set(identifier, torrent.getId(), 1, TimeUnit.DAYS);
+            torrentIdRedisTemplate.opsForValue().set("sparkle:torrent:" + identifier, torrent.getId(), 1, TimeUnit.DAYS);
             return torrent.getId();
         }
         Torrent createNewTorrent = new Torrent()
@@ -46,7 +46,7 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
                 .setInfoHash(infoHash)
                 .setTorrentName(torrentName);
         createNewTorrent = baseMapper.upsert(createNewTorrent);
-        torrentIdRedisTemplate.opsForValue().set(identifier, createNewTorrent.getId(), 1, TimeUnit.DAYS);
+        torrentIdRedisTemplate.opsForValue().set("sparkle:torrent:" + identifier, createNewTorrent.getId(), 1, TimeUnit.DAYS);
         return createNewTorrent.getId();
     }
 }
