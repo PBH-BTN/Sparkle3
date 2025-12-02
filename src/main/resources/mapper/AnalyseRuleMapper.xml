@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.AnalyseRuleMapper">
+    <resultMap id="analyseByModuleResult" type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult">
+        <result column="peer_ip_cidr" property="peerIpCidr"/>
+        <result column="iso" property="iso"/>
+        <result column="city" property="city"/>
+        <result column="ban_count" property="banCount"/>
+        <result column="userapps_count" property="userappsCount"/>
+    </resultMap>
+    <select id="analyseByModule" resultMap="analyseByModuleResult">
+        SELECT peer_ip                             AS peer_ip_cidr,
+               (peer_geoip ->> 'countryIso'::text) AS iso,
+               (peer_geoip ->> 'cityName'::text)   AS city,
+               count(peer_ip)                      AS ban_count,
+               count(distinct userapps_id)         AS userapps_count
+        FROM ban_history
+        WHERE ((insert_time > #{afterTimestamp}) AND (module_name = #{moduleName}))
+        GROUP BY peer_ip_cidr, iso, city
+        ORDER BY ban_count DESC, userapps_count DESC
+        LIMIT 1000
+    </select>
+    <resultMap id="analyseOverDownloadedResult"
+               type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult">
+        <result column="st_peer_ip" property="peerIp"/>
+        <result column="st_torrent_id" property="torrentId"/>
+        <result column="st_from_peer_traffic" property="totalFromPeerTraffic"/>
+        <result column="st_to_peer_traffic" property="totalToPeerTraffic"/>
+        <result column="t_torrent_size" property="torrentSize"/>
+        <result column="pure_to_peer_traffic" property="pureToPeerTraffic"/>
+    </resultMap>
+    <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult">
+        -- noinspection SqlShouldBeInGroupBy
+        SELECT swarm_tracker.peer_ip                             AS st_peer_ip,
+               swarm_tracker.torrent_id                          AS st_torrent_id,
+               SUM(swarm_tracker.from_peer_traffic)              AS st_from_peer_traffic,
+               SUM(swarm_tracker.to_peer_traffic)                AS st_to_peer_traffic,
+               torrent.size                                      AS t_torrent_size,
+               SUM(swarm_tracker.to_peer_traffic) - torrent.size AS pure_to_peer_traffic
+        FROM swarm_tracker
+                 JOIN torrent ON swarm_tracker.torrent_id = torrent.id
+        WHERE (last_time_seen >= #{afterTimestamp})
+          AND (to_peer_traffic - from_peer_traffic) > 0
+        GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
+        ORDER BY pure_to_peer_traffic DESC
+        LIMIT 1000
+    </select>
+    <resultMap id="analyseConcurrentDownloadResult"
+               type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult">
+        <result column="peer_ip" property="peerIp"/>
+        <result column="torrent_count" property="torrentCount"/>
+        <result column="userapps_count" property="userappsCount"/>
+    </resultMap>
+    <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult">
+        SELECT peer_ip,
+               COUNT(torrent_id)  AS torrent_count,
+               COUNT(userapps_id) AS userapps_count
+        FROM swarm_tracker
+        WHERE last_time_seen >= #{afterTimestamp}
+        GROUP BY peer_ip
+        ORDER BY torrent_count DESC,
+                 userapps_count DESC
+        LIMIT 1000
+    </select>
+</mapper>

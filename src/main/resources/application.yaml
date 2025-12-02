@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: Sparkle3
+  threads:
+    virtual:
+      enabled: true
+  thymeleaf:
+    cache: false
+  datasource:
+    url: jdbc:postgresql://local:5432/sparkle
+    username: username
+    password: password
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6372
+      client-name: sparkle-redis
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: client
+            client-secret: clientsecret
+            authorization-grant-type: authorization_code
+            # /login/oauth2/code/ 固定格式
+            redirect-uri: "http://localhost:7799/login/oauth2/code/github"
+            # GitHub 的权限范围
+            scope:
+              - read:user
+              - user:email
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+            user-name-attribute: id
+server:
+  address: 0.0.0.0
+  port: 7799
+  compression:
+    enabled: true
+  tomcat:
+    remoteip:
+      host-header: X-Forwarded-For
+      port-header: X-Forwarded-Port
+      protocol-header: X-Forwarded-Proto
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: "deleted_at"
+      logic-delete-value: "now()"
+      logic-not-delete-value: null
+sparkle:
+  root-url: "http://127.0.0.1:7799"
+  ping:
+    config:
+      min-protocol-version: 20
+      max-protocol-version: 20
+    sync-banhistory:
+      endpoint: "${sparkle.root-url}/ping/syncBanHistory"
+      random-initial-delay: 3000
+      interval: 10000
+    sync-swarm:
+      endpoint: "${sparkle.root-url}/ping/syncSwarm"
+      random-initial-delay: 3000
+      interval: 10000
+    rule-ip-denylist:
+      endpoint: "${sparkle.root-url}/ping/ruleIpDenylist"
+      random-initial-delay: 3000
+      interval: 10000
+    rule-ip-allowlist:
+      endpoint: "${sparkle.root-url}/ping/ruleIpAllowlist"
+      random-initial-delay: 3000
+      interval: 10000
+    reconfigure:
+      random-initial-delay: 600000
+      interval: 10800000
+  analyse:
+    untrusted-vote:
+      schedule: "0 0 * * * *"
+      duration: 1209600000
+      ipv4:
+        enable: true
+        min-userapps-vote: 3
+        min-ban-count: 5
+      ipv6:
+        enable: true
+        min-userapps-vote: 3
+        min-ban-count: 5
+    overdownload-analyse:
+      schedule: "0 0 * * * *"
+      duration: 1209600000
+      threshold: 3.2
+    concurrent-download-analyse:
+      schedule: "0 0 * * * *"
+      duration: 3600000
+      threshold-concurrent: 150
+      threshold-userapps: 3

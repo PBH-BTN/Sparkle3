@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.BanHistoryMapper">
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO ban_history (
+        insert_time, populate_time, userapps_id, torrent_id, peer_ip, peer_port,
+        peer_id, peer_client_name, peer_progress, peer_flags, reporter_progress,
+        to_peer_traffic, from_peer_traffic, module_name, rule_description, structured_data
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.insertTime}, #{item.populateTime}, #{item.userappsId}, #{item.torrentId},
+            #{item.peerIp}, #{item.peerPort}, #{item.peerId}, #{item.peerClientName},
+            #{item.peerProgress}, #{item.peerFlags}, #{item.reporterProgress},
+            #{item.toPeerTraffic}, #{item.fromPeerTraffic}, #{item.moduleName},
+            #{item.ruleDescription},
+            to_jsonb(#{item.structuredData, typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler}::text)
+            )
+        </foreach>
+    </insert>
+</mapper>

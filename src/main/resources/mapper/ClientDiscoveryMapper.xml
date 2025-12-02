@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.ClientDiscoveryMapper">
+    <insert id="batchInsert">
+        INSERT INTO client_discovery (hash, peer_id, peer_client_name, found_at, found_userapps_id, client_type,
+        client_semver)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.hash},
+            #{item.peerId},#{item.peerClientName},#{item.foundAt},#{item.foundUserappsId},#{item.clientType},#{item.clientSemver})
+        </foreach>
+        ON CONFLICT (hash) DO NOTHING
+    </insert>
+</mapper>

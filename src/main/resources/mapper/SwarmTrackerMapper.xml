@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper">
+    <insert id="upsert" parameterType="com.ghostchu.btn.sparkle.entity.SwarmTracker">
+        INSERT INTO swarm_tracker (userapps_id, user_downloader, torrent_id,
+                                   peer_ip, user_progress,
+                                   peer_port, peer_id, peer_client_name,
+                                   peer_progress, from_peer_traffic, to_peer_traffic,
+                                   from_peer_traffic_offset, to_peer_traffic_offset, flags,
+                                   first_time_seen, last_time_seen)
+        VALUES (#{userappsId}, #{userDownloader}, #{torrentId},
+                #{peerIp}, #{userProgress},
+                #{peerPort}, #{peerId}, #{peerClientName},
+                #{peerProgress}, #{fromPeerTraffic}, #{toPeerTraffic},
+                #{fromPeerTrafficOffset}, #{toPeerTrafficOffset}, #{flags},
+                #{firstTimeSeen}, #{lastTimeSeen})
+        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+            SET (userapps_id, user_downloader, torrent_id,
+                 peer_ip, user_progress,
+                 peer_port, peer_id, peer_client_name,
+                 peer_progress, from_peer_traffic, to_peer_traffic,
+                 from_peer_traffic_offset, to_peer_traffic_offset, flags,
+                 first_time_seen, last_time_seen) =
+                    (EXCLUDED.userapps_id, EXCLUDED.user_downloader, EXCLUDED.torrent_id,
+                     EXCLUDED.peer_ip, EXCLUDED.user_progress,
+                     EXCLUDED.peer_port, EXCLUDED.peer_id, EXCLUDED.peer_client_name,
+                     EXCLUDED.peer_progress, EXCLUDED.from_peer_traffic, EXCLUDED.to_peer_traffic,
+                     EXCLUDED.from_peer_traffic_offset, EXCLUDED.to_peer_traffic_offset, EXCLUDED.flags,
+                     EXCLUDED.first_time_seen, EXCLUDED.last_time_seen);
+    </insert>
+</mapper>

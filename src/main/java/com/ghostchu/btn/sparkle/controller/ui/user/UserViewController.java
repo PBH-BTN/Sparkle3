@@ -1,0 +1,26 @@
+package com.ghostchu.btn.sparkle.controller.ui.user;
+
+import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserDto;
+import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.IUserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class UserViewController {
+    @Autowired
+    private IUserService userService;
+
+    @GetMapping({"/user", "/user/profile"})
+    public String profile(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails) {
+        User user = userService.getById(userDetails.getUserId());
+        model.addAttribute("user", new UserDto(user));
+        model.addAttribute("userScoreBytesDisplay", "N/A");
+        model.addAttribute("userScoreBytesRaw", -1);
+        return "user/profile";
+    }
+}

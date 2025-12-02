@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.TorrentMapper">
+    <select id="findTorrentByIdentifier" resultType="com.ghostchu.btn.sparkle.entity.Torrent">
+        SELECT *
+        FROM torrent
+        WHERE torrent_identifier = #{identifier}
+        LIMIT 1
+    </select>
+
+    <resultMap id="torrentResultMap" type="com.ghostchu.btn.sparkle.entity.Torrent">
+        <id property="id" column="id"/>
+        <result property="torrentIdentifier" column="torrent_identifier"/>
+        <result property="size" column="size"/>
+        <result property="privateTorrent" column="private_torrent"/>
+        <result property="infoHash" column="info_hash"/>
+        <result property="torrentName" column="torrent_name"/>
+    </resultMap>
+
+    <select id="upsert" parameterType="com.ghostchu.btn.sparkle.entity.Torrent" resultMap="torrentResultMap">
+        INSERT INTO torrent (torrent_identifier, size, private_torrent, info_hash, torrent_name)
+        VALUES (#{torrentIdentifier}, #{size}, #{privateTorrent}, #{infoHash}, #{torrentName})
+        ON CONFLICT (torrent_identifier) DO UPDATE
+            SET size            = GREATEST(torrent.size, EXCLUDED.size),
+                private_torrent = COALESCE(torrent.private_torrent, EXCLUDED.private_torrent),
+                info_hash       = COALESCE(torrent.info_hash, EXCLUDED.info_hash),
+                torrent_name    = COALESCE(torrent.torrent_name, EXCLUDED.torrent_name)
+        RETURNING *
+    </select>
+</mapper>
