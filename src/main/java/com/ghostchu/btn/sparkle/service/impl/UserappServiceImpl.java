@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -67,6 +68,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
         userapp.setAppSecret(UUID.randomUUID().toString());
         userapp.setComment(comment);
         userapp.setCreateIp(creatorIp);
+        userapp.setCreatedAt(OffsetDateTime.now());
         if (baseMapper.insert(userapp) <= 0)
             throw new IllegalStateException("Failed to create userapp for user");
         return userapp;
