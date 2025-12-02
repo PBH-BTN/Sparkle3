@@ -28,6 +28,9 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
     @Autowired
     private List<SparkleBtnAbility> btnAbilities;
 
+    @Value("${sparkle.captcha.pow.endpoint}")
+    private String powCaptchaEndpoint;
+
     @Override
     public BtnConfig configAnonymousUserapp() throws UserApplicationNotFoundException {
         throw new UserApplicationNotFoundException();
@@ -43,6 +46,7 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
             ability.put(btnAbility.getConfigKey(), btnAbility);
         }
         btnConfig.setAbility(ability);
+        btnConfig.setProofOfWorkConfig(new BtnConfig.ProofOfWorkConfig(powCaptchaEndpoint));
         return btnConfig;
     }
 

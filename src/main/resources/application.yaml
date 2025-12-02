@@ -60,6 +60,7 @@ sparkle:
   root-url: "http://127.0.0.1:7799"
   captcha:
     pow:
+      endpoint: "${sparkle.root-url}/ping/captcha/createSession"
       difficulty-bits: 5
       algorithm: SHA-256
   ping:

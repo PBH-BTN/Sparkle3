@@ -21,6 +21,9 @@ public class BtnConfig {
     @JsonProperty("proof_of_work_captcha")
     private ProofOfWorkConfig proofOfWorkConfig;
 
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Data
     public static class ProofOfWorkConfig{
         @JsonProperty("endpoint")
         private String endpoint;
