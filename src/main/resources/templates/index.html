@@ -5,12 +5,7 @@
 <div th:replace="~{components/common::navbar}"></div>
 
 <div class="alert alert-warning" role="alert">
-    <b><i class="fa-solid fa-road-barrier"></i> 改版装修中</b> BTN 2.0 正在加紧施工中。由于缺乏前端人手，目前前端仅基本功能可用，不影响后端运行和上报收集等功能。
-</div>
-
-<div class="alert alert-success" role="alert">
-    <b><i class="fa-solid fa-check"></i> 恢复正常运行</b> 我们已应用了缓解措施以应对性能下降，目前 BTN
-    的所有功能恢复正常运行。我们仍在观测程序稳定性并持续改进 Sparkle BTN。
+    <b><i class="fa-solid fa-road-barrier"></i> 改版装修中</b> BTN 3.0 正在加紧施工中。由于缺乏前端人手，目前前端仅基本功能可用，不影响后端运行和上报收集等功能。
 </div>
 
 <div class="alert alert-danger" role="alert" th:if="${sessionUser.getBannedAt() != null}">
