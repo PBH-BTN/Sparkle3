@@ -30,6 +30,7 @@ public class PingSwarmController extends BasePingController {
     @PostMapping("/ping/syncSwarm")
     @Transactional
     public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+        log.info("validatePowCaptcha(): {}", validatePowCaptcha());
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
         var it = swarms.iterator();
