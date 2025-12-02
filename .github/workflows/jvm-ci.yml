@@ -13,7 +13,8 @@ on:
   workflow_dispatch:
 jobs:
   CI:
-    uses: build_gradle.yml
+    name: CI
+    uses: ./.github/workflows/build-gradle.yml
     secrets: inherit
   Build_Docker:
     needs: CI
