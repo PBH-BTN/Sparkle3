@@ -8,8 +8,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.UUID;
 
 @Service
@@ -24,18 +24,22 @@ public class PowCaptchaServiceImpl implements IPowCaptchaService {
     @Override
     public @NotNull CaptchaChallenge generateSession() {
         String id = UUID.randomUUID().toString();
-        String challenge = getRandomString(32);
-        redisTemplate.opsForValue().set("sparkle:powcaptcha:" + id, challenge);
-        return new CaptchaChallenge(id, challenge, poWServer.getDifficultyBits(), poWServer.getAlgorithm(), System.currentTimeMillis() + 20 * 60 * 1000);
+        byte[] challenge = new byte[64];
+        random.nextBytes(challenge);
+        String base64Challenge = java.util.Base64.getEncoder().encodeToString(challenge);
+        redisTemplate.opsForValue().set("sparkle:powcaptcha:" + id, base64Challenge);
+        return new CaptchaChallenge(id, base64Challenge, poWServer.getDifficultyBits(), poWServer.getAlgorithm(), System.currentTimeMillis() + 20 * 60 * 1000);
     }
 
     @Override
-    public boolean validateSession(@NotNull String id, @NotNull String solution) {
-        String challenge = redisTemplate.opsForValue().get("sparkle:powcaptcha:" + id);
-        if (challenge == null) {
+    public boolean validateSession(@NotNull String id , @NotNull String solutionBase64) {
+        String challengeBase64 = redisTemplate.opsForValue().get("sparkle:powcaptcha:" + id);
+        if (challengeBase64 == null) {
             return false;
         }
-        boolean result = poWServer.verify(challenge.getBytes(StandardCharsets.ISO_8859_1), solution.getBytes(StandardCharsets.ISO_8859_1));
+        byte[] challengeBytes = Base64.getDecoder().decode(challengeBase64);
+        byte[] solutionBytes = Base64.getDecoder().decode(solutionBase64);
+        boolean result = poWServer.verify(challengeBytes, solutionBytes);
         if (result) {
             redisTemplate.delete("sparkle:powcaptcha:" + id);
         }
