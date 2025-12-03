@@ -59,10 +59,10 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             IPAddress ipAddress = result.getPeerIpCidr();
             tries.put(ipAddress, result);
         }
-        IPv4Address[] ipv4Prefixes = mergeIps(tries.getIPv4Trie());
-        IPv6Address[] ipv6Prefixes = mergeIps(tries.getIPv6Trie());
-        triesMerge(tries.getIPv4Trie(), ipv4Prefixes);
-        triesMerge(tries.getIPv6Trie(), ipv6Prefixes);
+        IPv4Address[] ipv4Prefixes = mergeIpsV4(tries.getIPv4Trie());
+        IPv6Address[] ipv6Prefixes = mergeIpsV6(tries.getIPv6Trie());
+        triesMergeV4(tries.getIPv4Trie(), ipv4Prefixes);
+        triesMergeV6(tries.getIPv6Trie(), ipv6Prefixes);
         // 此时 Tries 就是已经合并好的结果，过滤一下规则
         tries.nodeIterator(false).forEachRemaining(node -> {
             var ip = node.getKey();
@@ -105,7 +105,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         private long mergedRecords;
     }
 
-    private void triesMerge(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie, IPv6Address[] prefixes) {
+    private void triesMergeV6(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie, IPv6Address[] prefixes) {
         for (IPv6Address prefix : prefixes) {
             GeneratedRule rule = new GeneratedRule();
             long totalBanCount = 0;
@@ -128,7 +128,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         }
     }
 
-    private void triesMerge(AssociativeAddressTrie<IPv4Address, GeneratedRule> trie, IPv4Address[] prefixes) {
+    private void triesMergeV4(AssociativeAddressTrie<IPv4Address, GeneratedRule> trie, IPv4Address[] prefixes) {
         for (IPv4Address prefix : prefixes) {
             GeneratedRule rule = new GeneratedRule();
             long totalBanCount = 0;
@@ -151,19 +151,32 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         }
     }
 
-
     @SuppressWarnings("unchecked")
-    private <T extends IPAddress> T[] mergeIps(AssociativeAddressTrie<T, GeneratedRule> trie) {
+    private IPv4Address[] mergeIpsV4(AssociativeAddressTrie<IPv4Address, GeneratedRule> trie) {
         var firstAddedNode = trie.firstAddedNode();
-        if (firstAddedNode == null) return (T[]) new IPAddress[0];
+        if (firstAddedNode == null) return new IPv4Address[0];
         var it = trie.nodeIterator(false);
-        List<T> ips = new ArrayList<>();
+        List<IPv4Address> ips = new ArrayList<>();
         while (it.hasNext()) {
             var node = it.next();
             ips.add(node.getKey());
         }
-        T[] array = (T[]) new IPAddress[ips.size()];
-        return (T[]) firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));
+        IPv4Address[] array = new IPv4Address[ips.size()];
+        return firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));
+    }
+
+    @SuppressWarnings("unchecked")
+    private IPv6Address[] mergeIpsV6(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie) {
+        var firstAddedNode = trie.firstAddedNode();
+        if (firstAddedNode == null) return new IPv6Address[0];
+        var it = trie.nodeIterator(false);
+        List<IPv6Address> ips = new ArrayList<>();
+        while (it.hasNext()) {
+            var node = it.next();
+            ips.add(node.getKey());
+        }
+        IPv6Address[] array = new IPv6Address[ips.size()];
+        return firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));
     }
 
 }
