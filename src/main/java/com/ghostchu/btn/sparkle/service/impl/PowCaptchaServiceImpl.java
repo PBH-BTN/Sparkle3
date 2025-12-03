@@ -24,7 +24,7 @@ public class PowCaptchaServiceImpl implements IPowCaptchaService {
     @Override
     public @NotNull CaptchaChallenge generateSession() {
         String id = UUID.randomUUID().toString();
-        byte[] challenge = new byte[64];
+        byte[] challenge = new byte[16];
         random.nextBytes(challenge);
         String base64Challenge = java.util.Base64.getEncoder().encodeToString(challenge);
         redisTemplate.opsForValue().set("sparkle:powcaptcha:" + id, base64Challenge);
