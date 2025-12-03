@@ -105,8 +105,31 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         private long mergedRecords;
     }
 
-    private <T extends IPAddress> void triesMerge(AssociativeAddressTrie<T, GeneratedRule> trie, T[] prefixes) {
-        for (T prefix : prefixes) {
+    private void triesMerge(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie, IPv6Address[] prefixes) {
+        for (IPv6Address prefix : prefixes) {
+            GeneratedRule rule = new GeneratedRule();
+            long totalBanCount = 0;
+            long totalUserappsCount = 0;
+            long totalMergedRecords = 0;
+            var it = trie.elementsContainedBy(prefix).nodeIterator(false);
+            while (it.hasNext()) {
+                var node = it.next();
+                GeneratedRule r = node.getValue();
+                totalBanCount += r.getBanCount();
+                totalUserappsCount += r.getUserappsCount();
+                totalMergedRecords += 1;
+            }
+            rule.setPeerIpCidr(prefix);
+            rule.setBanCount(totalBanCount);
+            rule.setUserappsCount(totalUserappsCount);
+            rule.setMergedRecords(totalMergedRecords);
+            trie.removeElementsContainedBy(prefix);
+            trie.put(prefix, rule);
+        }
+    }
+
+    private void triesMerge(AssociativeAddressTrie<IPv4Address, GeneratedRule> trie, IPv4Address[] prefixes) {
+        for (IPv4Address prefix : prefixes) {
             GeneratedRule rule = new GeneratedRule();
             long totalBanCount = 0;
             long totalUserappsCount = 0;
