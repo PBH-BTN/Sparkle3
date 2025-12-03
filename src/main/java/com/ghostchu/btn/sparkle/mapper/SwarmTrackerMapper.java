@@ -2,6 +2,10 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import org.jetbrains.annotations.NotNull;
+
+import java.net.InetAddress;
+import java.sql.Timestamp;
 
 /**
  * <p>
@@ -14,4 +18,6 @@ import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     void upsert(SwarmTracker swarm);
+
+    long calcPeerConcurrentDownloads(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
 }

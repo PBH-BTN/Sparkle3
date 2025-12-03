@@ -85,6 +85,9 @@ sparkle:
     reconfigure:
       random-initial-delay: 600000
       interval: 10800000
+    query-ip:
+      pow-captcha: true
+      endpoint: "${sparkle.root-url}/ping/queryIp"
   analyse:
     untrusted-vote:
       schedule: "0 0 * * * *"
@@ -106,3 +109,6 @@ sparkle:
       duration: 3600000
       threshold-concurrent: 150
       threshold-userapps: 3
+  query:
+    query-ip:
+      include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"

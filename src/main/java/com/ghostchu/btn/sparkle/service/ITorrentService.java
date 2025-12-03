@@ -16,6 +16,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface ITorrentService extends IService<Torrent> {
 
+    @Nullable Torrent getTorrentByTorrentIdentifier(@NotNull String torrentIdentifier);
+
     @Lock4j(keys = {"#identifier"})
     long getOrCreateTorrentId(@NotNull String identifier, @Nullable Long size, @Nullable Boolean isPrivate, @Nullable String infoHash, @Nullable String torrentName);
 }

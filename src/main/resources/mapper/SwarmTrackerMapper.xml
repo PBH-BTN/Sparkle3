@@ -28,4 +28,10 @@
                      EXCLUDED.from_peer_traffic_offset, EXCLUDED.to_peer_traffic_offset, EXCLUDED.flags,
                      EXCLUDED.first_time_seen, EXCLUDED.last_time_seen);
     </insert>
+    <select id="calcPeerConcurrentDownloads" resultType="long">
+        SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
+        FROM swarm_tracker
+        WHERE peer_ip = #{peerIp}
+          AND last_time_seen >= #{afterTimestamp};
+    </select>
 </mapper>

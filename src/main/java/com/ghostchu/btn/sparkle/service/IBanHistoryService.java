@@ -1,10 +1,15 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -18,4 +23,6 @@ import java.util.List;
 public interface IBanHistoryService extends IService<BanHistory> {
 
     void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans);
+
+    @NotNull IPage<BanHistory> fetchBanHistory(@NotNull OffsetDateTime afterTime, @Nullable InetAddress peerIp, @Nullable Long torrentId, @Nullable List<String> moduleNames, @NotNull Page<BanHistory> page);
 }

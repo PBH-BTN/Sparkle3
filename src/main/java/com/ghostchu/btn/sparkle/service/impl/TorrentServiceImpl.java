@@ -28,6 +28,11 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
     @Qualifier("stringLongRedisTemplate")
     private RedisTemplate<String, Long> torrentIdRedisTemplate;
 
+    @Override
+    public @Nullable Torrent getTorrentByTorrentIdentifier(@NotNull String torrentIdentifier){
+        return baseMapper.findTorrentByIdentifier(torrentIdentifier);
+    }
+
     // all parmas as lock4j keys
     @Lock4j(keys = {"#identifier", "#size", "#isPrivate", "#infoHash", "#torrentName"})
     @Override
