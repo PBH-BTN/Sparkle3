@@ -32,8 +32,8 @@ import java.util.List;
 public class PingQueryIpController extends BasePingController {
     @Value("${sparkle.ping.query-ip.pow-captcha}")
     private boolean powCaptcha;
-    @Value("#{${sparkle.query.query-ip.include-modules}.split(',')}")
-    private List<String> queryIpIncludeModules;
+    @Value("${sparkle.query.query-ip.include-modules}")
+    private String queryIpIncludeModules;
     @Value("${sparkle.ping.sync-swarm.interval}")
     private long syncSwarmInterval;
     @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
@@ -64,7 +64,7 @@ public class PingQueryIpController extends BasePingController {
                 OffsetDateTime.now().minusDays(7),
                 InetAddress.ofLiteral(ip),
                 torrentId,
-                queryIpIncludeModules,
+                List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
         result.setBans(new IpQueryResult.IpQueryResultBans(bans.getTotal(), bans.getRecords().stream().map(BanHistoryServiceImpl.BanHistoryDto::new).toList()));
@@ -103,16 +103,22 @@ public class PingQueryIpController extends BasePingController {
     @NoArgsConstructor
     @Data
     public static class IpQueryResult {
+        @JsonProperty("color")
         private String color;
+        @JsonProperty("labels")
         private List<String> labels = Collections.emptyList();
+        @JsonProperty("bans")
         private IpQueryResultBans bans;
+        @JsonProperty("swarms")
         private IpQueryResultSwarms swarms;
 
         @AllArgsConstructor
         @NoArgsConstructor
         @Data
         public static class IpQueryResultBans {
+            @JsonProperty("total")
             private long total;
+            @JsonProperty("records")
             private List<BanHistoryServiceImpl.BanHistoryDto> records;
         }
 
@@ -120,8 +126,11 @@ public class PingQueryIpController extends BasePingController {
         @NoArgsConstructor
         @Data
         public static class IpQueryResultSwarms {
+            @JsonProperty("total")
             private long total;
+            @JsonProperty("records")
             private List<SwarmTrackerServiceImpl.SwarmTrackerDto> records;
+            @JsonProperty("concurrent_download_torrents_count")
             private long concurrentDownloadTorrentsCount;
         }
     }
