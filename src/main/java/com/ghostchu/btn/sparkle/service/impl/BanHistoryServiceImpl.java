@@ -12,6 +12,7 @@ import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -45,6 +46,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private ITorrentService torrentService;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private GeoIPManager geoIPManager;
 
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -62,12 +65,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     structuredDataMap = Map.of();
                 }
             }
+            var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
             return new BanHistory()
                     .setInsertTime(LocalDateTime.now().atOffset(ZoneOffset.UTC))
                     .setPopulateTime(btnBan.getBanAt().toLocalDateTime().atOffset(ZoneOffset.UTC))
                     .setUserappsId(userAppId)
                     .setTorrentId(torrentService.getOrCreateTorrentId(btnBan.getTorrentIdentifier(), btnBan.getTorrentSize(), btnBan.isTorrentIsPrivate(), null, null))
-                    .setPeerIp(InetAddress.ofLiteral(btnBan.getPeerIp()))
+                    .setPeerIp(inet)
                     .setPeerPort(btnBan.getPeerPort())
                     .setPeerId(btnBan.getPeerId())
                     .setPeerClientName(btnBan.getPeerClientName())
@@ -79,6 +83,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setModuleName(btnBan.getModule())
                     .setRule(btnBan.getRule())
                     .setDescription(btnBan.getDescription())
+                    .setPeerGeoip(geoIPManager.geoData(inet))
                     .setStructuredData(structuredDataMap);
         }).toList();
         this.baseMapper.insert(list, 500);
