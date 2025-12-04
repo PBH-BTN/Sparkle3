@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class PowCaptchaServiceImpl implements IPowCaptchaService {
@@ -27,7 +28,7 @@ public class PowCaptchaServiceImpl implements IPowCaptchaService {
         byte[] challenge = new byte[16];
         random.nextBytes(challenge);
         String base64Challenge = java.util.Base64.getEncoder().encodeToString(challenge);
-        redisTemplate.opsForValue().set("sparkle:powcaptcha:" + id, base64Challenge);
+        redisTemplate.opsForValue().set("sparkle:powcaptcha:" + id, base64Challenge, 20 * 60 * 1000, TimeUnit.MILLISECONDS);
         return new CaptchaChallenge(id, base64Challenge, poWServer.getDifficultyBits(), poWServer.getAlgorithm(), System.currentTimeMillis() + 20 * 60 * 1000);
     }
 
