@@ -26,6 +26,8 @@ import java.util.Map;
 @Slf4j
 @RestController
 public class PingSwarmController extends BasePingController {
+    @Value("${sparkle.ping.sync-swarm.pow-captcha}")
+    private boolean powCaptcha;
     @Autowired
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
@@ -35,6 +37,9 @@ public class PingSwarmController extends BasePingController {
     @PostMapping("/ping/syncSwarm")
     @Transactional
     public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+        if(powCaptcha){
+            validatePowCaptcha();
+        }
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
         var it = swarms.iterator();

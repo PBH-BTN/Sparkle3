@@ -2,6 +2,9 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.entity.Rule;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +16,5 @@ import com.ghostchu.btn.sparkle.entity.Rule;
  */
 public interface IRuleService extends IService<Rule> {
 
+    @NotNull List<Rule> getRulesByType(@NotNull String type);
 }

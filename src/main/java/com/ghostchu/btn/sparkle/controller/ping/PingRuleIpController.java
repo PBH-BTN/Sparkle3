@@ -26,6 +26,9 @@ import java.util.StringJoiner;
 @RestController
 public class PingRuleIpController extends BasePingController {
 
+    @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
+    private boolean denyListPowCaptcha;
+
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
@@ -33,6 +36,9 @@ public class PingRuleIpController extends BasePingController {
     @SuppressWarnings("UnstableApiUsage")
     @GetMapping("/ping/ruleIpDenylist")
     public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) {
+        if(denyListPowCaptcha){
+            validatePowCaptcha();
+        }
         String untrustedVote = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey());
         String overDownloadedAnalyse = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
 

@@ -26,6 +26,8 @@ import java.util.Map;
 @RestController
 @Slf4j
 public class PingSubmitBansController extends BasePingController {
+    @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
+    private boolean powCaptcha;
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
@@ -34,6 +36,9 @@ public class PingSubmitBansController extends BasePingController {
     @PostMapping("/ping/syncBanHistory")
     @Transactional
     public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+        if(powCaptcha){
+            validatePowCaptcha();
+        }
         Userapp userapp = verifyUserApplication();
         var bans = ping.getBans();
         var it = bans.iterator();

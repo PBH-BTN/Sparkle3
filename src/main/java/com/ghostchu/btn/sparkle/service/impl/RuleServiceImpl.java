@@ -21,8 +21,8 @@ import java.util.List;
 @Service
 public class RuleServiceImpl extends ServiceImpl<RuleMapper, Rule> implements IRuleService {
 
-    @NotNull
-    public List<Rule> getRulesByType(@NotNull String type) {
+    @Override
+    public @NotNull List<Rule> getRulesByType(@NotNull String type) {
         return this.baseMapper.selectList(new QueryWrapper<Rule>()
                 .eq("type", type));
     }
