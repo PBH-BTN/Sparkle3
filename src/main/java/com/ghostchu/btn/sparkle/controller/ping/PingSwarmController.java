@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarmPeerPing;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
@@ -7,10 +8,14 @@ import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
+import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,5 +53,25 @@ public class PingSwarmController extends BasePingController {
         swarmTrackerService.syncSwarm(userapp.getId(), swarms);
         clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Map.entry(ban.getPeerId(), ban.getClientName())).toList());
         return ResponseEntity.status(200).build();
+    }
+
+    @Component
+    @Data
+    public static class SwarmSyncBtnAbility implements SparkleBtnAbility {
+        @Value("${sparkle.ping.sync-swarm.endpoint}")
+        private String endpoint;
+        @Value("${sparkle.ping.sync-swarm.interval}")
+        private long interval;
+        @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
+        @JsonProperty("random_initial_delay")
+        private long randomInitialDelay;
+        @Value("${sparkle.ping.sync-swarm.pow-captcha}")
+        @JsonProperty("pow_captcha")
+        private boolean powCaptcha;
+
+        @Override
+        public String getConfigKey() {
+            return "submit_swarm";
+        }
     }
 }

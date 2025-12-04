@@ -50,22 +50,5 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
         return btnConfig;
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
-    @Component
-    public static class ReconfigureAbility implements SparkleBtnAbility {
-        @Value("${sparkle.ping.reconfigure.interval}")
-        private long interval;
-        @Value("${sparkle.ping.reconfigure.random-initial-delay}")
-        @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
-        @JsonProperty("version")
-        private String version = UUID.randomUUID().toString();
 
-        @Override
-        public String getConfigKey() {
-            return "reconfigure";
-        }
-    }
 }

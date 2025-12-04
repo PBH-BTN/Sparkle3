@@ -101,25 +101,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         );
     }
 
-    @Component
-    @Data
-    public static class SyncBanHistoryBtnAbility implements SparkleBtnAbility {
-        @Value("${sparkle.ping.sync-banhistory.endpoint}")
-        private String endpoint;
-        @Value("${sparkle.ping.sync-banhistory.interval}")
-        private long interval;
-        @Value("${sparkle.ping.sync-banhistory.random-initial-delay}")
-        @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
-        @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
-        @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
 
-        @Override
-        public String getConfigKey() {
-            return "submit_bans";
-        }
-    }
 
     @AllArgsConstructor
     @NoArgsConstructor
