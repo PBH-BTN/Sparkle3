@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
@@ -25,6 +27,14 @@ public class GithubSyncServiceImpl {
     @Value("${sparkle.github-sync.branch-name}")
     private String branchName;
 
+    @Autowired
+    private AnalyseRuleUnTrustVoteServiceImpl unTrustVoteService;
+    @Autowired
+    private AnalyseRuleOverDownloadServiceImpl overDownloadService;
+    @Autowired
+    private AnalyseRuleConcurrentDownloadServiceImpl concurrentDownloadService;
+
+
     @Scheduled(cron = "${sparkle.github-sync.schedule}")
     public void scheduleSync() throws IOException {
         log.info("开始更新 GitHub 同步规则存储库...");
@@ -34,6 +44,17 @@ public class GithubSyncServiceImpl {
             throw new IllegalArgumentException("Organization " + orgName + " not found");
         }
         var repository = organization.getRepository(repoName);
+
+        var untrustIps = unTrustVoteService.getGeneratedContent().getValue();
+        var concurrentDownloadIps = concurrentDownloadService.getGeneratedContent().getValue();
+        var overDownloadIps = overDownloadService.getGeneratedContent().getValue();
+        if(untrustIps != null)
+            updateFile(repository, "untrusted-ips.txt", ()->untrustIps.getBytes(StandardCharsets.UTF_8));
+        if(concurrentDownloadIps != null)
+            updateFile(repository, "concurrent-downloads-ips.txt", ()->concurrentDownloadIps.getBytes(StandardCharsets.UTF_8));
+        if(overDownloadIps != null)
+            updateFile(repository, "overdownload-ips.txt", ()->overDownloadIps.getBytes(StandardCharsets.UTF_8));
+        log.info("GitHub 同步规则存储库更新完成");
     }
 
 
