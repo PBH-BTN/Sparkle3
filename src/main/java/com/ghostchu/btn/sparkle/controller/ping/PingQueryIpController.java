@@ -55,19 +55,12 @@ public class PingQueryIpController extends BasePingController {
     private ISwarmTrackerService swarmTrackerService;
 
     @GetMapping("/ping/queryIp")
-    @Cacheable(value = "pingQueryIpCache#600000", key = "#ip + '_' + #torrentIdentifier", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
-    public ResponseEntity<@NotNull IpQueryResult> queryIp(@RequestParam String ip, @RequestParam(required = false) String torrentIdentifier) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
+    @Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
+    public ResponseEntity<@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
         if (powCaptcha && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
         var userApps = verifyUserApplication();
-        Long torrentId = null;
-        if (torrentIdentifier != null) {
-            var torrent = torrentService.getTorrentByTorrentIdentifier(torrentIdentifier);
-            if (torrent != null) {
-                torrentId = torrent.getId();
-            }
-        }
         var peerIp = InetAddress.ofLiteral(ip);
 
         IpQueryResult result = new IpQueryResult();
@@ -75,7 +68,7 @@ public class PingQueryIpController extends BasePingController {
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minusDays(7),
                 peerIp,
-                torrentId,
+                null,
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
@@ -83,7 +76,7 @@ public class PingQueryIpController extends BasePingController {
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
                 OffsetDateTime.now().minusDays(7),
                 peerIp,
-                torrentId,
+                null,
                 Page.of(1, 1000)
         );
         var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
