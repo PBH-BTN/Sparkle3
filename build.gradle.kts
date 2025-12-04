@@ -77,14 +77,14 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.18.2")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.18.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.18.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.1")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.20.1")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.20.1")
+    implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.20.1")
     implementation("com.vdurmont:semver4j:3.1.0")
     implementation("com.github.seancfoley:ipaddress:5.5.0")
     implementation("com.maxmind.geoip2:geoip2:4.2.0")
-    implementation("org.kohsuke:github-api:1.324")
+    implementation("org.kohsuke:github-api:1.330")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
