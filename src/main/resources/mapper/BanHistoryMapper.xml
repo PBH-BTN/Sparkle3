@@ -29,4 +29,10 @@
             WHERE insert_time > #{afterTimestamp} AND peer_ip = #{peerIp}
         GROUP BY peer_ip
     </select>
+    <select id="selectPeerTorrents" resultType="long">
+        SELECT DISTINCT torrent_id AS torrent_count
+        FROM ban_history
+        WHERE peer_ip = #{peerIp}
+          AND last_time_seen >= #{afterTimestamp};
+    </select>
 </mapper>

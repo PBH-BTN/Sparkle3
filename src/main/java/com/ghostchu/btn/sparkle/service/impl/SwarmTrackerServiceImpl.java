@@ -86,5 +86,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 
+    @Override
+    public List<Long> selectPeerIpTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp){
+        return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
+    }
+
+
 
 }

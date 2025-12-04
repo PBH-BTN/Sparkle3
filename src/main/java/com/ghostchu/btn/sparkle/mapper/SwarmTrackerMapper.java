@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.List;
 
 /**
  * <p>
@@ -24,4 +25,6 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     @NotNull
     PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
+
+    List<Long> selectPeerTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
 }

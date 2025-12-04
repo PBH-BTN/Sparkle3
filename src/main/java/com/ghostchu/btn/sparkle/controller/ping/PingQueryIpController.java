@@ -27,7 +27,9 @@ import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 public class PingQueryIpController extends BasePingController {
@@ -41,6 +43,8 @@ public class PingQueryIpController extends BasePingController {
     private long syncSwarmRandomInitialDelayForConcurrentDownload;
     @Value("${sparkle.query.query-ip.traffic-measure-duration}")
     private long trafficMeasureDuration;
+    @Value("${sparkle.query.query-ip.torrents-counting-duration}")
+    private long torrentsCountingDuration;
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
@@ -91,7 +95,11 @@ public class PingQueryIpController extends BasePingController {
         var totalFromPeerTraffic = banHistoryTraffic.getSumFromPeerTraffic() + swarmTrackerTraffic.getSumFromPeerTraffic();
         var shareRatio = totalFromPeerTraffic == 0 ? -1 : (double) totalToPeerTraffic / totalFromPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
-
+        Set<Long> distinctTorrentIds = new HashSet<>();
+        Timestamp torrentsCountingSince = Timestamp.from(OffsetDateTime.now().minusSeconds(torrentsCountingDuration).toInstant());
+        distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
+        distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
+        result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
         return ResponseEntity.ok(result);
     }
 
@@ -126,6 +134,19 @@ public class PingQueryIpController extends BasePingController {
         private IpQueryResultSwarms swarms;
         @JsonProperty("traffic")
         private IpQueryTraffic traffic;
+        @JsonProperty("torrents")
+        private IpQueryTorrents torrents;
+
+
+        @AllArgsConstructor
+        @NoArgsConstructor
+        @Data
+        public static class IpQueryTorrents {
+            @JsonProperty("duration")
+            private long duration;
+            @JsonProperty("count")
+            private long count;
+        }
 
         @AllArgsConstructor
         @NoArgsConstructor
