@@ -1,8 +1,10 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleConcurrentDownloadServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleOverDownloadServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleUnTrustVoteServiceImpl;
 import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,6 +28,14 @@ import java.util.StringJoiner;
 @RestController
 public class PingRuleIpController extends BasePingController {
 
+    @Autowired
+    private AnalyseRuleUnTrustVoteServiceImpl unTrustVoteService;
+    @Autowired
+    private AnalyseRuleOverDownloadServiceImpl overDownloadService;
+    @Autowired
+    private AnalyseRuleConcurrentDownloadServiceImpl concurrentDownloadService;
+
+
     @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
     private boolean denyListPowCaptcha;
 
@@ -39,14 +49,17 @@ public class PingRuleIpController extends BasePingController {
         if(denyListPowCaptcha){
             validatePowCaptcha();
         }
-        String untrustedVote = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey());
-        String overDownloadedAnalyse = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
+        String untrustedVote = unTrustVoteService.getGeneratedContent().getValue();
+        String overDownloadedAnalyse = overDownloadService.getGeneratedContent().getValue();
+        String concurrentDownloadAnalyse = concurrentDownloadService.getGeneratedContent().getValue();
 
         StringJoiner joiner = new StringJoiner("\n\n");
         if(untrustedVote != null)
             joiner.add(untrustedVote);
         if(overDownloadedAnalyse != null)
             joiner.add(overDownloadedAnalyse);
+        if(concurrentDownloadAnalyse != null)
+            joiner.add(concurrentDownloadAnalyse);
 
         String listVersion = Hashing.crc32c().hashString(joiner.toString(), StandardCharsets.UTF_8).toString();
 

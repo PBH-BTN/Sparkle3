@@ -117,3 +117,9 @@ sparkle:
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"
+  github-sync:
+    schedule: "0 30 * * * *"
+    personal-access-token: sometoken
+    org-name: PBH-BTN
+    repository-name: BTN-Collected-Rules-BTN3
+    branch-name: master

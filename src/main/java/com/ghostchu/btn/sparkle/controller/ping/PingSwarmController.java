@@ -11,6 +11,7 @@ import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -56,7 +55,7 @@ public class PingSwarmController extends BasePingController {
             swarm.setPeerLastFlags(sanitizeU0(swarm.getPeerLastFlags()));
         }
         swarmTrackerService.syncSwarm(userapp.getId(), swarms);
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Map.entry(ban.getPeerId(), ban.getClientName())).toList());
+        clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList());
         return ResponseEntity.status(200).build();
     }
 

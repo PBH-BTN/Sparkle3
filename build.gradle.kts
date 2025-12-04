@@ -84,6 +84,7 @@ dependencies {
     implementation("com.vdurmont:semver4j:3.1.0")
     implementation("com.github.seancfoley:ipaddress:5.5.0")
     implementation("com.maxmind.geoip2:geoip2:4.2.0")
+    implementation("org.kohsuke:github-api:1.324")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

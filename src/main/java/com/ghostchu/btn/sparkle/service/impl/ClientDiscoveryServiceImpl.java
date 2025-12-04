@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.util.HexUtil;
 import com.ghostchu.btn.sparkle.util.PeerIdParser;
 import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * <p>
@@ -33,9 +33,9 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
     @Transactional
     @Async
     @Override
-    public void handleClientDiscovery(long userAppId, List<Map.Entry<String, String>> data) {
+    public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
-        for (Map.Entry<String, String> pair : data) {
+        for (Pair<String, String> pair : data) {
             var peerIdIn = pair.getKey();
             var peerClientNameIn = pair.getValue();
             if (peerIdIn == null && peerClientNameIn == null) return;

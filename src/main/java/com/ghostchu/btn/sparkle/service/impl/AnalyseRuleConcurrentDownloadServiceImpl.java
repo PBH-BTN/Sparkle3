@@ -5,6 +5,8 @@ import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadRes
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
+import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,5 +46,12 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey(), sb.toString());
         //noinspection UnstableApiUsage
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
+    }
+
+    @Override
+    public Pair<@Nullable String, @Nullable String> getGeneratedContent(){
+        var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey());
+        var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey());
+        return Pair.of(version, value);
     }
 }

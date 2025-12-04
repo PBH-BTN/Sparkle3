@@ -11,6 +11,7 @@ import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 @RestController
 @Slf4j
@@ -56,7 +55,7 @@ public class PingSubmitBansController extends BasePingController {
             ban.setPeerFlag(sanitizeU0(ban.getPeerFlag()));
             ban.setStructuredData(sanitizeU0(ban.getStructuredData()));
         }
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), bans.stream().map(ban -> Map.entry(ban.getPeerId(), ban.getPeerClientName())).toList());
+        clientDiscoveryService.handleClientDiscovery(userapp.getId(), bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList());
         banHistoryService.syncBanHistory(request.getRemoteAddr(), userapp.getId(), bans);
         return ResponseEntity.status(200).build();
     }

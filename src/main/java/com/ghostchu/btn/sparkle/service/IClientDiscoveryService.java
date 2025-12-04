@@ -2,9 +2,9 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.entity.ClientDiscovery;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * <p>
@@ -16,5 +16,5 @@ import java.util.Map;
  */
 public interface IClientDiscoveryService extends IService<ClientDiscovery> {
 
-    void handleClientDiscovery(long userAppId, List<Map.Entry<String, String>> data);
+    void handleClientDiscovery(long userAppId, List<Pair<String, String>> data);
 }
