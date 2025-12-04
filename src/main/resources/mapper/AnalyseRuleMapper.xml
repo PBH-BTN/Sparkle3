@@ -36,7 +36,7 @@
                SUM(swarm_tracker.from_peer_traffic)              AS st_from_peer_traffic,
                SUM(swarm_tracker.to_peer_traffic)                AS st_to_peer_traffic,
                torrent.size                                      AS t_torrent_size,
-               SUM(swarm_tracker.to_peer_traffic) - torrent.size AS pure_to_peer_traffic
+               SUM(swarm_tracker.to_peer_traffic) - SUM(swarm_tracker.from_peer_traffic) AS pure_to_peer_traffic
         FROM swarm_tracker
                  JOIN torrent ON swarm_tracker.torrent_id = torrent.id
         WHERE (last_time_seen >= #{afterTimestamp})

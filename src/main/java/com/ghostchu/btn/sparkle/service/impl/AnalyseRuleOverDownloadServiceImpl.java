@@ -37,7 +37,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         while (it.hasNext()) {
             var result = it.next();
             if (result.getTorrentSize() <= 0) continue;
-            double ratio = (double) result.getPureToPeerTraffic() / (double) result.getTorrentSize();
+            double ratio = (result.getTotalToPeerTraffic()- result.getTotalFromPeerTraffic()) / (double) result.getTorrentSize();
             if (ratio < threshold) {
                 {
                     it.remove();
