@@ -201,21 +201,7 @@ public class IPDB implements AutoCloseable {
 
     private void downloadFile(String url, Path path, String databaseName) throws IOException {
         try {
-            restClient.get()
-                    .uri(url)
-                    .exchange((request, response) -> {
-                        if (response.getStatusCode().is2xxSuccessful()) {
-                            try (InputStream inputStream = response.getBody();
-                                 OutputStream outputStream = Files.newOutputStream(path)) {
-                                inputStream.transferTo(outputStream);
-                                log.info("下载 {} 成功", databaseName);
-                            }
-                            return null;
-                        } else {
-                            log.error("下载 {} 失败：{}", databaseName, response.getStatusCode());
-                            throw new IOException("Download failed with status: " + response.getStatusCode());
-                        }
-                    });
+            downloadFileWithRedirect(url, path, databaseName, 0);
         } catch (Exception e) {
             log.error("下载 {} 失败", databaseName, e);
             File file = path.toFile();
@@ -224,6 +210,36 @@ public class IPDB implements AutoCloseable {
             }
             throw new IOException("Failed to download " + databaseName, e);
         }
+    }
+
+    private void downloadFileWithRedirect(String url, Path path, String databaseName, int redirectCount) throws IOException {
+        if (redirectCount > 10) {
+            throw new IOException("Too many redirects");
+        }
+
+        restClient.get()
+                .uri(url)
+                .exchange((request, response) -> {
+                    if (response.getStatusCode().is2xxSuccessful()) {
+                        try (InputStream inputStream = response.getBody();
+                             OutputStream outputStream = Files.newOutputStream(path)) {
+                            inputStream.transferTo(outputStream);
+                            log.info("下载 {} 成功", databaseName);
+                        }
+                        return null;
+                    } else if (response.getStatusCode().is3xxRedirection()) {
+                        String location = response.getHeaders().getFirst("Location");
+                        if (location == null) {
+                            throw new IOException("Redirect without Location header");
+                        }
+                        log.debug("Following redirect to: {}", location);
+                        downloadFileWithRedirect(location, path, databaseName, redirectCount + 1);
+                        return null;
+                    } else {
+                        log.error("下载 {} 失败：{}", databaseName, response.getStatusCode());
+                        throw new IOException("Download failed with status: " + response.getStatusCode());
+                    }
+                });
     }
 
     @Override
