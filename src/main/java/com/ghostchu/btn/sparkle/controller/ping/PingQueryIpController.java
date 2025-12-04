@@ -10,8 +10,8 @@ import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
-import com.ghostchu.btn.sparkle.service.impl.BanHistoryServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.SwarmTrackerServiceImpl;
+import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
+import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.InetAddress;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -35,9 +36,11 @@ public class PingQueryIpController extends BasePingController {
     @Value("${sparkle.query.query-ip.include-modules}")
     private String queryIpIncludeModules;
     @Value("${sparkle.ping.sync-swarm.interval}")
-    private long syncSwarmInterval;
+    private long syncSwarmIntervalForConcurrentDownload;
     @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
-    private long syncSwarmRandomInitialDelay;
+    private long syncSwarmRandomInitialDelayForConcurrentDownload;
+    @Value("${sparkle.query.query-ip.traffic-measure-duration}")
+    private long trafficMeasureDuration;
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
@@ -58,27 +61,37 @@ public class PingQueryIpController extends BasePingController {
                 torrentId = torrent.getId();
             }
         }
+        var peerIp = InetAddress.ofLiteral(ip);
         IpQueryResult result = new IpQueryResult();
         result.setColor("gray");
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minusDays(7),
-                InetAddress.ofLiteral(ip),
+                peerIp,
                 torrentId,
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
-        result.setBans(new IpQueryResult.IpQueryResultBans(bans.getTotal(), bans.getRecords().stream().map(BanHistoryServiceImpl.BanHistoryDto::new).toList()));
+        result.setBans(new IpQueryResult.IpQueryResultBans(bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
                 OffsetDateTime.now().minusDays(7),
-                InetAddress.ofLiteral(ip),
+                peerIp,
                 torrentId,
                 Page.of(1, 1000)
         );
         var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
-                OffsetDateTime.now().minusSeconds((syncSwarmInterval + syncSwarmRandomInitialDelay) / 1000 + 120),
+                OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
                 InetAddress.ofLiteral(ip)
         );
-        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerServiceImpl.SwarmTrackerDto::new).toList(), concurrentDownloads));
+        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads));
+
+        Timestamp trafficMeasureSince = Timestamp.from(OffsetDateTime.now().minusSeconds(trafficMeasureDuration).toInstant());
+        var banHistoryTraffic = banHistoryService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
+        var swarmTrackerTraffic = swarmTrackerService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
+        var totalToPeerTraffic = banHistoryTraffic.getSumToPeerTraffic() + swarmTrackerTraffic.getSumToPeerTraffic();
+        var totalFromPeerTraffic = banHistoryTraffic.getSumFromPeerTraffic() + swarmTrackerTraffic.getSumFromPeerTraffic();
+        var shareRatio = totalFromPeerTraffic == 0 ? -1 : (double) totalToPeerTraffic / totalFromPeerTraffic;
+        result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
+
         return ResponseEntity.ok(result);
     }
 
@@ -111,6 +124,22 @@ public class PingQueryIpController extends BasePingController {
         private IpQueryResultBans bans;
         @JsonProperty("swarms")
         private IpQueryResultSwarms swarms;
+        @JsonProperty("traffic")
+        private IpQueryTraffic traffic;
+
+        @AllArgsConstructor
+        @NoArgsConstructor
+        @Data
+        public static class IpQueryTraffic {
+            @JsonProperty("duration")
+            private long duration;
+            @JsonProperty("to_peer_traffic")
+            private long toPeerTraffic;
+            @JsonProperty("from_peer_traffic")
+            private long fromPeerTraffic;
+            @JsonProperty("share_ratio")
+            private double shareRatio;
+        }
 
         @AllArgsConstructor
         @NoArgsConstructor
@@ -119,7 +148,7 @@ public class PingQueryIpController extends BasePingController {
             @JsonProperty("total")
             private long total;
             @JsonProperty("records")
-            private List<BanHistoryServiceImpl.BanHistoryDto> records;
+            private List<BanHistoryDto> records;
         }
 
         @AllArgsConstructor
@@ -129,7 +158,7 @@ public class PingQueryIpController extends BasePingController {
             @JsonProperty("total")
             private long total;
             @JsonProperty("records")
-            private List<SwarmTrackerServiceImpl.SwarmTrackerDto> records;
+            private List<SwarmTrackerDto> records;
             @JsonProperty("concurrent_download_torrents_count")
             private long concurrentDownloadTorrentsCount;
         }

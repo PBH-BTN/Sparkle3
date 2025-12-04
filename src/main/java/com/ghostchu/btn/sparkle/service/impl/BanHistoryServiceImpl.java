@@ -4,28 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -101,59 +96,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         );
     }
 
-
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
-    public static class BanHistoryDto {
-        @JsonProperty("populate_time")
-        private Long populateTime;
-        @JsonProperty("torrent")
-        private String torrent;
-        @JsonProperty("peer_ip")
-        private InetAddress peerIp;
-        @JsonProperty("peer_port")
-        private Integer peerPort;
-        @JsonProperty("peer_id")
-        private String peerId;
-        @JsonProperty("peer_client_name")
-        private String peerClientName;
-        @JsonProperty("peer_progress")
-        private Double peerProgress;
-        @JsonProperty("peer_flags")
-        private String peerFlags;
-        @JsonProperty("reporter_progress")
-        private Double reporterProgress;
-        @JsonProperty("to_peer_traffic")
-        private Long toPeerTraffic;
-        @JsonProperty("from_peer_traffic")
-        private Long fromPeerTraffic;
-        @JsonProperty("module_name")
-        private String moduleName;
-        @JsonProperty("rule")
-        private String rule;
-        @JsonProperty("description")
-        private String description;
-        @JsonProperty("structured_data")
-        private Map<String, Object> structuredData;
-
-        public BanHistoryDto(BanHistory banHistory) {
-            this.torrent = "id=" + banHistory.getTorrentId();
-            this.populateTime = banHistory.getPopulateTime().toInstant().toEpochMilli();
-            this.peerIp = banHistory.getPeerIp();
-            this.peerPort = banHistory.getPeerPort();
-            this.peerId = banHistory.getPeerId();
-            this.peerClientName = banHistory.getPeerClientName();
-            this.peerProgress = banHistory.getPeerProgress();
-            this.peerFlags = banHistory.getPeerFlags();
-            this.reporterProgress = banHistory.getReporterProgress();
-            this.toPeerTraffic = banHistory.getToPeerTraffic();
-            this.fromPeerTraffic = banHistory.getFromPeerTraffic();
-            this.moduleName = banHistory.getModuleName();
-            this.rule = banHistory.getRule();
-            this.description = banHistory.getDescription();
-            this.structuredData = banHistory.getStructuredData();
-        }
+    @Override
+    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp){
+        return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
+
 }

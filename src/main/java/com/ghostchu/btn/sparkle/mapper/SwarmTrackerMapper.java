@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
@@ -20,4 +21,7 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
     void upsert(SwarmTracker swarm);
 
     long calcPeerConcurrentDownloads(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
+
+    @NotNull
+    PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
 }

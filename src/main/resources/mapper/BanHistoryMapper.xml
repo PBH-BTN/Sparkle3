@@ -18,4 +18,15 @@
             )
         </foreach>
     </insert>
+    <resultMap id="sumPeerIpTrafficSummaryDto" type="com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto">
+        <result column="peer_ip" property="peerIp"/>
+        <result column="sum_to_peer_traffic" property="sumToPeerTraffic"/>
+        <result column="sum_from_peer_traffic" property="sumFromPeerTraffic"/>
+    </resultMap>
+    <select id="sumPeerIpTraffic" resultMap="sumPeerIpTrafficSummaryDto">
+        SELECT peer_ip, SUM(to_peer_traffic) AS sum_to_peer_traffic, SUM(from_peer_traffic) AS sum_from_peer_traffic
+        FROM ban_history
+            WHERE insert_time > #{afterTimestamp} AND peer_ip = #{peerIp}
+        GROUP BY peer_ip
+    </select>
 </mapper>
