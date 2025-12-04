@@ -15,8 +15,10 @@ import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,7 +55,8 @@ public class PingQueryIpController extends BasePingController {
     private ISwarmTrackerService swarmTrackerService;
 
     @GetMapping("/ping/queryIp")
-    public ResponseEntity<?> queryIp(@RequestParam String ip, @RequestParam(required = false) String torrentIdentifier) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
+    @Cacheable(value = "pingQueryIpCache#600000", key = "#ip + '_' + #torrentIdentifier", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
+    public ResponseEntity<@NotNull IpQueryResult> queryIp(@RequestParam String ip, @RequestParam(required = false) String torrentIdentifier) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
         if (powCaptcha && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
@@ -66,6 +69,7 @@ public class PingQueryIpController extends BasePingController {
             }
         }
         var peerIp = InetAddress.ofLiteral(ip);
+
         IpQueryResult result = new IpQueryResult();
         result.setColor("gray");
         var bans = banHistoryService.fetchBanHistory(
