@@ -1,9 +1,16 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP 查询</title>
+    <script>
+        (function() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
     <style>
         * {
             margin: 0;
@@ -21,46 +28,75 @@
         }
 
         /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            body {
-                color: #e0e0e0;
-                background: #1e1e1e;
-            }
+        .dark-mode body {
+            color: #f0f0f0 !important;
+            background: #1a1a1a !important;
+        }
 
-            .section {
-                background: #2d2d2d;
-                border-color: #404040;
-            }
+        .dark-mode .section {
+            background: #252525 !important;
+            border-color: #3a3a3a !important;
+        }
 
-            .label-badge {
-                background: #404040;
-                color: #e0e0e0;
-            }
+        .dark-mode .label-badge {
+            background: #3a3a3a !important;
+            color: #f0f0f0 !important;
+        }
 
-            table {
-                border-color: #404040;
-            }
+        .dark-mode table {
+            border-color: #3a3a3a !important;
+        }
 
-            th {
-                background: #333;
-                border-color: #404040;
-            }
+        .dark-mode th {
+            background: #2a2a2a !important;
+            border-color: #3a3a3a !important;
+            color: #f0f0f0 !important;
+        }
 
-            td {
-                border-color: #404040;
-            }
+        .dark-mode td {
+            border-color: #3a3a3a !important;
+            color: #e8e8e8 !important;
+        }
 
-            tr:hover {
-                background: #333;
-            }
+        .dark-mode tr:hover {
+            background: #2f2f2f !important;
+        }
 
-            .stat-item {
-                border-color: #404040;
-            }
+        .dark-mode .stat-item {
+            background: #2a2a2a !important;
+            border-color: #3a3a3a !important;
+        }
 
-            .value {
-                color: #e0e0e0;
-            }
+        .dark-mode .value {
+            color: #e8e8e8 !important;
+        }
+
+        .dark-mode .empty-state {
+            color: #888 !important;
+        }
+
+        .dark-mode .timestamp {
+            color: #d0d0d0 !important;
+        }
+
+        .dark-mode .traffic {
+            color: #e8e8e8 !important;
+        }
+
+        .dark-mode .section-title {
+            color: #ffffff !important;
+        }
+
+        .dark-mode .section-subtitle {
+            color: #aaa !important;
+        }
+
+        .dark-mode .stat-label {
+            color: #aaa !important;
+        }
+
+        .dark-mode .stat-value {
+            color: #ffffff !important;
         }
 
         .container {
@@ -113,18 +149,13 @@
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 8px;
+            color: #333;
         }
 
         .section-subtitle {
             font-size: 12px;
             color: #666;
             margin-bottom: 12px;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .section-subtitle {
-                color: #999;
-            }
         }
 
         .stats {
@@ -135,9 +166,10 @@
         }
 
         .stat-item {
-            padding: 8px;
+            padding: 10px 12px;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
+            background: #ffffff;
         }
 
         .stat-label {
@@ -147,15 +179,10 @@
             margin-bottom: 4px;
         }
 
-        @media (prefers-color-scheme: dark) {
-            .stat-label {
-                color: #999;
-            }
-        }
-
         .stat-value {
             font-size: 18px;
             font-weight: 600;
+            color: #333;
         }
 
         table {
@@ -239,7 +266,7 @@
     <!-- Bans Section -->
     <div class="section" th:if="${result.bans != null}">
         <div class="section-title">封禁历史</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${result.bans.duration / 1000 / 60 / 60} + ' 小时'"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.bans.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">总封禁次数</div>
@@ -269,7 +296,7 @@
                     <td th:text="${ban.peerClientName}"></td>
                     <td th:text="${ban.peerProgress != null ? #numbers.formatPercent(ban.peerProgress, 1, 2) : 'N/A'}"></td>
                     <td class="traffic" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.fromPeerTraffic)}"></td>
-                    <td th:text="${ban.moduleName}"></td>
+                    <td th:text="${ban.moduleName != null && ban.moduleName.startsWith('com.ghostchu.peerbanhelper.module.impl.rule.') ? ban.moduleName.substring('com.ghostchu.peerbanhelper.module.impl.rule.'.length()) : ban.moduleName}"></td>
                     <td th:text="${ban.rule}"></td>
                     <td th:text="${ban.description}"></td>
                 </tr>
@@ -284,7 +311,7 @@
     <!-- Swarms Section -->
     <div class="section" th:if="${result.swarms != null}">
         <div class="section-title">种群活动</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${result.swarms.duration / 1000 / 60 / 60} + ' 小时'"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.swarms.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">总记录数</div>
@@ -337,7 +364,7 @@
     <!-- Traffic Section -->
     <div class="section" th:if="${result.traffic != null}">
         <div class="section-title">流量统计</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${result.traffic.duration / 1000 / 60 / 60} + ' 小时'"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.traffic.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">上传量 (到 Peer)</div>
@@ -357,7 +384,7 @@
     <!-- Torrents Section -->
     <div class="section" th:if="${result.torrents != null}">
         <div class="section-title">种子统计</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${result.torrents.duration / 1000 / 60 / 60} + ' 小时'"></div>
+<div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.torrents.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">唯一种子数</div>
