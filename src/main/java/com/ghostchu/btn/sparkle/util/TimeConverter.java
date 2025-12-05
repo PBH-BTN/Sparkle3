@@ -6,21 +6,22 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 public class TimeConverter {
+    public static final TimeConverter INSTANCE = new TimeConverter();
 
-    private TimeConverter() {
+    public TimeConverter() {
     }
 
-    public static String formatTime(OffsetDateTime time, String zoneId) {
+    public String formatTime(OffsetDateTime time, String zoneId) {
         // format to YYYY-MM-DD HH:MM:SS
         ZoneId zone = ZoneId.of(zoneId);
         return time.atZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
-    public static String formatDuration(Duration duration) {
+    public String formatDuration(Duration duration) {
         return formatDuration(duration.toMillis());
     }
 
-    public static String formatDuration(long durationInMs) {
+    public String formatDuration(long durationInMs) {
         long totalSeconds = durationInMs / 1000;
         long days = totalSeconds / (24 * 3600);
         totalSeconds %= (24 * 3600);

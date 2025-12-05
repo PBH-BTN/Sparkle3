@@ -266,7 +266,7 @@
     <!-- Bans Section -->
     <div class="section" th:if="${result.bans != null}">
         <div class="section-title">封禁历史</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.bans.duration)}"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.bans.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">总封禁次数</div>
@@ -311,7 +311,7 @@
     <!-- Swarms Section -->
     <div class="section" th:if="${result.swarms != null}">
         <div class="section-title">种群活动</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.swarms.duration)}"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.swarms.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">总记录数</div>
@@ -364,7 +364,7 @@
     <!-- Traffic Section -->
     <div class="section" th:if="${result.traffic != null}">
         <div class="section-title">流量统计</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.traffic.duration)}"></div>
+        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.traffic.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">上传量 (到 Peer)</div>
@@ -384,7 +384,7 @@
     <!-- Torrents Section -->
     <div class="section" th:if="${result.torrents != null}">
         <div class="section-title">种子统计</div>
-<div class="section-subtitle" th:text="'最近 ' + ${T(com.ghostchu.btn.sparkle.util.TimeConverter).formatDuration(result.torrents.duration)}"></div>
+<div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.torrents.duration)}"></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-label">唯一种子数</div>
