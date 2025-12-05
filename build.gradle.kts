@@ -26,6 +26,12 @@ repositories {
 	mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom("com.baomidou:mybatis-plus-bom:3.5.15")
+    }
+}
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-batch")
@@ -45,7 +51,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.apache.commons:commons-pool2")
-	implementation("com.baomidou:mybatis-plus-spring-boot4-starter:3.5.14")
+	implementation("com.baomidou:mybatis-plus-spring-boot4-starter")
 	implementation("com.baomidou:lock4j-redis-template-spring-boot-starter:2.2.7")
 	//implementation("com.baomidou:mybatis-plus-generator:3.5.14")
 	//implementation("org.freemarker:freemarker:2.3.34")
@@ -85,6 +91,7 @@ dependencies {
     implementation("com.github.seancfoley:ipaddress:5.5.0")
     implementation("com.maxmind.geoip2:geoip2:4.2.0")
     implementation("org.kohsuke:github-api:1.330")
+    implementation("com.baomidou:mybatis-plus-jsqlparser")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
