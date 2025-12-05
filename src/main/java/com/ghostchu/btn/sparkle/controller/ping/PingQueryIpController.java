@@ -59,7 +59,7 @@ public class PingQueryIpController extends BasePingController {
     private ISwarmTrackerService swarmTrackerService;
 
     @GetMapping("/ping/queryIp")
-    @Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
+    //@Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
     public ResponseEntity<@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
         if (powCaptcha && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
