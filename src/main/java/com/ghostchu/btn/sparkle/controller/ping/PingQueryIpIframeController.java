@@ -26,6 +26,7 @@ public class PingQueryIpIframeController extends BasePingController {
         var peerIp= InetAddress.ofLiteral(ip);
         var result = queryIpService.queryIp(peerIp);
         model.addAttribute("result", result);
+        model.addAttribute("ip", ip);
         return "widget/queryIp";
     }
 
