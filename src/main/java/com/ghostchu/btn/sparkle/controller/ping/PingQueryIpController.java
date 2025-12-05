@@ -123,6 +123,9 @@ public class PingQueryIpController extends BasePingController {
         @Value("${sparkle.ping.query-ip.pow-captcha}")
         @JsonProperty("pow_captcha")
         private boolean powCaptcha;
+        @Value("${sparkle.ping.query-ip.iframe-endpoint}")
+        @JsonProperty("iframe_endpoint")
+        private String iframeEndpoint;
 
         @Override
         public String getConfigKey() {

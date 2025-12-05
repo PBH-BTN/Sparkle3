@@ -93,6 +93,7 @@ sparkle:
     query-ip:
       pow-captcha: true
       endpoint: "${sparkle.root-url}/ping/queryIp"
+      iframe-endpoint: "${sparkle.root-url}/ping/queryIp/iframe/{ip}"
   analyse:
     untrusted-vote:
       schedule: "0 0 * * * *"
