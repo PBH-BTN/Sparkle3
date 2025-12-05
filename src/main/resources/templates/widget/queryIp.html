@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Query</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            padding: 16px;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #e0e0e0;
+                background: #1e1e1e;
+            }
+
+            .section {
+                background: #2d2d2d;
+                border-color: #404040;
+            }
+
+            .label-badge {
+                background: #404040;
+                color: #e0e0e0;
+            }
+
+            table {
+                border-color: #404040;
+            }
+
+            th {
+                background: #333;
+                border-color: #404040;
+            }
+
+            td {
+                border-color: #404040;
+            }
+
+            tr:hover {
+                background: #333;
+            }
+
+            .stat-item {
+                border-color: #404040;
+            }
+
+            .value {
+                color: #e0e0e0;
+            }
+        }
+
+        .container {
+            max-width: 100%;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .ip-address {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .label-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .color-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .section-subtitle {
+                color: #999;
+            }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .stat-label {
+                color: #999;
+            }
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .timestamp {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .traffic {
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 12px;
+            font-size: 12px;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .label {
+                color: #999;
+            }
+        }
+
+        .value {
+            color: #333;
+            word-break: break-all;
+        }
+
+        .scrollable {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="ip-address">
+            <span class="color-indicator" th:style="'background-color: ' + ${result.color}"></span>
+            <span th:text="${ip}">IP Address</span>
+        </div>
+        <div class="labels" th:if="${result.labels != null && !result.labels.isEmpty()}">
+            <span class="label-badge" th:each="label : ${result.labels}" th:text="${label}"></span>
+        </div>
+    </div>
+
+    <!-- Bans Section -->
+    <div class="section" th:if="${result.bans != null}">
+        <div class="section-title">Ban History</div>
+        <div class="section-subtitle" th:text="'Last ' + ${result.bans.duration / 1000 / 60 / 60} + ' hours'"></div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Total Bans</div>
+                <div class="stat-value" th:text="${result.bans.total}">0</div>
+            </div>
+        </div>
+        <div class="scrollable" th:if="${result.bans.records != null && !result.bans.records.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Torrent</th>
+                    <th>Port</th>
+                    <th>Client</th>
+                    <th>Progress</th>
+                    <th>Traffic (↑/↓)</th>
+                    <th>Module</th>
+                    <th>Rule</th>
+                    <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ban : ${result.bans.records}">
+                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(ban.populateTime), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                    <td th:text="${ban.torrent}"></td>
+                    <td th:text="${ban.peerPort}"></td>
+                    <td th:text="${ban.peerClientName}"></td>
+                    <td th:text="${ban.peerProgress != null ? #numbers.formatPercent(ban.peerProgress, 1, 2) : 'N/A'}"></td>
+                    <td class="traffic" th:text="${T(java.lang.String).format('%,d / %,d', ban.toPeerTraffic, ban.fromPeerTraffic)}"></td>
+                    <td th:text="${ban.moduleName}"></td>
+                    <td th:text="${ban.rule}"></td>
+                    <td th:text="${ban.description}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${result.bans.records == null || result.bans.records.isEmpty()}">
+            No ban records found
+        </div>
+    </div>
+
+    <!-- Swarms Section -->
+    <div class="section" th:if="${result.swarms != null}">
+        <div class="section-title">Swarm Activity</div>
+        <div class="section-subtitle" th:text="'Last ' + ${result.swarms.duration / 1000 / 60 / 60} + ' hours'"></div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Total Records</div>
+                <div class="stat-value" th:text="${result.swarms.total}">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Concurrent Downloads</div>
+                <div class="stat-value" th:text="${result.swarms.concurrentDownloadTorrentsCount}">0</div>
+            </div>
+        </div>
+        <div class="scrollable" th:if="${result.swarms.records != null && !result.swarms.records.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Torrent</th>
+                    <th>Port</th>
+                    <th>Peer ID</th>
+                    <th>Client</th>
+                    <th>Peer Progress</th>
+                    <th>User Progress</th>
+                    <th>Traffic (↑/↓)</th>
+                    <th>Offset (↑/↓)</th>
+                    <th>Flags</th>
+                    <th>First Seen</th>
+                    <th>Last Seen</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="swarm : ${result.swarms.records}">
+                    <td th:text="${swarm.torrent}"></td>
+                    <td th:text="${swarm.peerPort}"></td>
+                    <td th:text="${swarm.peerId}"></td>
+                    <td th:text="${swarm.peerClientName}"></td>
+                    <td th:text="${swarm.peerProgress != null ? #numbers.formatPercent(swarm.peerProgress, 1, 2) : 'N/A'}"></td>
+                    <td th:text="${#numbers.formatPercent(swarm.userProgress, 1, 2)}"></td>
+                    <td class="traffic" th:text="${T(java.lang.String).format('%,d / %,d', swarm.toPeerTraffic, swarm.fromPeerTraffic)}"></td>
+                    <td class="traffic" th:text="${T(java.lang.String).format('%,d / %,d', swarm.toPeerTrafficOffset, swarm.fromPeerTrafficOffset)}"></td>
+                    <td th:text="${swarm.flags}"></td>
+                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.firstTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.lastTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${result.swarms.records == null || result.swarms.records.isEmpty()}">
+            No swarm records found
+        </div>
+    </div>
+
+    <!-- Traffic Section -->
+    <div class="section" th:if="${result.traffic != null}">
+        <div class="section-title">Traffic Statistics</div>
+        <div class="section-subtitle" th:text="'Last ' + ${result.traffic.duration / 1000 / 60 / 60} + ' hours'"></div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Uploaded (To Peer)</div>
+                <div class="stat-value" th:text="${T(java.lang.String).format('%,d', result.traffic.toPeerTraffic)}">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Downloaded (From Peer)</div>
+                <div class="stat-value" th:text="${T(java.lang.String).format('%,d', result.traffic.fromPeerTraffic)}">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Share Ratio</div>
+                <div class="stat-value" th:text="${#numbers.formatDecimal(result.traffic.shareRatio, 1, 2)}">0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Torrents Section -->
+    <div class="section" th:if="${result.torrents != null}">
+        <div class="section-title">Torrent Statistics</div>
+        <div class="section-subtitle" th:text="'Last ' + ${result.torrents.duration / 1000 / 60 / 60} + ' hours'"></div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Unique Torrents</div>
+                <div class="stat-value" th:text="${result.torrents.count}">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -87,8 +87,21 @@ public class BasePingController {
         if (cred.isValid()) {
             return cred;
         }
+        cred = readQueryFromUri(request);
+        if (cred.isValid()) {
+            return cred;
+        }
         cred = readLegacy(request);
         return cred;
+    }
+
+    @NotNull
+    private ClientAuthenticationCredential readQueryFromUri(@NotNull HttpServletRequest request) {
+        String appId = request.getParameter("appId");
+        String appSecret = request.getParameter("appSecret");
+        String hardwareId = request.getParameter("hardwareId");
+        String installationId = request.getParameter("installationId");
+        return new ClientAuthenticationCredential(appId, appSecret);
     }
 
     @NotNull
