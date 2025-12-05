@@ -97,7 +97,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp){
+    public @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp){
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 

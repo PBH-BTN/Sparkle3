@@ -76,7 +76,7 @@ public class PingQueryIpController extends BasePingController {
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
-        result.setBans(new IpQueryResult.IpQueryResultBans(-1,bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
+        result.setBans(new IpQueryResult.IpQueryResultBans(-1, bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
                 OffsetDateTime.now().minusSeconds(swarmsCountingDuration / 1000),
                 peerIp,
@@ -89,11 +89,19 @@ public class PingQueryIpController extends BasePingController {
         );
         result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads));
 
+        long totalToPeerTraffic = 0;
+        long totalFromPeerTraffic = 0;
         Timestamp trafficMeasureSince = Timestamp.from(OffsetDateTime.now().minusSeconds(trafficMeasureDuration).toInstant());
         var banHistoryTraffic = banHistoryService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
         var swarmTrackerTraffic = swarmTrackerService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
-        var totalToPeerTraffic = banHistoryTraffic.getSumToPeerTraffic() + swarmTrackerTraffic.getSumToPeerTraffic();
-        var totalFromPeerTraffic = banHistoryTraffic.getSumFromPeerTraffic() + swarmTrackerTraffic.getSumFromPeerTraffic();
+        if (banHistoryTraffic != null) {
+            totalToPeerTraffic += banHistoryTraffic.getSumToPeerTraffic();
+            totalFromPeerTraffic += banHistoryTraffic.getSumFromPeerTraffic();
+        }
+        if (swarmTrackerTraffic != null) {
+            totalToPeerTraffic += swarmTrackerTraffic.getSumToPeerTraffic();
+            totalFromPeerTraffic += swarmTrackerTraffic.getSumFromPeerTraffic();
+        }
         var shareRatio = totalFromPeerTraffic == 0 ? -1 : (double) totalToPeerTraffic / totalFromPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
         Set<Long> distinctTorrentIds = new HashSet<>();

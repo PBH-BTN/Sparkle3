@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
@@ -19,7 +20,7 @@ import java.util.List;
  */
 public interface BanHistoryMapper extends BaseMapper<BanHistory> {
 
-    @NotNull
+    @Nullable
     PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
 
     List<Long> selectPeerTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
