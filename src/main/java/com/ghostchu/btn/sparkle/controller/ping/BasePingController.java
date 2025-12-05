@@ -12,11 +12,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 
-@RestController
+@Component
 public class BasePingController {
     @Autowired
     protected HttpServletRequest request;
