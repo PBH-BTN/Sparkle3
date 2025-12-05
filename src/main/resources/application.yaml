@@ -117,6 +117,8 @@ sparkle:
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"
+      bans-counting-duration: 604800000
+      swarms-counting-duration: 604800000
       traffic-measure-duration: 604800000
       torrents-counting-duration: 604800000
   github-sync:

@@ -39,6 +39,10 @@ public class PingQueryIpController extends BasePingController {
     private boolean powCaptcha;
     @Value("${sparkle.query.query-ip.include-modules}")
     private String queryIpIncludeModules;
+    @Value("${sparkle.query.query-ip.bans-counting-duration}")
+    private long bansCountingDuration;
+    @Value("${sparkle.query.query-ip.swarms-counting-duration}")
+    private long swarmsCountingDuration;
     @Value("${sparkle.ping.sync-swarm.interval}")
     private long syncSwarmIntervalForConcurrentDownload;
     @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
@@ -66,15 +70,15 @@ public class PingQueryIpController extends BasePingController {
         IpQueryResult result = new IpQueryResult();
         result.setColor("gray");
         var bans = banHistoryService.fetchBanHistory(
-                OffsetDateTime.now().minusDays(7),
+                OffsetDateTime.now().minusSeconds(bansCountingDuration / 1000),
                 peerIp,
                 null,
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
-        result.setBans(new IpQueryResult.IpQueryResultBans(bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
+        result.setBans(new IpQueryResult.IpQueryResultBans(-1,bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
-                OffsetDateTime.now().minusDays(7),
+                OffsetDateTime.now().minusSeconds(swarmsCountingDuration / 1000),
                 peerIp,
                 null,
                 Page.of(1, 1000)
@@ -83,7 +87,7 @@ public class PingQueryIpController extends BasePingController {
                 OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
                 InetAddress.ofLiteral(ip)
         );
-        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads));
+        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads));
 
         Timestamp trafficMeasureSince = Timestamp.from(OffsetDateTime.now().minusSeconds(trafficMeasureDuration).toInstant());
         var banHistoryTraffic = banHistoryService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
@@ -163,6 +167,8 @@ public class PingQueryIpController extends BasePingController {
         @NoArgsConstructor
         @Data
         public static class IpQueryResultBans {
+            @JsonProperty("duration") // 提供的是最近 duration 时间内的数据，单位是毫秒
+            private long duration;
             @JsonProperty("total")
             private long total;
             @JsonProperty("records")
@@ -173,6 +179,8 @@ public class PingQueryIpController extends BasePingController {
         @NoArgsConstructor
         @Data
         public static class IpQueryResultSwarms {
+            @JsonProperty("duration") // 提供的是最近 duration 时间内的数据，单位是毫秒
+            private long duration;
             @JsonProperty("total")
             private long total;
             @JsonProperty("records")
