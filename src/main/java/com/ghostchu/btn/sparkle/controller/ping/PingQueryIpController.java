@@ -69,6 +69,7 @@ public class PingQueryIpController extends BasePingController {
 
         IpQueryResult result = new IpQueryResult();
         result.setColor("gray");
+        result.setLabels(List.of("Test1", "Test2", "Test3"));
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minusSeconds(bansCountingDuration / 1000),
                 peerIp,
