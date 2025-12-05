@@ -76,7 +76,7 @@ public class PingQueryIpController extends BasePingController {
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
-        result.setBans(new IpQueryResult.IpQueryResultBans(-1, bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
+        result.setBans(new IpQueryResult.IpQueryResultBans(bansCountingDuration, bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
                 OffsetDateTime.now().minusSeconds(swarmsCountingDuration / 1000),
                 peerIp,
