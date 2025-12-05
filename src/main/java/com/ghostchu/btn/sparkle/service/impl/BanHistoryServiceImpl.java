@@ -93,6 +93,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                         .eq(peerIp != null, "peer_ip", peerIp)
                         .ge("insert_time", afterTime)
                         .in(moduleNames != null && !moduleNames.isEmpty(), "module_name", moduleNames)
+                        .orderByDesc("insert_time")
         );
     }
 

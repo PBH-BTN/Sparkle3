@@ -69,6 +69,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                         .eq(torrentId != null, "torrent_id", torrentId)
                         .eq(peerIp != null, "peer_ip", peerIp)
                         .ge("last_time_seen", afterTime)
+                        .orderByDesc("last_time_seen")
         );
     }
 
