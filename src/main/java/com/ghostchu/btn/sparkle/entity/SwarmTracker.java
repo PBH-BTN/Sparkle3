@@ -42,7 +42,7 @@ public class SwarmTracker implements Serializable {
     @TableField("user_downloader")
     private String userDownloader;
 
-    @TableField("torrentId")
+    @TableField("torrent_id")
     private Long torrentId;
 
     @TableField("peer_ip")
