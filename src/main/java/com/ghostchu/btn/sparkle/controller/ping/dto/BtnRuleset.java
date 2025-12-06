@@ -5,8 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Data
 @AllArgsConstructor
@@ -14,6 +16,8 @@ import java.util.Map;
 public final class BtnRuleset {
     @JsonProperty("version")
     private String version;
+    @JsonProperty("ip")
+    private Map<String, List<String>> ipRules = new HashMap<>();
     @JsonProperty("peer_id")
     private Map<String, List<String>> peerIdRules;
     @JsonProperty("client_name")
