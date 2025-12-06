@@ -63,6 +63,9 @@ public class PingHeartbeatController extends BasePingController {
         @Value("${sparkle.ping.heartbeat.pow-captcha}")
         @JsonProperty("pow_captcha")
         private boolean powCaptcha;
+        @Value("${sparkle.ping.heartbeat.multi-if}")
+        @JsonProperty("multi_if")
+        private boolean multiIf;
 
         @Override
         public String getConfigKey() {
