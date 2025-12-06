@@ -91,9 +91,10 @@ sparkle:
       random-initial-delay: 600000
       interval: 10800000
     heartbeat:
+      pow-captcha: true
+      endpoint: "${sparkle.root-url}/ping/heartbeat"
       random-initial-delay: 3000
       interval: 10000
-      endpoint: "${sparkle.root-url}/ping/heartbeat"
     query-ip:
       pow-captcha: true
       endpoint: "${sparkle.root-url}/ping/queryIp"
