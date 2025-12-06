@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper">
+    <insert id="upsert" parameterType="com.ghostchu.btn.sparkle.entity.UserappsHeartbeat">
+        INSERT INTO userapps_heartbeat (userapp_id, ip, first_seen_at, last_seen_at)
+        VALUES (#{userappId}, #{ip}, #{firstSeenAt}, #{lastSeenAt})
+        ON CONFLICT (userapp_id, ip) DO UPDATE
+            SET (last_seen_at) = (EXCLUDED.last_seen_at);
+    </insert>
+</mapper>
