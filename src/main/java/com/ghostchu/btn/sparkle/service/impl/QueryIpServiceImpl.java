@@ -105,7 +105,7 @@ public class QueryIpServiceImpl {
             if (btnUserApp != null) {
                 var btnUser = userService.getById(btnUserApp.getOwner());
                 if (btnUser != null) {
-                    result.getLabels().add("[BTN用户] " + btnUser.getNickname() + "(ID=" + btnUser.getId() + ") / " + TimeConverter.INSTANCE.formatTime(firstResult.getLastSeenAt(), "UTC") +" (UTC)");
+                    result.getLabels().add("[BTN用户] " + btnUser.getNickname() + " (UID:" + btnUser.getId() + ") / " + TimeConverter.INSTANCE.formatTime(firstResult.getLastSeenAt(), "UTC") +" (UTC)");
                 }
             }
         }

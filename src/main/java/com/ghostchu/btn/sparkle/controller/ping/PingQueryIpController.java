@@ -38,20 +38,6 @@ import java.util.Set;
 public class PingQueryIpController extends BasePingController {
     @Value("${sparkle.ping.query-ip.pow-captcha}")
     private boolean powCaptcha;
-    @Value("${sparkle.query.query-ip.include-modules}")
-    private String queryIpIncludeModules;
-    @Value("${sparkle.query.query-ip.bans-counting-duration}")
-    private long bansCountingDuration;
-    @Value("${sparkle.query.query-ip.swarms-counting-duration}")
-    private long swarmsCountingDuration;
-    @Value("${sparkle.ping.sync-swarm.interval}")
-    private long syncSwarmIntervalForConcurrentDownload;
-    @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
-    private long syncSwarmRandomInitialDelayForConcurrentDownload;
-    @Value("${sparkle.query.query-ip.traffic-measure-duration}")
-    private long trafficMeasureDuration;
-    @Value("${sparkle.query.query-ip.torrents-counting-duration}")
-    private long torrentsCountingDuration;
     @Autowired
     private QueryIpServiceImpl queryIpService;
 
