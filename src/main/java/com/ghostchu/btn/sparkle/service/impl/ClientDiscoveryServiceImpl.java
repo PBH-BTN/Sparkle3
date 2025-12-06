@@ -46,6 +46,9 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             String clientType = null;
             String clientSemver = null;
 
+            if(peerId != null && peerId.startsWith("-XL0012") && peerClientName.startsWith("-XL0012-"))
+                continue;
+
             // 处理 PeerId
             if (peerIdIn != null) {
                 var parsed = PeerIdParser.parse(peerIdIn);
