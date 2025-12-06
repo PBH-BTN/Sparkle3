@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleConcurrentDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleOverDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleUnTrustVoteServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.RuleServiceImpl;
 import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 @RestController
 public class PingRuleIpController extends BasePingController {
@@ -34,6 +36,8 @@ public class PingRuleIpController extends BasePingController {
     private AnalyseRuleOverDownloadServiceImpl overDownloadService;
     @Autowired
     private AnalyseRuleConcurrentDownloadServiceImpl concurrentDownloadService;
+    @Autowired
+    private RuleServiceImpl ruleService;
 
 
     @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
@@ -46,23 +50,24 @@ public class PingRuleIpController extends BasePingController {
     @SuppressWarnings("UnstableApiUsage")
     @GetMapping("/ping/ruleIpDenylist")
     public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) {
-        if(denyListPowCaptcha){
+        if (denyListPowCaptcha) {
             validatePowCaptcha();
         }
         String untrustedVote = unTrustVoteService.getGeneratedContent().getValue();
         String overDownloadedAnalyse = overDownloadService.getGeneratedContent().getValue();
         String concurrentDownloadAnalyse = concurrentDownloadService.getGeneratedContent().getValue();
-
+        String manualRules = ruleService.getIpDenyList();
         StringJoiner joiner = new StringJoiner("\n\n");
-        if(untrustedVote != null)
+        if (untrustedVote != null && !untrustedVote.isBlank())
             joiner.add(untrustedVote);
-        if(overDownloadedAnalyse != null)
+        if (overDownloadedAnalyse != null && !overDownloadedAnalyse.isBlank())
             joiner.add(overDownloadedAnalyse);
-        if(concurrentDownloadAnalyse != null)
+        if (concurrentDownloadAnalyse != null && !concurrentDownloadAnalyse.isBlank())
             joiner.add(concurrentDownloadAnalyse);
-
+        if(manualRules != null && !manualRules.isBlank()){
+            joiner.add(manualRules);
+        }
         String listVersion = Hashing.crc32c().hashString(joiner.toString(), StandardCharsets.UTF_8).toString();
-
         if (Objects.equals(listVersion, version)) {
             return ResponseEntity.noContent().header("X-BTN-ContentVersion", listVersion).build();
         }

@@ -6,9 +6,11 @@ import com.ghostchu.btn.sparkle.entity.Rule;
 import com.ghostchu.btn.sparkle.mapper.RuleMapper;
 import com.ghostchu.btn.sparkle.service.IRuleService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -27,4 +29,11 @@ public class RuleServiceImpl extends ServiceImpl<RuleMapper, Rule> implements IR
                 .eq("type", type));
     }
 
+    @Nullable
+    public String getIpDenyList() {
+        return this.baseMapper.selectList(new QueryWrapper<Rule>()
+                        .eq("type", "ip_denylist"))
+                .stream().map(rule -> "# [Sparkle3 手动规则] " + rule.getCategory() + "\n" + rule.getContent())
+                .collect(Collectors.joining("\n"));
+    }
 }
