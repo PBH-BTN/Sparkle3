@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ import java.net.InetAddress;
 public class PingHeartbeatController extends BasePingController {
     @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
     private boolean powCaptcha;
+
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
 
@@ -41,6 +43,8 @@ public class PingHeartbeatController extends BasePingController {
         heartbeatService.onHeartBeat(userapp.getId(), InetAddress.ofLiteral(request.getRemoteAddr()));
         return ResponseEntity.status(200).build();
     }
+
+
 
     @AllArgsConstructor
     @NoArgsConstructor
