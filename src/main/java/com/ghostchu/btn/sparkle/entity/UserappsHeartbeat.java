@@ -32,7 +32,7 @@ public class UserappsHeartbeat implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.INPUT)
     private Long id;
 
     @TableField("userapp_id")

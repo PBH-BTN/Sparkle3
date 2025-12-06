@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 
 /**
@@ -31,24 +33,25 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
 
     @Transactional
     @Override
-    public void onHeartBeat(long userAppId, @NotNull InetAddress ip){
+    public void onHeartBeat(long userAppId, @NotNull InetAddress ip) {
         var changes = this.baseMapper.upsert(new UserappsHeartbeat()
+                .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress(), StandardCharsets.UTF_8).asLong())
                 .setUserappId(userAppId)
                 .setIp(ip)
                 .setFirstSeenAt(OffsetDateTime.now())
                 .setLastSeenAt(OffsetDateTime.now()));
-        if(changes <= 0){
+        if (changes <= 0) {
             log.warn("Failed to upsert heartbeat for userAppId: {}, {}", userAppId, ip);
         }
     }
 
     @Scheduled(cron = "${sparkle.ping.heartbeat.cleanup-cron}")
     @Transactional
-    public void deleteOldData(){
-       var deleted = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
+    public void deleteOldData() {
+        var deleted = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
                 .le("last_seen_at", OffsetDateTime.now().minusSeconds(deleteBefore / 1000)));
-       if(deleted > 0) {
-           log.info("Deleted {} expired heartbeats", deleted);
-       }
+        if (deleted > 0) {
+            log.info("Deleted {} expired heartbeats", deleted);
+        }
     }
 }
