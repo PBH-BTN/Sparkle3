@@ -35,15 +35,21 @@ public class PingHeartbeatController extends BasePingController {
 
     @PostMapping("/ping/heartbeat")
     @Transactional
-    public ResponseEntity<@NotNull String> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+    public ResponseEntity<@NotNull ServerResponse> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         if (powCaptcha) {
             validatePowCaptcha();
         }
         Userapp userapp = verifyUserApplication();
         heartbeatService.onHeartBeat(userapp.getId(), InetAddress.ofLiteral(request.getRemoteAddr()));
-        return ResponseEntity.status(200).build();
+        return ResponseEntity.ok(new ServerResponse(request.getRemoteAddr()));
     }
 
+    @AllArgsConstructor
+    @Data
+    public static class ServerResponse {
+        @JsonProperty("external_ip")
+        private String externalIp;
+    }
 
 
     @AllArgsConstructor
