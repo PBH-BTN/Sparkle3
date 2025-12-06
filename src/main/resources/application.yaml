@@ -132,6 +132,7 @@ sparkle:
       swarms-counting-duration: 604800000
       traffic-measure-duration: 604800000
       torrents-counting-duration: 604800000
+      heartbeat-query-duration: 604800000
   github-sync:
     schedule: "0 /30 * * * *"
     personal-access-token: sometoken

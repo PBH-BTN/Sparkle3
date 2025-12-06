@@ -2,15 +2,10 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
-import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
-import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
-import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
-import com.ghostchu.btn.sparkle.service.IBanHistoryService;
-import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
-import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.*;
 import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
 import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
+import com.ghostchu.btn.sparkle.util.TimeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,10 +17,7 @@ import org.springframework.stereotype.Service;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class QueryIpServiceImpl {
@@ -37,6 +29,8 @@ public class QueryIpServiceImpl {
     private long bansCountingDuration;
     @Value("${sparkle.query.query-ip.swarms-counting-duration}")
     private long swarmsCountingDuration;
+    @Value("${sparkle.query.query-ip.heartbeat-query-duration}")
+    private long heartbeatDuration;
     @Value("${sparkle.ping.sync-swarm.interval}")
     private long syncSwarmIntervalForConcurrentDownload;
     @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
@@ -51,11 +45,18 @@ public class QueryIpServiceImpl {
     private ITorrentService torrentService;
     @Autowired
     private ISwarmTrackerService swarmTrackerService;
+    @Autowired
+    private IUserappsHeartbeatService userappsHeartbeatService;
+    @Autowired
+    private IUserappService userappService;
+    @Autowired
+    private IUserService userService;
+    ;
 
     public @NotNull IpQueryResult queryIp(@NotNull InetAddress peerIp) {
         IpQueryResult result = new IpQueryResult();
         result.setColor("gray");
-        result.setLabels(List.of("Test1", "Test2", "Test3"));
+        result.setLabels(new ArrayList<>());
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minusSeconds(bansCountingDuration / 1000),
                 peerIp,
@@ -96,6 +97,19 @@ public class QueryIpServiceImpl {
         distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
         distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
         result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
+
+        var heartbeats = userappsHeartbeatService.fetchIpHeartbeatRecords(peerIp, Timestamp.from(OffsetDateTime.now().minusSeconds(heartbeatDuration).toInstant()));
+        if (!heartbeats.isEmpty()) {
+            var firstResult = heartbeats.getFirst();
+            var btnUserApp = userappService.getById(firstResult.getUserappId());
+            if (btnUserApp != null) {
+                var btnUser = userService.getById(btnUserApp.getOwner());
+                if (btnUser != null) {
+                    result.getLabels().add("[BTN用户] " + btnUser.getNickname() + "(ID=" + btnUser.getId() + ") / " + TimeConverter.INSTANCE.formatTime(firstResult.getLastSeenAt(), "UTC") +" (UTC)");
+                }
+            }
+        }
+
         return result;
     }
 

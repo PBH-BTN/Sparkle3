@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -19,6 +20,8 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface IUserappsHeartbeatService extends IService<UserappsHeartbeat> {
+
+    @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(InetAddress ip, Timestamp after);
 
     @Transactional
     void onHeartBeat(long userAppId, @NotNull InetAddress ip);
