@@ -1,413 +1,422 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP 查询</title>
-    <script>
-        (function() {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark-mode');
-            }
-        })();
-    </script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IP 查询 - Sparkle (花火)</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+          integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/d1dcdaf5b7.js" crossorigin="anonymous"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-7ymO4nGrkm372HoSbq1OY2DP4pEZnMiA+E0F3zPr+JQQtQ82gQ1HPY3QIVtztVua"
+            crossorigin="anonymous"></script>
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* Light mode */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #333;
-            background: #fff;
-            padding: 16px;
-        }
-
-        /* Dark mode support */
-        .dark-mode body {
-            color: #f0f0f0 !important;
-            background: #1a1a1a !important;
-        }
-
-        .dark-mode .section {
-            background: #252525 !important;
-            border-color: #3a3a3a !important;
-        }
-
-        .dark-mode .label-badge {
-            background: #3a3a3a !important;
-            color: #f0f0f0 !important;
-        }
-
-        .dark-mode table {
-            border-color: #3a3a3a !important;
-        }
-
-        .dark-mode th {
-            background: #2a2a2a !important;
-            border-color: #3a3a3a !important;
-            color: #f0f0f0 !important;
-        }
-
-        .dark-mode td {
-            border-color: #3a3a3a !important;
-            color: #e8e8e8 !important;
-        }
-
-        .dark-mode tr:hover {
-            background: #2f2f2f !important;
-        }
-
-        .dark-mode .stat-item {
-            background: #2a2a2a !important;
-            border-color: #3a3a3a !important;
-        }
-
-        .dark-mode .value {
-            color: #e8e8e8 !important;
-        }
-
-        .dark-mode .empty-state {
-            color: #888 !important;
-        }
-
-        .dark-mode .timestamp {
-            color: #d0d0d0 !important;
-        }
-
-        .dark-mode .traffic {
-            color: #e8e8e8 !important;
-        }
-
-        .dark-mode .section-title {
-            color: #ffffff !important;
-        }
-
-        .dark-mode .section-subtitle {
-            color: #aaa !important;
-        }
-
-        .dark-mode .stat-label {
-            color: #aaa !important;
-        }
-
-        .dark-mode .stat-value {
-            color: #ffffff !important;
-        }
-
-        .container {
-            max-width: 100%;
-        }
-
-        .header {
-            margin-bottom: 20px;
-        }
-
-        .ip-address {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .labels {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
-
-        .label-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            font-size: 12px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            color: #212529;
         }
 
         .color-indicator {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             vertical-align: middle;
-            margin-right: 6px;
-        }
-
-        .section {
-            margin-bottom: 20px;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background: #fafafa;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        .section-subtitle {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 12px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .stat-item {
-            padding: 10px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            background: #ffffff;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th, td {
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #e0e0e0;
-        }
-
-        th {
-            background: #f5f5f5;
-            font-weight: 600;
-        }
-
-        tr:hover {
-            background: #f9f9f9;
+            margin-right: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .timestamp {
             font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-size: 0.85rem;
         }
 
-        .traffic {
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+            border-radius: 0.25rem;
+        }
+
+        /* 优化表格样式 */
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table td,
+        .table th {
+            padding: 1rem 0.75rem !important;
+            vertical-align: middle;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .table thead th {
+            font-weight: 600;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .table tbody tr {
+            border-bottom: 1px solid #dee2e6;
+            transition: background-color 0.15s ease;
+        }
+
+        .table td small {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        /* 让描述列自适应并自动换行 */
+        .table td {
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        /* 短文本截断样式 */
+        .text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
         }
 
+        /* 固定列不换行 */
+        .table td.timestamp,
+        .table td.text-nowrap {
+            white-space: nowrap;
+        }
+
+        .stat-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
         .empty-state {
+            padding: 40px;
             text-align: center;
-            padding: 20px;
-            color: #999;
-            font-style: italic;
+            color: #6c757d;
         }
 
-        .detail-grid {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 8px 12px;
-            font-size: 12px;
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
         }
 
-        .label {
-            font-weight: 600;
-            color: #666;
-        }
-
+        /* Dark mode support */
         @media (prefers-color-scheme: dark) {
-            .label {
-                color: #999;
+            body {
+                background-color: #1a1a1a;
+                color: #e8e8e8;
             }
-        }
 
-        .value {
-            color: #333;
-            word-break: break-all;
-        }
+            .card {
+                background-color: #2d2d2d;
+                border-color: #404040;
+                color: #e8e8e8;
+            }
 
-        .scrollable {
-            max-height: 400px;
-            overflow-y: auto;
-        }
+            .card-header {
+                border-bottom-color: #404040;
+            }
 
-        footer {
-            margin-top: 40px;
-            padding: 12px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-        }
+            .card-body {
+                color: #e8e8e8;
+            }
 
-        .dark-mode footer {
-            color: #999 !important;
+            .stat-card.bg-light {
+                background-color: #252525 !important;
+                border-color: #404040 !important;
+            }
+
+            .stat-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            }
+
+            .text-muted {
+                color: #aaa !important;
+            }
+
+            .table {
+                color: #e8e8e8;
+                border-color: #404040;
+            }
+
+            .table thead th {
+                background-color: #252525;
+                border-color: #404040;
+                color: #fff;
+                box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+            }
+
+            .table td {
+                border-color: #404040;
+            }
+
+            .table-hover tbody tr:hover {
+                background-color: #353535;
+                color: #fff;
+            }
+
+            .table tbody tr {
+                background-color: #2d2d2d;
+                border-bottom-color: #404040;
+            }
+
+            .badge-secondary {
+                background-color: #495057;
+                color: #e8e8e8;
+            }
+
+            .empty-state {
+                color: #888;
+            }
+
+            h2, h3, h4, h5, h6 {
+                color: #e8e8e8;
+            }
+
+            /* 保持卡片头部颜色在暗色模式下清晰 */
+            .card-header.bg-danger {
+                background-color: #c82333 !important;
+            }
+
+            .card-header.bg-info {
+                background-color: #138496 !important;
+            }
+
+            .card-header.bg-success {
+                background-color: #218838 !important;
+            }
+
+            .card-header.bg-primary {
+                background-color: #0062cc !important;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <div class="ip-address">
-            <span class="color-indicator" th:style="'background-color: ' + ${result.color}"></span>
-            <span th:text="${ip}">IP Address</span>
-        </div>
-        <div class="labels" th:if="${result.labels != null && !result.labels.isEmpty()}">
-            <span class="label-badge" th:each="label : ${result.labels}" th:text="${label}"></span>
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="mb-3">
+                <span class="color-indicator" th:style="'background-color: ' + ${result.color}"></span>
+                <span th:text="${ip}">IP Address</span>
+            </h2>
+            <div th:if="${result.labels != null && !result.labels.isEmpty()}">
+                <span class="badge badge-secondary mr-1 mb-1" th:each="label : ${result.labels}" th:text="${label}"></span>
+            </div>
         </div>
     </div>
 
     <!-- Bans Section -->
-    <div class="section" th:if="${result.bans != null}">
-        <div class="section-title">封禁历史</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.bans.duration)}"></div>
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-label">总封禁次数</div>
-                <div class="stat-value" th:text="${result.bans.total}">0</div>
+    <div class="card shadow-sm mb-4" th:if="${result.bans != null}">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="fas fa-ban mr-2"></i>封禁历史</h5>
+            <small th:text="'最近 ' + ${timeConverter.formatDuration(result.bans.duration)}"></small>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2">总封禁次数</h6>
+                            <h3 class="mb-0 text-danger" th:text="${result.bans.total}">0</h3>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="scrollable" th:if="${result.bans.records != null && !result.bans.records.isEmpty()}">
-            <table>
-                <thead>
-                <tr>
-                    <th>时间</th>
-                    <th>种子</th>
-                    <th>端口</th>
-                    <th>客户端</th>
-                    <th>进度</th>
-                    <th>流量 (↑/↓)</th>
-                    <th>模块</th>
-                    <th>规则</th>
-                    <th>描述</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="ban : ${result.bans.records}">
-                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(ban.populateTime), 'yyyy-MM-dd HH:mm:ss')}"></td>
-                    <td th:text="${ban.torrent}"></td>
-                    <td th:text="${ban.peerPort}"></td>
-                    <td th:text="${ban.peerClientName}"></td>
-                    <td th:text="${ban.peerProgress != null ? #numbers.formatPercent(ban.peerProgress, 1, 2) : 'N/A'}"></td>
-                    <td class="traffic" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.fromPeerTraffic)}"></td>
-                    <td th:text="${ban.moduleName != null && ban.moduleName.startsWith('com.ghostchu.peerbanhelper.module.impl.rule.') ? ban.moduleName.substring('com.ghostchu.peerbanhelper.module.impl.rule.'.length()) : ban.moduleName}"></td>
-                    <td th:text="${ban.rule}"></td>
-                    <td th:text="${ban.description}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="empty-state" th:if="${result.bans.records == null || result.bans.records.isEmpty()}">
-            未找到封禁记录
+            <div th:if="${result.bans.records != null && !result.bans.records.isEmpty()}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="thead-light">
+                        <tr>
+                            <th style="min-width: 140px;">时间</th>
+                            <th style="min-width: 100px;">种子</th>
+                            <th style="min-width: 60px;">端口</th>
+                            <th style="min-width: 100px;">客户端</th>
+                            <th style="min-width: 70px;">进度</th>
+                            <th style="min-width: 120px;">流量 (↑/↓)</th>
+                            <th style="min-width: 150px;">模块</th>
+                            <th style="min-width: 100px;">规则</th>
+                            <th style="min-width: 200px;">描述</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="ban : ${result.bans.records}">
+                            <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(ban.populateTime), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                            <td><span class="text-truncate d-inline-block" style="max-width: 120px;" th:text="${ban.torrent}" th:title="${ban.torrent}"></span></td>
+                            <td th:text="${ban.peerPort}"></td>
+                            <td th:text="${ban.peerClientName}"></td>
+                            <td th:text="${ban.peerProgress != null ? #numbers.formatPercent(ban.peerProgress, 1, 2) : 'N/A'}"></td>
+                            <td class="text-nowrap"><small th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(ban.fromPeerTraffic)}"></small></td>
+                            <td><small th:text="${ban.moduleName != null && ban.moduleName.startsWith('com.ghostchu.peerbanhelper.module.impl.rule.') ? ban.moduleName.substring('com.ghostchu.peerbanhelper.module.impl.rule.'.length()) : ban.moduleName}"></small></td>
+                            <td th:text="${ban.rule}"></td>
+                            <td th:text="${ban.description}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="empty-state" th:if="${result.bans.records == null || result.bans.records.isEmpty()}">
+                <i class="fas fa-inbox"></i>
+                <p class="mb-0">未找到封禁记录</p>
+            </div>
         </div>
     </div>
 
     <!-- Swarms Section -->
-    <div class="section" th:if="${result.swarms != null}">
-        <div class="section-title">种群活动</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.swarms.duration)}"></div>
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-label">总记录数</div>
-                <div class="stat-value" th:text="${result.swarms.total}">0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">并发下载数</div>
-                <div class="stat-value" th:text="${result.swarms.concurrentDownloadTorrentsCount}">0</div>
-            </div>
+    <div class="card shadow-sm mb-4" th:if="${result.swarms != null}">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-network-wired mr-2"></i>种群活动</h5>
+            <small th:text="'最近 ' + ${timeConverter.formatDuration(result.swarms.duration)}"></small>
         </div>
-        <div class="scrollable" th:if="${result.swarms.records != null && !result.swarms.records.isEmpty()}">
-            <table>
-                <thead>
-                <tr>
-                    <th>种子</th>
-                    <th>端口</th>
-                    <th>Peer ID</th>
-                    <th>客户端</th>
-                    <th>Peer 进度</th>
-                    <th>用户进度</th>
-                    <th>流量 (↑/↓)</th>
-                    <th>偏移量 (↑/↓)</th>
-                    <th>标志</th>
-                    <th>首次发现</th>
-                    <th>最后发现</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="swarm : ${result.swarms.records}">
-                    <td th:text="${swarm.torrent}"></td>
-                    <td th:text="${swarm.peerPort}"></td>
-                    <td th:text="${swarm.peerId}"></td>
-                    <td th:text="${swarm.peerClientName}"></td>
-                    <td th:text="${swarm.peerProgress != null ? #numbers.formatPercent(swarm.peerProgress, 1, 2) : 'N/A'}"></td>
-                    <td th:text="${#numbers.formatPercent(swarm.userProgress, 1, 2)}"></td>
-                    <td class="traffic" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTraffic)}"></td>
-                    <td class="traffic" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTrafficOffset) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTrafficOffset)}"></td>
-                    <td th:text="${swarm.flags}"></td>
-                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.firstTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
-                    <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.lastTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="empty-state" th:if="${result.swarms.records == null || result.swarms.records.isEmpty()}">
-            未找到种群记录
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2">总记录数</h6>
+                            <h3 class="mb-0 text-info" th:text="${result.swarms.total}">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2">并发下载数</h6>
+                            <h3 class="mb-0 text-info" th:text="${result.swarms.concurrentDownloadTorrentsCount}">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div th:if="${result.swarms.records != null && !result.swarms.records.isEmpty()}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="thead-light">
+                        <tr>
+                            <th style="min-width: 100px;">种子</th>
+                            <th style="min-width: 60px;">端口</th>
+                            <th style="min-width: 120px;">Peer ID</th>
+                            <th style="min-width: 100px;">客户端</th>
+                            <th style="min-width: 80px;">Peer 进度</th>
+                            <th style="min-width: 80px;">用户进度</th>
+                            <th style="min-width: 120px;">流量 (↑/↓)</th>
+                            <th style="min-width: 130px;">偏移量 (↑/↓)</th>
+                            <th style="min-width: 80px;">标志</th>
+                            <th style="min-width: 140px;">首次发现</th>
+                            <th style="min-width: 140px;">最后发现</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="swarm : ${result.swarms.records}">
+                            <td><span class="text-truncate d-inline-block" style="max-width: 120px;" th:text="${swarm.torrent}" th:title="${swarm.torrent}"></span></td>
+                            <td th:text="${swarm.peerPort}"></td>
+                            <td><small th:text="${swarm.peerId}"></small></td>
+                            <td th:text="${swarm.peerClientName}"></td>
+                            <td th:text="${swarm.peerProgress != null ? #numbers.formatPercent(swarm.peerProgress, 1, 2) : 'N/A'}"></td>
+                            <td th:text="${#numbers.formatPercent(swarm.userProgress, 1, 2)}"></td>
+                            <td class="text-nowrap"><small th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTraffic)}"></small></td>
+                            <td class="text-nowrap"><small th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTrafficOffset) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTrafficOffset)}"></small></td>
+                            <td th:text="${swarm.flags}"></td>
+                            <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.firstTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                            <td class="timestamp" th:text="${#temporals.format(T(java.time.Instant).ofEpochMilli(swarm.lastTimeSeen), 'yyyy-MM-dd HH:mm:ss')}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="empty-state" th:if="${result.swarms.records == null || result.swarms.records.isEmpty()}">
+                <i class="fas fa-inbox"></i>
+                <p class="mb-0">未找到种群记录</p>
+            </div>
         </div>
     </div>
 
     <!-- Traffic Section -->
-    <div class="section" th:if="${result.traffic != null}">
-        <div class="section-title">流量统计</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.traffic.duration)}"></div>
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-label">上传量 (到 Peer)</div>
-                <div class="stat-value" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(result.traffic.toPeerTraffic)}">0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">下载量 (从 Peer)</div>
-                <div class="stat-value" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(result.traffic.fromPeerTraffic)}">0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">分享率</div>
-                <div class="stat-value" th:text="${#numbers.formatDecimal(result.traffic.shareRatio, 1, 2)}">0.00</div>
+    <div class="card shadow-sm mb-4" th:if="${result.traffic != null}">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-exchange-alt mr-2"></i>流量统计</h5>
+            <small th:text="'最近 ' + ${timeConverter.formatDuration(result.traffic.duration)}"></small>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2"><i class="fas fa-arrow-up"></i> 上传量</h6>
+                            <h4 class="mb-0 text-success" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(result.traffic.toPeerTraffic)}">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2"><i class="fas fa-arrow-down"></i> 下载量</h6>
+                            <h4 class="mb-0 text-success" th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(result.traffic.fromPeerTraffic)}">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2"><i class="fas fa-percentage"></i> 分享率</h6>
+                            <h4 class="mb-0 text-success" th:text="${#numbers.formatDecimal(result.traffic.shareRatio, 1, 2)}">0.00</h4>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Torrents Section -->
-    <div class="section" th:if="${result.torrents != null}">
-        <div class="section-title">种子统计</div>
-        <div class="section-subtitle" th:text="'最近 ' + ${timeConverter.formatDuration(result.torrents.duration)}"></div>
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-label">访问过的唯一种子数</div>
-                <div class="stat-value" th:text="${result.torrents.count}">0</div>
+    <div class="card shadow-sm mb-4" th:if="${result.torrents != null}">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-download mr-2"></i>种子统计</h5>
+            <small th:text="'最近 ' + ${timeConverter.formatDuration(result.torrents.duration)}"></small>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted text-uppercase mb-2">唯一种子数</h6>
+                            <h3 class="mb-0 text-primary" th:text="${result.torrents.count}">0</h3>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <footer>
-        Powered by BTN-3.0 (Test Server), Made with ❤
-    </footer>
+    <!-- Footer -->
+    <div class="text-center text-muted mt-5">
+        <small>Powered by BTN-3.0 (Test Server) · Made with <i class="fas fa-heart text-danger"></i></small>
+    </div>
 </div>
 </body>
 </html>
