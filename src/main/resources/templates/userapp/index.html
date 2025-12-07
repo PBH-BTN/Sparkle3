@@ -5,7 +5,7 @@
 <nav th:replace="~{components/common::navbar}"></nav>
 
 <header class="spk-page-header">
-    <div class="spk-container spk-container--fluid spk-page-header__inner">
+    <div class="spk-container spk-page-header__inner">
         <h1 class="spk-page-header__title">
             <i class="fas fa-cog"></i> 用户应用管理
         </h1>
@@ -16,7 +16,7 @@
 </header>
 
 <main class="spk-main" style="padding-top: 0;">
-    <div class="spk-container spk-container--fluid">
+    <div class="spk-container">
         <!-- Table Card -->
         <div class="spk-table-wrapper" th:if="${userapps != null && !userapps.isEmpty()}">
             <table class="spk-table">
@@ -25,7 +25,7 @@
                     <th>ID</th>
                     <th>AppId</th>
                     <th>备注</th>
-                    <th>创建时间</th>
+<!--                    <th>创建时间</th>-->
                     <th>最近访问</th>
                     <th>状态</th>
                     <th>操作</th>
@@ -36,9 +36,9 @@
                     <td th:text="${app.getId()}">1</td>
                     <td><code class="spk-code" th:text="${app.getAppId()}">000000000000000</code></td>
                     <td th:text="${app.getComment()}">测试</td>
-                    <td class="spk-timestamp" th:text="${app.getCreatedAt() != null ? #temporals.format(app.getCreatedAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">
-                        2025-01-01 00:00:00
-                    </td>
+<!--                    <td class="spk-timestamp" th:text="${app.getCreatedAt() != null ? #temporals.format(app.getCreatedAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">-->
+<!--                        2025-01-01 00:00:00-->
+<!--                    </td>-->
                     <td class="spk-timestamp">N/A</td>
                     <td>
                         <span class="spk-badge spk-badge--success" th:if="${app.getBannedAt() == null}">
