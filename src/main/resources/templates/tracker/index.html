@@ -4,15 +4,16 @@
 <body class="spk-body">
 <nav th:replace="~{components/common::navbar}"></nav>
 
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fas fa-satellite-dish"></i> 公共 Tracker 服务
+        </h1>
+    </div>
+</header>
+
 <main class="spk-main">
     <div class="spk-container">
-        <!-- Page Title -->
-        <section class="spk-page-header">
-            <h1 class="spk-page-header__title">
-                <i class="fas fa-satellite-dish"></i> 公共 Tracker 服务
-            </h1>
-            <p class="spk-page-header__subtitle">高性能的 BitTorrent Tracker 服务</p>
-        </section>
 
         <!-- Tracker URL Card -->
         <section class="spk-mt-4">
@@ -41,20 +42,17 @@
         <section class="spk-mt-4">
             <div class="spk-card">
                 <div class="spk-card__header">
-                    <h3 class="spk-card__title"><i class="fas fa-info-circle"></i> 服务介绍</h3>
+                    <h3 class="spk-card__title"><i class="fas fa-info-circle"></i> 介绍</h3>
                 </div>
                 <div class="spk-card__body">
                     <p class="spk-text-secondary">
-                        我们提供的公共 Tracker 服务基于高性能架构构建，旨在为 BitTorrent 网络提供稳定可靠的节点发现服务。
-                        该服务支持 HTTP/HTTPS 协议，具备高并发处理能力，可以满足大规模种子文件的跟踪需求。
+                        TODO
                     </p>
                     <p class="spk-text-secondary spk-mb-0">
                         <strong>主要特性：</strong>
                     </p>
                     <ul class="spk-text-secondary">
-                        <li>高可用性保障，99.9% 的服务在线时间</li>
                         <li>支持 IPv4 和 IPv6 双栈网络</li>
-                        <li>低延迟响应，全球 CDN 加速</li>
                         <li>完全开放，无需注册或认证</li>
                         <li>遵循 BEP 标准协议</li>
                     </ul>
@@ -78,12 +76,12 @@
         <section class="spk-mt-4" th:if="${trackerDashboardUrl != null}">
             <div class="spk-card">
                 <div class="spk-card__header">
-                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> 网络架构图</h3>
+                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> Dashboard</h3>
                 </div>
                 <div class="spk-card__body">
                     <div class="spk-tracker-diagram">
-                        <img th:src="${trackerDashboardUrl}" 
-                             alt="Tracker Network Architecture" 
+                        <img th:src="${trackerDashboardUrl}"
+                             alt="Tracker Dashboard"
                              class="spk-tracker-diagram__image">
                     </div>
                 </div>
@@ -95,53 +93,53 @@
 <div th:replace="~{components/common::footer}"></div>
 
 <script>
-function copyTrackerUrl() {
-    const valueElement = document.querySelector('.spk-credential__value[data-url]');
-    const url = valueElement ? valueElement.getAttribute('data-url') : '';
-    const btn = document.getElementById('copyBtn');
-    
-    // 使用 Clipboard API 复制
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(() => {
+    function copyTrackerUrl() {
+        const valueElement = document.querySelector('.spk-credential__value[data-url]');
+        const url = valueElement ? valueElement.getAttribute('data-url') : '';
+        const btn = document.getElementById('copyBtn');
+
+        // 使用 Clipboard API 复制
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                btn.classList.add('spk-credential__copy--copied');
+
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                    btn.classList.remove('spk-credential__copy--copied');
+                }, 2000);
+            }).catch(() => {
+                fallbackCopy(url, btn);
+            });
+        } else {
+            fallbackCopy(url, btn);
+        }
+    }
+
+    function fallbackCopy(text, btn) {
+        // 降级方案：创建临时文本框
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            document.execCommand('copy');
             btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
             btn.classList.add('spk-credential__copy--copied');
-            
+
             setTimeout(() => {
                 btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
                 btn.classList.remove('spk-credential__copy--copied');
             }, 2000);
-        }).catch(() => {
-            fallbackCopy(url, btn);
-        });
-    } else {
-        fallbackCopy(url, btn);
-    }
-}
+        } catch (err) {
+            alert('复制失败，请手动复制');
+        }
 
-function fallbackCopy(text, btn) {
-    // 降级方案：创建临时文本框
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    
-    try {
-        document.execCommand('copy');
-        btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
-        btn.classList.add('spk-credential__copy--copied');
-        
-        setTimeout(() => {
-            btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
-            btn.classList.remove('spk-credential__copy--copied');
-        }, 2000);
-    } catch (err) {
-        alert('复制失败，请手动复制');
+        document.body.removeChild(textarea);
     }
-    
-    document.body.removeChild(textarea);
-}
 </script>
 </body>
 </html>

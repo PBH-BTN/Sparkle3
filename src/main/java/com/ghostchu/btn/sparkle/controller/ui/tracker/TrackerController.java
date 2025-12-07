@@ -34,7 +34,7 @@ public class TrackerController extends AbstractSparkleMVC {
     @GetMapping("/tracker")
     public String trackerIndex(Model model) {
         model.addAttribute("trackerDashboardUrl", rootUrl + "/tracker/dashboard");
-        model.addAttribute("announceUrl", rootUrl + announceEndpoint);
+        model.addAttribute("announceUrl", announceEndpoint);
         return "tracker/index";
     }
 }

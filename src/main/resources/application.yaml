@@ -151,4 +151,4 @@ sparkle:
     torrent-count-refresh-cron: "0 40 * * * *"
     tracker-dashboard-refresh-cron: "0 */10 * * * *"
     tracker-dashboard-image-retrieve: "https://grafana.ghostchu-services.top/render/public-dashboards/ed6c1383ac134a4e99b1efde6f377ebc"
-    tracker-dashboard-access-token: xxyyzz
+    tracker-dashboard-image-auth-token: xxyyzz
