@@ -20,12 +20,12 @@ public class UserViewController {
     public String profile(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails) {
         User user = userService.getById(userDetails.getUserId());
         UserRel userRel = userService.getUserRelByBindUserId(user.getId());
-        UserRelDto dto = null;
+        UserRelDto userRelDto = null;
         if(userRel != null) {
-            dto = new UserRelDto(userRel);
+            userRelDto = new UserRelDto(userRel);
         }
         model.addAttribute("user", new UserDto(user));
-        model.addAttribute("userRel", userRel);
+        model.addAttribute("userRel", userRelDto);
         model.addAttribute("userScoreBytesDisplay", "N/A");
         model.addAttribute("userScoreBytesRaw", -1);
         return "user/profile";
