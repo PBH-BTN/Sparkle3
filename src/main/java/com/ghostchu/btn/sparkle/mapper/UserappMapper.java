@@ -12,4 +12,5 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
  * @since 2025-11-29
  */
 public interface UserappMapper extends BaseMapper<Userapp> {
+    int updateUserAppLastSeen(long id);
 }

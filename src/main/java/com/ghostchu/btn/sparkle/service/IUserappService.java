@@ -32,4 +32,7 @@ public interface IUserappService extends IService<Userapp> {
 
     @Transactional
     @NotNull Userapp createUserAppForUser(Long userId, String comment, InetAddress creatorIp);
+
+    @Transactional
+    void updateUserAppLastSeen(long id);
 }

@@ -35,7 +35,8 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     @Nullable
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret) {
         Userapp loggedInUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
-        if(loggedInUserApp != null) {
+        if (loggedInUserApp != null) {
+            this.baseMapper.updateUserAppLastSeen(loggedInUserApp.getId());
             userAppsRedisTemplate.opsForValue().set("sparkle:userapps:lastaccess:" + loggedInUserApp.getId(), System.currentTimeMillis());
         }
         return loggedInUserApp;
@@ -88,5 +89,11 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
         if (baseMapper.insert(userapp) <= 0)
             throw new IllegalStateException("Failed to create userapp for user");
         return userapp;
+    }
+
+    @Transactional
+    @Override
+    public void updateUserAppLastSeen(long id) {
+        baseMapper.updateUserAppLastSeen(id);
     }
 }

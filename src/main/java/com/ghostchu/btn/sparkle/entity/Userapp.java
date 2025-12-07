@@ -67,4 +67,7 @@ public class Userapp implements Serializable {
 
     @TableField("create_ip")
     private InetAddress createIp;
+
+    @TableField("last_seen_at")
+    private OffsetDateTime lastSeenAt;
 }
