@@ -219,6 +219,88 @@ body.spk-body {
 }
 
 /* =====================================================
+   Grid System
+   ===================================================== */
+
+.spk-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 calc(-1 * var(--spk-spacing-sm));
+}
+
+.spk-col-1, .spk-col-2, .spk-col-3, .spk-col-4, 
+.spk-col-5, .spk-col-6, .spk-col-7, .spk-col-8, 
+.spk-col-9, .spk-col-10, .spk-col-11, .spk-col-12 {
+    padding: 0 var(--spk-spacing-sm);
+    box-sizing: border-box;
+}
+
+.spk-col-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+.spk-col-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+.spk-col-3 { flex: 0 0 25%; max-width: 25%; }
+.spk-col-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+.spk-col-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+.spk-col-6 { flex: 0 0 50%; max-width: 50%; }
+.spk-col-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+.spk-col-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+.spk-col-9 { flex: 0 0 75%; max-width: 75%; }
+.spk-col-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+.spk-col-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+.spk-col-12 { flex: 0 0 100%; max-width: 100%; }
+
+/* Responsive Grid */
+@media (max-width: 991px) {
+    .spk-col-3, .spk-col-4 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (max-width: 767px) {
+    .spk-col-1, .spk-col-2, .spk-col-3, .spk-col-4, 
+    .spk-col-5, .spk-col-6, .spk-col-7, .spk-col-8, 
+    .spk-col-9, .spk-col-10, .spk-col-11, .spk-col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: var(--spk-spacing-md);
+    }
+}
+
+/* =====================================================
+   Statistics Display
+   ===================================================== */
+
+.spk-stat {
+    background-color: var(--spk-bg-tertiary);
+    border-radius: var(--spk-radius-md);
+    padding: var(--spk-spacing-lg);
+    text-align: center;
+    transition: transform var(--spk-transition), box-shadow var(--spk-transition);
+    height: 100%;
+}
+
+.spk-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--spk-shadow-md);
+}
+
+.spk-stat__label {
+    font-size: var(--spk-font-size-sm);
+    font-weight: 600;
+    color: var(--spk-text-secondary);
+    margin-bottom: var(--spk-spacing-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.spk-stat__value {
+    font-size: var(--spk-font-size-3xl);
+    font-weight: 700;
+    color: var(--spk-primary-500);
+    line-height: 1.2;
+}
+
+/* =====================================================
    Navbar
    ===================================================== */
 

@@ -35,4 +35,7 @@
         WHERE peer_ip = #{peerIp}
           AND insert_time >= #{afterTimestamp};
     </select>
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM ban_history
+    </select>
 </mapper>

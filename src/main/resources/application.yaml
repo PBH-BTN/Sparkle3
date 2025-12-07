@@ -142,3 +142,8 @@ sparkle:
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
+  statistics:
+    ban-count-refresh-cron: "0 10 * * * *"
+    swarm-tracker-count-refresh-cron: "0 20 * * * *"
+    userapp-count-refresh-cron: "0 30 * * * *"
+    torrent-count-refresh-cron: "0 40 * * * *"

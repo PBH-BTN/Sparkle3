@@ -24,4 +24,6 @@ public interface BanHistoryMapper extends BaseMapper<BanHistory> {
     PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
 
     List<Long> selectPeerTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
+
+    long countAll();
 }

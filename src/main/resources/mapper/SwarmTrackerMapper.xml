@@ -54,4 +54,8 @@
         WHERE peer_ip = #{peerIp}
           AND last_time_seen >= #{afterTimestamp};
     </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM swarm_tracker
+    </select>
 </mapper>
