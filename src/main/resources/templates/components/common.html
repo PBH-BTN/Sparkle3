@@ -33,7 +33,6 @@
     <!-- Sparkle JS -->
     <script th:src="@{/js/sparkle.js}" defer></script>
 </head>
-
 <!-- Navbar Fragment -->
 <nav th:fragment="navbar" class="spk-navbar">
     <div class="spk-container spk-container--fluid spk-navbar__inner">
@@ -118,16 +117,6 @@
 <div th:fragment="alert-info(content)" class="spk-alert spk-alert--info">
     <span th:utext="${content}"></span>
 </div>
-
-<!-- Page Header Fragment -->
-<header th:fragment="page-header(title, icon)" class="spk-page-header">
-    <div class="spk-container spk-container--fluid spk-page-header__inner">
-        <h1 class="spk-page-header__title">
-            <i th:class="${icon}"></i>
-            <span th:text="${title}"></span>
-        </h1>
-    </div>
-</header>
 
 <!-- Empty State Fragment -->
 <div th:fragment="empty-state(icon, title, text)" class="spk-empty">

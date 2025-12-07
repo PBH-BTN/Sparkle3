@@ -84,6 +84,9 @@
     --spk-radius-lg: 12px;
     --spk-radius-full: 9999px;
 
+    /* Components */
+    --spk-navbar-height: 3.75rem;
+
     /* Typography */
     --spk-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --spk-font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
@@ -167,6 +170,7 @@
 html {
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
+    background-color: var(--spk-bg-primary);
 }
 
 body.spk-body {
@@ -177,6 +181,7 @@ body.spk-body {
     background-color: var(--spk-bg-secondary);
     margin: 0;
     padding: 0;
+    padding-top: var(--spk-navbar-height);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -221,9 +226,15 @@ body.spk-body {
     background-color: var(--spk-bg-primary);
     box-shadow: var(--spk-shadow-sm);
     padding: 0.75rem 0;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 1000;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1030;
+    height: var(--spk-navbar-height);
+    display: flex;
+    align-items: center;
 }
 
 .spk-navbar__inner {
@@ -497,6 +508,12 @@ body.spk-body {
     color: white;
     padding: var(--spk-spacing-xl) 0;
     margin-bottom: var(--spk-spacing-xl);
+}
+
+/* Fix for ghost header appearing at the top due to template fragment issue */
+body > header.spk-page-header:first-child,
+html > header.spk-page-header {
+    display: none !important;
 }
 
 .spk-page-header__inner {

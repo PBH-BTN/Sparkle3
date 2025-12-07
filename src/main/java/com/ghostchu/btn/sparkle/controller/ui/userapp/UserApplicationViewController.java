@@ -65,7 +65,7 @@ public class UserApplicationViewController {
         if (!Objects.equals(userApp.getOwner(), userDetails.getUserId()))
             throw new AccessDeniedException("Permission denied");
         userappService.deleteUserAppById(userApp.getId());
-        return "redirect:/userapp/";
+        return "redirect:/userapp";
     }
 
     @GetMapping("/userapp/create")
