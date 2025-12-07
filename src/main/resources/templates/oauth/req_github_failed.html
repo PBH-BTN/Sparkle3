@@ -1,17 +1,42 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <div th:replace="~{components/common::header}"></div>
-<body>
+<body class="spk-body">
 <div th:replace="~{components/common::navbar}"></div>
 
-<div class="container">
-    <h1>Github OAuth 登录过程失败</h1>
-    <p>Sparkle 在与 Github API 通信以验证您的身份时出现了错误。</p>
-    <h2>错误信息如下：</h2>
-    <p th:text="${error.getMessage()}"></p>
-    <p th:if="${error.isRetryable()}">这通常是一个暂时性的错误，您可以<a href="auth/oauth2/github/login">点击此处重试</a>
-    </p>
-</div>
+<main class="spk-main">
+    <div class="spk-container spk-container--narrow">
+        <div class="spk-card">
+            <div class="spk-card__header spk-card__header--danger">
+                <h1 class="spk-card__title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    GitHub OAuth 登录失败
+                </h1>
+            </div>
+            <div class="spk-card__body">
+                <p class="spk-mb-3">Sparkle 在与 GitHub API 通信以验证您的身份时出现了错误。</p>
+                
+                <div class="spk-alert spk-alert--danger spk-mb-3">
+                    <span class="spk-alert__title">错误信息：</span>
+                    <span th:text="${error.getMessage()}">未知错误</span>
+                </div>
+
+                <div class="spk-alert spk-alert--info" th:if="${error.isRetryable()}">
+                    <i class="fas fa-info-circle"></i>
+                    这通常是一个暂时性的错误，您可以
+                    <a class="spk-link" href="auth/oauth2/github/login">点击此处重试</a>
+                </div>
+
+                <div class="spk-mt-4">
+                    <a class="spk-btn spk-btn--primary" th:href="@{/}">
+                        <i class="fas fa-home"></i> 返回首页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
 <div th:replace="~{components/common::footer}"></div>
 </body>
 </html>

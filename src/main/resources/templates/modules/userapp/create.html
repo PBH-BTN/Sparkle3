@@ -1,21 +1,56 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <div th:replace="~{components/common::header}"></div>
-<body>
+<body class="spk-body">
 <div th:replace="~{components/common::navbar}"></div>
 
-<div class="container">
-    <h1>创建新的用户应用程序</h1>
-    <form th:action="@{/userapp/create}" method="post">
-        <div>
-            <label for="comment">名称: </label>
-            <input type="text" name="comment" id="comment" required/>
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fas fa-plus-circle"></i> 创建新的用户应用
+        </h1>
+    </div>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container spk-container--form">
+        <div class="spk-card">
+            <div class="spk-card__body">
+                <div class="spk-alert spk-alert--info spk-mb-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>提示：</strong>每个客户端都应创建独立的应用程序，请勿在多个客户端间共享凭据。
+                </div>
+
+                <form th:action="@{/userapp/create}" method="post">
+                    <div class="spk-form-group">
+                        <label for="comment" class="spk-label">
+                            <i class="fas fa-tag"></i> 应用名称
+                        </label>
+                        <input type="text"
+                               name="comment"
+                               id="comment"
+                               class="spk-input"
+                               placeholder="例如：我的 qBittorrent 客户端"
+                               required
+                               maxlength="100"/>
+                        <p class="spk-form-text">
+                            为您的应用起一个容易识别的名称，便于日后管理
+                        </p>
+                    </div>
+
+                    <div class="spk-flex spk-justify-between spk-mt-4">
+                        <a th:href="@{/userapp}" class="spk-btn spk-btn--secondary">
+                            <i class="fas fa-arrow-left"></i> 返回
+                        </a>
+                        <button type="submit" class="spk-btn spk-btn--primary">
+                            <i class="fas fa-check"></i> 创建应用
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div>
-            <input class="btn btn-primary" type="submit">
-        </div>
-    </form>
-</div>
+    </div>
+</main>
 
 <div th:replace="~{components/common::footer}"></div>
 </body>

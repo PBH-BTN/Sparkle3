@@ -1,20 +1,68 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <div th:replace="~{components/common::header}"></div>
-<body>
+<body class="spk-body">
 <div th:replace="~{components/common::navbar}"></div>
-<div class="container">
-    <h1>用户应用程序创建成功</h1>
-    <p>请妥善保存下面的凭据信息，这些信息只会显示一次！</p>
-    <p><b>请注意：每个客户端都必须创建一个单独的用户应用程序，复用 AppId 和 AppSecret 将可能导致您的 BTN 账号遭到封禁！</b>
-    </p>
-    <dl class="row">
-        <dt class="col-sm-3">AppId</dt>
-        <dd class="col-sm-9" th:text="${userapp.getAppId()}"></dd>
-        <dt class="col-sm-3">AppSecret</dt>
-        <dd class="col-sm-9" th:text="${userapp.getAppSecret()}"></dd>
-    </dl>
-</div>
+
+<header class="spk-success-header">
+    <i class="fas fa-check-circle spk-success-header__icon"></i>
+    <h1 class="spk-success-header__title">应用创建成功！</h1>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container spk-container--narrow">
+        <div class="spk-card">
+            <div class="spk-card__body">
+                <div class="spk-alert spk-alert--warning spk-mb-3">
+                    <div class="spk-flex spk-gap-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>重要提示：</strong>
+                            <p class="spk-mb-1">请妥善保存以下凭据信息，这些信息只会显示一次！</p>
+                            <p class="spk-mb-0"><strong>警告：</strong>每个客户端都必须创建一个单独的用户应用程序。复用 AppId 和 AppSecret 将可能导致您的 BTN 账号遭到封禁！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="spk-credential">
+                    <div class="spk-credential__label">
+                        <i class="fas fa-id-card"></i>
+                        应用ID (AppId)
+                    </div>
+                    <div class="spk-credential__value">
+                        <span id="appId" th:text="${userapp.getAppId()}">app-id-here</span>
+                        <button class="spk-credential__copy" data-copy="#appId">
+                            <i class="fas fa-copy"></i> 复制
+                        </button>
+                    </div>
+                </div>
+
+                <div class="spk-credential">
+                    <div class="spk-credential__label">
+                        <i class="fas fa-key"></i>
+                        应用密钥 (AppSecret)
+                    </div>
+                    <div class="spk-credential__value">
+                        <span id="appSecret" th:text="${userapp.getAppSecret()}">app-secret-here</span>
+                        <button class="spk-credential__copy" data-copy="#appSecret">
+                            <i class="fas fa-copy"></i> 复制
+                        </button>
+                    </div>
+                </div>
+
+                <div class="spk-flex spk-justify-center spk-gap-2 spk-mt-4 spk-flex-wrap">
+                    <a th:href="@{/userapp}" class="spk-btn spk-btn--primary spk-btn--lg">
+                        <i class="fas fa-list"></i> 返回应用列表
+                    </a>
+                    <a th:href="@{/userapp/create}" class="spk-btn spk-btn--outline spk-btn--lg">
+                        <i class="fas fa-plus"></i> 创建另一个应用
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
 <div th:replace="~{components/common::footer}"></div>
 </body>
 </html>

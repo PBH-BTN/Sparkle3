@@ -1,6 +1,9 @@
 spring:
   application:
     name: Sparkle3
+  web:
+    resources:
+      static-locations: "classpath:/static/,file:./static/"
   threads:
     virtual:
       enabled: true
