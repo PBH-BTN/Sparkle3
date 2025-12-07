@@ -50,8 +50,9 @@ public class UserApplicationViewController {
         }
         if (!Objects.equals(userApp.getOwner(), userDetails.getUserId()))
             throw new AccessDeniedException("Permission denied");
-        userappService.resetUserApplicationSecret(userApp.getId());
-        return "redirect:/userapp?resetSuccess=" + appId;
+        var resetUsrApp = userappService.resetUserApplicationSecret(userApp.getId());
+        model.addAttribute("userapp", resetUsrApp);
+        return "userapp/created";
     }
 
 
