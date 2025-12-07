@@ -46,15 +46,16 @@
                 </div>
                 <div class="spk-card__body">
                     <p class="spk-text-secondary">
-                        TODO
+                        PBH-BTN/Trunker 是基于 Go 的高性能 Tracker 服务，除提供基本 Tracker 功能外，还能够与 Sparkle BTN 集成以提供辅助数据支持。
                     </p>
                     <p class="spk-text-secondary spk-mb-0">
-                        <strong>主要特性：</strong>
+                        <strong>Trunker 支持下列功能和特性：</strong>
                     </p>
                     <ul class="spk-text-secondary">
-                        <li>支持 IPv4 和 IPv6 双栈网络</li>
+                        <li>IPv4 和 IPv6 双栈网络</li>
                         <li>完全开放，无需注册或认证</li>
-                        <li>遵循 BEP 标准协议</li>
+                        <li>支持 BEP-0003, BEP-0007, BEP-0023, BEP-0024, BEP-0031, BEP-0048, BEP-0015 标准规范</li>
+                        <li>支持 LibTorrent 扩展协议</li>
                     </ul>
                 </div>
             </div>
@@ -76,7 +77,7 @@
         <section class="spk-mt-4" th:if="${trackerDashboardUrl != null}">
             <div class="spk-card">
                 <div class="spk-card__header">
-                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> Dashboard</h3>
+                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> 统计数据</h3>
                 </div>
                 <div class="spk-card__body">
                     <div class="spk-tracker-diagram">

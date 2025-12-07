@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserRel;
@@ -7,6 +8,7 @@ import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,12 @@ import java.time.OffsetDateTime;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
     @Autowired
     private UserRelMapper userRelMapper;
+
+    @Override
+    public @Nullable UserRel getUserRelByBindUserId(long btnUserId) {
+        return userRelMapper.selectOne(new QueryWrapper<UserRel>()
+                .eq("bind_user_id", btnUserId));
+    }
 
     /**
      * 用户使用 Github 登录，自动注册或更新用户信息

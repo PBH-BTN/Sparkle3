@@ -1,7 +1,9 @@
 package com.ghostchu.btn.sparkle.controller.ui.user;
 
 import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserDto;
+import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +16,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class UserViewController {
     @Autowired
     private IUserService userService;
-
     @GetMapping({"/user", "/user/profile"})
     public String profile(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails) {
         User user = userService.getById(userDetails.getUserId());
+        UserRel userRel = userService.getUserRelByBindUserId(user.getId());
+        UserRelDto dto = null;
+        if(userRel != null) {
+            dto = new UserRelDto(userRel);
+        }
         model.addAttribute("user", new UserDto(user));
+        model.addAttribute("userRel", userRel);
         model.addAttribute("userScoreBytesDisplay", "N/A");
         model.addAttribute("userScoreBytesRaw", -1);
         return "user/profile";

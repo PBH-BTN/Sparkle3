@@ -65,6 +65,16 @@
                         </small>
                     </div>
                 </div>
+
+                <div class="spk-detail-row" th:if="${userRel != null}">
+                    <div class="spk-detail-label">
+                        <i class="fa-brands fa-github"></i>
+                        GitHub 关联账户
+                    </div>
+                    <div class="spk-detail-value">
+                        <a th:href='"https://github.com/" + ${userRel.getPlatformUserLogin()}' th:text="${userRel.getPlatformUserLogin()}">github-username</a> (UID: <span th:text="${userRel.getPlatformUserId()}">0000</span>)
+                    </div>
+                </div>
             </div>
         </div>
     </div>
