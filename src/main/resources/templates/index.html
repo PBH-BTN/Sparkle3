@@ -79,14 +79,14 @@
                     <div class="spk-row">
                         <div class="spk-col-3">
                             <div class="spk-stat">
-                                <div class="spk-stat__label">全时</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_alltime != null ? #numbers.formatInteger(stats_swarmtracker_alltime, 0, 'COMMA') : '0'}">0</div>
+                                <div class="spk-stat__label">30天</div>
+                                <div class="spk-stat__value" th:text="${stats_swarmtracker_30days != null ? #numbers.formatInteger(stats_swarmtracker_30days, 0, 'COMMA') : '0'}">0</div>
                             </div>
                         </div>
                         <div class="spk-col-3">
                             <div class="spk-stat">
-                                <div class="spk-stat__label">30天</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_30days != null ? #numbers.formatInteger(stats_swarmtracker_30days, 0, 'COMMA') : '0'}">0</div>
+                                <div class="spk-stat__label">14天</div>
+                                <div class="spk-stat__value" th:text="${stats_swarmtracker_14days != null ? #numbers.formatInteger(stats_swarmtracker_14days, 0, 'COMMA') : '0'}">0</div>
                             </div>
                         </div>
                         <div class="spk-col-3">

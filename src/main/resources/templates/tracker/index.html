@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{components/common::header}"></head>
+<body class="spk-body">
+<nav th:replace="~{components/common::navbar}"></nav>
+
+<main class="spk-main">
+    <div class="spk-container">
+        <!-- Page Title -->
+        <section class="spk-page-header">
+            <h1 class="spk-page-header__title">
+                <i class="fas fa-satellite-dish"></i> 公共 Tracker 服务
+            </h1>
+            <p class="spk-page-header__subtitle">高性能的 BitTorrent Tracker 服务</p>
+        </section>
+
+        <!-- Tracker URL Card -->
+        <section class="spk-mt-4">
+            <div class="spk-card">
+                <div class="spk-card__header">
+                    <h3 class="spk-card__title"><i class="fas fa-link"></i> Tracker 地址</h3>
+                </div>
+                <div class="spk-card__body">
+                    <div class="spk-credential">
+                        <div class="spk-credential__label">
+                            <i class="fas fa-server"></i>
+                            Announce URL
+                        </div>
+                        <div class="spk-credential__value" th:attr="data-url=${announceUrl}">
+                            <span th:text="${announceUrl}">https://tracker.ghostchu-services.top/announce</span>
+                            <button class="spk-credential__copy" onclick="copyTrackerUrl()" id="copyBtn">
+                                <i class="fas fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Introduction Section -->
+        <section class="spk-mt-4">
+            <div class="spk-card">
+                <div class="spk-card__header">
+                    <h3 class="spk-card__title"><i class="fas fa-info-circle"></i> 服务介绍</h3>
+                </div>
+                <div class="spk-card__body">
+                    <p class="spk-text-secondary">
+                        我们提供的公共 Tracker 服务基于高性能架构构建，旨在为 BitTorrent 网络提供稳定可靠的节点发现服务。
+                        该服务支持 HTTP/HTTPS 协议，具备高并发处理能力，可以满足大规模种子文件的跟踪需求。
+                    </p>
+                    <p class="spk-text-secondary spk-mb-0">
+                        <strong>主要特性：</strong>
+                    </p>
+                    <ul class="spk-text-secondary">
+                        <li>高可用性保障，99.9% 的服务在线时间</li>
+                        <li>支持 IPv4 和 IPv6 双栈网络</li>
+                        <li>低延迟响应，全球 CDN 加速</li>
+                        <li>完全开放，无需注册或认证</li>
+                        <li>遵循 BEP 标准协议</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Placeholder Section -->
+        <section class="spk-mt-4">
+            <div class="spk-card">
+                <div class="spk-card__body spk-text-center">
+                    <div class="spk-empty">
+                        <i class="fas fa-box-open spk-empty__icon"></i>
+                        <p class="spk-empty__text">更多功能正在开发中，敬请期待...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Network Diagram Section -->
+        <section class="spk-mt-4" th:if="${trackerDashboardUrl != null}">
+            <div class="spk-card">
+                <div class="spk-card__header">
+                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> 网络架构图</h3>
+                </div>
+                <div class="spk-card__body">
+                    <div class="spk-tracker-diagram">
+                        <img th:src="${trackerDashboardUrl}" 
+                             alt="Tracker Network Architecture" 
+                             class="spk-tracker-diagram__image">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<div th:replace="~{components/common::footer}"></div>
+
+<script>
+function copyTrackerUrl() {
+    const valueElement = document.querySelector('.spk-credential__value[data-url]');
+    const url = valueElement ? valueElement.getAttribute('data-url') : '';
+    const btn = document.getElementById('copyBtn');
+    
+    // 使用 Clipboard API 复制
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+            btn.classList.add('spk-credential__copy--copied');
+            
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                btn.classList.remove('spk-credential__copy--copied');
+            }, 2000);
+        }).catch(() => {
+            fallbackCopy(url, btn);
+        });
+    } else {
+        fallbackCopy(url, btn);
+    }
+}
+
+function fallbackCopy(text, btn) {
+    // 降级方案：创建临时文本框
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+        document.execCommand('copy');
+        btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+        btn.classList.add('spk-credential__copy--copied');
+        
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+            btn.classList.remove('spk-credential__copy--copied');
+        }, 2000);
+    } catch (err) {
+        alert('复制失败，请手动复制');
+    }
+    
+    document.body.removeChild(textarea);
+}
+</script>
+</body>
+</html>

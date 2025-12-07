@@ -10,14 +10,24 @@ import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.TorrentMapper;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 
 @Service
+@Slf4j
 public class StatisticsRefreshServiceImpl {
     private static final Timestamp thirtyDaysAgo = new Timestamp(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
     private static final Timestamp fourteenDaysAgo = new Timestamp(System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000);
@@ -35,6 +45,11 @@ public class StatisticsRefreshServiceImpl {
     private UserappMapper userappMapper;
     @Autowired
     private TorrentMapper torrentMapper;
+
+    @Value("${sparkle.statistics.tracker-dashboard-image-retrieve}")
+    private String trackerDashboardImageRetrieveUrl;
+    @Value("${sparkle.statistics.tracker-dashboard-image-auth-token}")
+    private String trackerDashboardImageAuthToken;
 
     @Scheduled(cron = "${sparkle.statistics.ban-count-refresh-cron}")
     public void onBanCountRefresh() {
@@ -86,5 +101,26 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_14DAYS.getKey(), last14Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_7DAYS.getKey(), last7Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_24HOURS.getKey(), last24Hours);
+    }
+
+    @Scheduled(cron = "${sparkle.statistics.tracker-dashboard-refresh-cron}")
+    public void onTrackerDashboardRefresh() {
+        // download the tracker dashboard image from trackerDashboardImageRetrieveUrl
+        // and save to /tmp/sparkle_tracker_dashboard.png
+        // use Java 11+ HttpClient
+        try (var httpClient = HttpClient.newHttpClient()) {
+            var request = HttpRequest.newBuilder()
+                    .uri(URI.create(trackerDashboardImageRetrieveUrl))
+                    .header("Authorization", "Bearer " + trackerDashboardImageAuthToken)
+                    .build();
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() == 200) {
+                Files.write(Paths.get("data/sparkle_tracker_dashboard.png"), response.body());
+            } else {
+                log.error("Failed to download tracker dashboard image, status code: {}", response.statusCode());
+            }
+        } catch (Exception e) {
+            log.error("Failed to download tracker dashboard image", e);
+        }
     }
 }

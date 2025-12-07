@@ -39,7 +39,7 @@ public class UserApplicationViewController {
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(UserApplicationDto::new).toList();
         model.addAttribute("userapps", list);
-        return "modules/userapp/index";
+        return "userapp/index";
     }
 
     @GetMapping("/userapp/{appId}/resetAppSecret")
@@ -52,7 +52,7 @@ public class UserApplicationViewController {
             throw new AccessDeniedException("Permission denied");
         var resetUsrApp = userappService.resetUserApplicationSecret(userApp.getId());
         model.addAttribute("userapp", resetUsrApp);
-        return "modules/userapp/created";
+        return "userapp/created";
     }
 
 
@@ -70,14 +70,14 @@ public class UserApplicationViewController {
 
     @GetMapping("/userapp/create")
     public String createUserApplication() {
-        return "modules/userapp/create";
+        return "userapp/create";
     }
 
     @PostMapping("/userapp/create")
     public String createUserApplication(Model model, @RequestParam String comment, @AuthenticationPrincipal SparkleUserDetails userDetails, HttpServletRequest request) throws UserNotFoundException, TooManyUserApplicationException {
         var usrApp = userappService.createUserAppForUser(userDetails.getUserId(), comment, InetAddress.ofLiteral(request.getRemoteAddr()));
         model.addAttribute("userapp", usrApp);
-        return "modules/userapp/created";
+        return "userapp/created";
     }
 
     @Data

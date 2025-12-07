@@ -1405,3 +1405,71 @@ html > header.spk-page-header {
         background-color: var(--spk-danger-light);
     }
 }
+
+/* =====================================================
+   Page Header (Alternative Style)
+   ===================================================== */
+
+.spk-page-header {
+    padding: var(--spk-spacing-2xl) 0;
+    margin-bottom: var(--spk-spacing-xl);
+    border-bottom: 2px solid var(--spk-border-color);
+}
+
+.spk-page-header__title {
+    font-size: var(--spk-font-size-3xl);
+    font-weight: 700;
+    color: var(--spk-text-primary);
+    margin: 0 0 var(--spk-spacing-sm) 0;
+}
+
+.spk-page-header__title i {
+    color: var(--spk-primary-500);
+    margin-right: var(--spk-spacing-sm);
+}
+
+.spk-page-header__subtitle {
+    font-size: var(--spk-font-size-lg);
+    color: var(--spk-text-secondary);
+    margin: 0;
+}
+
+@media (max-width: 767px) {
+    .spk-page-header {
+        padding: var(--spk-spacing-lg) 0;
+    }
+
+    .spk-page-header__title {
+        font-size: var(--spk-font-size-2xl);
+    }
+
+    .spk-page-header__subtitle {
+        font-size: var(--spk-font-size-base);
+    }
+}
+
+/* =====================================================
+   Tracker Diagram (Responsive Image)
+   ===================================================== */
+
+.spk-tracker-diagram {
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--spk-radius-md);
+}
+
+.spk-tracker-diagram__image {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    display: block;
+    object-fit: contain;
+    border-radius: var(--spk-radius-md);
+}
+
+/* Ensure image scales properly on all screen sizes */
+@media (max-width: 767px) {
+    .spk-tracker-diagram__image {
+        border-radius: var(--spk-radius);
+    }
+}

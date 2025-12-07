@@ -44,7 +44,7 @@ public class IPDB implements AutoCloseable {
     private List<String> languageTag;
 
     public IPDB(boolean autoUpdate, String userAgent) throws IllegalArgumentException, IOException {
-        this.directory = new File("geoip");
+        this.directory = new File("data/geoip");
         this.directory.mkdirs();
         this.mmdbCityFile = new File(directory, "GeoIP-City.mmdb");
         this.mmdbASNFile = new File(directory, "GeoIP-ASN.mmdb");
