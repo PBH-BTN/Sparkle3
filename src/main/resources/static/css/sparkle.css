@@ -1367,6 +1367,10 @@ html > header.spk-page-header {
     padding: var(--spk-spacing-xs) var(--spk-spacing-sm);
     border-radius: var(--spk-radius-sm);
     transition: all var(--spk-transition);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
 }
 
 .spk-action-link:hover {

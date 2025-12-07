@@ -22,7 +22,7 @@
             <table class="spk-table">
                 <thead>
                 <tr>
-                    <th>ID</th>
+<!--                    <th>ID</th>-->
                     <th>AppId</th>
                     <th>备注</th>
 <!--                    <th>创建时间</th>-->
@@ -33,7 +33,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="app : ${userapps}">
-                    <td th:text="${app.getId()}">1</td>
+<!--                    <td th:text="${app.getId()}">1</td>-->
                     <td><code class="spk-code" th:text="${app.getAppId()}">000000000000000</code></td>
                     <td th:text="${app.getComment()}">测试</td>
 <!--                    <td class="spk-timestamp" th:text="${app.getCreatedAt() != null ? #temporals.format(app.getCreatedAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">-->
@@ -51,14 +51,18 @@
                         </span>
                     </td>
                     <td class="spk-text-nowrap">
-                        <a class="spk-action-link" th:href="@{/userapp/{appId}/resetAppSecret(appId=${app.getAppId()})}">
-                            <i class="fas fa-key"></i> 重置密钥
-                        </a>
-                        <a class="spk-action-link spk-action-link--danger" 
-                           th:href="@{/userapp/{appId}/delete(appId=${app.getAppId()})}"
-                           data-confirm="确定要删除此应用吗？此操作无法撤销！">
-                            <i class="fas fa-trash"></i> 删除
-                        </a>
+                        <form method="post" th:action="@{/userapp/{appId}/resetAppSecret(appId=${app.getAppId()})}" style="display:inline;">
+                            <button type="submit" class="spk-action-link" 
+                                    onclick="return confirm('确定要重置此应用的密钥吗？重置后旧密钥将立即失效！')">
+                                <i class="fas fa-key"></i> 重置密钥
+                            </button>
+                        </form>
+                        <form method="post" th:action="@{/userapp/{appId}/delete(appId=${app.getAppId()})}" style="display:inline;">
+                            <button type="submit" class="spk-action-link spk-action-link--danger" 
+                                    onclick="return confirm('确定要删除此应用吗？此操作无法撤销！')">
+                                <i class="fas fa-trash"></i> 删除
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 </tbody>

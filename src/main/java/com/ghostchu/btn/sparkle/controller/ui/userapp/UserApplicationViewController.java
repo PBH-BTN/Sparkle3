@@ -42,7 +42,7 @@ public class UserApplicationViewController {
         return "userapp/index";
     }
 
-    @GetMapping("/userapp/{appId}/resetAppSecret")
+    @PostMapping("/userapp/{appId}/resetAppSecret")
     public String resetUserApplicationAppSecret(Model model, @PathVariable("appId") String appId, @AuthenticationPrincipal SparkleUserDetails userDetails) throws UserApplicationNotFoundException, AccessDeniedException {
         var userApp = userappService.getUserAppByAppId(appId);
         if (userApp == null) {
@@ -50,13 +50,12 @@ public class UserApplicationViewController {
         }
         if (!Objects.equals(userApp.getOwner(), userDetails.getUserId()))
             throw new AccessDeniedException("Permission denied");
-        var resetUsrApp = userappService.resetUserApplicationSecret(userApp.getId());
-        model.addAttribute("userapp", resetUsrApp);
-        return "userapp/created";
+        userappService.resetUserApplicationSecret(userApp.getId());
+        return "redirect:/userapp?resetSuccess=" + appId;
     }
 
 
-    @GetMapping("/userapp/{appId}/delete")
+    @PostMapping("/userapp/{appId}/delete")
     public String deleteUserApplication(@PathVariable("appId") String appId, @AuthenticationPrincipal SparkleUserDetails userDetails) throws UserApplicationNotFoundException, AccessDeniedException {
         var userApp = userappService.getUserAppByAppId(appId);
         if (userApp == null) {
@@ -65,7 +64,7 @@ public class UserApplicationViewController {
         if (!Objects.equals(userApp.getOwner(), userDetails.getUserId()))
             throw new AccessDeniedException("Permission denied");
         userappService.deleteUserAppById(userApp.getId());
-        return "redirect:/userapp";
+        return "redirect:/userapp?deleteSuccess=true";
     }
 
     @GetMapping("/userapp/create")
