@@ -79,7 +79,7 @@ public class QueryIpServiceImpl {
                 OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
                 peerIp
         );
-        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads));
+        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads, concurrentSeeds));
 
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
@@ -109,7 +109,7 @@ public class QueryIpServiceImpl {
             if (btnUserApp != null) {
                 var btnUser = userService.getById(btnUserApp.getOwner());
                 if (btnUser != null) {
-                    result.getLabels().add("[BTN用户] " + btnUser.getNickname() + " (UID:" + btnUser.getId() + ") / " + TimeConverter.INSTANCE.formatTime(firstResult.getLastSeenAt(), "UTC") +" (UTC)");
+                    result.getLabels().add("BTN用户");
                 }
             }
         }
