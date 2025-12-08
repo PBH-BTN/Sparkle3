@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -20,11 +21,11 @@ import java.util.List;
  */
 public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
     @NotNull
-    List<AnalyseByModuleResult> analyseByModule(@NotNull Timestamp afterTimestamp);
+    List<AnalyseByModuleResult> analyseByModule(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull Timestamp afterTimestamp);
+    List<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull Timestamp afterTimestamp);
+    List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
 }

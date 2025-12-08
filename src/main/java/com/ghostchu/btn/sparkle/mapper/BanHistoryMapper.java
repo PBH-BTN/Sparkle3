@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -21,9 +22,9 @@ import java.util.List;
 public interface BanHistoryMapper extends BaseMapper<BanHistory> {
 
     @Nullable
-    PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
+    PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
 
-    List<Long> selectPeerTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp);
+    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
 
     long countAll();
 }

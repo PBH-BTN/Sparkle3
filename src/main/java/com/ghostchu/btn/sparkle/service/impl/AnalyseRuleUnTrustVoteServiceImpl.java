@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,7 +52,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")
     public void analyseUntrusted() {
         List<GeneratedRule> rules = new ArrayList<>();
-        List<GeneratedRule> resultList = this.baseMapper.analyseByModule(new Timestamp(System.currentTimeMillis() - duration))
+        List<GeneratedRule> resultList = this.baseMapper.analyseByModule(OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS))
                 .stream()
                 .map(analysis -> {
                     IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());

@@ -15,7 +15,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -33,7 +34,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
 
     @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")
     public void analyseOverDownload() {
-        List<AnalyseConcurrentDownloadResult> resultList = this.baseMapper.analyseConcurrentDownload(new Timestamp(System.currentTimeMillis() - duration));
+        List<AnalyseConcurrentDownloadResult> resultList = this.baseMapper.analyseConcurrentDownload(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
         resultList.removeIf(result -> result.getTorrentCount() < thresholdConcurrent || result.getUserappsCount() < thresholdUserapps);
         StringBuilder sb = new StringBuilder();
         for (AnalyseConcurrentDownloadResult result : resultList) {
@@ -49,7 +50,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
     }
 
     @Override
-    public Pair<@Nullable String, @Nullable String> getGeneratedContent(){
+    public Pair<@Nullable String, @Nullable String> getGeneratedContent() {
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey());
         return Pair.of(version, value);

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -32,7 +34,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
 
     @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
     public void analyseOverDownload() {
-        List<AnalyseOverDownloadedResult> resultList = this.baseMapper.analyseOverDownloaded(new Timestamp(System.currentTimeMillis() - duration));
+        List<AnalyseOverDownloadedResult> resultList = this.baseMapper.analyseOverDownloaded(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
         var it = resultList.iterator();
         while (it.hasNext()) {
             var result = it.next();

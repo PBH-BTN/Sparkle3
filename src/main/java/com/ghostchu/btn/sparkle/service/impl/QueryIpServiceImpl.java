@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -83,7 +84,7 @@ public class QueryIpServiceImpl {
 
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
-        Timestamp trafficMeasureSince = Timestamp.from(OffsetDateTime.now().minusSeconds(trafficMeasureDuration).toInstant());
+        var trafficMeasureSince = OffsetDateTime.now().minus(trafficMeasureDuration, ChronoUnit.MILLIS);
         var banHistoryTraffic = banHistoryService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
         var swarmTrackerTraffic = swarmTrackerService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
         if (banHistoryTraffic != null) {
@@ -97,7 +98,7 @@ public class QueryIpServiceImpl {
         var shareRatio = totalFromPeerTraffic == 0 ? -1 : (double) totalToPeerTraffic / totalFromPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
         Set<Long> distinctTorrentIds = new HashSet<>();
-        Timestamp torrentsCountingSince = Timestamp.from(OffsetDateTime.now().minusSeconds(torrentsCountingDuration).toInstant());
+        OffsetDateTime torrentsCountingSince =OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
         distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
         distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
         result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
