@@ -55,7 +55,7 @@ public class QueryIpServiceImpl {
 
     public @NotNull IpQueryResult queryIp(@NotNull InetAddress peerIp) {
         IpQueryResult result = new IpQueryResult();
-        result.setColor("gray");
+        result.setColor("#808080");
         result.setLabels(new ArrayList<>());
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minusSeconds(bansCountingDuration / 1000),
@@ -72,6 +72,10 @@ public class QueryIpServiceImpl {
                 Page.of(1, 1000)
         );
         var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
+                OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
+                peerIp
+        );
+        var concurrentSeeds = swarmTrackerService.calcPeerConcurrentSeeds(
                 OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
                 peerIp
         );
@@ -179,6 +183,8 @@ public class QueryIpServiceImpl {
             private List<SwarmTrackerDto> records;
             @JsonProperty("concurrent_download_torrents_count")
             private long concurrentDownloadTorrentsCount;
+            @JsonProperty("concurrent_seeding_torrents_count")
+            private long concurrentSeedingTorrentsCount;
         }
     }
 

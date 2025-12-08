@@ -88,6 +88,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 new QueryWrapper<SwarmTracker>()
                         .eq("peer_ip", peerIp)
                         .ge("last_time_seen", afterTime)
+                        .eq("peer_progress", 1.0)
         );
     }
 
@@ -99,6 +100,16 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Override
     public List<Long> selectPeerIpTorrents(@NotNull Timestamp afterTimestamp, @NotNull InetAddress peerIp){
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
+    }
+
+    @Override
+    public long calcPeerConcurrentSeeds(@NotNull OffsetDateTime afterTime, @NotNull InetAddress peerIp) {
+        return this.baseMapper.selectCount(
+                new QueryWrapper<SwarmTracker>()
+                        .eq("peer_ip", peerIp)
+                        .ge("last_time_seen", afterTime)
+                        .not(query-> query.eq("peer_progress", 1.0))
+        );
     }
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")
