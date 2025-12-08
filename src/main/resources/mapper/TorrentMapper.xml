@@ -24,7 +24,8 @@
             SET size            = GREATEST(torrent.size, EXCLUDED.size),
                 private_torrent = COALESCE(torrent.private_torrent, EXCLUDED.private_torrent),
                 info_hash       = COALESCE(torrent.info_hash, EXCLUDED.info_hash),
-                torrent_name    = COALESCE(torrent.torrent_name, EXCLUDED.torrent_name)
+                torrent_name    = COALESCE(torrent.torrent_name, EXCLUDED.torrent_name),
+                last_seen_at    = NOW()
         RETURNING *
     </select>
 </mapper>

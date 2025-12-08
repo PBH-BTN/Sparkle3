@@ -11,6 +11,7 @@ import lombok.experimental.Accessors;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.OffsetDateTime;
 
 /**
  * <p>
@@ -47,4 +48,7 @@ public class Torrent implements Serializable {
 
     @TableField("torrent_name")
     private String torrentName;
+
+    @TableField("last_seen_at")
+    private OffsetDateTime lastSeenAt;
 }

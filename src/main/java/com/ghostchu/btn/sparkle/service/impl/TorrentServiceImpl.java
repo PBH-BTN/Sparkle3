@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,7 +50,8 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
                 .setSize(size != null ? size : 0)
                 .setPrivateTorrent(isPrivate)
                 .setInfoHash(infoHash)
-                .setTorrentName(torrentName);
+                .setTorrentName(torrentName)
+                .setLastSeenAt(OffsetDateTime.now());
         createNewTorrent = baseMapper.upsert(createNewTorrent);
         torrentIdRedisTemplate.opsForValue().set("sparkle:torrent:" + identifier, createNewTorrent.getId(), 30, TimeUnit.MINUTES);
         return createNewTorrent.getId();
