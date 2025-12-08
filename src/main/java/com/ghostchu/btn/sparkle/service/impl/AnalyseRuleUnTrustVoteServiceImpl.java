@@ -21,7 +21,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -32,6 +31,8 @@ import java.util.stream.Collectors;
 public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServiceImpl {
     @Value("${sparkle.analyse.untrusted-vote.duration}")
     private long duration;
+    @Value("${sparkle.analyse.untrusted-vote.include-modules}")
+    private String untrustedVoteIncludeModules;
     @Value("${sparkle.analyse.untrusted-vote.ipv4.enable}")
     private boolean useIPv4;
     @Value("${sparkle.analyse.untrusted-vote.ipv4.min-userapps-vote}")
@@ -52,7 +53,9 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")
     public void analyseUntrusted() {
         List<GeneratedRule> rules = new ArrayList<>();
-        List<GeneratedRule> resultList = this.baseMapper.analyseByModule(OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS))
+        List<GeneratedRule> resultList = this.baseMapper.analyseByModule(
+                        OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
+                        List.of(untrustedVoteIncludeModules.split(",")))
                 .stream()
                 .map(analysis -> {
                     IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());

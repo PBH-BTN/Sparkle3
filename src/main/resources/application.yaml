@@ -111,6 +111,7 @@ sparkle:
     untrusted-vote:
       schedule: "0 0 * * * *"
       duration: 1209600000
+      include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"
       ipv4:
         enable: true
         min-userapps-vote: 3
@@ -137,7 +138,7 @@ sparkle:
       torrents-counting-duration: 604800000
       heartbeat-query-duration: 604800000
   github-sync:
-    schedule: "0 /30 * * * *"
+    schedule: "0 */30 * * * *"
     personal-access-token: sometoken
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
