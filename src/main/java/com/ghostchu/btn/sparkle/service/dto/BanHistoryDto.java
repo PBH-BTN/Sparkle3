@@ -45,7 +45,7 @@ public class BanHistoryDto {
     private Map<String, Object> structuredData;
 
     public BanHistoryDto(BanHistory banHistory) {
-        this.torrent = "id=" + banHistory.getTorrentId();
+        this.torrent = String.valueOf(banHistory.getTorrentId());
         this.populateTime = banHistory.getPopulateTime().toInstant().toEpochMilli();
         this.peerIp = banHistory.getPeerIp();
         this.peerPort = banHistory.getPeerPort();

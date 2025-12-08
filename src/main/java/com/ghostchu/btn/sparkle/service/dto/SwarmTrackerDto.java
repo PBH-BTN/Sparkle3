@@ -42,7 +42,7 @@ public class SwarmTrackerDto {
     private double userProgress;
 
     public SwarmTrackerDto(SwarmTracker swarmTracker) {
-        this.torrent = "id=" + swarmTracker.getTorrentId();
+        this.torrent = String.valueOf(swarmTracker.getTorrentId());
         this.peerIp = swarmTracker.getPeerIp();
         this.peerPort = swarmTracker.getPeerPort();
         this.peerId = swarmTracker.getPeerId();
