@@ -33,6 +33,7 @@ public class IndexController extends AbstractSparkleMVC {
         model.addAttribute("stats_banhistory_24hours", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey()));
         // 跟踪 Peers
         model.addAttribute("stats_swarmtracker_alltime", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_SWARMTRACKER_ALLTIME.getKey()));
+        model.addAttribute("stats_swarmtracker_30days", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey()));
         model.addAttribute("stats_swarmtracker_14days", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey()));
         model.addAttribute("stats_swarmtracker_7days", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey()));
         model.addAttribute("stats_swarmtracker_24hours", stringLongRedisTemplate.opsForValue().get(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey()));
