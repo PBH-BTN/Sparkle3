@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
-import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
@@ -22,7 +21,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -120,6 +118,52 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         if(deleted > 0) {
             log.info("Deleted {} expired swarms", deleted);
         }
+    }
+
+    @Override
+    public @NotNull IPage<SwarmTracker> querySwarmTracker(
+            @Nullable Long torrentId,
+            @Nullable InetAddress peerIp,
+            @Nullable Integer peerPort,
+            @Nullable String peerId,
+            @Nullable String peerClientName,
+            @Nullable Double peerProgress,
+            @Nullable Long fromPeerTraffic,
+            @Nullable Long toPeerTraffic,
+            @Nullable String flags,
+            @Nullable OffsetDateTime firstTimeSeenAfter,
+            @Nullable OffsetDateTime lastTimeSeenAfter,
+            @Nullable Double userProgress,
+            @Nullable String sortBy,
+            @Nullable String sortOrder,
+            @NotNull Page<SwarmTracker> page) {
+        
+        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<>();
+        
+        // 添加查询条件
+        wrapper.eq(torrentId != null, "torrent_id", torrentId)
+                .eq(peerIp != null, "peer_ip", peerIp)
+                .eq(peerPort != null, "peer_port", peerPort)
+                .like(peerId != null && !peerId.isBlank(), "peer_id", peerId)
+                .like(peerClientName != null && !peerClientName.isBlank(), "peer_client_name", peerClientName)
+                .eq(peerProgress != null, "peer_progress", peerProgress)
+                .ge(fromPeerTraffic != null, "from_peer_traffic", fromPeerTraffic)
+                .ge(toPeerTraffic != null, "to_peer_traffic", toPeerTraffic)
+                .like(flags != null && !flags.isBlank(), "flags", flags)
+                .ge(firstTimeSeenAfter != null, "first_time_seen", firstTimeSeenAfter)
+                .ge(lastTimeSeenAfter != null, "last_time_seen", lastTimeSeenAfter)
+                .eq(userProgress != null, "user_progress", userProgress);
+        
+        // 添加排序
+        String sort = (sortBy != null && !sortBy.isBlank()) ? sortBy : "last_time_seen";
+        String order = (sortOrder != null && !sortOrder.isBlank()) ? sortOrder : "desc";
+        if ("desc".equalsIgnoreCase(order)) {
+            wrapper.orderByDesc(sort);
+        } else {
+            wrapper.orderByAsc(sort);
+        }
+        
+        return this.baseMapper.selectPage(page, wrapper);
     }
 
 

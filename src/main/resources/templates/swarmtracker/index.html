@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{components/common::header}"></head>
+<body class="spk-body">
+<nav th:replace="~{components/common::navbar}"></nav>
+
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fa-solid fa-list"></i> 种群检视
+        </h1>
+    </div>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container">
+        <!-- Query Form -->
+        <div class="spk-card" style="margin-bottom: 1.5rem;">
+            <div class="spk-card__body">
+                <form method="get" th:action="@{/swarm-tracker}">
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="infoHash" class="form-label">Info Hash</label>
+                            <input type="text" class="form-control" id="infoHash" name="infoHash"
+                                   th:value="${infoHash}" placeholder="种子信息哈希">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="peerIp" class="form-label">Peer IP</label>
+                            <input type="text" class="form-control" id="peerIp" name="peerIp"
+                                   th:value="${peerIp}" placeholder="对等端 IP 地址">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="peerPort" class="form-label">Peer Port</label>
+                            <input type="number" class="form-control" id="peerPort" name="peerPort"
+                                   th:value="${peerPort}" placeholder="对等端端口">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="peerId" class="form-label">Peer ID</label>
+                            <input type="text" class="form-control" id="peerId" name="peerId"
+                                   th:value="${peerId}" placeholder="支持模糊查询">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="peerClientName" class="form-label">客户端名称</label>
+                            <input type="text" class="form-control" id="peerClientName" name="peerClientName"
+                                   th:value="${peerClientName}" placeholder="支持模糊查询">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="peerProgress" class="form-label">Peer 进度</label>
+                            <input type="number" class="form-control" id="peerProgress" name="peerProgress"
+                                   th:value="${peerProgress}" placeholder="0.0 - 1.0" step="0.01" min="0" max="1">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="fromPeerTraffic" class="form-label">从 Peer 流量 (≥)</label>
+                            <input type="number" class="form-control" id="fromPeerTraffic" name="fromPeerTraffic"
+                                   th:value="${fromPeerTraffic}" placeholder="字节数">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="toPeerTraffic" class="form-label">到 Peer 流量 (≥)</label>
+                            <input type="number" class="form-control" id="toPeerTraffic" name="toPeerTraffic"
+                                   th:value="${toPeerTraffic}" placeholder="字节数">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="userProgress" class="form-label">用户进度</label>
+                            <input type="number" class="form-control" id="userProgress" name="userProgress"
+                                   th:value="${userProgress}" placeholder="0.0 - 1.0" step="0.01" min="0" max="1">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="flags" class="form-label">标志</label>
+                            <input type="text" class="form-control" id="flags" name="flags"
+                                   th:value="${flags}" placeholder="支持模糊查询">
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="sortBy" class="form-label">排序字段</label>
+                            <select class="form-control" id="sortBy" name="sortBy">
+                                <option value="last_time_seen" th:selected="${sortBy == 'last_time_seen'}">最后见到时间</option>
+                                <option value="first_time_seen" th:selected="${sortBy == 'first_time_seen'}">首次见到时间</option>
+                                <option value="torrent_id" th:selected="${sortBy == 'torrent_id'}">种子ID</option>
+                                <option value="peer_ip" th:selected="${sortBy == 'peer_ip'}">Peer IP</option>
+                                <option value="peer_port" th:selected="${sortBy == 'peer_port'}">Peer Port</option>
+                                <option value="peer_progress" th:selected="${sortBy == 'peer_progress'}">Peer 进度</option>
+                                <option value="from_peer_traffic" th:selected="${sortBy == 'from_peer_traffic'}">从 Peer 流量</option>
+                                <option value="to_peer_traffic" th:selected="${sortBy == 'to_peer_traffic'}">到 Peer 流量</option>
+                                <option value="user_progress" th:selected="${sortBy == 'user_progress'}">用户进度</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="sortOrder" class="form-label">排序方向</label>
+                            <select class="form-control" id="sortOrder" name="sortOrder">
+                                <option value="asc" th:selected="${sortOrder == 'asc'}">升序</option>
+                                <option value="desc" th:selected="${sortOrder == 'desc'}">降序</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="pageSize" class="form-label">每页显示</label>
+                            <select class="form-control" id="pageSize" name="pageSize">
+                                <option value="20" th:selected="${pageSize == 20}">20</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-8 mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="spk-btn spk-btn--primary">
+                                    <i class="fas fa-search"></i> 查询
+                                </button>
+                                <a th:href="@{/swarm-tracker}" class="spk-btn spk-btn--secondary">
+                                    <i class="fas fa-redo"></i> 重置
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Result Info -->
+        <div th:if="${records != null && !records.isEmpty()}" class="mb-3">
+            <p class="text-muted">
+                <i class="fas fa-info-circle"></i>
+                共找到 <strong th:text="${total}">0</strong> 条记录，
+                当前第 <strong th:text="${currentPage}">1</strong> / <strong th:text="${totalPages}">1</strong> 页
+            </p>
+        </div>
+
+        <!-- Result Table -->
+        <div class="spk-table-wrapper" th:if="${records != null && !records.isEmpty()}" style="overflow-x: auto;">
+            <table class="spk-table" style="white-space: nowrap;">
+                <thead>
+                <tr>
+                    <th>种子ID</th>
+                    <th>Peer IP</th>
+                    <th>Peer Port</th>
+                    <th>Peer ID</th>
+                    <th>客户端名称</th>
+                    <th>Peer 进度</th>
+                    <th>从 Peer 流量</th>
+                    <th>到 Peer 流量</th>
+                    <th>标志</th>
+                    <th>首次见到</th>
+                    <th>最后见到</th>
+                    <th>用户进度</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="record : ${records}">
+                    <td th:text="${record.getTorrentId()}">1</td>
+                    <td>
+                        <code class="spk-code" th:text="${record.getPeerIp() != null ? record.getPeerIp().getHostAddress() : 'N/A'}">
+                            127.0.0.1
+                        </code>
+                    </td>
+                    <td th:text="${record.getPeerPort() != null ? record.getPeerPort() : 'N/A'}">6881</td>
+                    <td>
+                        <code class="spk-code" th:if="${record.getPeerId() != null}" th:text="${record.getPeerId()}">
+                            -qB4380-
+                        </code>
+                        <span class="text-muted" th:if="${record.getPeerId() == null}">N/A</span>
+                    </td>
+                    <td th:text="${record.getPeerClientName() != null ? record.getPeerClientName() : 'N/A'}">
+                        qBittorrent/4.3.8
+                    </td>
+                    <td>
+                        <span th:if="${record.getPeerProgress() != null}">
+                            <span th:text="${#numbers.formatDecimal(record.getPeerProgress() * 100, 1, 2)}">50.00</span>%
+                        </span>
+                        <span class="text-muted" th:if="${record.getPeerProgress() == null}">N/A</span>
+                    </td>
+                    <td th:text="${record.getFromPeerTraffic() != null ? #numbers.formatInteger(record.getFromPeerTraffic(), 0, 'COMMA') : 'N/A'}">
+                        1,234,567
+                    </td>
+                    <td th:text="${record.getToPeerTraffic() != null ? #numbers.formatInteger(record.getToPeerTraffic(), 0, 'COMMA') : 'N/A'}">
+                        7,654,321
+                    </td>
+                    <td>
+                        <code class="spk-code" th:if="${record.getFlags() != null}" th:text="${record.getFlags()}">
+                            DHT|UTP
+                        </code>
+                        <span class="text-muted" th:if="${record.getFlags() == null}">N/A</span>
+                    </td>
+                    <td class="spk-timestamp" th:text="${record.getFirstTimeSeen() != null ? #temporals.format(record.getFirstTimeSeen(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">
+                        2025-01-01 00:00:00
+                    </td>
+                    <td class="spk-timestamp" th:text="${record.getLastTimeSeen() != null ? #temporals.format(record.getLastTimeSeen(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">
+                        2025-01-01 00:00:00
+                    </td>
+                    <td>
+                        <span th:if="${record.getUserProgress() != null}">
+                            <span th:text="${#numbers.formatDecimal(record.getUserProgress() * 100, 1, 2)}">50.00</span>%
+                        </span>
+                        <span class="text-muted" th:if="${record.getUserProgress() == null}">N/A</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div th:if="${records != null && !records.isEmpty() && totalPages > 1}" class="spk-pagination">
+            <div class="spk-pagination__info">
+                <span th:text="'第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'">第 1 / 10 页</span>
+            </div>
+            <div class="spk-pagination__controls">
+                <!-- First Page -->
+                <a th:if="${currentPage > 1}"
+                   th:href="@{/swarm-tracker(infoHash=${infoHash}, peerIp=${peerIp}, peerPort=${peerPort}, peerId=${peerId}, peerClientName=${peerClientName}, peerProgress=${peerProgress}, fromPeerTraffic=${fromPeerTraffic}, toPeerTraffic=${toPeerTraffic}, flags=${flags}, firstTimeSeenAfter=${firstTimeSeenAfter}, lastTimeSeenAfter=${lastTimeSeenAfter}, userProgress=${userProgress}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=1, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+
+                <!-- Previous Page -->
+                <a th:if="${currentPage > 1}"
+                   th:href="@{/swarm-tracker(infoHash=${infoHash}, peerIp=${peerIp}, peerPort=${peerPort}, peerId=${peerId}, peerClientName=${peerClientName}, peerProgress=${peerProgress}, fromPeerTraffic=${fromPeerTraffic}, toPeerTraffic=${toPeerTraffic}, flags=${flags}, firstTimeSeenAfter=${firstTimeSeenAfter}, lastTimeSeenAfter=${lastTimeSeenAfter}, userProgress=${userProgress}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${currentPage - 1}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-left"></i> 上一页
+                </a>
+
+                <!-- Page Numbers -->
+                <span class="spk-pagination__current">
+                    <strong th:text="${currentPage}">1</strong> / <span th:text="${totalPages}">10</span>
+                </span>
+
+                <!-- Next Page -->
+                <a th:if="${currentPage < totalPages}"
+                   th:href="@{/swarm-tracker(infoHash=${infoHash}, peerIp=${peerIp}, peerPort=${peerPort}, peerId=${peerId}, peerClientName=${peerClientName}, peerProgress=${peerProgress}, fromPeerTraffic=${fromPeerTraffic}, toPeerTraffic=${toPeerTraffic}, flags=${flags}, firstTimeSeenAfter=${firstTimeSeenAfter}, lastTimeSeenAfter=${lastTimeSeenAfter}, userProgress=${userProgress}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${currentPage + 1}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    下一页 <i class="fas fa-angle-right"></i>
+                </a>
+
+                <!-- Last Page -->
+                <a th:if="${currentPage < totalPages}"
+                   th:href="@{/swarm-tracker(infoHash=${infoHash}, peerIp=${peerIp}, peerPort=${peerPort}, peerId=${peerId}, peerClientName=${peerClientName}, peerProgress=${peerProgress}, fromPeerTraffic=${fromPeerTraffic}, toPeerTraffic=${toPeerTraffic}, flags=${flags}, firstTimeSeenAfter=${firstTimeSeenAfter}, lastTimeSeenAfter=${lastTimeSeenAfter}, userProgress=${userProgress}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${totalPages}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="spk-card" th:if="${records == null || records.isEmpty()}">
+            <div class="spk-card__body">
+                <div class="spk-empty">
+                    <i class="fa-solid fa-list spk-empty__icon"></i>
+                    <h4 class="spk-empty__title">没有找到任何记录</h4>
+                    <p class="spk-empty__text">请尝试调整查询条件或清空所有条件重新查询</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{components/common::footer}"></div>
+</body>
+</html>
