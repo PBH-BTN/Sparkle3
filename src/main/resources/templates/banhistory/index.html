@@ -353,54 +353,13 @@ const BanHistoryApp = {
             return;
         }
         
-        const totalPages = data.pages;
-        const current = data.current;
-        
-        let html = `
-            <div class="spk-pagination">
-                <div class="spk-pagination__info">
-                    显示第 ${(current - 1) * data.size + 1} - ${Math.min(current * data.size, data.total)} 条，共 ${data.total} 条记录
-                </div>
-                <div class="spk-pagination__controls">
-                    <button class="spk-btn spk-btn--sm spk-btn--light" ${current <= 1 ? 'disabled' : ''} onclick="BanHistoryApp.goToPage(${current - 1})">
-                        <i class="fas fa-chevron-left"></i> 上一页
-                    </button>
-        `;
-        
-        // Page numbers
-        const maxButtons = 7;
-        let startPage = Math.max(1, current - Math.floor(maxButtons / 2));
-        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-        
-        if (endPage - startPage < maxButtons - 1) {
-            startPage = Math.max(1, endPage - maxButtons + 1);
-        }
-        
-        if (startPage > 1) {
-            html += `<button class="spk-btn spk-btn--sm spk-btn--light" onclick="BanHistoryApp.goToPage(1)">1</button>`;
-            if (startPage > 2) {
-                html += `<span style="padding: 0 0.5rem;">...</span>`;
-            }
-        }
-        
-        for (let i = startPage; i <= endPage; i++) {
-            html += `<button class="spk-btn spk-btn--sm ${i === current ? 'spk-btn--primary' : 'spk-btn--light'}" onclick="BanHistoryApp.goToPage(${i})">${i}</button>`;
-        }
-        
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                html += `<span style="padding: 0 0.5rem;">...</span>`;
-            }
-            html += `<button class="spk-btn spk-btn--sm spk-btn--light" onclick="BanHistoryApp.goToPage(${totalPages})">${totalPages}</button>`;
-        }
-        
-        html += `
-                    <button class="spk-btn spk-btn--sm spk-btn--light" ${current >= totalPages ? 'disabled' : ''} onclick="BanHistoryApp.goToPage(${current + 1})">
-                        下一页 <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-        `;
+        const html = SPK.renderPagination({
+            currentPage: data.current,
+            totalPages: data.pages,
+            totalRecords: data.total,
+            pageSize: data.size,
+            onPageChange: (page) => this.goToPage(page)
+        });
         
         container.innerHTML = html;
     },

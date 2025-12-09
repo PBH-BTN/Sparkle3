@@ -1,10 +1,10 @@
 package com.ghostchu.btn.sparkle.controller.ui.banhistory.dto;
 
+import java.time.OffsetDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.OffsetDateTime;
 
 /**
  * Ban History Query DTO
