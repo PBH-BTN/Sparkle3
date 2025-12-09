@@ -17,82 +17,62 @@
         <!-- Search Form Card -->
         <div class="spk-card" style="margin-bottom: 1.5rem;">
             <div class="spk-card__body">
-                <form id="banHistorySearchForm" class="spk-form">
+                <form id="banHistorySearchForm">
                     <div class="row">
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">开始时间</label>
-                                <input type="datetime-local" class="spk-form-input" id="insertTimeStart" name="insertTimeStart">
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="insertTimeStart" class="form-label">开始时间</label>
+                            <input type="datetime-local" class="form-control" id="insertTimeStart" name="insertTimeStart">
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">结束时间</label>
-                                <input type="datetime-local" class="spk-form-input" id="insertTimeEnd" name="insertTimeEnd">
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="insertTimeEnd" class="form-label">结束时间</label>
+                            <input type="datetime-local" class="form-control" id="insertTimeEnd" name="insertTimeEnd">
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Torrent ID</label>
-                                <input type="number" class="spk-form-input" id="torrentId" name="torrentId" placeholder="种子ID">
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="torrentId" class="form-label">Torrent ID</label>
+                            <input type="number" class="form-control" id="torrentId" name="torrentId" placeholder="种子ID">
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Peer IP</label>
-                                <input type="text" class="spk-form-input" id="peerIp" name="peerIp" placeholder="IP地址">
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerIp" class="form-label">Peer IP</label>
+                            <input type="text" class="form-control" id="peerIp" name="peerIp" placeholder="IP地址">
                         </div>
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Peer Port</label>
-                                <input type="number" class="spk-form-input" id="peerPort" name="peerPort" placeholder="端口">
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerPort" class="form-label">Peer Port</label>
+                            <input type="number" class="form-control" id="peerPort" name="peerPort" placeholder="端口">
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Peer ID</label>
-                                <select class="spk-form-input" id="peerId" name="peerId">
-                                    <option value="">全部</option>
-                                    <option th:each="id : ${peerIds}" th:value="${id}" th:text="${id}"></option>
-                                </select>
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerId" class="form-label">Peer ID</label>
+                            <select class="form-control" id="peerId" name="peerId">
+                                <option value="">全部</option>
+                                <option th:each="id : ${peerIds}" th:value="${id}" th:text="${id}"></option>
+                            </select>
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Client Name</label>
-                                <select class="spk-form-input" id="peerClientName" name="peerClientName">
-                                    <option value="">全部</option>
-                                    <option th:each="name : ${peerClientNames}" th:value="${name}" th:text="${name}"></option>
-                                </select>
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerClientName" class="form-label">Client Name</label>
+                            <select class="form-control" id="peerClientName" name="peerClientName">
+                                <option value="">全部</option>
+                                <option th:each="name : ${peerClientNames}" th:value="${name}" th:text="${name}"></option>
+                            </select>
                         </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Module Name</label>
-                                <select class="spk-form-input" id="moduleName" name="moduleName">
-                                    <option value="">全部</option>
-                                    <option th:each="module : ${moduleNames}" th:value="${module}" th:text="${module}"></option>
-                                </select>
-                            </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="moduleName" class="form-label">Module Name</label>
+                            <select class="form-control" id="moduleName" name="moduleName">
+                                <option value="">全部</option>
+                                <option th:each="module : ${moduleNames}" th:value="${module}" th:text="${module}"></option>
+                            </select>
                         </div>
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Rule</label>
-                                <input type="text" class="spk-form-input" id="rule" name="rule" placeholder="规则名称（模糊搜索）">
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="rule" class="form-label">Rule</label>
+                            <input type="text" class="form-control" id="rule" name="rule" placeholder="规则名称（模糊搜索）">
                         </div>
-                        <div class="col-md-6">
-                            <div class="spk-form-group">
-                                <label class="spk-form-label">Description</label>
-                                <input type="text" class="spk-form-input" id="description" name="description" placeholder="描述信息（模糊搜索）">
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description" placeholder="描述信息（模糊搜索）">
                         </div>
                     </div>
                     
@@ -101,7 +81,7 @@
                             <button type="submit" class="spk-btn spk-btn--primary">
                                 <i class="fas fa-search"></i> 查询
                             </button>
-                            <button type="button" class="spk-btn spk-btn--light" id="resetButton">
+                            <button type="button" class="spk-btn spk-btn--secondary" id="resetButton">
                                 <i class="fas fa-redo"></i> 重置
                             </button>
                         </div>
@@ -267,7 +247,6 @@ const BanHistoryApp = {
                             <th>${this.renderSortHeader('module_name', 'Module')}</th>
                             <th>${this.renderSortHeader('rule', 'Rule')}</th>
                             <th>Description</th>
-                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -292,14 +271,6 @@ const BanHistoryApp = {
                 this.handleSort(el.dataset.sort);
             });
         });
-        
-        // Bind structured data buttons
-        container.querySelectorAll('[data-structured]').forEach(el => {
-            el.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showStructuredData(JSON.parse(el.dataset.structured));
-            });
-        });
     },
     
     renderSortHeader(field, label) {
@@ -315,7 +286,19 @@ const BanHistoryApp = {
         const time = record.insertTime ? new Date(record.insertTime).toLocaleString('zh-CN') : 'N/A';
         const progress = record.peerProgress !== null ? (record.peerProgress * 100).toFixed(2) + '%' : 'N/A';
         const geoip = this.formatGeoIP(record.peerGeoip);
-        const hasStructuredData = record.structuredData && Object.keys(record.structuredData).length > 0;
+        
+        // 处理 module_name，去掉前缀
+        let moduleName = record.moduleName || 'N/A';
+        if (moduleName.startsWith('com.ghostchu.peerbanhelper.module.impl.rule.')) {
+            moduleName = moduleName.substring('com.ghostchu.peerbanhelper.module.impl.rule.'.length);
+        }
+        
+        // 处理 description，截取并悬浮显示完整内容
+        const description = record.description || 'N/A';
+        const maxDescLength = 50;
+        const truncatedDesc = description.length > maxDescLength 
+            ? description.substring(0, maxDescLength) + '...' 
+            : description;
         
         return `
             <tr>
@@ -327,14 +310,9 @@ const BanHistoryApp = {
                 <td>${record.peerClientName || 'N/A'}</td>
                 <td>${progress}</td>
                 <td style="font-size: 0.85em;">${geoip}</td>
-                <td><span class="spk-badge spk-badge--info">${record.moduleName || 'N/A'}</span></td>
+                <td><span class="spk-badge spk-badge--info" title="${record.moduleName || ''}">${moduleName}</span></td>
                 <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${record.rule || ''}">${record.rule || 'N/A'}</td>
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${record.description || ''}">${record.description || 'N/A'}</td>
-                <td>
-                    ${hasStructuredData ? `<button class="spk-btn spk-btn--sm spk-btn--light" data-structured='${JSON.stringify(record.structuredData)}'>
-                        <i class="fas fa-file-code"></i> 查看数据
-                    </button>` : '<span class="text-muted">无</span>'}
-                </td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; cursor: help;" title="${description}">${truncatedDesc}</td>
             </tr>
         `;
     },

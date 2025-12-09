@@ -1,7 +1,6 @@
 package com.ghostchu.btn.sparkle.controller.ui.swarmtracker.dto;
 
 import java.io.Serializable;
-import java.net.InetAddress;
 import java.time.OffsetDateTime;
 
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
@@ -18,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class SwarmTrackerDto implements Serializable {
     private Long id;
     private Long torrentId;
-    private InetAddress peerIp;
+    private String peerIp;
     private Integer peerPort;
     private String peerId;
     private String peerClientName;
@@ -33,7 +32,7 @@ public class SwarmTrackerDto implements Serializable {
     public SwarmTrackerDto(SwarmTracker swarmTracker) {
         this.id = swarmTracker.getId();
         this.torrentId = swarmTracker.getTorrentId();
-        this.peerIp = swarmTracker.getPeerIp();
+        this.peerIp = swarmTracker.getPeerIp() != null ? swarmTracker.getPeerIp().getHostAddress() : null;
         this.peerPort = swarmTracker.getPeerPort();
         this.peerId = swarmTracker.getPeerId();
         this.peerClientName = swarmTracker.getPeerClientName();

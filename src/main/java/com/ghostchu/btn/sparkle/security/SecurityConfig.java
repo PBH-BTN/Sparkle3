@@ -32,6 +32,9 @@ public class SecurityConfig {
                                 .requestMatchers("/ping/**").permitAll()
                                 .requestMatchers("/login/**").permitAll()
                                 .requestMatchers("/admin/**").hasAnyRole("ADMIN")
+                                .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
+                                .requestMatchers("/banhistory/**").authenticated()
+                                .requestMatchers("/api/banhistory/**").authenticated()
                                 .anyRequest().authenticated())
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
