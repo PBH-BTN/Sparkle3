@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{components/common::header}"></head>
+<body class="spk-body">
+<nav th:replace="~{components/common::navbar}"></nav>
+
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fas fa-ban"></i> 封禁记录
+        </h1>
+    </div>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container">
+        <!-- Search Form Card -->
+        <div class="spk-card" style="margin-bottom: 1.5rem;">
+            <div class="spk-card__body">
+                <form id="banHistorySearchForm" class="spk-form">
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">开始时间</label>
+                                <input type="datetime-local" class="spk-form-input" id="insertTimeStart" name="insertTimeStart">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">结束时间</label>
+                                <input type="datetime-local" class="spk-form-input" id="insertTimeEnd" name="insertTimeEnd">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Torrent ID</label>
+                                <input type="number" class="spk-form-input" id="torrentId" name="torrentId" placeholder="种子ID">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Peer IP</label>
+                                <input type="text" class="spk-form-input" id="peerIp" name="peerIp" placeholder="IP地址">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Peer Port</label>
+                                <input type="number" class="spk-form-input" id="peerPort" name="peerPort" placeholder="端口">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Peer ID</label>
+                                <select class="spk-form-input" id="peerId" name="peerId">
+                                    <option value="">全部</option>
+                                    <option th:each="id : ${peerIds}" th:value="${id}" th:text="${id}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Client Name</label>
+                                <select class="spk-form-input" id="peerClientName" name="peerClientName">
+                                    <option value="">全部</option>
+                                    <option th:each="name : ${peerClientNames}" th:value="${name}" th:text="${name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Module Name</label>
+                                <select class="spk-form-input" id="moduleName" name="moduleName">
+                                    <option value="">全部</option>
+                                    <option th:each="module : ${moduleNames}" th:value="${module}" th:text="${module}"></option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Rule</label>
+                                <input type="text" class="spk-form-input" id="rule" name="rule" placeholder="规则名称（模糊搜索）">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="spk-form-group">
+                                <label class="spk-form-label">Description</label>
+                                <input type="text" class="spk-form-input" id="description" name="description" placeholder="描述信息（模糊搜索）">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="submit" class="spk-btn spk-btn--primary">
+                                <i class="fas fa-search"></i> 查询
+                            </button>
+                            <button type="button" class="spk-btn spk-btn--light" id="resetButton">
+                                <i class="fas fa-redo"></i> 重置
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Card -->
+        <div class="spk-card">
+            <div class="spk-card__body">
+                <div id="loadingIndicator" class="text-center" style="display: none; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>加载中...</p>
+                </div>
+                
+                <div id="resultsContainer">
+                    <!-- Table will be inserted here -->
+                </div>
+                
+                <!-- Pagination -->
+                <div id="paginationContainer" class="spk-pagination-wrapper">
+                    <!-- Pagination will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Structured Data Modal -->
+<div class="modal fade" id="structuredDataModal" tabindex="-1" aria-labelledby="structuredDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="structuredDataModalLabel">Structured Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <pre id="structuredDataContent" style="max-height: 400px; overflow-y: auto; background: #f5f5f5; padding: 1rem; border-radius: 4px;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="spk-btn spk-btn--light" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{components/common::footer}"></div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+const BanHistoryApp = {
+    currentPage: 1,
+    pageSize: 100,
+    sortBy: 'insert_time',
+    sortOrder: 'desc',
+    
+    init() {
+        this.bindEvents();
+        this.loadData();
+    },
+    
+    bindEvents() {
+        document.getElementById('banHistorySearchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.currentPage = 1;
+            this.loadData();
+        });
+        
+        document.getElementById('resetButton').addEventListener('click', () => {
+            document.getElementById('banHistorySearchForm').reset();
+            this.currentPage = 1;
+            this.loadData();
+        });
+    },
+    
+    getFormData() {
+        const form = document.getElementById('banHistorySearchForm');
+        const formData = new FormData(form);
+        const data = {
+            page: this.currentPage,
+            size: this.pageSize,
+            sortBy: this.sortBy,
+            sortOrder: this.sortOrder
+        };
+        
+        for (let [key, value] of formData.entries()) {
+            if (value && value.trim() !== '') {
+                if (key === 'insertTimeStart' || key === 'insertTimeEnd') {
+                    // Convert datetime-local to ISO format
+                    data[key] = new Date(value).toISOString();
+                } else if (key === 'torrentId' || key === 'peerPort') {
+                    data[key] = parseInt(value);
+                } else {
+                    data[key] = value;
+                }
+            }
+        }
+        
+        return data;
+    },
+    
+    async loadData() {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultsContainer = document.getElementById('resultsContainer');
+        
+        loadingIndicator.style.display = 'block';
+        resultsContainer.innerHTML = '';
+        
+        try {
+            const response = await fetch('/api/banhistory/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.getFormData())
+            });
+            
+            if (!response.ok) {
+                throw new Error('查询失败');
+            }
+            
+            const data = await response.json();
+            this.renderTable(data);
+            this.renderPagination(data);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            resultsContainer.innerHTML = '<div class="alert alert-danger">加载数据失败: ' + error.message + '</div>';
+        } finally {
+            loadingIndicator.style.display = 'none';
+        }
+    },
+    
+    renderTable(data) {
+        const container = document.getElementById('resultsContainer');
+        
+        if (!data.records || data.records.length === 0) {
+            container.innerHTML = `
+                <div class="spk-empty">
+                    <i class="fas fa-inbox spk-empty__icon"></i>
+                    <h4 class="spk-empty__title">没有找到记录</h4>
+                    <p class="spk-empty__text">请调整查询条件后重试</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="spk-table-wrapper">
+                <table class="spk-table">
+                    <thead>
+                        <tr>
+                            <th>${this.renderSortHeader('insert_time', '记录时间')}</th>
+                            <th>${this.renderSortHeader('torrent_id', 'Torrent ID')}</th>
+                            <th>${this.renderSortHeader('peer_ip', 'Peer IP')}</th>
+                            <th>${this.renderSortHeader('peer_port', 'Port')}</th>
+                            <th>${this.renderSortHeader('peer_id', 'Peer ID')}</th>
+                            <th>${this.renderSortHeader('peer_client_name', 'Client')}</th>
+                            <th>${this.renderSortHeader('peer_progress', '进度')}</th>
+                            <th>GeoIP</th>
+                            <th>${this.renderSortHeader('module_name', 'Module')}</th>
+                            <th>${this.renderSortHeader('rule', 'Rule')}</th>
+                            <th>Description</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.records.forEach(record => {
+            html += this.renderTableRow(record);
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        // Bind sort events
+        container.querySelectorAll('[data-sort]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleSort(el.dataset.sort);
+            });
+        });
+        
+        // Bind structured data buttons
+        container.querySelectorAll('[data-structured]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showStructuredData(JSON.parse(el.dataset.structured));
+            });
+        });
+    },
+    
+    renderSortHeader(field, label) {
+        const isCurrent = this.sortBy === field;
+        const icon = isCurrent 
+            ? (this.sortOrder === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>')
+            : '<i class="fas fa-sort"></i>';
+        
+        return `<a href="#" data-sort="${field}" style="color: inherit; text-decoration: none;">${label} ${icon}</a>`;
+    },
+    
+    renderTableRow(record) {
+        const time = record.insertTime ? new Date(record.insertTime).toLocaleString('zh-CN') : 'N/A';
+        const progress = record.peerProgress !== null ? (record.peerProgress * 100).toFixed(2) + '%' : 'N/A';
+        const geoip = this.formatGeoIP(record.peerGeoip);
+        const hasStructuredData = record.structuredData && Object.keys(record.structuredData).length > 0;
+        
+        return `
+            <tr>
+                <td class="spk-timestamp">${time}</td>
+                <td>${record.torrentId || 'N/A'}</td>
+                <td><code class="spk-code">${record.peerIp || 'N/A'}</code></td>
+                <td>${record.peerPort || 'N/A'}</td>
+                <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${record.peerId || ''}">${record.peerId || 'N/A'}</td>
+                <td>${record.peerClientName || 'N/A'}</td>
+                <td>${progress}</td>
+                <td style="font-size: 0.85em;">${geoip}</td>
+                <td><span class="spk-badge spk-badge--info">${record.moduleName || 'N/A'}</span></td>
+                <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${record.rule || ''}">${record.rule || 'N/A'}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${record.description || ''}">${record.description || 'N/A'}</td>
+                <td>
+                    ${hasStructuredData ? `<button class="spk-btn spk-btn--sm spk-btn--light" data-structured='${JSON.stringify(record.structuredData)}'>
+                        <i class="fas fa-file-code"></i> 查看数据
+                    </button>` : '<span class="text-muted">无</span>'}
+                </td>
+            </tr>
+        `;
+    },
+    
+    formatGeoIP(geoip) {
+        if (!geoip) return 'N/A';
+        
+        const parts = [];
+        if (geoip.countryIso) parts.push(geoip.countryIso);
+        if (geoip.cityCnProvince) parts.push(geoip.cityCnProvince);
+        if (geoip.cityCnCity) parts.push(geoip.cityCnCity);
+        if (geoip.isp) parts.push(geoip.isp);
+        
+        return parts.length > 0 ? parts.join(', ') : 'N/A';
+    },
+    
+    showStructuredData(data) {
+        const content = document.getElementById('structuredDataContent');
+        content.textContent = JSON.stringify(data, null, 2);
+        $('#structuredDataModal').modal('show');
+    },
+    
+    handleSort(field) {
+        if (this.sortBy === field) {
+            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortBy = field;
+            this.sortOrder = 'desc';
+        }
+        this.loadData();
+    },
+    
+    renderPagination(data) {
+        const container = document.getElementById('paginationContainer');
+        
+        if (data.total === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        const totalPages = data.pages;
+        const current = data.current;
+        
+        let html = `
+            <div class="spk-pagination">
+                <div class="spk-pagination__info">
+                    显示第 ${(current - 1) * data.size + 1} - ${Math.min(current * data.size, data.total)} 条，共 ${data.total} 条记录
+                </div>
+                <div class="spk-pagination__controls">
+                    <button class="spk-btn spk-btn--sm spk-btn--light" ${current <= 1 ? 'disabled' : ''} onclick="BanHistoryApp.goToPage(${current - 1})">
+                        <i class="fas fa-chevron-left"></i> 上一页
+                    </button>
+        `;
+        
+        // Page numbers
+        const maxButtons = 7;
+        let startPage = Math.max(1, current - Math.floor(maxButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+        
+        if (endPage - startPage < maxButtons - 1) {
+            startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+        
+        if (startPage > 1) {
+            html += `<button class="spk-btn spk-btn--sm spk-btn--light" onclick="BanHistoryApp.goToPage(1)">1</button>`;
+            if (startPage > 2) {
+                html += `<span style="padding: 0 0.5rem;">...</span>`;
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button class="spk-btn spk-btn--sm ${i === current ? 'spk-btn--primary' : 'spk-btn--light'}" onclick="BanHistoryApp.goToPage(${i})">${i}</button>`;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += `<span style="padding: 0 0.5rem;">...</span>`;
+            }
+            html += `<button class="spk-btn spk-btn--sm spk-btn--light" onclick="BanHistoryApp.goToPage(${totalPages})">${totalPages}</button>`;
+        }
+        
+        html += `
+                    <button class="spk-btn spk-btn--sm spk-btn--light" ${current >= totalPages ? 'disabled' : ''} onclick="BanHistoryApp.goToPage(${current + 1})">
+                        下一页 <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    },
+    
+    goToPage(page) {
+        this.currentPage = page;
+        this.loadData();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    BanHistoryApp.init();
+});
+/*]]>*/
+</script>
+
+</body>
+</html>

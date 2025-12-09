@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
+import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
@@ -15,15 +16,11 @@ import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -108,6 +105,112 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     @Override
     public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp){
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
+    }
+
+    @Override
+    public @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
+        QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
+        
+        // Time range filter
+        if (queryDto.getInsertTimeStart() != null) {
+            queryWrapper.ge("insert_time", queryDto.getInsertTimeStart());
+        }
+        if (queryDto.getInsertTimeEnd() != null) {
+            queryWrapper.le("insert_time", queryDto.getInsertTimeEnd());
+        }
+        
+        // Torrent filter
+        if (queryDto.getTorrentId() != null) {
+            queryWrapper.eq("torrent_id", queryDto.getTorrentId());
+        }
+        
+        // Peer IP filter
+        if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
+            try {
+                InetAddress peerIp = InetAddress.ofLiteral(queryDto.getPeerIp().trim());
+                queryWrapper.eq("peer_ip", peerIp);
+            } catch (Exception e) {
+                // Invalid IP, ignore filter
+            }
+        }
+        
+        // Peer Port filter
+        if (queryDto.getPeerPort() != null) {
+            queryWrapper.eq("peer_port", queryDto.getPeerPort());
+        }
+        
+        // Peer ID filter
+        if (queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank()) {
+            queryWrapper.eq("peer_id", queryDto.getPeerId().trim());
+        }
+        
+        // Peer Client Name filter
+        if (queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank()) {
+            queryWrapper.eq("peer_client_name", queryDto.getPeerClientName().trim());
+        }
+        
+        // Module Name filter
+        if (queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank()) {
+            queryWrapper.eq("module_name", queryDto.getModuleName().trim());
+        }
+        
+        // Rule filter
+        if (queryDto.getRule() != null && !queryDto.getRule().isBlank()) {
+            queryWrapper.like("rule", queryDto.getRule().trim());
+        }
+        
+        // Description filter
+        if (queryDto.getDescription() != null && !queryDto.getDescription().isBlank()) {
+            queryWrapper.like("description", queryDto.getDescription().trim());
+        }
+        
+        // Sorting
+        String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";
+        String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
+        
+        if ("asc".equals(sortOrder)) {
+            queryWrapper.orderByAsc(sortBy);
+        } else {
+            queryWrapper.orderByDesc(sortBy);
+        }
+        
+        // Pagination
+        int page = queryDto.getPage() != null && queryDto.getPage() > 0 ? queryDto.getPage() : 1;
+        int size = queryDto.getSize() != null && queryDto.getSize() > 0 ? queryDto.getSize() : 100;
+        
+        Page<BanHistory> pageRequest = new Page<>(page, size);
+        
+        return this.baseMapper.selectPage(pageRequest, queryWrapper);
+    }
+
+    @Override
+    public @NotNull List<String> getDistinctPeerIds() {
+        return this.baseMapper.selectObjs(
+                new QueryWrapper<BanHistory>()
+                        .select("DISTINCT peer_id")
+                        .isNotNull("peer_id")
+                        .orderByAsc("peer_id")
+        ).stream().map(Object::toString).toList();
+    }
+
+    @Override
+    public @NotNull List<String> getDistinctPeerClientNames() {
+        return this.baseMapper.selectObjs(
+                new QueryWrapper<BanHistory>()
+                        .select("DISTINCT peer_client_name")
+                        .isNotNull("peer_client_name")
+                        .orderByAsc("peer_client_name")
+        ).stream().map(Object::toString).toList();
+    }
+
+    @Override
+    public @NotNull List<String> getDistinctModuleNames() {
+        return this.baseMapper.selectObjs(
+                new QueryWrapper<BanHistory>()
+                        .select("DISTINCT module_name")
+                        .isNotNull("module_name")
+                        .orderByAsc("module_name")
+        ).stream().map(Object::toString).toList();
     }
 
 }

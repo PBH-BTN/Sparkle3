@@ -4,13 +4,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
+import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -31,4 +31,29 @@ public interface IBanHistoryService extends IService<BanHistory> {
     @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
 
     List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    
+    /**
+     * Query ban history with advanced filters and pagination
+     * @param queryDto Query parameters
+     * @return Paginated ban history records
+     */
+    @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto);
+    
+    /**
+     * Get distinct peer IDs for dropdown selection
+     * @return List of distinct peer IDs
+     */
+    @NotNull List<String> getDistinctPeerIds();
+    
+    /**
+     * Get distinct peer client names for dropdown selection
+     * @return List of distinct peer client names
+     */
+    @NotNull List<String> getDistinctPeerClientNames();
+    
+    /**
+     * Get distinct module names for dropdown selection
+     * @return List of distinct module names
+     */
+    @NotNull List<String> getDistinctModuleNames();
 }
