@@ -136,21 +136,9 @@
         </div>
 
         <!-- Pagination -->
-        <div th:replace="~{components/pagination::pagination(
-            currentPage=${currentPage},
-            totalPages=${totalPages},
-            totalRecords=${total},
-            pageSize=${pageSize},
-            baseUrl='/client-discovery',
-            queryParams={
-                peerId: ${peerId},
-                peerClientName: ${peerClientName},
-                clientType: ${clientType},
-                clientSemver: ${clientSemver},
-                sortBy: ${sortBy},
-                sortOrder: ${sortOrder}
-            }
-        )}" th:if="${records != null && !records.isEmpty() && totalPages > 1}"></div>
+        <div class="spk-pagination-wrapper" th:if="${records != null && !records.isEmpty() && totalPages > 1}">
+            <div th:replace="~{components/pagination::pagination}"></div>
+        </div>
 
         <!-- Empty State -->
         <div class="spk-card" th:if="${records == null || records.isEmpty()}">
