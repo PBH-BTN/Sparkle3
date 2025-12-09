@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{components/common::header}"></head>
+<body class="spk-body">
+<nav th:replace="~{components/common::navbar}"></nav>
+
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fas fa-search"></i> 客户端发现
+        </h1>
+    </div>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container">
+        <!-- Query Form -->
+        <div class="spk-card" style="margin-bottom: 1.5rem;">
+            <div class="spk-card__body">
+                <form method="get" th:action="@{/client-discovery}">
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerId" class="form-label">Peer ID</label>
+                            <input type="text" class="form-control" id="peerId" name="peerId"
+                                   th:value="${peerId}" placeholder="支持模糊查询">
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="peerClientName" class="form-label">客户端名称</label>
+                            <input type="text" class="form-control" id="peerClientName" name="peerClientName"
+                                   th:value="${peerClientName}" placeholder="支持模糊查询">
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="clientType" class="form-label">客户端类型</label>
+                            <select class="form-control" id="clientType" name="clientType">
+                                <option value="">全部</option>
+                                <option th:each="type : ${clientTypes}"
+                                        th:value="${type}"
+                                        th:text="${type}"
+                                        th:selected="${type == clientType}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="clientSemver" class="form-label">版本号</label>
+                            <input type="text" class="form-control" id="clientSemver" name="clientSemver"
+                                   th:value="${clientSemver}" placeholder="支持模糊查询">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="sortBy" class="form-label">排序字段</label>
+                            <select class="form-control" id="sortBy" name="sortBy">
+                                <option value="found_at" th:selected="${sortBy == 'found_at'}">发现时间</option>
+                                <option value="peer_id" th:selected="${sortBy == 'peer_id'}">Peer ID</option>
+                                <option value="peer_client_name" th:selected="${sortBy == 'peer_client_name'}">客户端名称</option>
+                                <option value="client_type" th:selected="${sortBy == 'client_type'}">客户端类型</option>
+                                <option value="client_semver" th:selected="${sortBy == 'client_semver'}">版本号</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="sortOrder" class="form-label">排序方向</label>
+                            <select class="form-control" id="sortOrder" name="sortOrder">
+                                <option value="asc" th:selected="${sortOrder == 'asc'}">升序</option>
+                                <option value="desc" th:selected="${sortOrder == 'desc'}">降序</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label for="pageSize" class="form-label">每页显示</label>
+                            <select class="form-control" id="pageSize" name="pageSize">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="20" th:selected="${pageSize == 20}">20</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="spk-btn spk-btn--primary">
+                                    <i class="fas fa-search"></i> 查询
+                                </button>
+                                <a th:href="@{/client-discovery}" class="spk-btn spk-btn--secondary">
+                                    <i class="fas fa-redo"></i> 重置
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Result Info -->
+        <div th:if="${records != null && !records.isEmpty()}" class="mb-3">
+            <p class="text-muted">
+                <i class="fas fa-info-circle"></i>
+                共找到 <strong th:text="${total}">0</strong> 条记录，
+                当前第 <strong th:text="${currentPage}">1</strong> / <strong th:text="${totalPages}">1</strong> 页
+            </p>
+        </div>
+
+        <!-- Result Table -->
+        <div class="spk-table-wrapper" th:if="${records != null && !records.isEmpty()}">
+            <table class="spk-table">
+                <thead>
+                <tr>
+                    <th>Peer ID</th>
+                    <th>客户端名称</th>
+                    <th>客户端类型</th>
+                    <th>版本号</th>
+                    <th>发现时间</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="record : ${records}">
+                    <td>
+                        <code class="spk-code" th:text="${record.getPeerId()}">-qB4380-</code>
+                    </td>
+                    <td th:text="${record.getPeerClientName() != null ? record.getPeerClientName() : 'N/A'}">
+                        qBittorrent/4.3.8
+                    </td>
+                    <td>
+                        <span class="spk-badge spk-badge--info" th:if="${record.getClientType() != null}" th:text="${record.getClientType()}">
+                            qBittorrent
+                        </span>
+                        <span class="text-muted" th:if="${record.getClientType() == null}">N/A</span>
+                    </td>
+                    <td th:text="${record.getClientSemver() != null ? record.getClientSemver() : 'N/A'}">
+                        4.3.8.0
+                    </td>
+                    <td class="spk-timestamp" th:text="${record.getFoundAt() != null ? #temporals.format(record.getFoundAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">
+                        2025-01-01 00:00:00
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div th:if="${records != null && !records.isEmpty() && totalPages > 1}" class="spk-pagination">
+            <div class="spk-pagination__info">
+                <span th:text="'第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'">第 1 / 10 页</span>
+            </div>
+            <div class="spk-pagination__controls">
+                <!-- First Page -->
+                <a th:if="${currentPage > 1}"
+                   th:href="@{/client-discovery(peerId=${peerId}, peerClientName=${peerClientName}, clientType=${clientType}, clientSemver=${clientSemver}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=1, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+
+                <!-- Previous Page -->
+                <a th:if="${currentPage > 1}"
+                   th:href="@{/client-discovery(peerId=${peerId}, peerClientName=${peerClientName}, clientType=${clientType}, clientSemver=${clientSemver}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${currentPage - 1}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-left"></i> 上一页
+                </a>
+
+                <!-- Page Numbers -->
+                <span class="spk-pagination__current">
+                    <strong th:text="${currentPage}">1</strong> / <span th:text="${totalPages}">10</span>
+                </span>
+
+                <!-- Next Page -->
+                <a th:if="${currentPage < totalPages}"
+                   th:href="@{/client-discovery(peerId=${peerId}, peerClientName=${peerClientName}, clientType=${clientType}, clientSemver=${clientSemver}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${currentPage + 1}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    下一页 <i class="fas fa-angle-right"></i>
+                </a>
+
+                <!-- Last Page -->
+                <a th:if="${currentPage < totalPages}"
+                   th:href="@{/client-discovery(peerId=${peerId}, peerClientName=${peerClientName}, clientType=${clientType}, clientSemver=${clientSemver}, sortBy=${sortBy}, sortOrder=${sortOrder}, page=${totalPages}, pageSize=${pageSize})}"
+                   class="spk-pagination__btn">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="spk-card" th:if="${records == null || records.isEmpty()}">
+            <div class="spk-card__body">
+                <div class="spk-empty">
+                    <i class="fas fa-search spk-empty__icon"></i>
+                    <h4 class="spk-empty__title">没有找到任何记录</h4>
+                    <p class="spk-empty__text">请尝试调整查询条件或清空所有条件重新查询</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{components/common::footer}"></div>
+</body>
+</html>
