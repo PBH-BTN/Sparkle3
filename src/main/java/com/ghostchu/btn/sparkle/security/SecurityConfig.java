@@ -35,6 +35,10 @@ public class SecurityConfig {
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
                                 .requestMatchers("/banhistory/**").authenticated()
                                 .requestMatchers("/api/banhistory/**").authenticated()
+                                .requestMatchers("/swarm-tracker/**").authenticated()
+                                .requestMatchers("/api/swarmtracker/**").authenticated()
+                                .requestMatchers("/client-discovery/**").authenticated()
+                                .requestMatchers("/api/clientdiscovery/**").authenticated()
                                 .anyRequest().authenticated())
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)

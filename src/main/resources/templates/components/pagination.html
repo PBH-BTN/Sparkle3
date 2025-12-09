@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<!--
+    Sparkle Pagination Component
+    Reusable pagination widget for server-side rendered pages
+-->
+
+<!-- 
+    Pagination Fragment - Simple Version
+    Just pass the controller variables directly
+-->
+<div th:fragment="pagination" th:if="${totalPages != null && totalPages > 0}">
+    
+    <div class="spk-pagination">
+        <!-- Pagination Info -->
+        <div class="spk-pagination__info">
+            <span th:if="${total != null}">
+                显示第 <strong th:text="${(currentPage - 1) * pageSize + 1}">1</strong> - 
+                <strong th:text="${#numbers.formatInteger(T(java.lang.Math).min(currentPage * pageSize, total), 0, 'COMMA')}">100</strong> 条，
+                共 <strong th:text="${#numbers.formatInteger(total, 0, 'COMMA')}">1000</strong> 条记录
+            </span>
+            <span th:if="${total == null}">
+                第 <strong th:text="${currentPage}">1</strong> / <strong th:text="${totalPages}">10</strong> 页
+            </span>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="spk-pagination__controls">
+            <!-- First Page Button -->
+            <a th:if="${currentPage > 1}"
+               th:href="@{''(page=1, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+               class="spk-pagination__btn"
+               title="首页">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+            <span th:if="${currentPage <= 1}" class="spk-pagination__btn spk-pagination__btn--disabled" title="首页">
+                <i class="fas fa-angle-double-left"></i>
+            </span>
+            
+            <!-- Previous Page Button -->
+            <a th:if="${currentPage > 1}"
+               th:href="@{''(page=${currentPage - 1}, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+               class="spk-pagination__btn"
+               title="上一页">
+                <i class="fas fa-angle-left"></i> 上一页
+            </a>
+            <span th:if="${currentPage <= 1}" class="spk-pagination__btn spk-pagination__btn--disabled" title="上一页">
+                <i class="fas fa-angle-left"></i> 上一页
+            </span>
+            
+            <!-- Page Numbers -->
+            <th:block th:with="
+                maxButtons=7,
+                halfButtons=${maxButtons / 2},
+                startPage=${T(java.lang.Math).max(1, currentPage - halfButtons)},
+                endPage=${T(java.lang.Math).min(totalPages, startPage + maxButtons - 1)},
+                adjustedStartPage=${endPage - startPage < maxButtons - 1 ? T(java.lang.Math).max(1, endPage - maxButtons + 1) : startPage}">
+                
+                <!-- First page if not in range -->
+                <a th:if="${adjustedStartPage > 1}"
+                   th:href="@{''(page=1, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+                   class="spk-pagination__btn spk-pagination__btn--number">
+                    1
+                </a>
+                <span th:if="${adjustedStartPage > 2}" class="spk-pagination__ellipsis">...</span>
+                
+                <!-- Page number buttons -->
+                <th:block th:each="pageNum : ${#numbers.sequence(adjustedStartPage, endPage)}">
+                    <span th:if="${pageNum == currentPage}" 
+                          class="spk-pagination__btn spk-pagination__btn--number spk-pagination__btn--active">
+                        <strong th:text="${pageNum}">1</strong>
+                    </span>
+                    <a th:if="${pageNum != currentPage}"
+                       th:href="@{''(page=${pageNum}, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+                       class="spk-pagination__btn spk-pagination__btn--number"
+                       th:text="${pageNum}">
+                        1
+                    </a>
+                </th:block>
+                
+                <!-- Last page if not in range -->
+                <span th:if="${endPage < totalPages - 1}" class="spk-pagination__ellipsis">...</span>
+                <a th:if="${endPage < totalPages}"
+                   th:href="@{''(page=${totalPages}, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+                   class="spk-pagination__btn spk-pagination__btn--number"
+                   th:text="${totalPages}">
+                    10
+                </a>
+            </th:block>
+            
+            <!-- Next Page Button -->
+            <a th:if="${currentPage < totalPages}"
+               th:href="@{''(page=${currentPage + 1}, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+               class="spk-pagination__btn"
+               title="下一页">
+                下一页 <i class="fas fa-angle-right"></i>
+            </a>
+            <span th:if="${currentPage >= totalPages}" class="spk-pagination__btn spk-pagination__btn--disabled" title="下一页">
+                下一页 <i class="fas fa-angle-right"></i>
+            </span>
+            
+            <!-- Last Page Button -->
+            <a th:if="${currentPage < totalPages}"
+               th:href="@{''(page=${totalPages}, pageSize=${pageSize}, ${#request.getParameterMap()})}"
+               class="spk-pagination__btn"
+               title="末页">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+            <span th:if="${currentPage >= totalPages}" class="spk-pagination__btn spk-pagination__btn--disabled" title="末页">
+                <i class="fas fa-angle-double-right"></i>
+            </span>
+        </div>
+    </div>
+</div>
+
+</html>
