@@ -15,17 +15,17 @@
    ===================================================== */
 
 :root {
-    /* Primary Color - Emerald Green */
-    --spk-primary-50: #ecfdf5;
-    --spk-primary-100: #d1fae5;
-    --spk-primary-200: #a7f3d0;
-    --spk-primary-300: #6ee7b7;
-    --spk-primary-400: #34d399;
-    --spk-primary-500: #10b981;
-    --spk-primary-600: #059669;
-    --spk-primary-700: #047857;
-    --spk-primary-800: #065f46;
-    --spk-primary-900: #064e3b;
+    /* Primary Color - Soft Blue */
+    --spk-primary-50: #f0f4fe;
+    --spk-primary-100: #dde6fc;
+    --spk-primary-200: #c3d4f9;
+    --spk-primary-300: #adc6f9;
+    --spk-primary-400: #8aacf5;
+    --spk-primary-500: #6b91f0;
+    --spk-primary-600: #5574e4;
+    --spk-primary-700: #4760d1;
+    --spk-primary-800: #3c50aa;
+    --spk-primary-900: #364786;
 
     /* Neutral Colors */
     --spk-gray-50: #f9fafb;
