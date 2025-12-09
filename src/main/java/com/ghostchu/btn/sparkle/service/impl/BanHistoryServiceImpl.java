@@ -175,8 +175,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }
         
         // Pagination
-        int page = queryDto.getPage() != null && queryDto.getPage() > 0 ? queryDto.getPage() : 1;
-        int size = queryDto.getSize() != null && queryDto.getSize() > 0 ? queryDto.getSize() : 100;
+        int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
+        int size = (queryDto.getSize() != null && queryDto.getSize() > 0) ? queryDto.getSize() : 100;
         
         Page<BanHistory> pageRequest = new Page<>(page, size);
         

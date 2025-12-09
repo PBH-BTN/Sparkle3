@@ -1603,3 +1603,19 @@ html > header.spk-page-header {
         min-width: fit-content;
     }
 }
+
+/* =====================================================
+   Ban History Specific Styles
+   ===================================================== */
+
+.spk-pagination-wrapper {
+    margin-top: var(--spk-spacing-lg);
+}
+
+.spk-form .row {
+    margin-bottom: var(--spk-spacing-md);
+}
+
+.spk-form .row:last-child {
+    margin-bottom: 0;
+}
