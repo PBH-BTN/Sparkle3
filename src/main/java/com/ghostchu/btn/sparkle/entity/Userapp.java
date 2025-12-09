@@ -59,9 +59,6 @@ public class Userapp implements Serializable {
     @TableField(condition = "delete_at")
     private OffsetDateTime deleteAt;
 
-    @TableField("hardware_id")
-    private String hardwareId;
-
     @TableField("installation_id")
     private String installationId;
 
