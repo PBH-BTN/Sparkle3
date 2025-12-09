@@ -21,7 +21,7 @@ import java.util.List;
  */
 public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
     @NotNull
-    List<AnalyseByModuleResult> analyseByModule(@NotNull OffsetDateTime afterTimestamp, @NotNull List<String> module);
+    List<AnalyseByModuleResult> analyseByModule(@NotNull OffsetDateTime afterTimestamp, @NotNull List<String> moduleName);
 
     @NotNull
     List<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull OffsetDateTime afterTimestamp);
