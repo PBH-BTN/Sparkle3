@@ -7,7 +7,6 @@ import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadRes
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import org.jetbrains.annotations.NotNull;
 
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 

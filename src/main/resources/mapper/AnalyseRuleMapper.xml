@@ -15,7 +15,11 @@
                count(peer_ip)                      AS ban_count,
                count(distinct userapps_id)         AS userapps_count
         FROM ban_history
-        WHERE ((insert_time > #{afterTimestamp}) AND (module_name IN #{moduleName}))
+        WHERE ((insert_time > #{afterTimestamp}) AND (module_name IN
+        <foreach collection="moduleName" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        ))
         GROUP BY peer_ip_cidr, iso, city
         ORDER BY ban_count DESC, userapps_count DESC
         LIMIT 1000
