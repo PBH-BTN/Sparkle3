@@ -18,6 +18,7 @@ public class UserApplicationDto implements Serializable {
     private String appId;
     private String comment;
     private OffsetDateTime createdAt;
+    private OffsetDateTime lastSeenAt;
     private OffsetDateTime bannedAt;
     private String bannedReason;
 
@@ -26,6 +27,7 @@ public class UserApplicationDto implements Serializable {
         this.appId = userapp.getAppId();
         this.comment = userapp.getComment();
         this.createdAt = userapp.getCreatedAt();
+        this.lastSeenAt = userapp.getLastSeenAt();
         this.bannedAt = userapp.getBannedAt();
         this.bannedReason = userapp.getBannedReason();
     }
