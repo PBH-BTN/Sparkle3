@@ -88,7 +88,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 new QueryWrapper<SwarmTracker>()
                         .eq("peer_ip", peerIp)
                         .ge("last_time_seen", afterTime)
-                        .eq("peer_progress", 1.0)
+                        .le("peer_progress", 1.0)
         );
     }
 
@@ -108,7 +108,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 new QueryWrapper<SwarmTracker>()
                         .eq("peer_ip", peerIp)
                         .ge("last_time_seen", afterTime)
-                        .not(query-> query.eq("peer_progress", 1.0))
+                        .ge("peer_progress", 1.0)
         );
     }
 
