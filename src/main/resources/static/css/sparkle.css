@@ -636,7 +636,7 @@ html > header.spk-page-header {
 
 .spk-page-header__title i {
     margin-right: var(--spk-spacing-sm);
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--spk-primary-300);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -1452,7 +1452,7 @@ html > header.spk-page-header {
 }
 
 .spk-page-header__title i {
-    color: var(--spk-primary-500);
+    color: var(--spk-primary-300);
     margin-right: var(--spk-spacing-sm);
 }
 
