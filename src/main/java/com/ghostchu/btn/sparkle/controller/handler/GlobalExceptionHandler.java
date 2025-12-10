@@ -1,11 +1,9 @@
 package com.ghostchu.btn.sparkle.controller.handler;
 
-import com.ghostchu.btn.sparkle.exception.BusinessException;
-import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
-import com.ghostchu.btn.sparkle.exception.UserBannedException;
-import com.ghostchu.btn.sparkle.wrapper.StdResp;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.charset.MalformedInputException;
+
 import org.apache.catalina.connector.ClientAbortException;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +13,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
+import com.ghostchu.btn.sparkle.exception.UserBannedException;
+import com.ghostchu.btn.sparkle.wrapper.StdResp;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
 @Slf4j
@@ -74,9 +80,52 @@ public class GlobalExceptionHandler {
         // not my issue
     }
 
+    @ExceptionHandler(InvalidParameterException.class)
+    public ResponseEntity<@NotNull StdResp<String>> invalidParameterHandler(InvalidParameterException e, HttpServletRequest request) {
+        String queryString = request.getQueryString();
+        boolean isTrackerRequest = queryString != null && queryString.contains("info_hash");
+        
+        if (isTrackerRequest) {
+            log.debug("BitTorrent tracker request detected with invalid parameter: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new StdResp<>(false, "d14:failure reason82:This is not a BitTorrent tracker. Invalid parameter encoding detected.e", null));
+        }
+        log.warn("Invalid parameter received: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new StdResp<>(false, "无效的请求参数: " + e.getMessage(), null));
+    }
+
+    @ExceptionHandler(MalformedInputException.class)
+    public ResponseEntity<@NotNull StdResp<String>> malformedInputHandler(MalformedInputException e, HttpServletRequest request) {
+        String queryString = request.getQueryString();
+        boolean isTrackerRequest = queryString != null && queryString.contains("info_hash");
+        if (isTrackerRequest) {
+            log.debug("BitTorrent tracker request detected with malformed input: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new StdResp<>(false, "d14:failure reason70:This is not a BitTorrent tracker. Malformed input detected.e", null));
+        }
+        
+        log.warn("Malformed input received: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new StdResp<>(false, "请求包含格式错误的数据: " + e.getMessage(), null));
+    }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<@NotNull StdResp<Void>> jvmExceptionHandler(Exception e) {
+    public ResponseEntity<@NotNull StdResp<String>> jvmExceptionHandler(Exception e, HttpServletRequest request) {
+        // Check if it's a parameter encoding issue deep in the stack
+        Throwable cause = e;
+        int depth = 0;
+        while (cause != null && depth < 20) {
+            if (cause instanceof InvalidParameterException) {
+                return invalidParameterHandler((InvalidParameterException) cause, request);
+            }
+            if (cause instanceof MalformedInputException) {
+                return malformedInputHandler((MalformedInputException) cause, request);
+            }
+            cause = cause.getCause();
+            depth++;
+        }
+        
         log.error("Unexpected exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new StdResp<>(false, "服务器内部错误，请联系服务器管理员。", null));
