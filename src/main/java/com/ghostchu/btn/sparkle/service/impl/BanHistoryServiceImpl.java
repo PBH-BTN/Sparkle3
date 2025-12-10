@@ -81,6 +81,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setPeerGeoip(geoIPManager.geoData(inet))
                     .setStructuredData(structuredDataMap);
         }).toList();
+        if(list.isEmpty()) return;
         this.baseMapper.insert(list, 500);
     }
 

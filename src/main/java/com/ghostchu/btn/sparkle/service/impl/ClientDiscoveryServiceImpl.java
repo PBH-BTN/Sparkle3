@@ -82,7 +82,9 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             clientDiscoveryList.add(clientDiscovery);
         }
         try {
-            this.baseMapper.batchInsert(clientDiscoveryList);
+            if (!clientDiscoveryList.isEmpty()) {
+                this.baseMapper.batchInsert(clientDiscoveryList);
+            }
         } catch (Exception e) {
             log.error("Error inserting client discovery data: {}", e.getMessage());
         }
