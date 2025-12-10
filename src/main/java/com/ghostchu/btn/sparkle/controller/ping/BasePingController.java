@@ -75,15 +75,15 @@ public class BasePingController {
 
     @NotNull
     public ClientAuthenticationCredential cred(@NotNull HttpServletRequest request) {
-        ClientAuthenticationCredential cred = readModernFromAuthentication(request);
+        ClientAuthenticationCredential cred = readModernFromHeader(request);
+        if (cred.isValid()) {
+            return cred;
+        }
+        cred = readModernFromAuthentication(request);
         if (cred.isValid()) {
             return cred;
         }
         cred = readOldModernFromAuthentication(request); // 显然，BUG 变成了特性
-        if (cred.isValid()) {
-            return cred;
-        }
-        cred = readModernFromHeader(request);
         if (cred.isValid()) {
             return cred;
         }
