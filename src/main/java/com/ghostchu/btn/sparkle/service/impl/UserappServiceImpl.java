@@ -45,7 +45,9 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     @Transactional
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp) {
         Userapp userApp;
-        if (("example-app-id".equals(appId) || appId.isBlank()) && ("example-app-secret".equals(appSecret) || appSecret.isBlank()) && installationId != null && !installationId.isBlank()) {
+        if (("example-app-id".equals(appId) || appId.isBlank())
+                && ("example-app-secret".equals(appSecret) || appSecret.isBlank())
+                && (installationId != null && !installationId.isBlank())) {
             // auto account logic
             Userapp autoAccountUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("owner", autoAccountHolderUid).eq("installation_id", installationId));
             if (autoAccountUserApp == null) {
@@ -77,7 +79,9 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
 
     @Nullable
     public Long getUserAppLastAccess(long userAppId) {
-        return userAppsRedisTemplate.opsForValue().get("sparkle:userapps:lastaccess:" + userAppId);
+        var userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("id", userAppId));
+        if (userApp == null) return null;
+        return userApp.getLastSeenAt().toInstant().toEpochMilli();
     }
 
     @Override
