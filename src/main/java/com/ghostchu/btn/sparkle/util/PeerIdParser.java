@@ -121,6 +121,7 @@ public class PeerIdParser {
         AZ_STYLE_CLIENTS.put("BS", "BTSlave");
         AZ_STYLE_CLIENTS.put("BW", "BitWombat");
         AZ_STYLE_CLIENTS.put("BX", "BittorrentX");
+        AZ_STYLE_CLIENTS.put("BL", "BiglyBT");
         AZ_STYLE_CLIENTS.put("CB", "Shareaza Plus");
         AZ_STYLE_CLIENTS.put("CD", "Enhanced CTorrent");
         AZ_STYLE_CLIENTS.put("CT", "CTorrent");
@@ -206,6 +207,9 @@ public class PeerIdParser {
         SIMPLE_CLIENTS.put("btpd", "BT Protocol Daemon");
         SIMPLE_CLIENTS.put("Plus", "Plus!");
         SIMPLE_CLIENTS.put("turbobt", "TurboBT");
+        SIMPLE_CLIENTS.put("A2", "Aria2");
+        SIMPLE_CLIENTS.put("FD6", "Free Download Manager 6");
+        SIMPLE_CLIENTS.put("FD5", "Free Download Manager 5");
     }
 
     /**
