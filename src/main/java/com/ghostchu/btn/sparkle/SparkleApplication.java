@@ -10,9 +10,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @MapperScan("com.ghostchu.btn.sparkle.mapper")
-@EnableAsync
+//@EnableAsync
 @EnableScheduling
-@EnableRetry
+//@EnableRetry
 @EnableCaching
 public class SparkleApplication {
 

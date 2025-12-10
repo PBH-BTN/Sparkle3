@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMapper, ClientDiscovery> implements IClientDiscoveryService {
 
     @Transactional
-    @Async
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
