@@ -53,6 +53,13 @@ server:
       host-header: X-Forwarded-For
       port-header: X-Forwarded-Port
       protocol-header: X-Forwarded-Proto
+    reject-illegal-header: false
+    max-http-form-post-size: 2MB
+logging:
+  level:
+    org.apache.catalina.connector: OFF
+    org.apache.tomcat.util.http.Parameters: OFF
+    org.apache.coyote.http11.Http11Processor: WARN
 mybatis-plus:
   global-config:
     db-config:
