@@ -121,7 +121,6 @@ public class PeerIdParser {
         AZ_STYLE_CLIENTS.put("BS", "BTSlave");
         AZ_STYLE_CLIENTS.put("BW", "BitWombat");
         AZ_STYLE_CLIENTS.put("BX", "BittorrentX");
-        AZ_STYLE_CLIENTS.put("BL", "BiglyBT");
         AZ_STYLE_CLIENTS.put("CB", "Shareaza Plus");
         AZ_STYLE_CLIENTS.put("CD", "Enhanced CTorrent");
         AZ_STYLE_CLIENTS.put("CT", "CTorrent");
@@ -172,6 +171,10 @@ public class PeerIdParser {
         AZ_STYLE_CLIENTS.put("XC", "XTorrent");
         AZ_STYLE_CLIENTS.put("ZT", "ZipTorrent");
         AZ_STYLE_CLIENTS.put("ZO", "Zona");
+        AZ_STYLE_CLIENTS.put("GP", "Gopeed");
+        AZ_STYLE_CLIENTS.put("BI", "BiglyBT");
+        AZ_STYLE_CLIENTS.put("FW", "FrostWire");
+        AZ_STYLE_CLIENTS.put("BL", "BitLord");
 
         // Shadow style clients (单字符标识)
         SHADOW_STYLE_CLIENTS.put("A", "Aria2");
