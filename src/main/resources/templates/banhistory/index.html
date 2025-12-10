@@ -28,7 +28,7 @@
                             <input type="datetime-local" class="form-control" id="insertTimeEnd" name="insertTimeEnd">
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
-                            <label for="torrentId" class="form-label">Torrent ID</label>
+                            <label for="torrentId" class="form-label">种子 ID</label>
                             <input type="number" class="form-control" id="torrentId" name="torrentId" placeholder="种子ID">
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
@@ -39,7 +39,7 @@
                     
                     <div class="row">
                         <div class="col-md-6 col-lg-3 mb-3">
-                            <label for="peerPort" class="form-label">Peer Port</label>
+                            <label for="peerPort" class="form-label">Peer 端口号</label>
                             <input type="number" class="form-control" id="peerPort" name="peerPort" placeholder="端口">
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
@@ -50,14 +50,14 @@
                             </select>
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
-                            <label for="peerClientName" class="form-label">Client Name</label>
+                            <label for="peerClientName" class="form-label">客户端名称</label>
                             <select class="form-control" id="peerClientName" name="peerClientName">
                                 <option value="">全部</option>
                                 <option th:each="name : ${peerClientNames}" th:value="${name}" th:text="${name}"></option>
                             </select>
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
-                            <label for="moduleName" class="form-label">Module Name</label>
+                            <label for="moduleName" class="form-label">模块名称</label>
                             <select class="form-control" id="moduleName" name="moduleName">
                                 <option value="">全部</option>
                                 <option th:each="module : ${moduleNames}" th:value="${module}" th:text="${module}"></option>
@@ -67,11 +67,11 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="rule" class="form-label">Rule</label>
+                            <label for="rule" class="form-label">规则</label>
                             <input type="text" class="form-control" id="rule" name="rule" placeholder="规则名称（模糊搜索）">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="description" class="form-label">Description</label>
+                            <label for="description" class="form-label">描述</label>
                             <input type="text" class="form-control" id="description" name="description" placeholder="描述信息（模糊搜索）">
                         </div>
                     </div>
