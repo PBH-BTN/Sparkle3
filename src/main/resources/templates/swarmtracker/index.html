@@ -208,16 +208,16 @@ const SwarmTrackerApp = {
                         <tr>
                             <th>${this.renderSortHeader('torrent_id', '种子ID')}</th>
                             <th>${this.renderSortHeader('peer_ip', 'Peer IP')}</th>
-                            <th>${this.renderSortHeader('peer_port', 'Peer Port')}</th>
+                            <th>${this.renderSortHeader('peer_port', 'Peer 端口号')}</th>
                             <th>${this.renderSortHeader('peer_id', 'Peer ID')}</th>
                             <th>客户端名称</th>
-                            <th>${this.renderSortHeader('peer_progress', 'Peer 进度')}</th>
-                            <th>${this.renderSortHeader('from_peer_traffic', '从 Peer 流量')}</th>
-                            <th>${this.renderSortHeader('to_peer_traffic', '到 Peer 流量')}</th>
+                            <th>${this.renderSortHeader('peer_progress', 'Peer 任务进度')}</th>
+                            <th>${this.renderSortHeader('from_peer_traffic', '从 Peer 获取的流量')}</th>
+                            <th>${this.renderSortHeader('to_peer_traffic', '到 Peer 发送的流量')}</th>
                             <th>标志</th>
                             <th>${this.renderSortHeader('first_time_seen', '首次见到')}</th>
                             <th>${this.renderSortHeader('last_time_seen', '最后见到')}</th>
-                            <th>${this.renderSortHeader('user_progress', '用户进度')}</th>
+                            <th>${this.renderSortHeader('user_progress', '用户任务进度')}</th>
                         </tr>
                     </thead>
                     <tbody>

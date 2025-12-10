@@ -7,10 +7,23 @@
 <main class="spk-main">
     <div class="spk-container">
         <!-- Warning Alert -->
-        <div class="spk-alert spk-alert--warning spk-mb-3">
-            <span class="spk-alert__title"><i class="fa-solid fa-road-barrier"></i> 改版装修中</span>
-            BTN 3.0 正在加紧施工中。由于缺乏前端人手，目前前端仅基本功能可用，不影响后端运行和上报收集等功能。
+        <div class="spk-alert spk-alert--success spk-mb-3">
+            <span class="spk-alert__title"><i class="fa-solid fa-road-barrier"></i> 欢迎来到 BTN 3.0</span>
+            您正在访问的是 BTN 3.0 服务端，于 2025/12/10 上线。原 BTN 2.0 用户数据现已迁移到 BTN 3.0 版本，但仍有部分用户因长期未登录过而迁移失败。如您出现登陆后数据丢失的问题，请您重新创建用户应用程序。
         </div>
+        <div class="spk-alert spk-alert--info spk-mb-3">
+            <span class="spk-alert__title"><i class="fa-solid fa-circle-info"></i> BTN 协议版本已升级</span>
+            协议版本已升级到 20 版本，新的 BTN 3.0 协议不与旧版本 PeerBanHelper 兼容。请您升级 PeerBanHelper 至最新版本以继续使用。
+        </div>
+        <div class="spk-alert spk-alert--warning spk-mb-3">
+            <span class="spk-alert__title"><i class="fa-solid fa-pause"></i> GitHub 规则同步临时暂停</span>
+            PBH-BTN/BTN-Collected-Rules 仓库自动同步临时暂停，我们将在 BTN 服务器接收到新版客户端足够多的数据后再恢复同步。
+        </div>
+        <div class="spk-alert spk-alert--info spk-mb-3">
+            <span class="spk-alert__title"><i class="fa-solid fa-pause"></i> Sparkle Dashboard 临时下线</span>
+            原 Grafana Sparkle Dashboard 暂时下线以接受数据迁移。迁移期间，Dashboard 暂不可用。
+        </div>
+
 
         <!-- Banned Alert -->
         <div class="spk-alert spk-alert--danger spk-mb-3" th:if="${sessionUser.getBannedAt() != null}">
@@ -34,7 +47,7 @@
         <!-- Statistics Section -->
         <section class="spk-mt-4">
             <h2 class="spk-mb-3"><i class="fas fa-chart-line"></i> 网络统计数据</h2>
-            
+
             <!-- Ban History Statistics -->
             <div class="spk-card spk-mb-3">
                 <div class="spk-card__header">
