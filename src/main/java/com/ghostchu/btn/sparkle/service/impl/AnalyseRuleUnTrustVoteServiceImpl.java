@@ -113,11 +113,15 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                     .append(", 不信任票数: ").append(rule.getUserappsCount())
                     .append(", 合并记录数量: ").append(rule.getMergedRecords())
                     .append("\n");
-            if ((rule.getPeerIpCidr().isIPv4() && rule.getPeerIpCidr().getPrefixLength() == 32)
-                    || (rule.getPeerIpCidr().isIPv6() && rule.getPeerIpCidr().getPrefixLength() == 128)) {
-                rule.setPeerIpCidr(rule.getPeerIpCidr().withoutPrefixLength());
+
+            // 先调用 toZeroHost()，然后再决定是否移除前缀长度
+            IPAddress outputAddr = rule.getPeerIpCidr().toZeroHost();
+            if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
+                    || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
+                outputAddr = outputAddr.withoutPrefixLength();
             }
-            String outputIp = rule.getPeerIpCidr().toZeroHost().toNormalizedString();
+
+            String outputIp = outputAddr.toNormalizedString();
             log.info("规则: {} -> 输出: {}", rule.getPeerIpCidr(), outputIp);
             sb.append(outputIp).append("\n");
         }
