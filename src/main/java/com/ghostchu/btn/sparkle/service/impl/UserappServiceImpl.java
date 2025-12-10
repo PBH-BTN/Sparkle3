@@ -54,8 +54,8 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
                 if (!autoAccountAllowRegister) return null;
                 Userapp newRegister = new Userapp();
                 newRegister.setOwner(autoAccountHolderUid);
-                newRegister.setAppId(UUID.randomUUID().toString());
-                newRegister.setAppSecret(UUID.randomUUID().toString());
+                newRegister.setAppId("AUTOACCOUNT-" + UUID.randomUUID());
+                newRegister.setAppSecret("AUTOACCOUNT-" + UUID.randomUUID());
                 newRegister.setComment("Auto Account for installation ID: " + installationId);
                 newRegister.setCreateIp(loginIp);
                 newRegister.setCreatedAt(OffsetDateTime.now());
