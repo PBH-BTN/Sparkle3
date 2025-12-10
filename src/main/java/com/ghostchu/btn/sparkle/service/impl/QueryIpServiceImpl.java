@@ -97,7 +97,7 @@ public class QueryIpServiceImpl {
         }
         var shareRatio =
                 totalFromPeerTraffic == 0 ? 0.0 :
-                totalToPeerTraffic == 0 ? Double.POSITIVE_INFINITY :
+                totalToPeerTraffic == 0 ? 999999999.0 :
                 (double) totalFromPeerTraffic / totalToPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
         Set<Long> distinctTorrentIds = new HashSet<>();
