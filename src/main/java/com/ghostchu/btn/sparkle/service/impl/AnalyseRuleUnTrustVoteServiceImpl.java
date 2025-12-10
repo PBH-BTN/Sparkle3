@@ -63,7 +63,6 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                     IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
                     return new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0);
                 }).collect(Collectors.toCollection(ArrayList::new));
-        log.info("从数据库查询到 {} 条记录", resultList.size());
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
         for (GeneratedRule result : resultList) {
             IPAddress ipAddress = result.getPeerIpCidr();
@@ -71,14 +70,6 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         }
         IPv4Address[] ipv4Prefixes = mergeIpsV4(tries.getIPv4Trie());
         IPv6Address[] ipv6Prefixes = mergeIpsV6(tries.getIPv6Trie());
-        log.info("IPv4 合并后生成 {} 个前缀块", ipv4Prefixes.length);
-        log.info("IPv6 合并后生成 {} 个前缀块", ipv6Prefixes.length);
-        for (IPv4Address prefix : ipv4Prefixes) {
-            log.info("IPv4 合并块: {}", prefix);
-        }
-        for (IPv6Address prefix : ipv6Prefixes) {
-            log.info("IPv6 合并块: {}", prefix);
-        }
         triesMergeV4(tries.getIPv4Trie(), ipv4Prefixes);
         triesMergeV6(tries.getIPv6Trie(), ipv6Prefixes);
         // 此时 Tries 就是已经合并好的结果，过滤一下规则
@@ -95,8 +86,6 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                 }
             }
         });
-
-        log.info("过滤后生成 {} 条规则", rules.size());
         StringBuilder sb = new StringBuilder();
         for (GeneratedRule rule : rules) {
             // 过滤掉无效的 IP 地址（0.0.0.0 或全 0 的 IPv6）
@@ -105,10 +94,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
 
             // 检查是否为无效的全 0 地址或过大的 CIDR 块
             if (ipAddr.isZero() || (prefixLength != null && prefixLength == 0)) {
-                log.warn("跳过无效的 IP 地址: {}, 前缀长度: {}", ipAddr, prefixLength);
                 continue;
             }
-
             sb.append("# [Sparkle3 不受信任投票] 封禁计数: ").append(rule.getBanCount())
                     .append(", 不信任票数: ").append(rule.getUserappsCount())
                     .append(", 合并记录数量: ").append(rule.getMergedRecords())
@@ -120,9 +107,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                     || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
                 outputAddr = outputAddr.withoutPrefixLength();
             }
-
             String outputIp = outputAddr.toNormalizedString();
-            log.info("规则: {} -> 输出: {}", rule.getPeerIpCidr(), outputIp);
             sb.append(outputIp).append("\n");
         }
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey(), sb.toString());
