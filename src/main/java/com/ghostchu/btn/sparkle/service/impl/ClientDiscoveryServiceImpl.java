@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +37,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMapper, ClientDiscovery> implements IClientDiscoveryService {
 
-    @Transactional
+    @Value("${sparkle.client-discovery.enabled}")
+    private boolean useClientDiscovery;
+
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
+        if(!useClientDiscovery) return;
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
         for (Pair<String, String> pair : data) {
             var peerIdIn = pair.getKey();
