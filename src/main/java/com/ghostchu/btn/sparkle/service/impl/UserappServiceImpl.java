@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,19 +29,50 @@ import java.util.UUID;
  * @since 2025-11-29
  */
 @Service
+@Slf4j
 public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> implements IUserappService {
     @Qualifier("stringLongRedisTemplate")
     @Autowired
     private RedisTemplate<String, Long> userAppsRedisTemplate;
+    @Value("${sparkle.userapp.auto-account.allow-register}")
+    private boolean autoAccountAllowRegister;
+    @Value("${sparkle.userapp.auto-account.allow-login}")
+    private boolean autoAccountAllowLogin;
+    @Value("${sparkle.userapp.auto-account.holder-uid}")
+    private long autoAccountHolderUid;
 
     @Nullable
-    public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret) {
-        Userapp loggedInUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
-        if (loggedInUserApp != null) {
-            this.baseMapper.updateUserAppLastSeen(loggedInUserApp.getId());
-            userAppsRedisTemplate.opsForValue().set("sparkle:userapps:lastaccess:" + loggedInUserApp.getId(), System.currentTimeMillis());
+    @Transactional
+    public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp) {
+        Userapp userApp;
+        if (("example-app-id".equals(appId) || appId.isBlank()) && ("example-app-secret".equals(appSecret) || appSecret.isBlank()) && installationId != null && !installationId.isBlank()) {
+            // auto account logic
+            Userapp autoAccountUserApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("owner", autoAccountHolderUid).eq("installation_id", installationId));
+            if (autoAccountUserApp == null) {
+                if (!autoAccountAllowRegister) return null;
+                Userapp newRegister = new Userapp();
+                newRegister.setOwner(autoAccountHolderUid);
+                newRegister.setAppId(UUID.randomUUID().toString());
+                newRegister.setAppSecret(UUID.randomUUID().toString());
+                newRegister.setComment("Auto Account for installation ID: " + installationId);
+                newRegister.setCreateIp(loginIp);
+                newRegister.setCreatedAt(OffsetDateTime.now());
+                newRegister.setInstallationId(installationId);
+                if (baseMapper.insert(newRegister) <= 0)
+                    throw new IllegalStateException("Failed to create userapp for user");
+                userApp = newRegister;
+                log.info("Auto registered new userapp for installation ID {}", installationId);
+            } else {
+                if (!autoAccountAllowLogin) return null;
+                userApp = autoAccountUserApp;
+            }
+        } else {
+            userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
         }
-        return loggedInUserApp;
+        if (userApp != null) {
+            this.baseMapper.updateUserAppLastSeen(userApp.getId());
+        }
+        return userApp;
     }
 
     @Nullable

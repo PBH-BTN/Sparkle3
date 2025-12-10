@@ -48,7 +48,7 @@ public class BasePingController {
     public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret());
+        var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()));
         if (userApp == null) {
             throw new UserApplicationNotFoundException();
         }
@@ -62,7 +62,7 @@ public class BasePingController {
     public Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        return userappService.loginViaCredential(cred.appId(), cred.appSecret());
+        return userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()));
     }
 
     public String cutPeerId(String in) {
@@ -87,10 +87,6 @@ public class BasePingController {
         if (cred.isValid()) {
             return cred;
         }
-        cred = readQueryFromUri(request);
-        if (cred.isValid()) {
-            return cred;
-        }
         cred = readLegacy(request);
         return cred;
     }
@@ -99,50 +95,50 @@ public class BasePingController {
     private ClientAuthenticationCredential readQueryFromUri(@NotNull HttpServletRequest request) {
         String appId = request.getParameter("appId");
         String appSecret = request.getParameter("appSecret");
-        String hardwareId = request.getParameter("hardwareId");
         String installationId = request.getParameter("installationId");
-        return new ClientAuthenticationCredential(appId, appSecret);
+        return new ClientAuthenticationCredential(appId, appSecret, installationId);
     }
 
     @NotNull
     private ClientAuthenticationCredential readOldModernFromAuthentication(@NotNull HttpServletRequest request) {
         String header = request.getHeader("Authentication");
         if (header == null) {
-            return new ClientAuthenticationCredential(null, null);
+            return new ClientAuthenticationCredential(null, null, null);
         }
         header = header.substring(7);
         String[] parser = header.split("@", 2);
         if (parser.length == 2) {
-            return new ClientAuthenticationCredential(parser[0], parser[1]);
+            return new ClientAuthenticationCredential(parser[0], parser[1], null);
         }
-        return new ClientAuthenticationCredential(null, null);
+        return new ClientAuthenticationCredential(null, null, null);
     }
 
     @NotNull
     private ClientAuthenticationCredential readModernFromAuthentication(@NotNull HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header == null) {
-            return new ClientAuthenticationCredential(null, null);
+            return new ClientAuthenticationCredential(null, null, null);
         }
         header = header.substring(7);
         String[] parser = header.split("@", 2);
         if (parser.length == 2) {
-            return new ClientAuthenticationCredential(parser[0], parser[1]);
+            return new ClientAuthenticationCredential(parser[0], parser[1], null);
         }
-        return new ClientAuthenticationCredential(null, null);
+        return new ClientAuthenticationCredential(null, null, null);
     }
 
     @NotNull
     private ClientAuthenticationCredential readModernFromHeader(@NotNull HttpServletRequest request) {
         String appId = request.getHeader("X-BTN-AppID");
         String appSecret = request.getHeader("X-BTN-AppSecret");
-        return new ClientAuthenticationCredential(appId, appSecret);
+        String installationId = request.getHeader("X-BTN-InstallationID");
+        return new ClientAuthenticationCredential(appId, appSecret, installationId);
     }
 
     @NotNull
     private ClientAuthenticationCredential readLegacy(@NotNull HttpServletRequest request) {
         String appId = request.getHeader("BTN-AppID");
         String appSecret = request.getHeader("BTN-AppSecret");
-        return new ClientAuthenticationCredential(appId, appSecret);
+        return new ClientAuthenticationCredential(appId, appSecret, null);
     }
 }

@@ -66,6 +66,11 @@ sparkle:
       endpoint: "${sparkle.root-url}/ping/captcha/createSession"
       difficulty-bits: 5
       algorithm: SHA-256
+  userapp:
+    auto-account:
+      allow-register: true
+      allow-login: true
+      holder-uid: 16402
   ping:
     config:
       min-protocol-version: 20

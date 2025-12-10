@@ -7,10 +7,12 @@ import java.io.Serializable;
 public class ClientAuthenticationCredential implements Serializable {
     private final String appId;
     private final String appSecret;
+    private final String installationId;
 
-    public ClientAuthenticationCredential(String appId, String appSecret) {
+    public ClientAuthenticationCredential(String appId, String appSecret, String installationId) {
         this.appId = appId;
         this.appSecret = appSecret;
+        this.installationId = installationId;
     }
 
     public String appId() {
@@ -21,8 +23,12 @@ public class ClientAuthenticationCredential implements Serializable {
         return appSecret.trim();
     }
 
+    public String installationId() {
+        return installationId.trim();
+    }
+
     public boolean isValid() {
-        return appId != null && appSecret != null;
+        return (appId != null && appSecret != null) || (installationId != null && !installationId.trim().isEmpty());
     }
 
     public void verifyOrThrow() throws AccessDeniedException {

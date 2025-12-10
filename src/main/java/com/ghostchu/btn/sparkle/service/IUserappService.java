@@ -19,7 +19,7 @@ import java.util.List;
  */
 public interface IUserappService extends IService<Userapp> {
     @Nullable
-    Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret);
+    Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp);
 
     @NotNull
     List<Userapp> getUserAppsByUserId(long userId);
