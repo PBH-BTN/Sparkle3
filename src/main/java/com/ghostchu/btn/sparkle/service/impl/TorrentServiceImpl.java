@@ -35,9 +35,8 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
     }
 
     // all parmas as lock4j keys
-    @Lock4j(keys = {"#identifier"})
     @Override
-    public long getOrCreateTorrentId(@NotNull String identifier, @Nullable Long size, @Nullable Boolean isPrivate, @Nullable String infoHash, @Nullable String torrentName) {
+    public synchronized long getOrCreateTorrentId(@NotNull String identifier, @Nullable Long size, @Nullable Boolean isPrivate, @Nullable String infoHash, @Nullable String torrentName) {
         Long cachedTorrentId = torrentIdRedisTemplate.opsForValue().get(identifier);
         if (cachedTorrentId != null) return cachedTorrentId;
         Torrent torrent = baseMapper.findTorrentByIdentifier(identifier);
