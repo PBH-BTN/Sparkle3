@@ -50,8 +50,6 @@ public class BanHistoryApiController {
     @GetMapping("/options")
     public FilterOptions getFilterOptions() {
         return new FilterOptions(
-                banHistoryService.getDistinctPeerIds(),
-                banHistoryService.getDistinctPeerClientNames(),
                 banHistoryService.getDistinctModuleNames()
         );
     }
@@ -71,8 +69,6 @@ public class BanHistoryApiController {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class FilterOptions {
-        private List<String> peerIds;
-        private List<String> peerClientNames;
         private List<String> moduleNames;
     }
 }
