@@ -175,6 +175,11 @@ public class PeerIdParser {
         AZ_STYLE_CLIENTS.put("BI", "BiglyBT");
         AZ_STYLE_CLIENTS.put("FW", "FrostWire");
         AZ_STYLE_CLIENTS.put("BL", "BitLord");
+        AZ_STYLE_CLIENTS.put("Lr", "LibreTorrent");
+        AZ_STYLE_CLIENTS.put("AL", "Anitorrent");
+        AZ_STYLE_CLIENTS.put("GT", "anacrolix/torrent");
+        AZ_STYLE_CLIENTS.put("tT", "tTorrent");
+        AZ_STYLE_CLIENTS.put("TIX", "Tixati");
 
         // Shadow style clients (单字符标识)
         SHADOW_STYLE_CLIENTS.put("A", "Aria2");
@@ -348,6 +353,11 @@ public class PeerIdParser {
 
         String clientId = peerId.substring(1, 3);
         String client = AZ_STYLE_CLIENTS.get(clientId);
+
+        if(client == null && peerId.length() > 4){
+             clientId = peerId.substring(1, 4);
+             client = AZ_STYLE_CLIENTS.get(clientId);
+        }
 
         // 提取 PeerID 特征部分：-XX####- (8个字符)
         // 如果第7位是横杠，就取前8位；否则取前7位（某些客户端没有结尾横杠）
