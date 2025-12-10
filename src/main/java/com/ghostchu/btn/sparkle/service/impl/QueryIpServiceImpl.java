@@ -95,9 +95,10 @@ public class QueryIpServiceImpl {
             totalToPeerTraffic += swarmTrackerTraffic.getSumToPeerTraffic();
             totalFromPeerTraffic += swarmTrackerTraffic.getSumFromPeerTraffic();
         }
-        var shareRatio = totalFromPeerTraffic == 0
-                ? 0.0
-                : (double) totalToPeerTraffic / totalFromPeerTraffic;
+        var shareRatio =
+                totalFromPeerTraffic == 0 ? 0.0 :
+                totalToPeerTraffic == 0 ? Double.POSITIVE_INFINITY :
+                (double) totalFromPeerTraffic / totalToPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
         Set<Long> distinctTorrentIds = new HashSet<>();
         OffsetDateTime torrentsCountingSince =OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
