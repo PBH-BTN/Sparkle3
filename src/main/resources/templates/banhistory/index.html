@@ -44,17 +44,11 @@
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
                             <label for="peerId" class="form-label">Peer ID</label>
-                            <select class="form-control" id="peerId" name="peerId">
-                                <option value="">全部</option>
-                                <option th:each="id : ${peerIds}" th:value="${id}" th:text="${id}"></option>
-                            </select>
+                            <input type="text" class="form-control" id="peerId" name="peerId" placeholder="Peer ID（模糊搜索）">
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
                             <label for="peerClientName" class="form-label">客户端名称</label>
-                            <select class="form-control" id="peerClientName" name="peerClientName">
-                                <option value="">全部</option>
-                                <option th:each="name : ${peerClientNames}" th:value="${name}" th:text="${name}"></option>
-                            </select>
+                            <input type="text" class="form-control" id="peerClientName" name="peerClientName" placeholder="客户端名称（模糊搜索）">
                         </div>
                         <div class="col-md-6 col-lg-3 mb-3">
                             <label for="moduleName" class="form-label">模块名称</label>
@@ -137,7 +131,7 @@
 /*<![CDATA[*/
 const BanHistoryApp = {
     currentPage: 1,
-    pageSize: 100,
+    pageSize: 50,
     sortBy: 'insert_time',
     sortOrder: 'desc',
     

@@ -20,10 +20,8 @@ public class BanHistoryViewController extends AbstractSparkleMVC {
     @GetMapping("/banhistory")
     public String banHistoryIndex(Model model) {
         // Get dropdown options
-        model.addAttribute("peerIds", banHistoryService.getDistinctPeerIds());
-        model.addAttribute("peerClientNames", banHistoryService.getDistinctPeerClientNames());
         model.addAttribute("moduleNames", banHistoryService.getDistinctModuleNames());
-        
+
         return "banhistory/index";
     }
 }

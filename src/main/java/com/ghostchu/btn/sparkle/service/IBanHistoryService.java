@@ -40,18 +40,6 @@ public interface IBanHistoryService extends IService<BanHistory> {
     @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto);
     
     /**
-     * Get distinct peer IDs for dropdown selection
-     * @return List of distinct peer IDs
-     */
-    @NotNull List<String> getDistinctPeerIds();
-    
-    /**
-     * Get distinct peer client names for dropdown selection
-     * @return List of distinct peer client names
-     */
-    @NotNull List<String> getDistinctPeerClientNames();
-    
-    /**
      * Get distinct module names for dropdown selection
      * @return List of distinct module names
      */

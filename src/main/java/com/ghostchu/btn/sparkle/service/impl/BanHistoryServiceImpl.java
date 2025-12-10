@@ -185,26 +185,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @NotNull List<String> getDistinctPeerIds() {
-        return this.baseMapper.selectObjs(
-                new QueryWrapper<BanHistory>()
-                        .select("DISTINCT peer_id")
-                        .isNotNull("peer_id")
-                        .orderByAsc("peer_id")
-        ).stream().map(Object::toString).toList();
-    }
-
-    @Override
-    public @NotNull List<String> getDistinctPeerClientNames() {
-        return this.baseMapper.selectObjs(
-                new QueryWrapper<BanHistory>()
-                        .select("DISTINCT peer_client_name")
-                        .isNotNull("peer_client_name")
-                        .orderByAsc("peer_client_name")
-        ).stream().map(Object::toString).toList();
-    }
-
-    @Override
     public @NotNull List<String> getDistinctModuleNames() {
         return this.baseMapper.selectObjs(
                 new QueryWrapper<BanHistory>()
