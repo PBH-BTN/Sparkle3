@@ -16,15 +16,15 @@ public class ClientAuthenticationCredential implements Serializable {
     }
 
     public String appId() {
-        return appId.trim();
+        return appId != null ? appId.trim() : null;
     }
 
     public String appSecret() {
-        return appSecret.trim();
+        return appSecret != null ? appSecret.trim() : null;
     }
 
     public String installationId() {
-        return installationId.trim();
+        return installationId != null ? installationId.trim() : null;
     }
 
     public boolean isValid() {
