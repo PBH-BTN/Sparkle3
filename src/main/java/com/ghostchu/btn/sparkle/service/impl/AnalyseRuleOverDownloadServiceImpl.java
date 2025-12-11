@@ -29,7 +29,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
 
     @Value("${sparkle.analyse.overdownload-analyse.duration}")
     private long duration;
-    @Value("${sparkle.analyse.overdownload-analyse.threshold}")
+    @Value("${sparkle.analyse.overdownload-analyse.threshold-ratio}")
     private double thresholdRatio;
     @Value("${sparkle.analyse.overdownload-analyse.threshold-traffic}")
     private long thresholdTraffic;
@@ -43,12 +43,13 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         List<AnalyseOverDownloadedResult> resultList = this.baseMapper.analyseOverDownloaded(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
         for (AnalyseOverDownloadedResult result : resultList) {
             if (result.getTorrentSize() <= 0) continue;
-            var mixCalc = aggregateMap.getOrDefault(InetAddress.ofLiteral(result.getPeerIp()), new AggregateCrossTorrentMixCalc());
+            var inet = InetAddress.ofLiteral(result.getPeerIp());
+            var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
             mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
             mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalToPeerTraffic());
             mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
             mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
-            aggregateMap.put(InetAddress.ofLiteral(result.getPeerIp()), mixCalc);
+            aggregateMap.put(inet, mixCalc);
         }
         StringBuilder sb = new StringBuilder();
 
