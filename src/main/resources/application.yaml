@@ -137,7 +137,8 @@ sparkle:
     overdownload-analyse:
       schedule: "0 0 * * * *"
       duration: 1209600000
-      threshold: 3.2
+      threshold-ratio: 3.2
+      threshold-traffic: 15000000000
     concurrent-download-analyse:
       schedule: "0 0 * * * *"
       duration: 3600000
