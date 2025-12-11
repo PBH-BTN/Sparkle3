@@ -153,9 +153,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         Page<BanHistory> pageRequest = new Page<>(page, size);
 
         // Disable count query if there are no search conditions to improve performance
-        if (!hasSearchConditions) {
-            pageRequest.setSearchCount(false);
-        }
+//        if (!hasSearchConditions) {
+//            pageRequest.setSearchCount(false);
+//        }
 
         return this.baseMapper.selectPage(pageRequest, queryWrapper);
     }
