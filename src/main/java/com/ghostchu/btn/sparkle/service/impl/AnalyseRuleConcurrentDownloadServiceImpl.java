@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.impl;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
+import com.ghostchu.btn.sparkle.util.UnitConverter;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
 import org.apache.commons.lang3.tuple.Pair;
@@ -40,12 +41,13 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
         for (AnalyseConcurrentDownloadResult result : resultList) {
             sb.append("# [Sparkle3 并发下载在线分析] 过去给定时间内并发下载计数: ").append(result.getTorrentCount())
                     .append(", 标记人数: ").append(result.getUserappsCount())
+                    .append(", BTN 网络发送到此 Peer 的总流量: ").append(UnitConverter.autoUnit(result.getTotalToPeerTraffic()))
+                    .append(", BTN 网络从此 Peer 接收的总流量: ").append(UnitConverter.autoUnit(result.getTotalFromPeerTraffic()))
                     .append("\n");
             IPAddress ipAddress = IPAddressUtil.getIPAddress(result.getPeerIp());
             sb.append(ipAddress.toNormalizedString()).append("\n");
         }
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey(), sb.toString());
-        //noinspection UnstableApiUsage
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }
 

@@ -11,4 +11,6 @@ public class AnalyseConcurrentDownloadResult {
     private String peerIp;
     private long torrentCount;
     private long userappsCount;
+    private long totalToPeerTraffic;
+    private long totalFromPeerTraffic;
 }

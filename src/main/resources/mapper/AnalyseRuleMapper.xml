@@ -54,11 +54,15 @@
         <result column="peer_ip" property="peerIp"/>
         <result column="torrent_count" property="torrentCount"/>
         <result column="userapps_count" property="userappsCount"/>
+        <result column="total_to_peer_traffic" property="totalToPeerTraffic"/>
+        <result column="total_from_peer_traffic" property="totalFromPeerTraffic"/>
     </resultMap>
     <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult">
         SELECT peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
-               COUNT(DISTINCT userapps_id) AS userapps_count
+               COUNT(DISTINCT userapps_id) AS userapps_count,
+               SUM(to_peer_traffic) AS total_to_peer_traffic,
+               SUM(from_peer_traffic) AS total_from_peer_traffic
         FROM swarm_tracker
         WHERE last_time_seen >= #{afterTimestamp}
         GROUP BY peer_ip
