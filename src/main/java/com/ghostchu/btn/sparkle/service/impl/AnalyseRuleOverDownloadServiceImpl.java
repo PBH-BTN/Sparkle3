@@ -46,7 +46,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             var inet = InetAddress.ofLiteral(result.getPeerIp());
             var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
             mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
-            mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalToPeerTraffic());
+            mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
             mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
             mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
             aggregateMap.put(inet, mixCalc);
