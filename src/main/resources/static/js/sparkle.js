@@ -239,9 +239,10 @@
      * Render Pagination HTML
      * @param {Object} options - Pagination options
      * @param {number} options.currentPage - Current page number (1-based)
-     * @param {number} options.totalPages - Total number of pages
+     * @param {number} options.totalPages - Total number of pages (optional, 0 means unknown)
      * @param {number} options.totalRecords - Total number of records (optional)
      * @param {number} options.pageSize - Records per page (optional)
+     * @param {number} options.currentRecordCount - Number of records on current page (optional)
      * @param {Function} options.onPageChange - Callback function when page changes
      * @returns {string} HTML string for pagination
      */
@@ -251,21 +252,23 @@
             totalPages = 1,
             totalRecords = null,
             pageSize = 100,
+            currentRecordCount = 0,
             onPageChange = null
         } = options;
 
-        if (totalPages <= 0) {
-            return '';
-        }
+        // If totalPages is unknown (0 or null) but we have records, use simplified pagination
+        const isUnknownTotal = (!totalPages || totalPages === 0);
 
         let html = '<div class="spk-pagination">';
 
         // Pagination info
         html += '<div class="spk-pagination__info">';
-        if (totalRecords !== null) {
+        if (totalRecords !== null && totalRecords > 0) {
             const startRecord = (currentPage - 1) * pageSize + 1;
             const endRecord = Math.min(currentPage * pageSize, totalRecords);
             html += `显示第 <strong>${startRecord.toLocaleString()}</strong> - <strong>${endRecord.toLocaleString()}</strong> 条，共 <strong>${totalRecords.toLocaleString()}</strong> 条记录`;
+        } else if (isUnknownTotal) {
+            html += `第 <strong>${currentPage}</strong> 页`;
         } else {
             html += `第 <strong>${currentPage}</strong> / <strong>${totalPages}</strong> 页`;
         }
@@ -274,67 +277,89 @@
         // Pagination controls
         html += '<div class="spk-pagination__controls">';
 
-        // First page button
-        if (currentPage > 1) {
-            html += `<button class="spk-pagination__btn" data-page="1" title="首页"><i class="fas fa-angle-double-left"></i></button>`;
-        } else {
-            html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="首页"><i class="fas fa-angle-double-left"></i></span>`;
-        }
-
-        // Previous page button
-        if (currentPage > 1) {
-            html += `<button class="spk-pagination__btn" data-page="${currentPage - 1}" title="上一页"><i class="fas fa-angle-left"></i> 上一页</button>`;
-        } else {
-            html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="上一页"><i class="fas fa-angle-left"></i> 上一页</span>`;
-        }
-
-        // Page numbers
-        const maxButtons = 7;
-        const halfButtons = Math.floor(maxButtons / 2);
-        let startPage = Math.max(1, currentPage - halfButtons);
-        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-        if (endPage - startPage < maxButtons - 1) {
-            startPage = Math.max(1, endPage - maxButtons + 1);
-        }
-
-        // First page if not in range
-        if (startPage > 1) {
-            html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="1">1</button>`;
-            if (startPage > 2) {
-                html += '<span class="spk-pagination__ellipsis">...</span>';
-            }
-        }
-
-        // Page number buttons
-        for (let i = startPage; i <= endPage; i++) {
-            if (i === currentPage) {
-                html += `<span class="spk-pagination__btn spk-pagination__btn--number spk-pagination__btn--active"><strong>${i}</strong></span>`;
+        if (isUnknownTotal) {
+            // Simplified pagination for unknown total
+            // Previous page button
+            if (currentPage > 1) {
+                html += `<button class="spk-pagination__btn" data-page="${currentPage - 1}" title="上一页"><i class="fas fa-angle-left"></i> 上一页</button>`;
             } else {
-                html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="${i}">${i}</button>`;
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="上一页"><i class="fas fa-angle-left"></i> 上一页</span>`;
             }
-        }
 
-        // Last page if not in range
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                html += '<span class="spk-pagination__ellipsis">...</span>';
+            // Current page indicator
+            html += `<span class="spk-pagination__btn spk-pagination__btn--number spk-pagination__btn--active"><strong>${currentPage}</strong></span>`;
+
+            // Next page button (enabled if current page has records matching page size)
+            const hasNextPage = currentRecordCount >= pageSize;
+            if (hasNextPage) {
+                html += `<button class="spk-pagination__btn" data-page="${currentPage + 1}" title="下一页">下一页 <i class="fas fa-angle-right"></i></button>`;
+            } else {
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="下一页">下一页 <i class="fas fa-angle-right"></i></span>`;
             }
-            html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="${totalPages}">${totalPages}</button>`;
-        }
-
-        // Next page button
-        if (currentPage < totalPages) {
-            html += `<button class="spk-pagination__btn" data-page="${currentPage + 1}" title="下一页">下一页 <i class="fas fa-angle-right"></i></button>`;
         } else {
-            html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="下一页">下一页 <i class="fas fa-angle-right"></i></span>`;
-        }
+            // Full pagination with known total
+            // First page button
+            if (currentPage > 1) {
+                html += `<button class="spk-pagination__btn" data-page="1" title="首页"><i class="fas fa-angle-double-left"></i></button>`;
+            } else {
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="首页"><i class="fas fa-angle-double-left"></i></span>`;
+            }
 
-        // Last page button
-        if (currentPage < totalPages) {
-            html += `<button class="spk-pagination__btn" data-page="${totalPages}" title="末页"><i class="fas fa-angle-double-right"></i></button>`;
-        } else {
-            html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="末页"><i class="fas fa-angle-double-right"></i></span>`;
+            // Previous page button
+            if (currentPage > 1) {
+                html += `<button class="spk-pagination__btn" data-page="${currentPage - 1}" title="上一页"><i class="fas fa-angle-left"></i> 上一页</button>`;
+            } else {
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="上一页"><i class="fas fa-angle-left"></i> 上一页</span>`;
+            }
+
+            // Page numbers
+            const maxButtons = 7;
+            const halfButtons = Math.floor(maxButtons / 2);
+            let startPage = Math.max(1, currentPage - halfButtons);
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            // First page if not in range
+            if (startPage > 1) {
+                html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="1">1</button>`;
+                if (startPage > 2) {
+                    html += '<span class="spk-pagination__ellipsis">...</span>';
+                }
+            }
+
+            // Page number buttons
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    html += `<span class="spk-pagination__btn spk-pagination__btn--number spk-pagination__btn--active"><strong>${i}</strong></span>`;
+                } else {
+                    html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="${i}">${i}</button>`;
+                }
+            }
+
+            // Last page if not in range
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += '<span class="spk-pagination__ellipsis">...</span>';
+                }
+                html += `<button class="spk-pagination__btn spk-pagination__btn--number" data-page="${totalPages}">${totalPages}</button>`;
+            }
+
+            // Next page button
+            if (currentPage < totalPages) {
+                html += `<button class="spk-pagination__btn" data-page="${currentPage + 1}" title="下一页">下一页 <i class="fas fa-angle-right"></i></button>`;
+            } else {
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="下一页">下一页 <i class="fas fa-angle-right"></i></span>`;
+            }
+
+            // Last page button
+            if (currentPage < totalPages) {
+                html += `<button class="spk-pagination__btn" data-page="${totalPages}" title="末页"><i class="fas fa-angle-double-right"></i></button>`;
+            } else {
+                html += `<span class="spk-pagination__btn spk-pagination__btn--disabled" title="末页"><i class="fas fa-angle-double-right"></i></span>`;
+            }
         }
 
         html += '</div></div>';

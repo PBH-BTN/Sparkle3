@@ -113,6 +113,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     public @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
         QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
 
+        // Check if there are any search conditions
+        boolean hasSearchConditions = hasSearchConditions(queryDto);
+
         // Time range filter
         queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
                 .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
@@ -149,7 +152,28 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
         Page<BanHistory> pageRequest = new Page<>(page, size);
 
+        // Disable count query if there are no search conditions to improve performance
+        if (!hasSearchConditions) {
+            pageRequest.setSearchCount(false);
+        }
+
         return this.baseMapper.selectPage(pageRequest, queryWrapper);
+    }
+
+    /**
+     * Check if the query DTO has any search conditions (excluding pagination and sorting)
+     */
+    private boolean hasSearchConditions(@NotNull BanHistoryQueryDto queryDto) {
+        return queryDto.getInsertTimeStart() != null
+                || queryDto.getInsertTimeEnd() != null
+                || queryDto.getTorrentId() != null
+                || (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank())
+                || queryDto.getPeerPort() != null
+                || (queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank())
+                || (queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank())
+                || (queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank())
+                || (queryDto.getRule() != null && !queryDto.getRule().isBlank())
+                || (queryDto.getDescription() != null && !queryDto.getDescription().isBlank());
     }
 
     @Override
