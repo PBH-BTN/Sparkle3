@@ -28,6 +28,37 @@
                      EXCLUDED.from_peer_traffic_offset, EXCLUDED.to_peer_traffic_offset, EXCLUDED.flags,
                      EXCLUDED.first_time_seen, EXCLUDED.last_time_seen);
     </insert>
+
+    <insert id="batchUpsert">
+        INSERT INTO swarm_tracker (userapps_id, user_downloader, torrent_id,
+                                   peer_ip, user_progress,
+                                   peer_port, peer_id, peer_client_name,
+                                   peer_progress, from_peer_traffic, to_peer_traffic,
+                                   from_peer_traffic_offset, to_peer_traffic_offset, flags,
+                                   first_time_seen, last_time_seen)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userappsId}, #{item.userDownloader}, #{item.torrentId},
+            #{item.peerIp}, #{item.userProgress},
+            #{item.peerPort}, #{item.peerId}, #{item.peerClientName},
+            #{item.peerProgress}, #{item.fromPeerTraffic}, #{item.toPeerTraffic},
+            #{item.fromPeerTrafficOffset}, #{item.toPeerTrafficOffset}, #{item.flags},
+            #{item.firstTimeSeen}, #{item.lastTimeSeen})
+        </foreach>
+        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+            SET user_progress = EXCLUDED.user_progress,
+                peer_id = EXCLUDED.peer_id,
+                peer_client_name = EXCLUDED.peer_client_name,
+                peer_progress = EXCLUDED.peer_progress,
+                from_peer_traffic = EXCLUDED.from_peer_traffic,
+                to_peer_traffic = EXCLUDED.to_peer_traffic,
+                from_peer_traffic_offset = EXCLUDED.from_peer_traffic_offset,
+                to_peer_traffic_offset = EXCLUDED.to_peer_traffic_offset,
+                flags = EXCLUDED.flags,
+                first_time_seen = EXCLUDED.first_time_seen,
+                last_time_seen = EXCLUDED.last_time_seen
+    </insert>
+
     <select id="calcPeerConcurrentDownloads" resultType="long">
         SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
         FROM swarm_tracker

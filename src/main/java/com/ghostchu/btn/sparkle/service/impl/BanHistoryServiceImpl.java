@@ -82,7 +82,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setStructuredData(structuredDataMap);
         }).toList();
         if(list.isEmpty()) return;
-        this.baseMapper.insert(list, 500);
+        this.baseMapper.insert(list, 1000);
     }
 
     @Override

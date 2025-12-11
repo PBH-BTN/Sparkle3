@@ -62,8 +62,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .setFlags(swarm.getPeerLastFlags())
                 .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
                 .setLastTimeSeen(swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))).toList();
-        for (SwarmTracker swarmTracker : swarmList) {
-            this.baseMapper.upsert(swarmTracker);
+        if (!swarmList.isEmpty()) {
+            this.baseMapper.batchUpsert(swarmList);
         }
     }
 

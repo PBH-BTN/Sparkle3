@@ -87,6 +87,7 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.20.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.20.1")
     implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.20.1")
+    implementation("com.google.guava:guava:33.4.0-jre")
     implementation("com.vdurmont:semver4j:3.1.0")
     implementation("com.github.seancfoley:ipaddress:5.5.0")
     implementation("com.maxmind.geoip2:geoip2:4.2.0")

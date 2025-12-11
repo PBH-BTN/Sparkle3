@@ -22,6 +22,8 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     void upsert(SwarmTracker swarm);
 
+    void batchUpsert(List<SwarmTracker> swarms);
+
     long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
 
     @NotNull
