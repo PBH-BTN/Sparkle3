@@ -16,6 +16,7 @@ import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -152,6 +153,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
+    @Cacheable(value = "banHistoryDistinctModuleNames#1800000")
     public @NotNull List<String> getDistinctModuleNames() {
         return this.baseMapper.selectObjs(
                 new QueryWrapper<BanHistory>()

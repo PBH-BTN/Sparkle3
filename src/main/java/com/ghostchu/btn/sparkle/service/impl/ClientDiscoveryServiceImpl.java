@@ -69,8 +69,6 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                     clientSemver = parsed.getMajor() + "." + parsed.getMinor() + "." + parsed.getPatch() + "." + parsed.getHotpatch();
                 }
             }
-
-            //noinspection UnstableApiUsage
             ClientDiscovery clientDiscovery = new ClientDiscovery()
                     .setHash(Hashing.sha256().hashString(peerId + "@" + peerClientName, StandardCharsets.UTF_8).asLong())
                     .setPeerId(peerId)
