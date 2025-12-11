@@ -61,7 +61,6 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                     sb.append("# [Sparkle3 过量下载在线分析] ")
                             .append(" 过量下载比率: ").append(String.format("%.2f", calc.getOverDownloadRatio() * 100)).append("%")
                             .append(" (100% = 完整下载一次种子大小)")
-                            .append(", 分享率: ").append(String.format("%.2f", calc.getShareRatio()))
                             .append(", BTN 网络发送到此 Peer 的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalToPeerTraffic()))
                             .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalFromPeerTraffic()))
                             .append(", 跨种计算数量: ").append(calc.getTorrentCount())
