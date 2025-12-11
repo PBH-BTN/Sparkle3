@@ -81,7 +81,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setPeerGeoip(geoIPManager.geoData(inet))
                     .setStructuredData(structuredDataMap);
         }).toList();
-        if(list.isEmpty()) return;
+        if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
     }
 
@@ -99,32 +99,29 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp){
+    public @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp) {
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 
     @Override
-    public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp){
+    public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp) {
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
     }
 
     @Override
     public @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
         QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
-        
+
         // Time range filter
-        if (queryDto.getInsertTimeStart() != null) {
-            queryWrapper.ge("insert_time", queryDto.getInsertTimeStart());
-        }
-        if (queryDto.getInsertTimeEnd() != null) {
-            queryWrapper.le("insert_time", queryDto.getInsertTimeEnd());
-        }
-        
-        // Torrent filter
-        if (queryDto.getTorrentId() != null) {
-            queryWrapper.eq("torrent_id", queryDto.getTorrentId());
-        }
-        
+        queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
+                .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
+                .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
+                .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
+                .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
+                .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())
+                .eq(queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank(), "module_name", queryDto.getModuleName())
+                .like(queryDto.getRule() != null && !queryDto.getRule().isBlank(), "rule", queryDto.getRule())
+                .like(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
         // Peer IP filter
         if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
             try {
@@ -134,53 +131,23 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 // Invalid IP, ignore filter
             }
         }
-        
-        // Peer Port filter
-        if (queryDto.getPeerPort() != null) {
-            queryWrapper.eq("peer_port", queryDto.getPeerPort());
-        }
-        
-        // Peer ID filter
-        if (queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank()) {
-            queryWrapper.eq("peer_id", queryDto.getPeerId().trim());
-        }
-        
-        // Peer Client Name filter
-        if (queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank()) {
-            queryWrapper.eq("peer_client_name", queryDto.getPeerClientName().trim());
-        }
-        
-        // Module Name filter
-        if (queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank()) {
-            queryWrapper.eq("module_name", queryDto.getModuleName().trim());
-        }
-        
-        // Rule filter
-        if (queryDto.getRule() != null && !queryDto.getRule().isBlank()) {
-            queryWrapper.like("rule", queryDto.getRule().trim());
-        }
-        
-        // Description filter
-        if (queryDto.getDescription() != null && !queryDto.getDescription().isBlank()) {
-            queryWrapper.like("description", queryDto.getDescription().trim());
-        }
-        
+
         // Sorting
         String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";
         String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
-        
+
         if ("asc".equals(sortOrder)) {
             queryWrapper.orderByAsc(sortBy);
         } else {
             queryWrapper.orderByDesc(sortBy);
         }
-        
+
         // Pagination
         int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
         int size = (queryDto.getSize() != null && queryDto.getSize() > 0) ? queryDto.getSize() : 100;
-        
+
         Page<BanHistory> pageRequest = new Page<>(page, size);
-        
+
         return this.baseMapper.selectPage(pageRequest, queryWrapper);
     }
 
