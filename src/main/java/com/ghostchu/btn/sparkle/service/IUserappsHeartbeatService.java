@@ -21,7 +21,7 @@ import java.util.List;
  */
 public interface IUserappsHeartbeatService extends IService<UserappsHeartbeat> {
 
-    @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(InetAddress ip, Timestamp after);
+    @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(String ip, Timestamp after);
 
     @Transactional
     void onHeartBeat(long userAppId, @NotNull InetAddress ip);

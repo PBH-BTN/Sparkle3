@@ -69,45 +69,56 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
 
     @Override
-    public @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable InetAddress peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page){
-        return this.baseMapper.selectPage(
-                page,
-                new QueryWrapper<SwarmTracker>()
-                        .eq(torrentId != null, "torrent_id", torrentId)
-                        .eq(peerIp != null, "peer_ip", peerIp)
-                        .ge("last_time_seen", afterTime)
-                        .orderByDesc("last_time_seen")
-        );
+    public @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page){
+        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
+                .eq(torrentId != null, "torrent_id", torrentId)
+                .ge("last_time_seen", afterTime)
+                .orderByDesc("last_time_seen");
+
+        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
+        if (peerIp != null && !peerIp.isBlank()) {
+            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+        }
+
+        return this.baseMapper.selectPage(page, wrapper);
     }
 
     @Override
-    public long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull InetAddress peerIp){
-        return this.baseMapper.selectCount(
-                new QueryWrapper<SwarmTracker>()
-                        .eq("peer_ip", peerIp)
-                        .ge("last_time_seen", afterTime)
-                        .le("peer_progress", 1.0)
-        );
+    public long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp){
+        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
+                .ge("last_time_seen", afterTime)
+                .le("peer_progress", 1.0);
+
+        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
+        if (peerIp != null && !peerIp.isBlank()) {
+            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+        }
+
+        return this.baseMapper.selectCount(wrapper);
     }
 
     @Override
-    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp){
+    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp){
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 
     @Override
-    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp){
+    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp){
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
     }
 
     @Override
-    public long calcPeerConcurrentSeeds(@NotNull OffsetDateTime afterTime, @NotNull InetAddress peerIp) {
-        return this.baseMapper.selectCount(
-                new QueryWrapper<SwarmTracker>()
-                        .eq("peer_ip", peerIp)
-                        .ge("last_time_seen", afterTime)
-                        .ge("peer_progress", 1.0)
-        );
+    public long calcPeerConcurrentSeeds(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
+        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
+                .ge("last_time_seen", afterTime)
+                .ge("peer_progress", 1.0);
+
+        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
+        if (peerIp != null && !peerIp.isBlank()) {
+            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+        }
+
+        return this.baseMapper.selectCount(wrapper);
     }
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")
@@ -123,7 +134,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Override
     public @NotNull IPage<SwarmTracker> querySwarmTracker(
             @Nullable Long torrentId,
-            @Nullable InetAddress peerIp,
+            @Nullable String peerIp,
             @Nullable Integer peerPort,
             @Nullable String peerId,
             @Nullable String peerClientName,
@@ -137,12 +148,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             @Nullable String sortBy,
             @Nullable String sortOrder,
             @NotNull Page<SwarmTracker> page) {
-        
+
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<>();
-        
+
         // 添加查询条件
         wrapper.eq(torrentId != null, "torrent_id", torrentId)
-                .eq(peerIp != null, "peer_ip", peerIp)
+                .apply(peerIp != null && !peerIp.isBlank(), "peer_ip <<= {0}::inet", peerIp)
                 .eq(peerPort != null, "peer_port", peerPort)
                 .like(peerId != null && !peerId.isBlank(), "peer_id", peerId)
                 .like(peerClientName != null && !peerClientName.isBlank(), "peer_client_name", peerClientName)
@@ -153,7 +164,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .ge(firstTimeSeenAfter != null, "first_time_seen", firstTimeSeenAfter)
                 .ge(lastTimeSeenAfter != null, "last_time_seen", lastTimeSeenAfter)
                 .eq(userProgress != null, "user_progress", userProgress);
-        
+
+
         // 添加排序
         String sort = (sortBy != null && !sortBy.isBlank()) ? sortBy : "last_time_seen";
         String order = (sortOrder != null && !sortOrder.isBlank()) ? sortOrder : "desc";
@@ -162,7 +174,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         } else {
             wrapper.orderByAsc(sort);
         }
-        
+
         return this.baseMapper.selectPage(page, wrapper);
     }
 

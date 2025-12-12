@@ -48,8 +48,7 @@ public class PingQueryIpController extends BasePingController {
             throw new PowCaptchaFailureException();
         }
         var userApps = verifyUserApplication();
-        var peerIp = InetAddress.ofLiteral(ip);
-        return ResponseEntity.ok(queryIpService.queryIp(peerIp));
+        return ResponseEntity.ok(queryIpService.queryIp(ip));
     }
 
     @AllArgsConstructor

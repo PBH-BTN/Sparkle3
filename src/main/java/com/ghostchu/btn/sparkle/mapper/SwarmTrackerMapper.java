@@ -24,12 +24,12 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     void batchUpsert(List<SwarmTracker> swarms);
 
-    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
     @NotNull
-    PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
     long countAll();
 }

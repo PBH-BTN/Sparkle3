@@ -87,25 +87,28 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @NotNull IPage<BanHistory> fetchBanHistory(@NotNull OffsetDateTime afterTime, @Nullable InetAddress peerIp, @Nullable Long torrentId, @Nullable List<String> moduleNames, @NotNull Page<BanHistory> page) {
-        return this.baseMapper.selectPage(
-                page,
-                new QueryWrapper<BanHistory>()
-                        .eq(torrentId != null, "torrent_id", torrentId)
-                        .eq(peerIp != null, "peer_ip", peerIp)
-                        .ge("insert_time", afterTime)
-                        .in(moduleNames != null && !moduleNames.isEmpty(), "module_name", moduleNames)
-                        .orderByDesc("insert_time")
-        );
+    public @NotNull IPage<BanHistory> fetchBanHistory(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @Nullable List<String> moduleNames, @NotNull Page<BanHistory> page) {
+        QueryWrapper<BanHistory> wrapper = new QueryWrapper<BanHistory>()
+                .eq(torrentId != null, "torrent_id", torrentId)
+                .ge("insert_time", afterTime)
+                .in(moduleNames != null && !moduleNames.isEmpty(), "module_name", moduleNames)
+                .orderByDesc("insert_time");
+
+        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
+        if (peerIp != null && !peerIp.isBlank()) {
+            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+        }
+
+        return this.baseMapper.selectPage(page, wrapper);
     }
 
     @Override
-    public @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp) {
+    public @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 
     @Override
-    public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp) {
+    public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
     }
 
@@ -120,21 +123,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
                 .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
+                .apply(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank(), "peer_ip <<= {0}::inet", queryDto.getPeerIp())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
                 .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())
                 .eq(queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank(), "module_name", queryDto.getModuleName())
                 .like(queryDto.getRule() != null && !queryDto.getRule().isBlank(), "rule", queryDto.getRule())
                 .like(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
-        // Peer IP filter
-        if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
-            try {
-                InetAddress peerIp = InetAddress.ofLiteral(queryDto.getPeerIp().trim());
-                queryWrapper.eq("peer_ip", peerIp);
-            } catch (Exception e) {
-                // Invalid IP, ignore filter
-            }
-        }
 
         // Sorting
         String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";

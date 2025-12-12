@@ -23,8 +23,7 @@ public class PingQueryIpIframeController extends BasePingController {
     //@Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
     public @NotNull String queryIp(@RequestParam String ip, Model model) throws AccessDeniedException, UserApplicationBannedException, UserApplicationNotFoundException {
         verifyUserApplication();
-        var peerIp= InetAddress.ofLiteral(ip);
-        var result = queryIpService.queryIp(peerIp);
+        var result = queryIpService.queryIp(ip);
         model.addAttribute("result", result);
         model.addAttribute("ip", ip);
         return "widget/queryIp";

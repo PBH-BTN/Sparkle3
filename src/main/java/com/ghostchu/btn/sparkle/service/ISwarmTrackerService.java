@@ -26,19 +26,19 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
 
     void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms);
 
-    @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable InetAddress peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page);
+    @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page);
 
-    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull InetAddress peerIp);
+    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp);
 
-    @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull InetAddress peerIp);
+    List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    long calcPeerConcurrentSeeds(@NotNull OffsetDateTime offsetDateTime, @NotNull InetAddress peerIp);
+    long calcPeerConcurrentSeeds(@NotNull OffsetDateTime offsetDateTime, @NotNull String peerIp);
 
     @NotNull IPage<SwarmTracker> querySwarmTracker(
             @Nullable Long torrentId,
-            @Nullable InetAddress peerIp,
+            @Nullable String peerIp,
             @Nullable Integer peerPort,
             @Nullable String peerId,
             @Nullable String peerClientName,

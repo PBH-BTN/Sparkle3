@@ -54,7 +54,7 @@ public class QueryIpServiceImpl {
     private IUserService userService;
     ;
 
-    public @NotNull IpQueryResult queryIp(@NotNull InetAddress peerIp) {
+    public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
         IpQueryResult result = new IpQueryResult();
         result.setColor("#808080");
         result.setLabels(new ArrayList<>());

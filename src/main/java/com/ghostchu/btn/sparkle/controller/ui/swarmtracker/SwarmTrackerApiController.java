@@ -56,16 +56,6 @@ public class SwarmTrackerApiController {
             }
         }
 
-        // 解析 InetAddress
-        InetAddress peerIpAddr = null;
-        if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
-            try {
-                peerIpAddr = InetAddress.ofLiteral(queryDto.getPeerIp());
-            } catch (Exception e) {
-                // 如果解析失败，保持为 null
-            }
-        }
-
         // 解析时间
         OffsetDateTime firstTimeSeenAfterDate = null;
         if (queryDto.getFirstTimeSeenAfter() != null && !queryDto.getFirstTimeSeenAfter().isBlank()) {
@@ -88,10 +78,10 @@ public class SwarmTrackerApiController {
         // 创建分页对象
         Page<SwarmTracker> pageObj = new Page<>(queryDto.getPage(), pageSize);
 
-        // 查询数据
+        // 查询数据 - peerIp 直接传递字符串，支持 CIDR
         IPage<SwarmTracker> page = swarmTrackerService.querySwarmTracker(
                 torrentId,
-                peerIpAddr,
+                queryDto.getPeerIp(),
                 queryDto.getPeerPort(),
                 queryDto.getPeerId(),
                 queryDto.getPeerClientName(),
