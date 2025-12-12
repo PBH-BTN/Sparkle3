@@ -144,6 +144,15 @@ sparkle:
       duration: 3600000
       threshold-concurrent: 150
       threshold-userapps: 3
+    random-identity-analyse:
+      schedule: "0 0 * * * *"
+      duration: 1209600000
+    rain000-identity-analyse:
+      schedule: "0 0 * * * *"
+      duration: 1209600000
+    gopeeddev-identity-analyse:
+      schedule: "0 0 * * * *"
+      duration: 1209600000
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"

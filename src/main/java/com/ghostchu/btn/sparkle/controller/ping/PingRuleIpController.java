@@ -2,10 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleConcurrentDownloadServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleOverDownloadServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleUnTrustVoteServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.RuleServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.*;
 import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.stream.Collectors;
 
 @RestController
 public class PingRuleIpController extends BasePingController {
@@ -37,6 +33,12 @@ public class PingRuleIpController extends BasePingController {
     @Autowired
     private AnalyseRuleConcurrentDownloadServiceImpl concurrentDownloadService;
     @Autowired
+    private AnalyseGopeedDevIdentityServiceImpl gopeedDevIdentityService;
+    @Autowired
+    private AnalyseRain000IdentityServiceImpl rain000IdentityService;
+    @Autowired
+    private AnalyseRandomIdentityServiceImpl randomIdentityService;
+    @Autowired
     private RuleServiceImpl ruleService;
 
 
@@ -47,7 +49,6 @@ public class PingRuleIpController extends BasePingController {
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
 
-    @SuppressWarnings("UnstableApiUsage")
     @GetMapping("/ping/ruleIpDenylist")
     public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) {
         if (denyListPowCaptcha) {
@@ -56,6 +57,9 @@ public class PingRuleIpController extends BasePingController {
         String untrustedVote = unTrustVoteService.getGeneratedContent().getValue();
         String overDownloadedAnalyse = overDownloadService.getGeneratedContent().getValue();
         String concurrentDownloadAnalyse = concurrentDownloadService.getGeneratedContent().getValue();
+        String randomIdentityAnalyse = randomIdentityService.getGeneratedContent().getValue();
+        String gopeedDevIdentityAnalyse = gopeedDevIdentityService.getGeneratedContent().getValue();
+        String rain000IdentityAnalyse = rain000IdentityService.getGeneratedContent().getValue();
         String manualRules = ruleService.getIpDenyList();
         StringJoiner joiner = new StringJoiner("\n\n");
         if (untrustedVote != null && !untrustedVote.isBlank())
@@ -64,7 +68,13 @@ public class PingRuleIpController extends BasePingController {
             joiner.add(overDownloadedAnalyse);
         if (concurrentDownloadAnalyse != null && !concurrentDownloadAnalyse.isBlank())
             joiner.add(concurrentDownloadAnalyse);
-        if(manualRules != null && !manualRules.isBlank()){
+        if(randomIdentityAnalyse != null && !randomIdentityAnalyse.isBlank())
+            joiner.add(randomIdentityAnalyse);
+        if(gopeedDevIdentityAnalyse != null && !gopeedDevIdentityAnalyse.isBlank())
+            joiner.add(gopeedDevIdentityAnalyse);
+        if(rain000IdentityAnalyse != null && !rain000IdentityAnalyse.isBlank())
+            joiner.add(rain000IdentityAnalyse);
+        if (manualRules != null && !manualRules.isBlank()) {
             joiner.add(manualRules);
         }
         String listVersion = Hashing.crc32c().hashString(joiner.toString(), StandardCharsets.UTF_8).toString();

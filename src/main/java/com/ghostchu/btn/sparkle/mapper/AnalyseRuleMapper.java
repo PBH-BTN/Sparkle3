@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.entity.AnalyseRule;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
+import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
@@ -27,4 +28,22 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
 
     @NotNull
     List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseRandomIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseRandomIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseRain000IdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseRain000IdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseGopeeddevIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<AnalyseIPAndIdentityResult> analyseGopeeddevIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 }

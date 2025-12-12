@@ -33,6 +33,12 @@ public class GithubSyncServiceImpl {
     private AnalyseRuleOverDownloadServiceImpl overDownloadService;
     @Autowired
     private AnalyseRuleConcurrentDownloadServiceImpl concurrentDownloadService;
+    @Autowired
+    private AnalyseGopeedDevIdentityServiceImpl gopeedDevIdentityService;
+    @Autowired
+    private AnalyseRain000IdentityServiceImpl rain000IdentityService;
+    @Autowired
+    private AnalyseRandomIdentityServiceImpl randomIdentityService;
 
 
     @Scheduled(cron = "${sparkle.github-sync.schedule}")
@@ -48,12 +54,21 @@ public class GithubSyncServiceImpl {
         var untrustIps = unTrustVoteService.getGeneratedContent().getValue();
         var concurrentDownloadIps = concurrentDownloadService.getGeneratedContent().getValue();
         var overDownloadIps = overDownloadService.getGeneratedContent().getValue();
+        var randomIdentityIps = randomIdentityService.getGeneratedContent().getValue();
+        var rain000IdentityIps = rain000IdentityService.getGeneratedContent().getValue();
+        var gopeedDevIdentityIps = gopeedDevIdentityService.getGeneratedContent().getValue();
         if(untrustIps != null)
             updateFile(repository, "untrusted-ips.txt", ()->untrustIps.getBytes(StandardCharsets.UTF_8));
         if(concurrentDownloadIps != null)
             updateFile(repository, "concurrent-downloads-ips.txt", ()->concurrentDownloadIps.getBytes(StandardCharsets.UTF_8));
         if(overDownloadIps != null)
             updateFile(repository, "overdownload-ips.txt", ()->overDownloadIps.getBytes(StandardCharsets.UTF_8));
+        if(randomIdentityIps != null)
+            updateFile(repository, "random-identity.txt", ()->randomIdentityIps.getBytes(StandardCharsets.UTF_8));
+        if(rain000IdentityIps != null)
+            updateFile(repository, "rain0.0.0.txt", ()->rain000IdentityIps.getBytes(StandardCharsets.UTF_8));
+        if(gopeedDevIdentityIps != null)
+            updateFile(repository, "gopeeddev.txt", ()->gopeedDevIdentityIps.getBytes(StandardCharsets.UTF_8));
         log.info("GitHub 同步规则存储库更新完成");
     }
 

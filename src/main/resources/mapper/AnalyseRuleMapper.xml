@@ -9,11 +9,11 @@
         <result column="userapps_count" property="userappsCount"/>
     </resultMap>
     <select id="analyseByModule" resultMap="analyseByModuleResult">
-        SELECT peer_ip                             AS peer_ip_cidr,
-               (peer_geoip ->> 'countryIso'::text) AS iso,
-               (peer_geoip ->> 'cityName'::text)   AS city,
-               count(peer_ip)                      AS ban_count,
-               count(distinct userapps_id)         AS userapps_count
+        SELECT peer_ip AS peer_ip_cidr,
+        (peer_geoip ->> 'countryIso'::text) AS iso,
+        (peer_geoip ->> 'cityName'::text) AS city,
+        count(peer_ip) AS ban_count,
+        count(distinct userapps_id) AS userapps_count
         FROM ban_history
         WHERE ((insert_time > #{afterTimestamp}) AND (module_name IN
         <foreach collection="moduleName" item="item" open="(" separator="," close=")">
@@ -35,11 +35,11 @@
     </resultMap>
     <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult">
         -- noinspection SqlShouldBeInGroupBy
-        SELECT swarm_tracker.peer_ip                             AS st_peer_ip,
-               swarm_tracker.torrent_id                          AS st_torrent_id,
-               SUM(swarm_tracker.from_peer_traffic)              AS st_from_peer_traffic,
-               SUM(swarm_tracker.to_peer_traffic)                AS st_to_peer_traffic,
-               torrent.size                                      AS t_torrent_size,
+        SELECT swarm_tracker.peer_ip                                                     AS st_peer_ip,
+               swarm_tracker.torrent_id                                                  AS st_torrent_id,
+               SUM(swarm_tracker.from_peer_traffic)                                      AS st_from_peer_traffic,
+               SUM(swarm_tracker.to_peer_traffic)                                        AS st_to_peer_traffic,
+               torrent.size                                                              AS t_torrent_size,
                SUM(swarm_tracker.to_peer_traffic) - SUM(swarm_tracker.from_peer_traffic) AS pure_to_peer_traffic
         FROM swarm_tracker
                  JOIN torrent ON swarm_tracker.torrent_id = torrent.id
@@ -61,12 +61,82 @@
         SELECT peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
-               SUM(to_peer_traffic) AS total_to_peer_traffic,
-               SUM(from_peer_traffic) AS total_from_peer_traffic
+               SUM(to_peer_traffic)        AS total_to_peer_traffic,
+               SUM(from_peer_traffic)      AS total_from_peer_traffic
         FROM swarm_tracker
         WHERE last_time_seen >= #{afterTimestamp}
         GROUP BY peer_ip
         ORDER BY torrent_count DESC,
                  userapps_count DESC
+    </select>
+    <resultMap id="analyseIpAndIdentityResult"
+               type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult">
+        <result column="peer_ip" property="peerIp"/>
+        <result column="peer_id" property="peerId"/>
+        <result column="peer_client_name" property="peerClientName"/>
+    </resultMap>
+    <select id="analyseRandomIdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM ban_history
+        WHERE peer_id &lt;> ''
+          AND starts_with(peer_client_name, peer_id)
+          AND NOT starts_with(peer_client_name, '-XL00')
+          AND NOT starts_with(peer_client_name, 'FD')
+          AND NOT starts_with(peer_client_name, 'MG')
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseRandomIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM swarm_tracker
+        WHERE peer_id &lt;> ''
+          AND starts_with(peer_client_name, peer_id)
+          AND NOT starts_with(peer_client_name, '-XL00')
+          AND NOT starts_with(peer_client_name, 'FD')
+          AND NOT starts_with(peer_client_name, 'MG')
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseRain000IdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM ban_history
+        WHERE peer_id &lt;> ''
+            AND starts_with(peer_client_name, 'Gopeed dev')
+            AND NOT starts_with(peer_id, '-GP')
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM swarm_tracker
+        WHERE peer_id &lt;> ''
+          AND starts_with(peer_client_name, 'Gopeed dev')
+          AND NOT starts_with(peer_id, '-GP')
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseGopeeddevIdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM ban_history
+        WHERE peer_id &lt;> ''
+          AND starts_with(peer_client_name, 'Gopeed dev')
+          AND NOT starts_with(peer_id, '-GP')
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseGopeeddevIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+        SELECT DISTINCT peer_ip,
+                        peer_id,
+                        peer_client_name
+        FROM swarm_tracker
+        WHERE peer_id &lt;> ''
+          AND starts_with(peer_client_name, 'Gopeed dev')
+          AND NOT starts_with(peer_id, '-GP')
+        ORDER BY peer_ip
     </select>
 </mapper>
