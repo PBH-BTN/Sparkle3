@@ -38,7 +38,8 @@ public enum RedisKeyConstant {
     STATS_TORRENT_30DAYS("sparkle:stats:torrent:30days"),
     STATS_TORRENT_14DAYS("sparkle:stats:torrent:14days"),
     STATS_TORRENT_7DAYS("sparkle:stats:torrent:7days"),
-    STATS_TORRENT_24HOURS("sparkle:stats:torrent:24hours");
+    STATS_TORRENT_24HOURS("sparkle:stats:torrent:24hours"),
+    ADMIN_USER_IP_HEARTBEAT_WARNING_LIST("sparkle:admin:user:ip_heartbeat_warning_list");
 
     private final String key;
 

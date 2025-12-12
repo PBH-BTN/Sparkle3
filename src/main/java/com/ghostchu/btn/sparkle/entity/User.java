@@ -54,4 +54,7 @@ public class User implements Serializable {
 
     @TableField("banned_reason")
     private String bannedReason;
+
+    @TableField("role")
+    private String role;
 }

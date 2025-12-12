@@ -1,10 +1,13 @@
 package com.ghostchu.btn.sparkle.autoconfig;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -21,6 +24,19 @@ public class RedisConfig {
         template.setValueSerializer(redisSerializer);
         template.setHashValueSerializer(redisSerializer);
         template.setConnectionFactory(factory);
+        return template;
+    }
+
+    @Bean("stringObjectRedisTemplate")
+    public RedisTemplate<String, Object> stringObjectRedisTemplate(@NotNull RedisConnectionFactory factory) {
+        RedisSerializer<@NotNull String> stringSerializer = new StringRedisSerializer();
+        RedisSerializer<@NotNull Object> jsonSerializer = new GenericJacksonJsonRedisSerializer(new tools.jackson.databind.ObjectMapper()); // wtf
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(stringSerializer);
+        template.setHashKeySerializer(stringSerializer);
+        template.setValueSerializer(jsonSerializer);
+        template.setHashValueSerializer(jsonSerializer);
         return template;
     }
 

@@ -34,10 +34,10 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     private long deleteBefore;
 
     @Override
-    public @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(@NotNull String peerIp, @NotNull Timestamp after) {
+    public @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(@NotNull String peerIp, @NotNull OffsetDateTime after) {
         return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
                 .apply("ip <<= {0}::inet", peerIp)
-                .gt("last_seen_at", OffsetDateTime.ofInstant(after.toInstant(), OffsetDateTime.now().getOffset()))
+                .gt("last_seen_at", after)
                 .orderByDesc("last_seen_at")
         );
     }

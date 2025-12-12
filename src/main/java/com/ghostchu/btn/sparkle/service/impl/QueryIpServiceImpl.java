@@ -106,7 +106,7 @@ public class QueryIpServiceImpl {
         distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
         result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
 
-        var heartbeats = userappsHeartbeatService.fetchIpHeartbeatRecords(peerIp, Timestamp.from(OffsetDateTime.now().minusSeconds(heartbeatDuration).toInstant()));
+        var heartbeats = userappsHeartbeatService.fetchIpHeartbeatRecords(peerIp, OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));
         if (!heartbeats.isEmpty()) {
             var firstResult = heartbeats.getFirst();
             var btnUserApp = userappService.getById(firstResult.getUserappId());

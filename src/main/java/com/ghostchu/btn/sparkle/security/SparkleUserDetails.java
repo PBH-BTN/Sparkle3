@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.security;
 import com.ghostchu.btn.sparkle.entity.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -37,10 +38,14 @@ public class SparkleUserDetails implements UserDetails, OAuth2User {
     }
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    public @NotNull Collection<? extends GrantedAuthority> getAuthorities() {
         // 可以根据 User 实体的角色或权限来返回权限列表
         // 目前返回基本的 USER 角色
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_USER"),
+                new SimpleGrantedAuthority("user"),
+                new SimpleGrantedAuthority(user.getRole())
+        );
     }
 
     @Override
