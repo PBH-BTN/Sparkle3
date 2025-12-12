@@ -36,7 +36,7 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Override
     public @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(@NotNull String peerIp, @NotNull Timestamp after) {
         return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
-                .apply("ip <<= {0}::inet", peerIp)
+                .apply("ip <<= inet {0}", peerIp)
                 .gt("last_seen_at", OffsetDateTime.ofInstant(after.toInstant(), OffsetDateTime.now().getOffset()))
                 .orderByDesc("last_seen_at")
         );
