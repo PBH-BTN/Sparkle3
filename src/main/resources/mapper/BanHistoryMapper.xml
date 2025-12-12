@@ -26,7 +26,7 @@
     <select id="sumPeerIpTraffic" resultMap="sumPeerIpTrafficSummaryDto">
         SELECT peer_ip, SUM(to_peer_traffic) AS sum_to_peer_traffic, SUM(from_peer_traffic) AS sum_from_peer_traffic
         FROM ban_history
-            WHERE insert_time > #{afterTimestamp} AND peer_ip &lt;&lt;= #{peerIp}
+            WHERE insert_time > #{afterTimestamp} AND peer_ip &lt;&lt;= inet #{peerIp}
         GROUP BY peer_ip
     </select>
     <select id="selectPeerTorrents" resultType="long">
