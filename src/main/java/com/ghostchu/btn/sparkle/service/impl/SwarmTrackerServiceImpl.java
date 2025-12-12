@@ -71,7 +71,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             );
             var lastSeenTime = swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC);
             // 相差不能超过 7 天
-            if (lastSeenTime.isAfter(nowTime.plusDays(7)) || lastSeenTime.isBefore(nowTime.minusDays(7))) {
+            if (lastSeenTime.isAfter(nowTime.plusHours(1)) || lastSeenTime.isBefore(nowTime.minusDays(7))) {
                 log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}", lastSeenTime);
                 continue;
             }
