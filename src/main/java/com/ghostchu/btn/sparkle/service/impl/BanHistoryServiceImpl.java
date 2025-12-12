@@ -106,7 +106,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            wrapper.apply("peer_ip <<= inet {0}", peerIp.trim());
         }
 
         return this.baseMapper.selectPage(page, wrapper);
@@ -133,7 +133,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
                 .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
-                .apply(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank(), "peer_ip <<= {0}::inet", queryDto.getPeerIp())
+                .apply(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank(), "peer_ip <<= inet {0}", queryDto.getPeerIp())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
                 .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())

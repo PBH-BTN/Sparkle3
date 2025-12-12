@@ -125,7 +125,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            wrapper.apply("peer_ip <<= inet {0}", peerIp.trim());
         }
 
         return this.baseMapper.selectPage(page, wrapper);
@@ -139,7 +139,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            wrapper.apply("peer_ip <<= inet {0}", peerIp.trim());
         }
 
         return this.baseMapper.selectCount(wrapper);
@@ -163,7 +163,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            wrapper.apply("peer_ip <<= inet {0}", peerIp.trim());
         }
 
         return this.baseMapper.selectCount(wrapper);
@@ -201,7 +201,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         // 添加查询条件
         wrapper.eq(torrentId != null, "torrent_id", torrentId)
-                .apply(peerIp != null && !peerIp.isBlank(), "peer_ip <<= {0}::inet", peerIp)
+                .apply(peerIp != null && !peerIp.isBlank(), "peer_ip <<= inet {0}", peerIp)
                 .eq(peerPort != null, "peer_port", peerPort)
                 .like(peerId != null && !peerId.isBlank(), "peer_id", peerId)
                 .like(peerClientName != null && !peerClientName.isBlank(), "peer_client_name", peerClientName)
