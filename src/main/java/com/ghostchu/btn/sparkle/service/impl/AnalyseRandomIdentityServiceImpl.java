@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.format.util.DualIPv4v6AssociativeTries;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class AnalyseRandomIdentityServiceImpl extends AbstractAnalyseRuleServiceImpl {
 
     @Value("${sparkle.analyse.random-identity-analyse.duration}")
@@ -34,11 +36,16 @@ public class AnalyseRandomIdentityServiceImpl extends AbstractAnalyseRuleService
     public void analyseRandomIdentity() {
         var banhistory = baseMapper.analyseRandomIdentityBanHistory(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
         var swarm = baseMapper.analyseRandomIdentitySwarmTracker(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
+        log.info("banhistory entries: {}", banhistory.size());
+        log.info("swarm entries: {}", swarm.size());
         DualIPv4v6AssociativeTries<Pair<String, String>> tries = new DualIPv4v6AssociativeTries<>();
         banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
         swarm.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
+        log.info("Before mergeIps: {} entries", tries.size());
         mergeIps(tries);
+        log.info("After mergeIps: {} entries", tries.size());
         var map = formatAndIterateIp(tries);
+        log.info("formatted to map: {} entries", map.size());
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<IPAddress, Pair<String, String>> entry : map.entrySet()) {
             sb.append("# [Sparkle3] 随机特征识别: ")
