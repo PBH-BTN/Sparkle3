@@ -54,20 +54,20 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         for (BtnSwarm swarm : swarms) {
             long torrentId = torrentService.getOrCreateTorrentId(
-                swarm.getTorrentIdentifier(),
-                swarm.getTorrentSize(),
-                swarm.getTorrentIsPrivate(),
-                null,
-                null
+                    swarm.getTorrentIdentifier(),
+                    swarm.getTorrentSize(),
+                    swarm.getTorrentIsPrivate(),
+                    null,
+                    null
             );
             InetAddress peerIp = InetAddress.ofLiteral(swarm.getPeerIp());
 
             SwarmKey key = new SwarmKey(
-                userAppId,
-                swarm.getDownloader(),
-                torrentId,
-                peerIp,
-                swarm.getPort()
+                    userAppId,
+                    swarm.getDownloader(),
+                    torrentId,
+                    peerIp,
+                    swarm.getPort()
             );
             var lastSeenTime = swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC);
             // 相差不能超过 7 天
@@ -76,26 +76,26 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 continue;
             }
             SwarmTracker tracker = new SwarmTracker()
-                .setUserappsId(userAppId)
-                .setUserDownloader(swarm.getDownloader())
-                .setUserProgress(swarm.getDownloaderProgress())
-                .setTorrentId(torrentId)
-                .setPeerIp(peerIp)
-                .setPeerPort(swarm.getPort())
-                .setPeerId(swarm.getPeerId())
-                .setPeerClientName(swarm.getClientName())
-                .setPeerProgress(swarm.getPeerProgress())
-                .setFromPeerTraffic(swarm.getFromPeerTraffic())
-                .setToPeerTraffic(swarm.getToPeerTraffic())
-                .setFromPeerTrafficOffset(swarm.getFromPeerTrafficOffset())
-                .setToPeerTrafficOffset(swarm.getToPeerTrafficOffset())
-                .setFlags(swarm.getPeerLastFlags())
-                .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
-                .setLastTimeSeen(lastSeenTime);
+                    .setUserappsId(userAppId)
+                    .setUserDownloader(swarm.getDownloader())
+                    .setUserProgress(swarm.getDownloaderProgress())
+                    .setTorrentId(torrentId)
+                    .setPeerIp(peerIp)
+                    .setPeerPort(swarm.getPort())
+                    .setPeerId(swarm.getPeerId())
+                    .setPeerClientName(swarm.getClientName())
+                    .setPeerProgress(swarm.getPeerProgress())
+                    .setFromPeerTraffic(swarm.getFromPeerTraffic())
+                    .setToPeerTraffic(swarm.getToPeerTraffic())
+                    .setFromPeerTrafficOffset(swarm.getFromPeerTrafficOffset())
+                    .setToPeerTrafficOffset(swarm.getToPeerTrafficOffset())
+                    .setFlags(swarm.getPeerLastFlags())
+                    .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
+                    .setLastTimeSeen(lastSeenTime);
 
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->
-                newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
+                    newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
             );
         }
 
@@ -108,16 +108,17 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
      * Composite key for deduplication based on userapps_id, user_downloader, torrent_id, peer_ip, peer_port
      */
     private record SwarmKey(
-        long userappsId,
-        String userDownloader,
-        long torrentId,
-        InetAddress peerIp,
-        int peerPort
-    ) {}
+            long userappsId,
+            String userDownloader,
+            long torrentId,
+            InetAddress peerIp,
+            int peerPort
+    ) {
+    }
 
 
     @Override
-    public @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page){
+    public @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page) {
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
                 .eq(torrentId != null, "torrent_id", torrentId)
                 .ge("last_time_seen", afterTime)
@@ -126,16 +127,17 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
             wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            page.setOptimizeJoinOfCountSql(false);
         }
 
-        page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-        page.setOptimizeJoinOfCountSql(false);
+
 
         return this.baseMapper.selectPage(page, wrapper);
     }
 
     @Override
-    public long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp){
+    public long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
                 .ge("last_time_seen", afterTime)
                 .le("peer_progress", 1.0);
@@ -149,12 +151,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     }
 
     @Override
-    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp){
+    public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
     }
 
     @Override
-    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp){
+    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
         return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
     }
 
@@ -174,10 +176,10 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")
     @Transactional
-    public void deleteOldData(){
+    public void deleteOldData() {
         var deleted = this.baseMapper.delete(new QueryWrapper<SwarmTracker>()
                 .le("last_time_seen", OffsetDateTime.now().minusSeconds(deleteBefore / 1000)));
-        if(deleted > 0) {
+        if (deleted > 0) {
             log.info("Deleted {} expired swarms", deleted);
         }
     }
@@ -204,7 +206,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         // 添加查询条件
         wrapper.eq(torrentId != null, "torrent_id", torrentId)
-                .apply(peerIp != null && !peerIp.isBlank(), "peer_ip <<= {0}::inet", peerIp)
                 .eq(peerPort != null, "peer_port", peerPort)
                 .like(peerId != null && !peerId.isBlank(), "peer_id", peerId)
                 .like(peerClientName != null && !peerClientName.isBlank(), "peer_client_name", peerClientName)
@@ -215,6 +216,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .ge(firstTimeSeenAfter != null, "first_time_seen", firstTimeSeenAfter)
                 .ge(lastTimeSeenAfter != null, "last_time_seen", lastTimeSeenAfter)
                 .eq(userProgress != null, "user_progress", userProgress);
+        if (peerIp != null && !peerIp.isBlank()) {
+            wrapper.apply("peer_ip <<= {0}::inet", peerIp);
+            page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            page.setOptimizeJoinOfCountSql(false);
+        }
 
 
         // 添加排序
@@ -226,8 +232,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             wrapper.orderByAsc(sort);
         }
 
-        page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-        page.setOptimizeJoinOfCountSql(false);
 
         return this.baseMapper.selectPage(page, wrapper);
     }

@@ -107,9 +107,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
             wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
+            page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            page.setOptimizeJoinOfCountSql(false);
         }
-        page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-        page.setOptimizeJoinOfCountSql(false);
+
         return this.baseMapper.selectPage(page, wrapper);
     }
 
@@ -134,13 +135,15 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
                 .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
-                .apply(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank(), "peer_ip <<= {0}::inet", queryDto.getPeerIp())
+
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
                 .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())
                 .eq(queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank(), "module_name", queryDto.getModuleName())
                 .like(queryDto.getRule() != null && !queryDto.getRule().isBlank(), "rule", queryDto.getRule())
                 .like(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
+
+
 
         // Sorting
         String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";
@@ -163,8 +166,14 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             pageRequest.setSearchCount(false);
         }
 
-        pageRequest.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-        pageRequest.setOptimizeJoinOfCountSql(false);
+
+        if(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()){
+            queryWrapper.apply( "peer_ip <<= {0}::inet", queryDto.getPeerIp());
+            pageRequest.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            pageRequest.setOptimizeJoinOfCountSql(false);
+        }
+
+
 
         return this.baseMapper.selectPage(pageRequest, queryWrapper);
     }
