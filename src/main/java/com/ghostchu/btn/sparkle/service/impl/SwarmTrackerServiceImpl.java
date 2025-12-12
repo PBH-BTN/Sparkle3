@@ -48,6 +48,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Transactional(propagation = Propagation.MANDATORY)
     @Override
     public void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms) {
+        var nowTime = OffsetDateTime.now();
         // 使用 Map 进行内存去重，key 为 userapps_id, user_downloader, torrent_id, peer_ip, peer_port
         Map<SwarmKey, SwarmTracker> swarmMap = new HashMap<>();
 
@@ -68,7 +69,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 peerIp,
                 swarm.getPort()
             );
-
+            var lastSeenTime = swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC);
+            // 相差不能超过 7 天
+            if (lastSeenTime.isAfter(nowTime.plusDays(7)) || lastSeenTime.isBefore(nowTime.minusDays(7))) {
+                log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}", lastSeenTime);
+                continue;
+            }
             SwarmTracker tracker = new SwarmTracker()
                 .setUserappsId(userAppId)
                 .setUserDownloader(swarm.getDownloader())
@@ -85,7 +91,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .setToPeerTrafficOffset(swarm.getToPeerTrafficOffset())
                 .setFlags(swarm.getPeerLastFlags())
                 .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
-                .setLastTimeSeen(swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC));
+                .setLastTimeSeen(lastSeenTime);
 
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->

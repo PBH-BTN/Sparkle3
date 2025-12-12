@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <p>
@@ -37,6 +39,7 @@ import java.util.Map;
  * @since 2025-11-29
  */
 @Service
+@Slf4j
 public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHistory> implements IBanHistoryService {
     @Autowired
     private ITorrentService torrentService;
@@ -49,6 +52,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     @Transactional(propagation = Propagation.MANDATORY)
     @Override
     public void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans) {
+        var nowTime = OffsetDateTime.now();
         var list = bans.stream().map(btnBan -> {
             Map<String, Object> structuredDataMap = Map.of();
             if (btnBan.getStructuredData() != null && !btnBan.getStructuredData().isBlank()) {
@@ -61,10 +65,16 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     structuredDataMap = Map.of();
                 }
             }
+            var banAtTime = btnBan.getBanAt().toLocalDateTime().atOffset(ZoneOffset.UTC);
+            // 相差不能超过 7 天
+            if (banAtTime.isAfter(nowTime.plusDays(7)) || banAtTime.isBefore(nowTime.minusDays(7))) {
+                log.debug("Ignoring ban entry with out-of-range banAt time: {}", btnBan.getBanAt());
+                return null;
+            }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
             return new BanHistory()
-                    .setInsertTime(LocalDateTime.now().atOffset(ZoneOffset.UTC))
-                    .setPopulateTime(btnBan.getBanAt().toLocalDateTime().atOffset(ZoneOffset.UTC))
+                    .setInsertTime(nowTime)
+                    .setPopulateTime(banAtTime)
                     .setUserappsId(userAppId)
                     .setTorrentId(torrentService.getOrCreateTorrentId(btnBan.getTorrentIdentifier(), btnBan.getTorrentSize(), btnBan.isTorrentIsPrivate(), null, null))
                     .setPeerIp(inet)
@@ -81,7 +91,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setDescription(btnBan.getDescription())
                     .setPeerGeoip(geoIPManager.geoData(inet))
                     .setStructuredData(structuredDataMap);
-        }).toList();
+        }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
     }
