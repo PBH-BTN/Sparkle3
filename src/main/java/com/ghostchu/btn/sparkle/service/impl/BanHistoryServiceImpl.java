@@ -67,7 +67,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             }
             var banAtTime = btnBan.getBanAt().toLocalDateTime().atOffset(ZoneOffset.UTC);
             // 相差不能超过 7 天
-            if (banAtTime.isAfter(nowTime.plusDays(7)) || banAtTime.isBefore(nowTime.minusDays(7))) {
+            if (banAtTime.isAfter(nowTime.plusHours(1)) || banAtTime.isBefore(nowTime.minusDays(7))) {
                 log.debug("Ignoring ban entry with out-of-range banAt time: {}", btnBan.getBanAt());
                 return null;
             }
