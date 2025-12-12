@@ -95,6 +95,8 @@ public class QueryIpServiceImpl {
             totalToPeerTraffic += swarmTrackerTraffic.getSumToPeerTraffic();
             totalFromPeerTraffic += swarmTrackerTraffic.getSumFromPeerTraffic();
         }
+        totalFromPeerTraffic = Math.max(0, totalFromPeerTraffic);
+        totalToPeerTraffic = Math.max(0, totalToPeerTraffic);
         var shareRatio =
                 totalFromPeerTraffic == 0 ? 0.0 :
                 totalToPeerTraffic == 0 ? 999999999.0 :
