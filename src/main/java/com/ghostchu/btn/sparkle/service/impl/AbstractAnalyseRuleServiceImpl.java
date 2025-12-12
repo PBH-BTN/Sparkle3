@@ -38,9 +38,10 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         Map<IPAddress, T> map = new LinkedHashMap<>();
         tries.nodeIterator(false).forEachRemaining(node -> {
             IPAddress outputAddr = node.getKey();
-            if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
-                    || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                outputAddr = outputAddr.withoutPrefixLength();
+            if(outputAddr.getPrefixLength() != null) {
+                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
+                    outputAddr = outputAddr.withoutPrefixLength();
+                }
             }
             map.put(outputAddr, node.getValue());
         });
