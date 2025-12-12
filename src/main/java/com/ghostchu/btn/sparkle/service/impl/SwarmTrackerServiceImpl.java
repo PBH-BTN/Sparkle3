@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -45,12 +48,33 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Transactional(propagation = Propagation.MANDATORY)
     @Override
     public void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms) {
-        var swarmList = swarms.stream().map(swarm -> new SwarmTracker()
+        // 使用 Map 进行内存去重，key 为 userapps_id, user_downloader, torrent_id, peer_ip, peer_port
+        Map<SwarmKey, SwarmTracker> swarmMap = new HashMap<>();
+
+        for (BtnSwarm swarm : swarms) {
+            long torrentId = torrentService.getOrCreateTorrentId(
+                swarm.getTorrentIdentifier(),
+                swarm.getTorrentSize(),
+                swarm.getTorrentIsPrivate(),
+                null,
+                null
+            );
+            InetAddress peerIp = InetAddress.ofLiteral(swarm.getPeerIp());
+
+            SwarmKey key = new SwarmKey(
+                userAppId,
+                swarm.getDownloader(),
+                torrentId,
+                peerIp,
+                swarm.getPort()
+            );
+
+            SwarmTracker tracker = new SwarmTracker()
                 .setUserappsId(userAppId)
                 .setUserDownloader(swarm.getDownloader())
                 .setUserProgress(swarm.getDownloaderProgress())
-                .setTorrentId(torrentService.getOrCreateTorrentId(swarm.getTorrentIdentifier(), swarm.getTorrentSize(), swarm.getTorrentIsPrivate(), null, null))
-                .setPeerIp(InetAddress.ofLiteral(swarm.getPeerIp()))
+                .setTorrentId(torrentId)
+                .setPeerIp(peerIp)
                 .setPeerPort(swarm.getPort())
                 .setPeerId(swarm.getPeerId())
                 .setPeerClientName(swarm.getClientName())
@@ -61,11 +85,29 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .setToPeerTrafficOffset(swarm.getToPeerTrafficOffset())
                 .setFlags(swarm.getPeerLastFlags())
                 .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
-                .setLastTimeSeen(swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))).toList();
-        if (!swarmList.isEmpty()) {
-            this.baseMapper.batchUpsert(swarmList);
+                .setLastTimeSeen(swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC));
+
+            // 如果已存在相同键，比较 lastTimeSeen，保留最新的
+            swarmMap.merge(key, tracker, (existing, newTracker) ->
+                newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
+            );
+        }
+
+        if (!swarmMap.isEmpty()) {
+            this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
         }
     }
+
+    /**
+     * Composite key for deduplication based on userapps_id, user_downloader, torrent_id, peer_ip, peer_port
+     */
+    private record SwarmKey(
+        long userappsId,
+        String userDownloader,
+        long torrentId,
+        InetAddress peerIp,
+        int peerPort
+    ) {}
 
 
     @Override
