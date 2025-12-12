@@ -177,7 +177,6 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         }
     }
 
-    @SuppressWarnings("unchecked")
     private IPv4Address[] mergeIpsV4(AssociativeAddressTrie<IPv4Address, GeneratedRule> trie) {
         var firstAddedNode = trie.firstAddedNode();
         if (firstAddedNode == null) return new IPv4Address[0];
@@ -191,7 +190,6 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         return firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));
     }
 
-    @SuppressWarnings("unchecked")
     private IPv6Address[] mergeIpsV6(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie) {
         var firstAddedNode = trie.firstAddedNode();
         if (firstAddedNode == null) return new IPv6Address[0];
