@@ -128,6 +128,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
         }
 
+        page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+        page.setOptimizeJoinOfCountSql(false);
+
         return this.baseMapper.selectPage(page, wrapper);
     }
 
@@ -222,6 +225,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         } else {
             wrapper.orderByAsc(sort);
         }
+
+        page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+        page.setOptimizeJoinOfCountSql(false);
 
         return this.baseMapper.selectPage(page, wrapper);
     }
