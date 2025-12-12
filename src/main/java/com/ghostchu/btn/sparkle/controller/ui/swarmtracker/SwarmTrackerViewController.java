@@ -98,7 +98,7 @@ public class SwarmTrackerViewController {
         // 查询数据
         var result = swarmTrackerService.querySwarmTracker(
                 torrentId,
-                peerIpAddr,
+                peerIp,
                 peerPort,
                 peerId,
                 peerClientName,
