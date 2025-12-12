@@ -49,13 +49,39 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
 
     private <T> void commonTriesMergeV6(@NotNull AssociativeAddressTrie<IPv6Address, T> trie, @NotNull IPv6Address[] prefixes) {
         for (IPv6Address prefix : prefixes) {
+            // 收集该前缀下的第一个值作为聚合结果
+            T aggregatedValue = null;
+            var it = trie.elementsContainedBy(prefix).nodeIterator(false);
+            if (it.hasNext()) {
+                aggregatedValue = it.next().getValue();
+            }
+
+            // 删除所有被该前缀包含的元素
             trie.removeElementsContainedBy(prefix);
+
+            // 将聚合后的前缀块添加回trie
+            if (aggregatedValue != null) {
+                trie.put(prefix, aggregatedValue);
+            }
         }
     }
 
     private <T> void commonTriesMergeV4(@NotNull AssociativeAddressTrie<IPv4Address, T> trie, @NotNull IPv4Address[] prefixes) {
         for (IPv4Address prefix : prefixes) {
+            // 收集该前缀下的第一个值作为聚合结果
+            T aggregatedValue = null;
+            var it = trie.elementsContainedBy(prefix).nodeIterator(false);
+            if (it.hasNext()) {
+                aggregatedValue = it.next().getValue();
+            }
+
+            // 删除所有被该前缀包含的元素
             trie.removeElementsContainedBy(prefix);
+
+            // 将聚合后的前缀块添加回trie
+            if (aggregatedValue != null) {
+                trie.put(prefix, aggregatedValue);
+            }
         }
     }
 
