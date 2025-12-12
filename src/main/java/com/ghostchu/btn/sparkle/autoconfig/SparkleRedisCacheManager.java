@@ -22,7 +22,7 @@ public class SparkleRedisCacheManager extends RedisCacheManager{
             long ttl = Long.parseLong(array[1]);
             cacheConfig = cacheConfig.entryTtl(Duration.ofMillis(ttl));
         }
-        return super.createRedisCache(name, cacheConfig);
+        return super.createRedisCache("sparkle:cache:kv:"+name, cacheConfig);
     }
 
 }
