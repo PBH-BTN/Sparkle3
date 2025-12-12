@@ -73,39 +73,6 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }
 
-//    @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
-//    public void analyseOverDownload() {
-//        List<AnalyseOverDownloadedResult> resultList = this.baseMapper.analyseOverDownloaded(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
-//        var it = resultList.iterator();
-//        long totalTorrentSize = 0;
-//        long totalToPeerTraffic = 0;
-//        long totalFromPeerTraffic = 0;
-//        while (it.hasNext()) {
-//            var result = it.next();
-//            if (result.getTorrentSize() <= 0) continue;
-//            double ratio = (result.getTotalToPeerTraffic() - result.getTotalFromPeerTraffic()) / (double) result.getTorrentSize();
-//            totalTorrentSize += result.getTorrentSize();
-//            totalToPeerTraffic += result.getTotalToPeerTraffic();
-//            totalFromPeerTraffic += result.getTotalFromPeerTraffic();
-//            if (ratio < threshold) {
-//                it.remove();
-//            }
-//        }
-//        StringBuilder sb = new StringBuilder();
-//        for (AnalyseOverDownloadedResult result : resultList) {
-//            assert result.getTorrentSize() > 0;
-//            double ratio = (double) result.getPureToPeerTraffic() / (double) result.getTorrentSize();
-//            sb.append("# [Sparkle3 过量下载在线分析]  过量下载比率: ").append(String.format("%.2f", ratio * 100)).append("%")
-//                    .append(" (100% = 完整下载一次种子大小), BTN 网络总发送量: ").append(MsgUtil.humanReadableByteCountBin(result.getTotalToPeerTraffic()))
-//                    .append(", BTN 网络总接收量: ").append(MsgUtil.humanReadableByteCountBin(result.getTotalFromPeerTraffic()))
-//                    .append("\n");
-//            IPAddress ipAddress = IPAddressUtil.getIPAddress(result.getPeerIp());
-//            sb.append(ipAddress.toNormalizedString()).append("\n");
-//        }
-//        redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey(), sb.toString());
-//        redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
-//    }
-
     @Override
     public Pair<@Nullable String, @Nullable String> getGeneratedContent() {
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
