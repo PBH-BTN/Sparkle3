@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServiceImpl {
+public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServiceImpl  implements IPDenyListRuleProvider {
     @Value("${sparkle.analyse.untrusted-vote.duration}")
     private long duration;
     @Value("${sparkle.analyse.untrusted-vote.include-modules}")
@@ -119,6 +120,16 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VERSION.getKey());
         return Pair.of(version, value);
+    }
+
+    @Override
+    public String getVersion() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VERSION.getKey());
+    }
+
+    @Override
+    public String getContent() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey());
     }
 
     @AllArgsConstructor

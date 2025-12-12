@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.UnitConverter;
 import com.google.common.hash.Hashing;
@@ -21,7 +22,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
-public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRuleServiceImpl {
+public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
 
     @Value("${sparkle.analyse.concurrent-download-analyse.duration}")
     private long duration;
@@ -56,5 +57,15 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey());
         return Pair.of(version, value);
+    }
+
+    @Override
+    public String getVersion() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey());
+    }
+
+    @Override
+    public String getContent() {
+        return  redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey());
     }
 }

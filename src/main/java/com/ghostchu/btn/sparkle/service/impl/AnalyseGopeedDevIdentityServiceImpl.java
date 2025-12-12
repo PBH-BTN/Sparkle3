@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
@@ -20,7 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 @Service
-public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServiceImpl {
+public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
 
     @Value("${sparkle.analyse.gopeeddev-identity-analyse.duration}")
     private long duration;
@@ -53,5 +54,15 @@ public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServ
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_GOPEEDDEV_IDENTITY_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_GOPEEDDEV_IDENTITY_VERSION.getKey());
         return Pair.of(version, value);
+    }
+
+    @Override
+    public String getVersion() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_GOPEEDDEV_IDENTITY_VERSION.getKey());
+    }
+
+    @Override
+    public String getContent() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_GOPEEDDEV_IDENTITY_VALUE.getKey());
     }
 }

@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
@@ -21,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class AnalyseRain000IdentityServiceImpl extends AbstractAnalyseRuleServiceImpl {
+public class AnalyseRain000IdentityServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
 
     @Value("${sparkle.analyse.rain000-identity-analyse.duration}")
     private long duration;
@@ -53,5 +54,15 @@ public class AnalyseRain000IdentityServiceImpl extends AbstractAnalyseRuleServic
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_RAIN000_IDENTITY_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_RAIN000_IDENTITY_VERSION.getKey());
         return Pair.of(version, value);
+    }
+
+    @Override
+    public String getVersion() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_RAIN000_IDENTITY_VERSION.getKey());
+    }
+
+    @Override
+    public String getContent() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_RAIN000_IDENTITY_VALUE.getKey());
     }
 }

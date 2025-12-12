@@ -5,10 +5,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.Rule;
 import com.ghostchu.btn.sparkle.mapper.RuleMapper;
 import com.ghostchu.btn.sparkle.service.IRuleService;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.google.common.hash.Hashing;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,7 +24,7 @@ import java.util.stream.Collectors;
  * @since 2025-11-29
  */
 @Service
-public class RuleServiceImpl extends ServiceImpl<RuleMapper, Rule> implements IRuleService {
+public class RuleServiceImpl extends ServiceImpl<RuleMapper, Rule> implements IRuleService, IPDenyListRuleProvider {
 
     @Override
     public @NotNull List<Rule> getRulesByType(@NotNull String type) {
@@ -31,6 +34,19 @@ public class RuleServiceImpl extends ServiceImpl<RuleMapper, Rule> implements IR
 
     @Nullable
     public String getIpDenyList() {
+        return this.baseMapper.selectList(new QueryWrapper<Rule>()
+                        .eq("type", "ip_denylist"))
+                .stream().map(rule -> "# [Sparkle3 手动规则] " + rule.getCategory() + "\n" + rule.getContent())
+                .collect(Collectors.joining("\n"));
+    }
+
+    @Override
+    public String getVersion() {
+        return Hashing.crc32c().hashString(getContent(), StandardCharsets.UTF_8).toString();
+    }
+
+    @Override
+    public String getContent() {
         return this.baseMapper.selectList(new QueryWrapper<Rule>()
                         .eq("type", "ip_denylist"))
                 .stream().map(rule -> "# [Sparkle3 手动规则] " + rule.getCategory() + "\n" + rule.getContent())

@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
+import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
 import com.google.common.hash.Hashing;
@@ -25,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServiceImpl {
+public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
 
     @Value("${sparkle.analyse.overdownload-analyse.duration}")
     private long duration;
@@ -78,6 +79,16 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         var value = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
         var version = redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey());
         return Pair.of(version, value);
+    }
+
+    @Override
+    public String getVersion() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey());
+    }
+
+    @Override
+    public String getContent() {
+        return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
     }
 
     @Data
