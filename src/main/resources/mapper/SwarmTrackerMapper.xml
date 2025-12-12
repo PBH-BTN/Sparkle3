@@ -62,7 +62,7 @@
     <select id="calcPeerConcurrentDownloads" resultType="long">
         SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
         FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= #{peerIp}
+        WHERE peer_ip &lt;&lt;= inet #{peerIp}
           AND last_time_seen >= #{afterTimestamp}
           AND 1.0 > peer_progress;
     </select>
@@ -83,7 +83,7 @@
     <select id="selectPeerTorrents" resultType="long">
         SELECT DISTINCT torrent_id AS torrent_count
         FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= #{peerIp}
+        WHERE peer_ip &lt;&lt;= inet #{peerIp}
           AND last_time_seen >= #{afterTimestamp};
     </select>
 

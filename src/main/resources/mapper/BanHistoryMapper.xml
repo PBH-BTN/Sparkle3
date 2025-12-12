@@ -32,7 +32,7 @@
     <select id="selectPeerTorrents" resultType="long">
         SELECT DISTINCT torrent_id AS torrent_count
         FROM ban_history
-        WHERE peer_ip &lt;&lt;= #{peerIp}
+        WHERE peer_ip &lt;&lt;= inet #{peerIp}
           AND insert_time >= #{afterTimestamp};
     </select>
     <select id="countAll" resultType="long">
