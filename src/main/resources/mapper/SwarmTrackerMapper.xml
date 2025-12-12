@@ -62,7 +62,7 @@
     <select id="calcPeerConcurrentDownloads" resultType="long">
         SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
         FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= inet #{peerIp}
+        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp}
           AND 1.0 > peer_progress;
     </select>
@@ -75,7 +75,7 @@
 
     <select id="sumPeerIpTraffic" resultMap="sumPeerIpTrafficResultDto">
         SELECT peer_ip, SUM(to_peer_traffic) AS sum_to_peer_traffic, SUM(from_peer_traffic) AS sum_from_peer_traffic FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= inet #{peerIp}
+        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp}
         GROUP BY peer_ip;
     </select>
@@ -83,7 +83,7 @@
     <select id="selectPeerTorrents" resultType="long">
         SELECT DISTINCT torrent_id AS torrent_count
         FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= inet #{peerIp}
+        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp};
     </select>
 
