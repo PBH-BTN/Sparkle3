@@ -14,7 +14,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<AnalyseRuleMapper, AnalyseRule> implements IAnalyseRuleService {
@@ -31,16 +33,18 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         commonTriesMergeV6(tries.getIPv6Trie(), ipv6Prefixes);
     }
 
-    <T> void formatAndIterateIp(@NotNull DualIPv4v6AssociativeTries<T> tries, @NotNull Consumer<Pair<String, T>> consumer) {
+    @NotNull
+    <T> Map<IPAddress, T> formatAndIterateIp(@NotNull DualIPv4v6AssociativeTries<T> tries) {
+        Map<IPAddress, T> map = new LinkedHashMap<>();
         tries.nodeIterator(false).forEachRemaining(node -> {
             IPAddress outputAddr = node.getKey();
             if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
                     || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
                 outputAddr = outputAddr.withoutPrefixLength();
             }
-            String outputIp = outputAddr.toNormalizedString();
-            consumer.accept(Pair.of(outputIp, node.getValue()));
+            map.put(outputAddr, node.getValue());
         });
+        return map;
     }
 
     private <T> void commonTriesMergeV6(@NotNull AssociativeAddressTrie<IPv6Address, T> trie, @NotNull IPv6Address[] prefixes) {
