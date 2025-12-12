@@ -105,8 +105,8 @@
                         peer_client_name
         FROM ban_history
         WHERE peer_id &lt;> ''
-            AND starts_with(peer_client_name, 'Gopeed dev')
-            AND NOT starts_with(peer_id, '-GP')
+            AND starts_with(peer_client_name, 'Rain 0.0.0')
+            AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
     </select>
     <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
@@ -115,8 +115,8 @@
                         peer_client_name
         FROM swarm_tracker
         WHERE peer_id &lt;> ''
-          AND starts_with(peer_client_name, 'Gopeed dev')
-          AND NOT starts_with(peer_id, '-GP')
+          AND starts_with(peer_client_name, 'Rain 0.0.0')
+          AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
     </select>
     <select id="analyseGopeeddevIdentityBanHistory" resultMap="analyseIpAndIdentityResult">
