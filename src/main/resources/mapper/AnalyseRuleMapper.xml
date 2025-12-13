@@ -15,7 +15,7 @@
         count(peer_ip) AS ban_count,
         count(distinct userapps_id) AS userapps_count
         FROM ban_history
-        WHERE ((insert_time > #{afterTimestamp}) AND (module_name IN
+        WHERE ((populate_time > #{afterTimestamp}) AND (module_name IN
         <foreach collection="moduleName" item="item" open="(" separator="," close=")">
             #{item}
         </foreach>
