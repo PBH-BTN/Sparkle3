@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
+import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
@@ -204,6 +205,13 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<>();
 
+        // Check if there are any search conditions
+        boolean hasSearchConditions = hasSearchConditions(
+                torrentId, peerIp, peerPort, peerId, peerClientName,
+                peerProgress, fromPeerTraffic, toPeerTraffic, flags,
+                firstTimeSeenAfter, lastTimeSeenAfter, userProgress
+        );
+
         // 添加查询条件
         wrapper.eq(torrentId != null, "torrent_id", torrentId)
                 .eq(peerPort != null, "peer_port", peerPort)
@@ -216,6 +224,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .ge(firstTimeSeenAfter != null, "first_time_seen", firstTimeSeenAfter)
                 .ge(lastTimeSeenAfter != null, "last_time_seen", lastTimeSeenAfter)
                 .eq(userProgress != null, "user_progress", userProgress);
+
+        // Disable count query if there are no search conditions to improve performance
+        if (!hasSearchConditions) {
+            page.setSearchCount(false);
+        }
+
         if (peerIp != null && !peerIp.isBlank()) {
             wrapper.apply("peer_ip <<= {0}::inet", peerIp);
             page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
@@ -236,5 +250,33 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.selectPage(page, wrapper);
     }
 
-
+    /**
+     * Check if the query has any search conditions (excluding pagination and sorting)
+     */
+    private boolean hasSearchConditions(
+            @Nullable Long torrentId,
+            @Nullable String peerIp,
+            @Nullable Integer peerPort,
+            @Nullable String peerId,
+            @Nullable String peerClientName,
+            @Nullable Double peerProgress,
+            @Nullable Long fromPeerTraffic,
+            @Nullable Long toPeerTraffic,
+            @Nullable String flags,
+            @Nullable OffsetDateTime firstTimeSeenAfter,
+            @Nullable OffsetDateTime lastTimeSeenAfter,
+            @Nullable Double userProgress) {
+        return torrentId != null
+                || (peerIp != null && !peerIp.isBlank())
+                || peerPort != null
+                || (peerId != null && !peerId.isBlank())
+                || (peerClientName != null && !peerClientName.isBlank())
+                || peerProgress != null
+                || fromPeerTraffic != null
+                || toPeerTraffic != null
+                || (flags != null && !flags.isBlank())
+                || firstTimeSeenAfter != null
+                || lastTimeSeenAfter != null
+                || userProgress != null;
+    }
 }
