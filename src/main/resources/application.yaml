@@ -81,6 +81,8 @@ sparkle:
       holder-uid: 16402
   client-discovery:
     enabled: false
+  banhistory:
+    refresh-module-name-cache-cron: "0 0 */2 * * *"
   ping:
     config:
       min-protocol-version: 20

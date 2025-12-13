@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
@@ -13,17 +14,19 @@ import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -41,12 +44,17 @@ import java.util.Objects;
 @Service
 @Slf4j
 public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHistory> implements IBanHistoryService {
+    private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
     @Autowired
     private ITorrentService torrentService;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private GeoIPManager geoIPManager;
+
+    @Autowired
+    @Qualifier("stringStringRedisTemplate")
+    private RedisTemplate<String, String> stringStringRedisTemplate;
 
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -144,7 +152,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 .like(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
 
 
-
         // Sorting
         String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";
         String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
@@ -167,12 +174,11 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }
 
 
-        if(queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()){
-            queryWrapper.apply( "peer_ip <<= {0}::inet", queryDto.getPeerIp());
+        if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
+            queryWrapper.apply("peer_ip <<= {0}::inet", queryDto.getPeerIp());
             pageRequest.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
             pageRequest.setOptimizeJoinOfCountSql(false);
         }
-
 
 
         return this.baseMapper.selectPage(pageRequest, queryWrapper);
@@ -194,15 +200,33 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 || (queryDto.getDescription() != null && !queryDto.getDescription().isBlank());
     }
 
+
+    @SneakyThrows
     @Override
-    @Cacheable(value = "banHistoryDistinctModuleNames#1800000")
     public @NotNull List<String> getDistinctModuleNames() {
-        return this.baseMapper.selectObjs(
+        String cache = stringStringRedisTemplate.opsForValue().get(DISTINCT_MODULE_NAMES_CACHE_KEY);
+        if (cache == null) {
+            refreshDistinctModuleNamesCache();
+            cache = stringStringRedisTemplate.opsForValue().get(DISTINCT_MODULE_NAMES_CACHE_KEY);
+        }
+        return objectMapper.readValue(cache, new TypeReference<>() {
+        });
+    }
+
+    @Scheduled(cron = "${sparkle.banhistory.refresh-module-name-cache-cron}")
+    public void refreshDistinctModuleNamesCache() {
+        List<String> moduleNames = this.baseMapper.selectObjs(
                 new QueryWrapper<BanHistory>()
                         .select("DISTINCT module_name")
                         .isNotNull("module_name")
                         .orderByAsc("module_name")
         ).stream().map(Object::toString).toList();
+        try {
+            String serialized = objectMapper.writeValueAsString(moduleNames);
+            stringStringRedisTemplate.opsForValue().set(DISTINCT_MODULE_NAMES_CACHE_KEY, serialized);
+        } catch (Exception e) {
+            log.error("Failed to serialize distinct module names for caching", e);
+        }
     }
 
 }
