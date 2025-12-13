@@ -63,7 +63,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setNickname(githubName)
                 .setAvatar(githubAvatarUrl)
                 .setRegisterAt(OffsetDateTime.now())
-                .setLastLoginAt(OffsetDateTime.now());
+                .setLastLoginAt(OffsetDateTime.now())
+                .setRole("user");
         boolean success = baseMapper.insert(newUser) != 0;
         if (!success) {
             throw new IllegalStateException("Failed to create new user, the changed records count is 0.");
