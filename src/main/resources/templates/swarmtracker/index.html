@@ -304,16 +304,17 @@ const SwarmTrackerApp = {
     renderPagination(data) {
         const container = document.getElementById('paginationContainer');
 
-        if (data.total === 0) {
+        if (!data.records || data.records.length === 0) {
             container.innerHTML = '';
             return;
         }
 
         const html = SPK.renderPagination({
             currentPage: data.current,
-            totalPages: data.pages,
-            totalRecords: data.total,
+            totalPages: data.pages || 0,
+            totalRecords: data.total > 0 ? data.total : null,
             pageSize: data.size,
+            currentRecordCount: data.records.length,
             onPageChange: (page) => this.goToPage(page)
         });
 
