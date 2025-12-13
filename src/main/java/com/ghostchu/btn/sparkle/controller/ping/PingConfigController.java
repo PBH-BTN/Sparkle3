@@ -8,9 +8,12 @@ import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
+import com.ghostchu.btn.sparkle.util.ipdb.IPDB;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,12 +22,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.InetAddress;
+import java.util.Locale;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 public class PingConfigController extends BasePingController {
     @Autowired
     private IUserappConfigService userappConfigService;
+    @Autowired
+    private GeoIPManager ipdb;
+    @Value("${sparkle.root-url}")
+    private String rootUrl;
+    @Value("${sparkle.chn-root-url}")
+    private String chnRootUrl;
+
 
     @GetMapping("/ping/config")
     public ResponseEntity<@NotNull BtnConfig> config() throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
@@ -38,8 +51,30 @@ public class PingConfigController extends BasePingController {
             }
             config = userappConfigService.configLoggedInUserapp(userapp);
         }
+        var geoData = ipdb.geoData(InetAddress.ofLiteral(request.getRemoteAddr()));
+        if ("cn".equals(geoData.getCountryIso().toLowerCase(Locale.ROOT))) {
+            if(chnRootUrl != null && !chnRootUrl.isBlank()) {
+                for (SparkleBtnAbility ability : config.getAbility().values()) {
+                    // get endpoint private field content
+                    try {
+                        var field = ability.getClass().getDeclaredField("endpoint");
+                        String endpoint = (String) field.get(ability);
+                        if (endpoint != null && endpoint.startsWith(rootUrl)) {
+                            String newEndpoint = endpoint.replaceFirst(rootUrl, chnRootUrl);
+                            field.set(ability, newEndpoint);
+                            log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
+                        }
+                    } catch (NoSuchFieldException _) {
+                        // ignored
+                    } catch (IllegalAccessException _) {
+
+                    }
+                }
+            }
+        }
         return ResponseEntity.ok(config);
     }
+
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
