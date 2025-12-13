@@ -57,13 +57,13 @@ public class PingQueryIpController extends BasePingController {
     @Component
     public static class IpQueryBtnModule implements SparkleBtnAbility {
         @Value("${sparkle.ping.query-ip.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.query-ip.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
         @Value("${sparkle.ping.query-ip.iframe-endpoint}")
         @JsonProperty("iframe_endpoint")
-        private String iframeEndpoint;
+        public String iframeEndpoint;
 
         @Override
         public String getConfigKey() {

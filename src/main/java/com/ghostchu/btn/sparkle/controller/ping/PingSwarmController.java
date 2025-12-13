@@ -63,15 +63,15 @@ public class PingSwarmController extends BasePingController {
     @Data
     public static class SwarmSyncBtnAbility implements SparkleBtnAbility {
         @Value("${sparkle.ping.sync-swarm.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.sync-swarm.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @Value("${sparkle.ping.sync-swarm.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
 
         @Override
         public String getConfigKey() {

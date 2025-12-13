@@ -64,18 +64,18 @@ public class PingHeartbeatController extends BasePingController {
     @Data
     public static class HeartbeatBtnAbility implements SparkleBtnAbility {
         @Value("${sparkle.ping.heartbeat.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.heartbeat.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.heartbeat.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @Value("${sparkle.ping.heartbeat.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
         @Value("${sparkle.ping.heartbeat.multi-if}")
         @JsonProperty("multi_if")
-        private boolean multiIf;
+        public boolean multiIf;
 
         @Override
         public String getConfigKey() {

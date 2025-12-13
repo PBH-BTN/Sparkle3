@@ -91,15 +91,15 @@ public class PingRuleIpController extends BasePingController {
     @Component
     public static class IpDenyListBtnModule implements SparkleBtnAbility {
         @Value("${sparkle.ping.rule-ip-denylist.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.rule-ip-denylist.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.rule-ip-denylist.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
 
         @Override
         public String getConfigKey() {

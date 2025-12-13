@@ -62,10 +62,10 @@ public class PingConfigController extends BasePingController {
                         if (endpoint != null && endpoint.startsWith(rootUrl)) {
                             String newEndpoint = endpoint.replaceFirst(rootUrl, chnRootUrl);
                             field.set(ability, newEndpoint);
-                            log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
+                            //log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
                         }
                     } catch (NoSuchFieldException e) {
-                        log.warn("Field 'endpoint' not found in ability class: {}", ability.getClass().getName(), e);
+                        //log.warn("Field 'endpoint' not found in ability class: {}", ability.getClass().getName(), e);
                     } catch (IllegalAccessException e) {
                         log.warn("Failed to access field 'endpoint' in ability class: {}", ability.getClass().getName(), e);
                     }
@@ -82,12 +82,12 @@ public class PingConfigController extends BasePingController {
     @Component
     public static class ReconfigureAbility implements SparkleBtnAbility {
         @Value("${sparkle.ping.reconfigure.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.reconfigure.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @JsonProperty("version")
-        private String version = UUID.randomUUID().toString();
+        public String version = UUID.randomUUID().toString();
 
         @Override
         public String getConfigKey() {

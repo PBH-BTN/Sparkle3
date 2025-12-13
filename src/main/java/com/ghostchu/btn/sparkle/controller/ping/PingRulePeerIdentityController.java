@@ -86,15 +86,15 @@ public class PingRulePeerIdentityController extends BasePingController {
     @Component
     public static class RulePeerIdentityBtnModule implements SparkleBtnAbility {
         @Value("${sparkle.ping.rule-peer-identity.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.rule-peer-identity.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.rule-peer-identity.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @Value("${sparkle.ping.rule-peer-identity.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
 
         @Override
         public String getConfigKey() {

@@ -64,15 +64,15 @@ public class PingSubmitBansController extends BasePingController {
     @Data
     public static class SyncBanHistoryBtnAbility implements SparkleBtnAbility {
         @Value("${sparkle.ping.sync-banhistory.endpoint}")
-        private String endpoint;
+        public String endpoint;
         @Value("${sparkle.ping.sync-banhistory.interval}")
-        private long interval;
+        public long interval;
         @Value("${sparkle.ping.sync-banhistory.random-initial-delay}")
         @JsonProperty("random_initial_delay")
-        private long randomInitialDelay;
+        public long randomInitialDelay;
         @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
         @JsonProperty("pow_captcha")
-        private boolean powCaptcha;
+        public boolean powCaptcha;
 
         @Override
         public String getConfigKey() {
