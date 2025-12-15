@@ -7,13 +7,17 @@
         <result column="city" property="city"/>
         <result column="ban_count" property="banCount"/>
         <result column="userapps_count" property="userappsCount"/>
+        <result column="to_peer_traffic" property="toPeerTraffic"/>
+        <result column="from_peer_traffic" property="fromPeerTraffic"/>
     </resultMap>
     <select id="analyseByModule" resultMap="analyseByModuleResult">
         SELECT peer_ip AS peer_ip_cidr,
         (peer_geoip ->> 'countryIso'::text) AS iso,
         (peer_geoip ->> 'cityName'::text) AS city,
         count(peer_ip) AS ban_count,
-        count(distinct userapps_id) AS userapps_count
+        count(distinct userapps_id) AS userapps_count,
+        SUM(to_peer_traffic) AS to_peer_traffic,
+        SUM(from_peer_traffic) AS from_peer_traffic
         FROM ban_history
         WHERE ((populate_time > #{afterTimestamp}) AND (module_name IN
         <foreach collection="moduleName" item="item" open="(" separator="," close=")">

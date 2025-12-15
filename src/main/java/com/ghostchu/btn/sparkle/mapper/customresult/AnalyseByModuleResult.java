@@ -13,4 +13,6 @@ public class AnalyseByModuleResult {
     private String city;
     private long banCount;
     private long userappsCount;
+    private long toPeerTraffic;
+    private long fromPeerTraffic;
 }

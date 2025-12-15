@@ -3,6 +3,8 @@ package com.ghostchu.btn.sparkle.service.impl;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
+import com.ghostchu.btn.sparkle.util.MsgUtil;
+import com.ghostchu.btn.sparkle.util.UnitConverter;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.format.util.AssociativeAddressTrie;
@@ -62,7 +64,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                 .stream()
                 .map(analysis -> {
                     IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
-                    return new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0);
+                    return new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0, analysis.getToPeerTraffic(), analysis.getFromPeerTraffic());
                 }).collect(Collectors.toCollection(ArrayList::new));
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
         for (GeneratedRule result : resultList) {
@@ -100,6 +102,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             sb.append("# [Sparkle3 不受信任投票] 封禁计数: ").append(rule.getBanCount())
                     .append(", 不信任票数: ").append(rule.getUserappsCount())
                     .append(", 合并记录数量: ").append(rule.getMergedRecords())
+                    .append(", BTN网络发送到此Peer流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getToPeerTraffic()))
+                    .append(", BTN网络从此Peer获取流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getFromPeerTraffic()))
                     .append("\n");
 
             // 先调用 toZeroHost()，然后再决定是否移除前缀长度
@@ -140,6 +144,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         private long banCount;
         private long userappsCount;
         private long mergedRecords;
+        private long toPeerTraffic;
+        private long fromPeerTraffic;
     }
 
     private void triesMergeV6(AssociativeAddressTrie<IPv6Address, GeneratedRule> trie, IPv6Address[] prefixes) {
@@ -148,6 +154,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             long totalBanCount = 0;
             long totalUserappsCount = 0;
             long totalMergedRecords = 0;
+            long totalToPeerTraffic = 0;
+            long totalFromPeerTraffic = 0;
             var it = trie.elementsContainedBy(prefix).nodeIterator(false);
             while (it.hasNext()) {
                 var node = it.next();
@@ -155,11 +163,15 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                 totalBanCount += r.getBanCount();
                 totalUserappsCount += r.getUserappsCount();
                 totalMergedRecords += 1;
+                totalToPeerTraffic += r.getToPeerTraffic();
+                totalFromPeerTraffic += r.getFromPeerTraffic();
             }
             rule.setPeerIpCidr(prefix);
             rule.setBanCount(totalBanCount);
             rule.setUserappsCount(totalUserappsCount);
             rule.setMergedRecords(totalMergedRecords);
+            rule.setToPeerTraffic(totalToPeerTraffic);
+            rule.setFromPeerTraffic(totalFromPeerTraffic);
             trie.removeElementsContainedBy(prefix);
             trie.put(prefix, rule);
         }
@@ -171,6 +183,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             long totalBanCount = 0;
             long totalUserappsCount = 0;
             long totalMergedRecords = 0;
+            long totalToPeerTraffic = 0;
+            long totalFromPeerTraffic = 0;
             var it = trie.elementsContainedBy(prefix).nodeIterator(false);
             while (it.hasNext()) {
                 var node = it.next();
@@ -178,11 +192,15 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                 totalBanCount += r.getBanCount();
                 totalUserappsCount += r.getUserappsCount();
                 totalMergedRecords += 1;
+                totalToPeerTraffic += r.getToPeerTraffic();
+                totalFromPeerTraffic += r.getFromPeerTraffic();
             }
             rule.setPeerIpCidr(prefix);
             rule.setBanCount(totalBanCount);
             rule.setUserappsCount(totalUserappsCount);
             rule.setMergedRecords(totalMergedRecords);
+            rule.setToPeerTraffic(totalToPeerTraffic);
+            rule.setFromPeerTraffic(totalFromPeerTraffic);
             trie.removeElementsContainedBy(prefix);
             trie.put(prefix, rule);
         }
