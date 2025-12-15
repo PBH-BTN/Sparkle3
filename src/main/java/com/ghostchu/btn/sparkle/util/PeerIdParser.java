@@ -218,6 +218,7 @@ public class PeerIdParser {
         SIMPLE_CLIENTS.put("A2", "Aria2");
         SIMPLE_CLIENTS.put("FD6", "Free Download Manager 6");
         SIMPLE_CLIENTS.put("FD5", "Free Download Manager 5");
+        SIMPLE_CLIENTS.put("MG-3", "MediaGet2 3");
     }
 
     /**

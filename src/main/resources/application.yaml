@@ -53,6 +53,7 @@ server:
       host-header: X-Forwarded-For
       port-header: X-Forwarded-Port
       protocol-header: X-Forwarded-Proto
+      trusted-proxies: "10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\.\d{1,3}\.\d{1,3}"
     reject-illegal-header: false
     max-http-form-post-size: 2MB
 logging:
