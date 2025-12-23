@@ -123,7 +123,7 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
             }
             return save(new IPDBMeasure()
                     .setIp(address)
-                    .setBelongCidr(cidr.toNormalizedString())
+                    .setBelongCidr(cidr)
                     .setMeasureId(null)
                     .setMeasureSuccess(null)
                     .setResult(null));
