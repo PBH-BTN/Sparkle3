@@ -66,14 +66,6 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
                 var measurementResponse = globalpingApiClient.createMeasurement(measurementRequest);
                 ts = System.currentTimeMillis();
                 unstartedMeasure.setMeasureId(measurementResponse.getId());
-                IPAddress ipAddress = IPAddressUtil.getIPAddress(unstartedMeasure.getIp().getHostAddress());
-                IPAddress cidr = ipAddress;
-                if (ipAddress.isIPv4()) {
-                    cidr = IPAddressUtil.toPrefixBlockAndZeroHost(ipAddress, ipv4PL);
-                } else if (ipAddress.isIPv6()) {
-                    cidr = IPAddressUtil.toPrefixBlockAndZeroHost(ipAddress, ipv6PL);
-                }
-                unstartedMeasure.setBelongCidr(cidr.toNormalizedString());
                 save(unstartedMeasure);
             }catch (GlobalpingApiClient.RateLimitExceededException ele){
                 log.warn("Rate limit exceeded when starting measurement for IP {}", unstartedMeasure.getIp());
@@ -122,8 +114,16 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
         if (!enabled) return false;
         var closestMeasure = findClosestMeasure(address.getHostAddress());
         if (closestMeasure == null || isMeasureExpired(closestMeasure)) {
+            IPAddress ipAddress = IPAddressUtil.getIPAddress(address.getHostAddress());
+            IPAddress cidr = ipAddress;
+            if (ipAddress.isIPv4()) {
+                cidr = IPAddressUtil.toPrefixBlockAndZeroHost(ipAddress, ipv4PL);
+            } else if (ipAddress.isIPv6()) {
+                cidr = IPAddressUtil.toPrefixBlockAndZeroHost(ipAddress, ipv6PL);
+            }
             return save(new IPDBMeasure()
                     .setIp(address)
+                    .setBelongCidr(cidr.toNormalizedString())
                     .setMeasureId(null)
                     .setMeasureSuccess(null)
                     .setResult(null));
