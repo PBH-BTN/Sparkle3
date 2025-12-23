@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ghostchu.btn.sparkle.converter.IPAddressTypeHandler;
+import com.ghostchu.btn.sparkle.converter.InetAddressTypeHandler;
 import com.ghostchu.btn.sparkle.service.impl.IPDBMeasureServiceImpl;
+import inet.ipaddr.IPAddress;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -40,8 +43,8 @@ public class IPDBMeasure implements Serializable {
     @TableField("ip")
     private InetAddress ip;
 
-    @TableField("belong_cidr")
-    private String belongCidr;
+    @TableField(value = "belong_cidr", typeHandler = IPAddressTypeHandler.class)
+    private IPAddress belongCidr;
 
     @TableField("measure_id")
     private String measureId;
