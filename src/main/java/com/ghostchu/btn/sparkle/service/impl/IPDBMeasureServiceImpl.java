@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.IPDBMeasure;
 import com.ghostchu.btn.sparkle.mapper.IPDBMeasureMapper;
@@ -159,8 +160,8 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
 
     public @NotNull List<IPDBMeasure> findUnstartedMeasures(int limit) {
         return baseMapper.selectList(
-                lambdaQuery()
-                        .isNull(IPDBMeasure::getMeasureId)
+               new QueryWrapper<IPDBMeasure>()
+                        .isNull("measure_id")
                         .last("LIMIT " + limit)
         );
     }
