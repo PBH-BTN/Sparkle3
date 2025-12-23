@@ -394,6 +394,6 @@
 
 
 const formatTime = (time) => {
-    if (!time) return 'N/A';
+    if (!time || time === 0) return 'N/A';
     return new Date(time).toLocaleString();
 };
