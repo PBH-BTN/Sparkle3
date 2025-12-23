@@ -143,7 +143,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
                 .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
-
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
                 .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())

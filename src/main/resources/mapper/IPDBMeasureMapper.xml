@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.IPDBMeasureMapper">
+
+    <select id="findClosestSuccessMeasure" resultType="com.ghostchu.btn.sparkle.entity.IPDBMeasure">
+        SELECT *
+        FROM ipdb_measure
+        WHERE belong_cidr &gt;&gt;= #{address}::inet
+          AND success = TRUE
+        ORDER BY measure_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findClosestMeasure" resultType="com.ghostchu.btn.sparkle.entity.IPDBMeasure">
+        SELECT *
+        FROM ipdb_measure
+        WHERE belong_cidr &gt;&gt;= #{address}::inet
+        ORDER BY measure_at DESC
+            LIMIT 1
+    </select>
+
+    <select id="findMeasures" resultType="com.ghostchu.btn.sparkle.entity.IPDBMeasure">
+        SELECT *
+        FROM ipdb_measure
+        WHERE ip &lt;&lt;= #{address}::inet
+        ORDER BY measure_at DESC
+    </select>
+
+    <select id="findStartedUnfinishedMeasures" resultType="com.ghostchu.btn.sparkle.entity.IPDBMeasure">
+        SELECT *
+        FROM ipdb_measure
+        WHERE
+            measure_id IS NULL
+            AND success IS NULL
+        ORDER BY measure_at DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

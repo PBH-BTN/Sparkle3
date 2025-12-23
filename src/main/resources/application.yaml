@@ -183,3 +183,12 @@ sparkle:
     user-ip-warning:
       duration: 1209600000
       cron: "0 0 * * * *"
+  measure:
+    enable: true
+    globalping-token: ""
+    globalping-result-retrieve-cron: "0 */10 * * * *"
+    globalping-start-measure-cron: "0 */10 * * * *"
+    expired-after: 31104000000
+    prefix-length:
+      ipv4: 30
+      ipv6: 48

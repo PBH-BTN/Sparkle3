@@ -1,0 +1,57 @@
+package com.ghostchu.btn.sparkle.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.ghostchu.btn.sparkle.service.impl.IPDBMeasureServiceImpl;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.net.InetAddress;
+import java.time.OffsetDateTime;
+import java.util.Map;
+
+/**
+ * <p>
+ *
+ * </p>
+ *
+ * @author Ghost_chu
+ * @since 2025-11-29
+ */
+@Getter
+@Setter
+@ToString
+@TableName("ipdb_measure")
+@Accessors(chain = true)
+public class IPDBMeasure implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    @TableField("ip")
+    private InetAddress ip;
+
+    @TableField("belong_cidr")
+    private String belongCidr;
+
+    @TableField("measure_id")
+    private String measureId;
+
+    @TableField("measure_at")
+    private OffsetDateTime measureAt;
+
+    @TableField("measure_success")
+    private Boolean measureSuccess;
+
+    @TableField("result")
+    private IPDBMeasureServiceImpl.MeasurementResultWrapper result;
+}

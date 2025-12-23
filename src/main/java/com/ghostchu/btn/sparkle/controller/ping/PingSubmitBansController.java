@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
+import com.ghostchu.btn.sparkle.service.IIPDBMeasureService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.InetAddress;
+
 @RestController
 @Slf4j
 public class PingSubmitBansController extends BasePingController {
@@ -31,11 +34,13 @@ public class PingSubmitBansController extends BasePingController {
     private IBanHistoryService banHistoryService;
     @Autowired
     private IClientDiscoveryService clientDiscoveryService;
+    @Autowired
+    private IIPDBMeasureService ipdbMeasureService;
 
     @PostMapping("/ping/syncBanHistory")
     @Transactional
     public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
-        if(powCaptcha){
+        if (powCaptcha) {
             validatePowCaptcha();
         }
         Userapp userapp = verifyUserApplication();
@@ -58,8 +63,14 @@ public class PingSubmitBansController extends BasePingController {
         }
         clientDiscoveryService.handleClientDiscovery(userapp.getId(), bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList());
         banHistoryService.syncBanHistory(request.getRemoteAddr(), userapp.getId(), bans);
+        bans.forEach(ban -> {
+            if ("com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker".equals(ban.getModule())) {
+                ipdbMeasureService.scheduleMeasure(InetAddress.ofLiteral(ban.getPeerIp()));
+            }
+        });
         return ResponseEntity.status(200).build();
     }
+
     @Component
     @Data
     public static class SyncBanHistoryBtnAbility implements SparkleBtnAbility {

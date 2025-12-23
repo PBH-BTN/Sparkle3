@@ -1,8 +1,10 @@
 /*
- Navicat Dump SQL
+ Navicat Premium Dump SQL
 
+ Source Server         : pbhbtn-netcup-g12
  Source Server Type    : PostgreSQL
  Source Server Version : 180001 (180001)
+ Source Host           : pbhbtn-netcup-g12:5432
  Source Catalog        : sparkle3
  Source Schema         : public
 
@@ -10,9 +12,21 @@
  Target Server Version : 180001 (180001)
  File Encoding         : 65001
 
- Date: 10/12/2025 22:03:59
+ Date: 23/12/2025 18:59:38
 */
 
+
+-- ----------------------------
+-- Type structure for gtrgm
+-- ----------------------------
+DROP TYPE IF EXISTS "public"."gtrgm";
+CREATE TYPE "public"."gtrgm" (
+  INPUT = "public"."gtrgm_in",
+  OUTPUT = "public"."gtrgm_out",
+  INTERNALLENGTH = VARIABLE,
+  CATEGORY = U,
+  DELIMITER = ','
+);
 
 -- ----------------------------
 -- Sequence structure for analyse_rule_id_seq
@@ -500,7 +514,8 @@ CACHE 1
   "register_at" timestamptz(6) NOT NULL,
   "banned_at" timestamptz(6),
   "banned_reason" text COLLATE "pg_catalog"."default",
-  "last_login_at" timestamptz(6) NOT NULL
+  "last_login_at" timestamptz(6) NOT NULL,
+  "role" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT 'user'::character varying
 )
 ;
 
@@ -565,6 +580,379 @@ CREATE TABLE "public"."userapps_heartbeat" (
 ;
 
 -- ----------------------------
+-- Function structure for gin_extract_query_trgm
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gin_extract_query_trgm"(text, internal, int2, internal, internal, internal, internal);
+CREATE FUNCTION "public"."gin_extract_query_trgm"(text, internal, int2, internal, internal, internal, internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gin_extract_query_trgm'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gin_extract_value_trgm
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gin_extract_value_trgm"(text, internal);
+CREATE FUNCTION "public"."gin_extract_value_trgm"(text, internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gin_extract_value_trgm'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gin_trgm_consistent
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gin_trgm_consistent"(internal, int2, text, int4, internal, internal, internal, internal);
+CREATE FUNCTION "public"."gin_trgm_consistent"(internal, int2, text, int4, internal, internal, internal, internal)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'gin_trgm_consistent'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gin_trgm_triconsistent
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gin_trgm_triconsistent"(internal, int2, text, int4, internal, internal, internal);
+CREATE FUNCTION "public"."gin_trgm_triconsistent"(internal, int2, text, int4, internal, internal, internal)
+  RETURNS "pg_catalog"."char" AS '$libdir/pg_trgm', 'gin_trgm_triconsistent'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_compress
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_compress"(internal);
+CREATE FUNCTION "public"."gtrgm_compress"(internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gtrgm_compress'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_consistent
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_consistent"(internal, text, int2, oid, internal);
+CREATE FUNCTION "public"."gtrgm_consistent"(internal, text, int2, oid, internal)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'gtrgm_consistent'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_decompress
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_decompress"(internal);
+CREATE FUNCTION "public"."gtrgm_decompress"(internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gtrgm_decompress'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_distance
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_distance"(internal, text, int2, oid, internal);
+CREATE FUNCTION "public"."gtrgm_distance"(internal, text, int2, oid, internal)
+  RETURNS "pg_catalog"."float8" AS '$libdir/pg_trgm', 'gtrgm_distance'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_in
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_in"(cstring);
+CREATE FUNCTION "public"."gtrgm_in"(cstring)
+  RETURNS "public"."gtrgm" AS '$libdir/pg_trgm', 'gtrgm_in'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_options
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_options"(internal);
+CREATE FUNCTION "public"."gtrgm_options"(internal)
+  RETURNS "pg_catalog"."void" AS '$libdir/pg_trgm', 'gtrgm_options'
+  LANGUAGE c IMMUTABLE
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_out
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_out"("public"."gtrgm");
+CREATE FUNCTION "public"."gtrgm_out"("public"."gtrgm")
+  RETURNS "pg_catalog"."cstring" AS '$libdir/pg_trgm', 'gtrgm_out'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_penalty
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_penalty"(internal, internal, internal);
+CREATE FUNCTION "public"."gtrgm_penalty"(internal, internal, internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gtrgm_penalty'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_picksplit
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_picksplit"(internal, internal);
+CREATE FUNCTION "public"."gtrgm_picksplit"(internal, internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gtrgm_picksplit'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_same
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", internal);
+CREATE FUNCTION "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", internal)
+  RETURNS "pg_catalog"."internal" AS '$libdir/pg_trgm', 'gtrgm_same'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for gtrgm_union
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."gtrgm_union"(internal, internal);
+CREATE FUNCTION "public"."gtrgm_union"(internal, internal)
+  RETURNS "public"."gtrgm" AS '$libdir/pg_trgm', 'gtrgm_union'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for pg_stat_statements
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."pg_stat_statements"("showtext" bool, OUT "userid" oid, OUT "dbid" oid, OUT "toplevel" bool, OUT "queryid" int8, OUT "query" text, OUT "plans" int8, OUT "total_plan_time" float8, OUT "min_plan_time" float8, OUT "max_plan_time" float8, OUT "mean_plan_time" float8, OUT "stddev_plan_time" float8, OUT "calls" int8, OUT "total_exec_time" float8, OUT "min_exec_time" float8, OUT "max_exec_time" float8, OUT "mean_exec_time" float8, OUT "stddev_exec_time" float8, OUT "rows" int8, OUT "shared_blks_hit" int8, OUT "shared_blks_read" int8, OUT "shared_blks_dirtied" int8, OUT "shared_blks_written" int8, OUT "local_blks_hit" int8, OUT "local_blks_read" int8, OUT "local_blks_dirtied" int8, OUT "local_blks_written" int8, OUT "temp_blks_read" int8, OUT "temp_blks_written" int8, OUT "shared_blk_read_time" float8, OUT "shared_blk_write_time" float8, OUT "local_blk_read_time" float8, OUT "local_blk_write_time" float8, OUT "temp_blk_read_time" float8, OUT "temp_blk_write_time" float8, OUT "wal_records" int8, OUT "wal_fpi" int8, OUT "wal_bytes" numeric, OUT "wal_buffers_full" int8, OUT "jit_functions" int8, OUT "jit_generation_time" float8, OUT "jit_inlining_count" int8, OUT "jit_inlining_time" float8, OUT "jit_optimization_count" int8, OUT "jit_optimization_time" float8, OUT "jit_emission_count" int8, OUT "jit_emission_time" float8, OUT "jit_deform_count" int8, OUT "jit_deform_time" float8, OUT "parallel_workers_to_launch" int8, OUT "parallel_workers_launched" int8, OUT "stats_since" timestamptz, OUT "minmax_stats_since" timestamptz);
+CREATE FUNCTION "public"."pg_stat_statements"(IN "showtext" bool, OUT "userid" oid, OUT "dbid" oid, OUT "toplevel" bool, OUT "queryid" int8, OUT "query" text, OUT "plans" int8, OUT "total_plan_time" float8, OUT "min_plan_time" float8, OUT "max_plan_time" float8, OUT "mean_plan_time" float8, OUT "stddev_plan_time" float8, OUT "calls" int8, OUT "total_exec_time" float8, OUT "min_exec_time" float8, OUT "max_exec_time" float8, OUT "mean_exec_time" float8, OUT "stddev_exec_time" float8, OUT "rows" int8, OUT "shared_blks_hit" int8, OUT "shared_blks_read" int8, OUT "shared_blks_dirtied" int8, OUT "shared_blks_written" int8, OUT "local_blks_hit" int8, OUT "local_blks_read" int8, OUT "local_blks_dirtied" int8, OUT "local_blks_written" int8, OUT "temp_blks_read" int8, OUT "temp_blks_written" int8, OUT "shared_blk_read_time" float8, OUT "shared_blk_write_time" float8, OUT "local_blk_read_time" float8, OUT "local_blk_write_time" float8, OUT "temp_blk_read_time" float8, OUT "temp_blk_write_time" float8, OUT "wal_records" int8, OUT "wal_fpi" int8, OUT "wal_bytes" numeric, OUT "wal_buffers_full" int8, OUT "jit_functions" int8, OUT "jit_generation_time" float8, OUT "jit_inlining_count" int8, OUT "jit_inlining_time" float8, OUT "jit_optimization_count" int8, OUT "jit_optimization_time" float8, OUT "jit_emission_count" int8, OUT "jit_emission_time" float8, OUT "jit_deform_count" int8, OUT "jit_deform_time" float8, OUT "parallel_workers_to_launch" int8, OUT "parallel_workers_launched" int8, OUT "stats_since" timestamptz, OUT "minmax_stats_since" timestamptz)
+  RETURNS SETOF "pg_catalog"."record" AS '$libdir/pg_stat_statements', 'pg_stat_statements_1_12'
+  LANGUAGE c VOLATILE STRICT
+  COST 1
+  ROWS 1000;
+
+-- ----------------------------
+-- Function structure for pg_stat_statements_info
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."pg_stat_statements_info"(OUT "dealloc" int8, OUT "stats_reset" timestamptz);
+CREATE FUNCTION "public"."pg_stat_statements_info"(OUT "dealloc" int8, OUT "stats_reset" timestamptz)
+  RETURNS "pg_catalog"."record" AS '$libdir/pg_stat_statements', 'pg_stat_statements_info'
+  LANGUAGE c VOLATILE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for pg_stat_statements_reset
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."pg_stat_statements_reset"("userid" oid, "dbid" oid, "queryid" int8, "minmax_only" bool);
+CREATE FUNCTION "public"."pg_stat_statements_reset"("userid" oid=0, "dbid" oid=0, "queryid" int8=0, "minmax_only" bool=false)
+  RETURNS "pg_catalog"."timestamptz" AS '$libdir/pg_stat_statements', 'pg_stat_statements_reset_1_11'
+  LANGUAGE c VOLATILE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for set_limit
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."set_limit"(float4);
+CREATE FUNCTION "public"."set_limit"(float4)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'set_limit'
+  LANGUAGE c VOLATILE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for show_limit
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."show_limit"();
+CREATE FUNCTION "public"."show_limit"()
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'show_limit'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for show_trgm
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."show_trgm"(text);
+CREATE FUNCTION "public"."show_trgm"(text)
+  RETURNS "pg_catalog"."_text" AS '$libdir/pg_trgm', 'show_trgm'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for similarity
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."similarity"(text, text);
+CREATE FUNCTION "public"."similarity"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'similarity'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for similarity_dist
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."similarity_dist"(text, text);
+CREATE FUNCTION "public"."similarity_dist"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'similarity_dist'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for similarity_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."similarity_op"(text, text);
+CREATE FUNCTION "public"."similarity_op"(text, text)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'similarity_op'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for strict_word_similarity
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."strict_word_similarity"(text, text);
+CREATE FUNCTION "public"."strict_word_similarity"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'strict_word_similarity'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for strict_word_similarity_commutator_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."strict_word_similarity_commutator_op"(text, text);
+CREATE FUNCTION "public"."strict_word_similarity_commutator_op"(text, text)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'strict_word_similarity_commutator_op'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for strict_word_similarity_dist_commutator_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."strict_word_similarity_dist_commutator_op"(text, text);
+CREATE FUNCTION "public"."strict_word_similarity_dist_commutator_op"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'strict_word_similarity_dist_commutator_op'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for strict_word_similarity_dist_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."strict_word_similarity_dist_op"(text, text);
+CREATE FUNCTION "public"."strict_word_similarity_dist_op"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'strict_word_similarity_dist_op'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for strict_word_similarity_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."strict_word_similarity_op"(text, text);
+CREATE FUNCTION "public"."strict_word_similarity_op"(text, text)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'strict_word_similarity_op'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for word_similarity
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."word_similarity"(text, text);
+CREATE FUNCTION "public"."word_similarity"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'word_similarity'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for word_similarity_commutator_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."word_similarity_commutator_op"(text, text);
+CREATE FUNCTION "public"."word_similarity_commutator_op"(text, text)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'word_similarity_commutator_op'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for word_similarity_dist_commutator_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."word_similarity_dist_commutator_op"(text, text);
+CREATE FUNCTION "public"."word_similarity_dist_commutator_op"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'word_similarity_dist_commutator_op'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for word_similarity_dist_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."word_similarity_dist_op"(text, text);
+CREATE FUNCTION "public"."word_similarity_dist_op"(text, text)
+  RETURNS "pg_catalog"."float4" AS '$libdir/pg_trgm', 'word_similarity_dist_op'
+  LANGUAGE c IMMUTABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- Function structure for word_similarity_op
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."word_similarity_op"(text, text);
+CREATE FUNCTION "public"."word_similarity_op"(text, text)
+  RETURNS "pg_catalog"."bool" AS '$libdir/pg_trgm', 'word_similarity_op'
+  LANGUAGE c STABLE STRICT
+  COST 1;
+
+-- ----------------------------
+-- View structure for pg_stat_statements_info
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."pg_stat_statements_info";
+CREATE VIEW "public"."pg_stat_statements_info" AS  SELECT dealloc,
+    stats_reset
+   FROM pg_stat_statements_info() pg_stat_statements_info(dealloc, stats_reset);
+
+-- ----------------------------
+-- View structure for pg_stat_statements
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."pg_stat_statements";
+CREATE VIEW "public"."pg_stat_statements" AS  SELECT userid,
+    dbid,
+    toplevel,
+    queryid,
+    query,
+    plans,
+    total_plan_time,
+    min_plan_time,
+    max_plan_time,
+    mean_plan_time,
+    stddev_plan_time,
+    calls,
+    total_exec_time,
+    min_exec_time,
+    max_exec_time,
+    mean_exec_time,
+    stddev_exec_time,
+    rows,
+    shared_blks_hit,
+    shared_blks_read,
+    shared_blks_dirtied,
+    shared_blks_written,
+    local_blks_hit,
+    local_blks_read,
+    local_blks_dirtied,
+    local_blks_written,
+    temp_blks_read,
+    temp_blks_written,
+    shared_blk_read_time,
+    shared_blk_write_time,
+    local_blk_read_time,
+    local_blk_write_time,
+    temp_blk_read_time,
+    temp_blk_write_time,
+    wal_records,
+    wal_fpi,
+    wal_bytes,
+    wal_buffers_full,
+    jit_functions,
+    jit_generation_time,
+    jit_inlining_count,
+    jit_inlining_time,
+    jit_optimization_count,
+    jit_optimization_time,
+    jit_emission_count,
+    jit_emission_time,
+    jit_deform_count,
+    jit_deform_time,
+    parallel_workers_to_launch,
+    parallel_workers_launched,
+    stats_since,
+    minmax_stats_since
+   FROM pg_stat_statements(true) pg_stat_statements(userid, dbid, toplevel, queryid, query, plans, total_plan_time, min_plan_time, max_plan_time, mean_plan_time, stddev_plan_time, calls, total_exec_time, min_exec_time, max_exec_time, mean_exec_time, stddev_exec_time, rows, shared_blks_hit, shared_blks_read, shared_blks_dirtied, shared_blks_written, local_blks_hit, local_blks_read, local_blks_dirtied, local_blks_written, temp_blks_read, temp_blks_written, shared_blk_read_time, shared_blk_write_time, local_blk_read_time, local_blk_write_time, temp_blk_read_time, temp_blk_write_time, wal_records, wal_fpi, wal_bytes, wal_buffers_full, jit_functions, jit_generation_time, jit_inlining_count, jit_inlining_time, jit_optimization_count, jit_optimization_time, jit_emission_count, jit_emission_time, jit_deform_count, jit_deform_time, parallel_workers_to_launch, parallel_workers_launched, stats_since, minmax_stats_since);
+
+-- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."analyse_rule_id_seq"
@@ -583,7 +971,7 @@ SELECT setval('"public"."analyserules_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."ban_history_id_seq"
 OWNED BY "public"."ban_history"."id";
-SELECT setval('"public"."ban_history_id_seq"', 2790399, true);
+SELECT setval('"public"."ban_history_id_seq"', 22576986, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -604,7 +992,7 @@ SELECT setval('"public"."rules_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."swarm_tracker_id_seq"
 OWNED BY "public"."swarm_tracker"."id";
-SELECT setval('"public"."swarm_tracker_id_seq"', 118073, true);
+SELECT setval('"public"."swarm_tracker_id_seq"', 32795700, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -618,7 +1006,7 @@ SELECT setval('"public"."swarmtracker_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."torrent_id_seq"
 OWNED BY "public"."torrent"."id";
-SELECT setval('"public"."torrent_id_seq"', 18127, true);
+SELECT setval('"public"."torrent_id_seq"', 192604, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -632,7 +1020,7 @@ SELECT setval('"public"."torrents_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."user_id_seq"
 OWNED BY "public"."user"."id";
-SELECT setval('"public"."user_id_seq"', 16410, true);
+SELECT setval('"public"."user_id_seq"', 16492, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -646,14 +1034,14 @@ SELECT setval('"public"."user_rel_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."user_rel_id_seq1"
 OWNED BY "public"."user_rel"."id";
-SELECT setval('"public"."user_rel_id_seq1"', 5848, true);
+SELECT setval('"public"."user_rel_id_seq1"', 5930, true);
 
 -- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."userapp_id_seq"
 OWNED BY "public"."userapp"."id";
-SELECT setval('"public"."userapp_id_seq"', 17992, true);
+SELECT setval('"public"."userapp_id_seq"', 18396, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -684,14 +1072,26 @@ ALTER TABLE "public"."analyse_rule" ADD CONSTRAINT "analyserules_pkey" PRIMARY K
 -- ----------------------------
 -- Indexes structure for table ban_history
 -- ----------------------------
-CREATE INDEX "ban_history_insert_time_idx" ON "public"."ban_history" USING btree (
-  "insert_time" "pg_catalog"."timestamptz_ops" DESC NULLS LAST
+CREATE INDEX "ban_history_analyse_idx" ON "public"."ban_history" USING btree (
+  "insert_time" "pg_catalog"."timestamptz_ops" ASC NULLS LAST,
+  "peer_ip" "pg_catalog"."inet_ops" ASC NULLS LAST,
+  "peer_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "peer_client_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
-CREATE INDEX "ban_history_module_name_idx" ON "public"."ban_history" USING btree (
+CREATE INDEX "ban_history_description_trgm" ON "public"."ban_history" USING gin (
+  "description" COLLATE "pg_catalog"."default" "public"."gin_trgm_ops"
+);
+CREATE INDEX "ban_history_insert_time_idx" ON "public"."ban_history" USING btree (
+  "insert_time" "pg_catalog"."timestamptz_ops" DESC NULLS FIRST
+);
+CREATE INDEX "ban_history_modulename_idx" ON "public"."ban_history" USING btree (
   "module_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 CREATE INDEX "ban_history_peer_client_name_idx" ON "public"."ban_history" USING btree (
   "peer_client_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "ban_history_peer_client_name_trgm" ON "public"."ban_history" USING gin (
+  "peer_client_name" COLLATE "pg_catalog"."default" "public"."gin_trgm_ops"
 );
 CREATE INDEX "ban_history_peer_flags_idx" ON "public"."ban_history" USING btree (
   "peer_flags" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
@@ -706,7 +1106,7 @@ CREATE INDEX "ban_history_peer_ip_idx" ON "public"."ban_history" USING gist (
   "peer_ip" "pg_catalog"."inet_ops"
 );
 CREATE INDEX "ban_history_populate_time_idx" ON "public"."ban_history" USING btree (
-  "populate_time" "pg_catalog"."timestamptz_ops" DESC NULLS LAST
+  "populate_time" "pg_catalog"."timestamptz_ops" DESC NULLS FIRST
 );
 CREATE INDEX "ban_history_structured_data" ON "public"."ban_history" USING gin (
   "structured_data" "pg_catalog"."jsonb_ops"
@@ -726,6 +1126,15 @@ ALTER TABLE "public"."ban_history" ADD CONSTRAINT "banhistory_pkey" PRIMARY KEY 
 -- ----------------------------
 -- Indexes structure for table client_discovery
 -- ----------------------------
+CREATE INDEX "client_discovery_found_at_idx" ON "public"."client_discovery" USING btree (
+  "found_at" "pg_catalog"."timestamptz_ops" ASC NULLS LAST
+);
+CREATE INDEX "client_discovery_peer_client_name_trgm" ON "public"."client_discovery" USING gin (
+  "peer_client_name" COLLATE "pg_catalog"."default" "public"."gin_trgm_ops"
+);
+CREATE INDEX "client_discovery_peer_id_idx" ON "public"."client_discovery" USING btree (
+  "peer_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE UNIQUE INDEX "client_discovery_unique_idx" ON "public"."client_discovery" USING btree (
   "peer_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "peer_client_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
@@ -912,14 +1321,26 @@ ALTER TABLE "public"."rules" ADD CONSTRAINT "rules_pkey" PRIMARY KEY ("id");
 -- ----------------------------
 -- Indexes structure for table swarm_tracker
 -- ----------------------------
+CREATE INDEX "swarm_tracker_analyse_idx" ON "public"."swarm_tracker" USING btree (
+  "peer_ip" "pg_catalog"."inet_ops" ASC NULLS LAST,
+  "peer_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "peer_client_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "last_time_seen" "pg_catalog"."timestamptz_ops" ASC NULLS LAST
+);
 CREATE INDEX "swarm_tracker_first_time_seen_idx" ON "public"."swarm_tracker" USING btree (
   "first_time_seen" "pg_catalog"."timestamptz_ops" ASC NULLS LAST
 );
+CREATE INDEX "swarm_tracker_last_time_seen_asc_idx" ON "public"."swarm_tracker" USING btree (
+  "last_time_seen" "pg_catalog"."timestamptz_ops" ASC NULLS LAST
+);
 CREATE INDEX "swarm_tracker_last_time_seen_idx" ON "public"."swarm_tracker" USING btree (
-  "last_time_seen" "pg_catalog"."timestamptz_ops" DESC NULLS LAST
+  "last_time_seen" "pg_catalog"."timestamptz_ops" DESC NULLS FIRST
 );
 CREATE INDEX "swarm_tracker_peer_client_name_idx" ON "public"."swarm_tracker" USING btree (
   "peer_client_name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "swarm_tracker_peer_client_name_trgm" ON "public"."swarm_tracker" USING gin (
+  "peer_client_name" COLLATE "pg_catalog"."default" "public"."gin_trgm_ops"
 );
 CREATE INDEX "swarm_tracker_peer_id_idx" ON "public"."swarm_tracker" USING btree (
   "peer_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
