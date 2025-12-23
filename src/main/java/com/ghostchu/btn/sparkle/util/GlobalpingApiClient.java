@@ -82,7 +82,6 @@ public class GlobalpingApiClient {
     public CreateMeasurementResponse createMeasurement(MeasurementRequest request) {
         try {
             String jsonRequest = objectMapper.writeValueAsString(request);
-            System.out.println(jsonRequest);
             return restClient.post()
                     .uri("/v1/measurements")
                     .headers(headers -> headers.putAll(buildAuthHeaders()))

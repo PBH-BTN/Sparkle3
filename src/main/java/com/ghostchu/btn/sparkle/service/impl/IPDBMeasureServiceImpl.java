@@ -57,9 +57,9 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
                 measurementRequest.setTarget(unstartedMeasure.getIp().getHostAddress());
                 measurementRequest.setType("mtr");
                 measurementRequest.setLocations(new ArrayList<>() {{
-                    add(new LinkedHashMap<>() {{
-                        put("country", "CN");
-                    }});
+                    var locationOpts = new GlobalpingApiClient.MeasurementLocationOption();
+                    locationOpts.setCountry("CN");
+                    add(locationOpts);
                 }});
                 if (System.currentTimeMillis() - ts < 500) {
                     Thread.sleep(Math.max(0, 500 - (System.currentTimeMillis() - ts)));
