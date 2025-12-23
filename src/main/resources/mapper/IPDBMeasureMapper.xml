@@ -31,7 +31,7 @@
         FROM ipdb_measure
         WHERE
             measure_id IS NULL
-            AND success IS NULL
+            AND measure_success IS NULL
         ORDER BY measure_at DESC
         LIMIT #{limit}
     </select>
