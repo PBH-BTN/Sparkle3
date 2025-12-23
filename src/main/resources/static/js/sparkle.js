@@ -391,3 +391,9 @@
     }
 
 })(window, document);
+
+
+const formatTime = (time) => {
+    if (!time) return 'N/A';
+    return new Date(time).toLocaleString();
+};

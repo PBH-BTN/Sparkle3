@@ -264,10 +264,6 @@ const SwarmTrackerApp = {
             return (progress * 100).toFixed(2) + '%';
         };
 
-        const formatTime = (time) => {
-            if (!time) return 'N/A';
-            return new Date(time).toLocaleString('zh-CN');
-        };
 
         return `
             <tr>

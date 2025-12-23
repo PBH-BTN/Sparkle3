@@ -238,11 +238,6 @@ const ClientDiscoveryApp = {
     },
 
     renderTableRow(record) {
-        const formatTime = (time) => {
-            if (!time) return 'N/A';
-            return new Date(time).toLocaleString('zh-CN');
-        };
-
         return `
             <tr>
                 <td><code class="spk-code">${record.peerId || 'N/A'}</code></td>

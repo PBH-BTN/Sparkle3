@@ -277,7 +277,7 @@ const BanHistoryApp = {
     },
     
     renderTableRow(record) {
-        const time = record.insertTime ? new Date(record.insertTime).toLocaleString('zh-CN') : 'N/A';
+        const time = record.insertTime ? formatTime(record.insertTime) : 'N/A';
         const progress = record.peerProgress !== null ? (record.peerProgress * 100).toFixed(2) + '%' : 'N/A';
         const geoip = this.formatGeoIP(record.peerGeoip);
         

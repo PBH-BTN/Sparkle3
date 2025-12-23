@@ -39,7 +39,7 @@
 <!--                    <td class="spk-timestamp" th:text="${app.getCreatedAt() != null ? #temporals.format(app.getCreatedAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">-->
 <!--                       2025-01-01 00:00:00-->
 <!--                    </td>-->
-                    <td class="spk-timestamp" th:text="${app.getLastSeenAt() != null ? #temporals.format(app.getLastSeenAt(), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}">
+                    <td class="spk-timestamp" th:data-time="${app.getLastSeenAt()}">
                        2025-01-01 00:00:00
                     </td>
                     <td>
@@ -85,5 +85,17 @@
 </main>
 
 <div th:replace="~{components/common::footer}"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Format all timestamps using formatTime from sparkle.js
+        document.querySelectorAll('.spk-timestamp').forEach(function(el) {
+            const time = el.getAttribute('data-time');
+            if (time) {
+                el.textContent = formatTime(time);
+            }
+        });
+    });
+</script>
 </body>
 </html>
