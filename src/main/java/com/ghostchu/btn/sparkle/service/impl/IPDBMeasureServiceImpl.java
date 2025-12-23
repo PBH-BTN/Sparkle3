@@ -60,8 +60,8 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
                         put("country", "CN");
                     }});
                 }});
-                if (System.currentTimeMillis() - ts < 2000) {
-                    Thread.sleep(Math.max(0, 2000 - (System.currentTimeMillis() - ts)));
+                if (System.currentTimeMillis() - ts < 500) {
+                    Thread.sleep(Math.max(0, 500 - (System.currentTimeMillis() - ts)));
                 }
                 var measurementResponse = globalpingApiClient.createMeasurement(measurementRequest);
                 ts = System.currentTimeMillis();
@@ -94,8 +94,8 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
                 if (unfinishedMeasure.getMeasureId() == null) {
                     continue;
                 }
-                if (System.currentTimeMillis() - ts < 2000) {
-                    Thread.sleep(Math.max(0, 2000 - (System.currentTimeMillis() - ts)));
+                if (System.currentTimeMillis() - ts < 500) {
+                    Thread.sleep(Math.max(0, 500 - (System.currentTimeMillis() - ts)));
                 }
                 var measurement = globalpingApiClient.getMeasurement(unfinishedMeasure.getMeasureId());
                 ts = System.currentTimeMillis();
