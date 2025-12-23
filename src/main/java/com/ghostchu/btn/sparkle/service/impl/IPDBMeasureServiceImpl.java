@@ -69,7 +69,7 @@ public class IPDBMeasureServiceImpl extends ServiceImpl<IPDBMeasureMapper, IPDBM
                 unstartedMeasure.setMeasureId(measurementResponse.getId());
                 save(unstartedMeasure);
             }catch (GlobalpingApiClient.RateLimitExceededException ele){
-                log.warn("Rate limit exceeded when starting measurement for IP {}", unstartedMeasure.getIp());
+                log.warn("Rate limit exceeded when starting measurement for IP {}", unstartedMeasure.getIp().getHostAddress());
                 break;
             } catch (Exception e) {
                 log.warn("Unable to start measurement for IP {}", unstartedMeasure.getIp(), e);
