@@ -3,10 +3,8 @@ package com.ghostchu.btn.sparkle.service.impl;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
-import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
 import com.google.common.hash.Hashing;
-import inet.ipaddr.IPAddress;
 import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
@@ -22,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -41,17 +38,24 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
     public void analyseOverDownload() {
         Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
-        List<AnalyseOverDownloadedResult> resultList = this.baseMapper.analyseOverDownloaded(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
-        for (AnalyseOverDownloadedResult result : resultList) {
-            if (result.getTorrentSize() <= 0) continue;
-            var inet = InetAddress.ofLiteral(result.getPeerIp());
-            var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
-            mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
-            mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
-            mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
-            mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
-            aggregateMap.put(inet, mixCalc);
-        }
+
+        // Use ResultHandler to process results one by one, avoiding loading all data into memory
+        this.baseMapper.analyseOverDownloadedWithHandler(
+            OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
+            resultContext -> {
+                AnalyseOverDownloadedResult result = resultContext.getResultObject();
+                if (result.getTorrentSize() <= 0) return;
+
+                var inet = InetAddress.ofLiteral(result.getPeerIp());
+                var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
+                mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
+                mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
+                mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
+                mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
+                aggregateMap.put(inet, mixCalc);
+            }
+        );
+
         StringBuilder sb = new StringBuilder();
 
         for (Map.Entry<InetAddress, AggregateCrossTorrentMixCalc> entry : aggregateMap.entrySet()) {

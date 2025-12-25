@@ -52,6 +52,24 @@
           AND (to_peer_traffic - from_peer_traffic) > 0
         GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
         ORDER BY pure_to_peer_traffic DESC
+        LIMIT 5000
+    </select>
+    <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="100">
+        -- noinspection SqlShouldBeInGroupBy
+        SELECT swarm_tracker.peer_ip                                                     AS st_peer_ip,
+               swarm_tracker.torrent_id                                                  AS st_torrent_id,
+               SUM(swarm_tracker.from_peer_traffic)                                      AS st_from_peer_traffic,
+               SUM(swarm_tracker.to_peer_traffic)                                        AS st_to_peer_traffic,
+               torrent.size                                                              AS t_torrent_size,
+               SUM(swarm_tracker.to_peer_traffic) - SUM(swarm_tracker.from_peer_traffic) AS pure_to_peer_traffic
+        FROM swarm_tracker
+                 JOIN torrent ON swarm_tracker.torrent_id = torrent.id
+        WHERE (last_time_seen >= #{afterTimestamp})
+          AND torrent.size > 0
+          AND (to_peer_traffic - from_peer_traffic) > 0
+        GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
+        ORDER BY pure_to_peer_traffic DESC
+        LIMIT 1000
     </select>
     <resultMap id="analyseConcurrentDownloadResult"
                type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult">

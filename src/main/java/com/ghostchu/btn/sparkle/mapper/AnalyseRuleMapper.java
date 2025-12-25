@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult;
+import org.apache.ibatis.session.ResultHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
@@ -25,6 +26,8 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
 
     @NotNull
     List<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull OffsetDateTime afterTimestamp);
+
+    void analyseOverDownloadedWithHandler(@NotNull OffsetDateTime afterTimestamp, ResultHandler<AnalyseOverDownloadedResult> handler);
 
     @NotNull
     List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
