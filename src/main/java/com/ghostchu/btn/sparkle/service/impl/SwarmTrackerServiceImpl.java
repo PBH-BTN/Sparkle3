@@ -46,7 +46,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Value("${sparkle.ping.sync-swarm.cleanup-before}")
     private long deleteBefore;
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Transactional
     @Override
     public void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms) {
         var nowTime = OffsetDateTime.now();
