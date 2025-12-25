@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p>
@@ -32,7 +34,7 @@ import java.util.List;
 public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatMapper, UserappsHeartbeat> implements IUserappsHeartbeatService {
     @Value("${sparkle.ping.heartbeat.cleanup-before}")
     private long deleteBefore;
-
+    private final AtomicLong seq = new AtomicLong();
     @Override
     public @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(@NotNull String peerIp, @NotNull OffsetDateTime after) {
         return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
@@ -46,7 +48,7 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Override
     public void onHeartBeat(long userAppId, @NotNull InetAddress ip) {
         var changes = this.baseMapper.upsert(new UserappsHeartbeat()
-                .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress(), StandardCharsets.UTF_8).asLong())
+                .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress() + System.currentTimeMillis()+seq.incrementAndGet(), StandardCharsets.UTF_8).asLong())
                 .setUserappId(userAppId)
                 .setIp(ip)
                 .setFirstSeenAt(OffsetDateTime.now())
