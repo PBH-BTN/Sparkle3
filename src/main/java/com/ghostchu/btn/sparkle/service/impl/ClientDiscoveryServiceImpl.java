@@ -46,11 +46,10 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
         for (Pair<String, String> pair : data) {
             var peerIdIn = pair.getKey();
-            var peerClientNameIn = pair.getValue();
-            if (peerIdIn == null && peerClientNameIn == null) return;
+            var peerClientName = pair.getValue();
+            if (peerIdIn == null && peerClientName == null) return;
             // 设置默认值
-            String peerId = HexUtil.cutPeerId(HexUtil.sanitizeU0(peerIdIn));
-            String peerClientName = HexUtil.sanitizeU0(peerClientNameIn);
+            String peerId = HexUtil.cutPeerId(peerIdIn);
             OffsetDateTime foundAt = OffsetDateTime.now();
             String clientType = null;
             String clientSemver = null;
@@ -71,8 +70,8 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             }
             ClientDiscovery clientDiscovery = new ClientDiscovery()
                     .setHash(Hashing.sha256().hashString(peerId + "@" + peerClientName, StandardCharsets.UTF_8).asLong())
-                    .setPeerId(peerId)
-                    .setPeerClientName(peerClientName)
+                    .setPeerId(HexUtil.sanitizeU0(peerId))
+                    .setPeerClientName(HexUtil.sanitizeU0(peerClientName))
                     .setFoundAt(foundAt)
                     .setFoundUserappsId(userAppId)
                     .setClientType(clientType)
