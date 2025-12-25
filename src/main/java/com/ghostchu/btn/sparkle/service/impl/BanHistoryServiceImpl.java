@@ -57,7 +57,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private RedisTemplate<String, String> stringStringRedisTemplate;
 
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Transactional
     @Override
     public void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans) {
         var nowTime = OffsetDateTime.now();
