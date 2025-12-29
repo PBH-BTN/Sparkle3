@@ -53,7 +53,13 @@ server:
       host-header: X-Forwarded-For
       port-header: X-Forwarded-Port
       protocol-header: X-Forwarded-Proto
-    max-http-form-post-size: 2MB
+    max-http-form-post-size: 50MB
+management:
+  endpoints:
+    web:
+      exposure:
+          include: prometheus,health,info
+
 logging:
   level:
     org.apache.catalina.connector: OFF

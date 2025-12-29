@@ -34,6 +34,7 @@ public class SecurityConfig {
                                 .requestMatchers("/login/**").permitAll()
                                 .requestMatchers("/announce").permitAll()
                                 .requestMatchers("/tracker/announce").permitAll()
+                                .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/admin/**").hasAnyRole("ADMIN")
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
 //                                .requestMatchers("/banhistory/**").authenticated()
