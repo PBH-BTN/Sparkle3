@@ -36,4 +36,6 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     @NotNull
     Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String peerIp, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+
+    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

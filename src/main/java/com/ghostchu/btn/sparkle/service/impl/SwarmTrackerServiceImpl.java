@@ -256,6 +256,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.fetchSwarmTrackerByIpInTimeRange(ip, startAt, endAt);
     }
 
+    @Override
+    public @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+        return this.baseMapper.fetchSwarmTrackerByUserAppsInTimeRange(userAppId, startAt, endAt);
+    }
+
     /**
      * Check if the query has any search conditions (excluding pagination and sorting)
      */

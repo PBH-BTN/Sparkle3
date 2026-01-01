@@ -1,6 +1,5 @@
 package com.ghostchu.btn.sparkle.service;
 
-import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -58,4 +57,6 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
 
     @Transactional(propagation = Propagation.MANDATORY)
     @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @Transactional(propagation = Propagation.MANDATORY)
+    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

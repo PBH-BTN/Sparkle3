@@ -98,4 +98,12 @@
             AND first_time_seen &gt;= #{startAt}
             AND last_time_seen &lt;= #{endAt}
     </select>
+
+    <select id="fetchSwarmTrackerByUserAppsInTimeRange" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker" fetchSize="100">
+        SELECT * FROM swarm_tracker
+        WHERE
+            userapps_id = #{userappsId}
+            AND first_time_seen &gt;= #{startAt}
+            AND last_time_seen &lt;= #{endAt}
+    </select>
 </mapper>

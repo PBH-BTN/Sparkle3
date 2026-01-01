@@ -34,11 +34,17 @@ public class UserSwarmStatistic implements Serializable {
     @TableId(value = "user_id", type = IdType.NONE)
     private Long userId;
 
-    @TableField("sent_traffic")
-    private long sentTraffic;
+    @TableField("sent_traffic_self_report")
+    private long sentTrafficSelfReport;
 
-    @TableField("received_traffic")
-    private long receivedTraffic;
+    @TableField("received_traffic_self_report")
+    private long receivedTrafficSelfReport;
+
+    @TableField("sent_traffic_other_ack")
+    private long sentTrafficOtherAck;
+
+    @TableField("received_traffic_other_ack")
+    private long receivedTrafficOtherAck;
 
     @TableField("torrent_count")
     private long torrentCount;
