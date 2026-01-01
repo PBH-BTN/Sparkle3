@@ -15,14 +15,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -79,15 +76,12 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
 
     private void handleSelfReport(@NotNull List<Userapp> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
         for (Userapp userApp : userApps) {
-            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-            transactionTemplate.executeWithoutResult((_) -> {
-                var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt);
-                // 以自己为视角
-                if(result != null) {
-                    userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
-                    userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(result.getReceivedTraffic());
-                }
-            });
+            var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt);
+            // 以自己为视角
+            if (result != null) {
+                userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
+                userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(result.getReceivedTraffic());
+            }
         }
     }
 
@@ -98,7 +92,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             for (UserappsHeartbeat heartbeat : heartbeats) {
                 var result = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt);
                 // 以他人为视角
-                if(result != null) {
+                if (result != null) {
                     userSwarmStatistics.getSentTrafficOtherAck().addAndGet(result.getReceivedTraffic());
                     userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(result.getSentTraffic());
                 }
