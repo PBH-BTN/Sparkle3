@@ -3,7 +3,7 @@ package com.ghostchu.btn.sparkle.service;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-import org.apache.ibatis.cursor.Cursor;
+import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,7 +56,7 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
             @NotNull Page<SwarmTracker> page);
 
     @Transactional(propagation = Propagation.MANDATORY)
-    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
     @Transactional(propagation = Propagation.MANDATORY)
-    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

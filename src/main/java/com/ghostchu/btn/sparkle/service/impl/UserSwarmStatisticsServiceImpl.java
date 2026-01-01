@@ -61,8 +61,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                     .setReceivedTrafficOtherAck(result.getReceivedTrafficOtherAck().get())
                     .setSentTrafficSelfReport(result.getSentTrafficSelfReport().get())
                     .setReceivedTrafficSelfReport(result.getReceivedTrafficSelfReport().get())
-                    .setIpCount(result.getIps().size())
-                    .setTorrentCount(result.getTorrents().size())
                     .setLastUpdateAt(OffsetDateTime.now())
             );
             processed++;
@@ -83,16 +81,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         for (Userapp userApp : userApps) {
             TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
             transactionTemplate.executeWithoutResult((_) -> {
-                try (var cursor = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt)) {
-                    cursor.forEach(swarmTracker -> {
-                        // 因为这里是从自己的视角来看的，所以应该正着来
-                        userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(swarmTracker.getFromPeerTraffic());
-                        userSwarmStatistics.getSentTrafficSelfReport().addAndGet(swarmTracker.getToPeerTraffic());
-                        userSwarmStatistics.getTorrents().add(swarmTracker.getTorrentId());
-                    });
-                } catch (Exception ex) {
-                    log.warn("Unable to fetch swarm tracker for userAppId {} in time range {} - {}: {}", userApp.getId(), startAt, endAt, ex.getMessage());
-                }
+                var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt);
+                // 以自己为视角
+                userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
+                userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(result.getReceivedTraffic());
             });
         }
     }
@@ -102,20 +94,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp.getId(), startAt, endAt)));
         for (List<UserappsHeartbeat> heartbeats : heartbeatBatches) {
             for (UserappsHeartbeat heartbeat : heartbeats) {
-                TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-                transactionTemplate.executeWithoutResult((_) -> {
-                    try (var cursor = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt)) {
-                        cursor.forEach(swarmTracker -> {
-                            // 因为这里是从别人的视角来看的，所以应该反着来
-                            userSwarmStatistics.getSentTrafficOtherAck().addAndGet(swarmTracker.getFromPeerTraffic());
-                            userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(swarmTracker.getToPeerTraffic());
-                            userSwarmStatistics.getTorrents().add(swarmTracker.getTorrentId());
-                            userSwarmStatistics.getIps().add(swarmTracker.getPeerIp().getHostAddress());
-                        });
-                    } catch (Exception ex) {
-                        log.warn("Unable to fetch swarm tracker for IP {} in time range {} - {}: {}", heartbeat.getIp().getHostAddress(), startAt, endAt, ex.getMessage());
-                    }
-                });
+                var result = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt);
+                // 以他人为视角
+                userSwarmStatistics.getSentTrafficOtherAck().addAndGet(result.getReceivedTraffic());
+                userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(result.getSentTraffic());
             }
         }
     }
@@ -127,7 +109,5 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         private AtomicLong receivedTrafficOtherAck = new AtomicLong();
         private AtomicLong sentTrafficSelfReport = new AtomicLong();
         private AtomicLong receivedTrafficSelfReport = new AtomicLong();
-        private final Set<String> ips = new HashSet<>();
-        private final Set<Long> torrents = new HashSet<>();
     }
 }

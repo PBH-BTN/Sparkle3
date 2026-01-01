@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
+import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
@@ -250,14 +251,13 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.selectPage(page, wrapper);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
     @Override
-    public @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+    public @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         return this.baseMapper.fetchSwarmTrackerByIpInTimeRange(ip, startAt, endAt);
     }
 
     @Override
-    public @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+    public @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         return this.baseMapper.fetchSwarmTrackerByUserAppsInTimeRange(userAppId, startAt, endAt);
     }
 

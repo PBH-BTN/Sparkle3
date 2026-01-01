@@ -1,15 +1,14 @@
 package com.ghostchu.btn.sparkle.mapper;
 
-import java.net.InetAddress;
-import java.time.OffsetDateTime;
-import java.util.List;
-
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
+import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.ghostchu.btn.sparkle.entity.SwarmTracker;
-import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
  * <p>
@@ -34,8 +33,7 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     long countAll();
 
-    @NotNull
-    Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String peerIp, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String peerIp, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 
-    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

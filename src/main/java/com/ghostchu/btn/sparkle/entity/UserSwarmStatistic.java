@@ -46,12 +46,6 @@ public class UserSwarmStatistic implements Serializable {
     @TableField("received_traffic_other_ack")
     private long receivedTrafficOtherAck;
 
-    @TableField("torrent_count")
-    private long torrentCount;
-
-    @TableField("ip_count")
-    private long ipCount;
-
     @TableField("last_update_at")
     private OffsetDateTime lastUpdateAt;
 }

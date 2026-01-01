@@ -91,16 +91,27 @@
         SELECT COUNT(*) FROM swarm_tracker
     </select>
 
-    <select id="fetchSwarmTrackerByIpInTimeRange" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker" fetchSize="100">
-        SELECT * FROM swarm_tracker
+    <select id="fetchSwarmTrackerByIpInTimeRange" resultMap="userSwarmStatisticByUserAppResult">
+        SELECT
+            SUM(to_peer_traffic) AS sentTraffic,
+            SUM(from_peer_traffic) AS receivedTraffic
+        FROM swarm_tracker
         WHERE
             peer_ip &lt;&lt;= #{peerIp}::inet
             AND first_time_seen &gt;= #{startAt}
             AND last_time_seen &lt;= #{endAt}
     </select>
 
-    <select id="fetchSwarmTrackerByUserAppsInTimeRange" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker" fetchSize="100">
-        SELECT * FROM swarm_tracker
+    <resultMap id="userSwarmStatisticByUserAppResult" type="com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult">
+        <result column="sentTraffic" property="sentTraffic"/>
+        <result column="receivedTraffic" property="receivedTraffic"/>
+    </resultMap>
+
+    <select id="fetchSwarmTrackerByUserAppsInTimeRange" resultMap="userSwarmStatisticByUserAppResult">
+        SELECT
+            SUM(to_peer_traffic) AS sentTraffic,
+            SUM(from_peer_traffic) AS receivedTraffic
+        FROM swarm_tracker
         WHERE
             userapps_id = #{userAppId}
             AND first_time_seen &gt;= #{startAt}
