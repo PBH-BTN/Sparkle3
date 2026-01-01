@@ -49,6 +49,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
 
     @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
     public void cronUserSwarmStatisticsUpdate() {
+        if(!enabled) return;
         OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         OffsetDateTime endAt = OffsetDateTime.now();
         long processed = 0;
