@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.UserappMapper">
+    <select id="fetchAllUserApps" resultType="com.ghostchu.btn.sparkle.entity.Userapp" fetchSize="100">
+        SELECT * FROM userapp
+    </select>
     <insert id="updateUserAppLastSeen">
         UPDATE userapp
         SET last_seen_at = NOW()

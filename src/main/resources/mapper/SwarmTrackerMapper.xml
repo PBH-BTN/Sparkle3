@@ -90,4 +90,12 @@
     <select id="countAll" resultType="long">
         SELECT COUNT(*) FROM swarm_tracker
     </select>
+
+    <select id="fetchSwarmTrackerByIpInTimeRange" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker" fetchSize="100">
+        SELECT * FROM swarm_tracker
+        WHERE
+            peer_ip &lt;&lt;= #{peerIp}::inet
+            AND first_time_seen &gt;= #{startTime}
+            AND last_time_seen &lt;= #{endTime}
+    </select>
 </mapper>

@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -32,4 +33,7 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
     List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
     long countAll();
+
+    @NotNull
+    Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String peerIp, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

@@ -198,3 +198,7 @@ sparkle:
     prefix-length:
       ipv4: 30
       ipv6: 48
+  swarm-statistics-track:
+    enabled: true
+    cron: "0 0 * * * *"
+    duration: 604800000

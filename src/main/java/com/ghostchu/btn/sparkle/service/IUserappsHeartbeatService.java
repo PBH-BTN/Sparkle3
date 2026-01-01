@@ -22,6 +22,8 @@ import java.util.List;
  */
 public interface IUserappsHeartbeatService extends IService<UserappsHeartbeat> {
 
+    @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+
     @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(String ip, OffsetDateTime after);
 
     @Transactional

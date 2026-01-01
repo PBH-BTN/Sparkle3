@@ -15,11 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -36,6 +34,17 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Value("${sparkle.ping.heartbeat.cleanup-before}")
     private long deleteBefore;
     private final AtomicLong seq = new AtomicLong();
+
+    @Override
+    public @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+        return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
+                .eq("userapp_id", userAppId)
+                .ge("first_seen_at", startAt)
+                .le("last_seen_at", endAt)
+                .orderByDesc("last_seen_at")
+        );
+    }
+
     @Override
     public @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(@NotNull String peerIp, @NotNull OffsetDateTime after) {
         return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()

@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
  * <p>
@@ -81,5 +83,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new IllegalStateException("Failed to create new user relation, the changed records count is 0.");
         }
         return newUser;
+    }
+
+    @Override
+    public @NotNull List<Long> fetchAllUserIds(){
+        return baseMapper.fetchAllUserIds();
+    }
+
+    @Override
+    public @NotNull Cursor<User> fetchAllUsers(){
+        return baseMapper.fetchAllUsers();
     }
 }

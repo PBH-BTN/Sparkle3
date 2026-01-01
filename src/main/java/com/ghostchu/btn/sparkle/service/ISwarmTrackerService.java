@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,6 +14,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * <p>
@@ -52,4 +55,7 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
             @Nullable String sortBy,
             @Nullable String sortOrder,
             @NotNull Page<SwarmTracker> page);
+
+    @Transactional
+    @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }
