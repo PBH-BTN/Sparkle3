@@ -95,7 +95,7 @@
         SELECT * FROM swarm_tracker
         WHERE
             peer_ip &lt;&lt;= #{peerIp}::inet
-            AND first_time_seen &gt;= #{startTime}
-            AND last_time_seen &lt;= #{endTime}
+            AND first_time_seen &gt;= #{startAt}
+            AND last_time_seen &lt;= #{endAt}
     </select>
 </mapper>
