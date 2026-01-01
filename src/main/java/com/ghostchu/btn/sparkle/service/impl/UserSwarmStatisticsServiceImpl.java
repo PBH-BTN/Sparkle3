@@ -83,8 +83,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             transactionTemplate.executeWithoutResult((_) -> {
                 var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt);
                 // 以自己为视角
-                userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
-                userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(result.getReceivedTraffic());
+                if(result != null) {
+                    userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
+                    userSwarmStatistics.getReceivedTrafficSelfReport().addAndGet(result.getReceivedTraffic());
+                }
             });
         }
     }
@@ -96,8 +98,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             for (UserappsHeartbeat heartbeat : heartbeats) {
                 var result = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt);
                 // 以他人为视角
-                userSwarmStatistics.getSentTrafficOtherAck().addAndGet(result.getReceivedTraffic());
-                userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(result.getSentTraffic());
+                if(result != null) {
+                    userSwarmStatistics.getSentTrafficOtherAck().addAndGet(result.getReceivedTraffic());
+                    userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(result.getSentTraffic());
+                }
             }
         }
     }

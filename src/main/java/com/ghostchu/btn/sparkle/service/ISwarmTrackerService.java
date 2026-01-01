@@ -55,8 +55,6 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
             @Nullable String sortOrder,
             @NotNull Page<SwarmTracker> page);
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
-    @Transactional(propagation = Propagation.MANDATORY)
-    @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @Nullable UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+    @Nullable UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }

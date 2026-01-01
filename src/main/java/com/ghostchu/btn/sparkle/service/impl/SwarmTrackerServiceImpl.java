@@ -252,12 +252,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     }
 
     @Override
-    public @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+    public @Nullable UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         return this.baseMapper.fetchSwarmTrackerByIpInTimeRange(ip, startAt, endAt);
     }
 
     @Override
-    public @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
+    public @Nullable UserSwarmStatisticTrafficResult fetchSwarmTrackerByUserAppsInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         return this.baseMapper.fetchSwarmTrackerByUserAppsInTimeRange(userAppId, startAt, endAt);
     }
 
