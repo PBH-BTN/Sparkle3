@@ -102,7 +102,7 @@
     <select id="fetchSwarmTrackerByUserAppsInTimeRange" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker" fetchSize="100">
         SELECT * FROM swarm_tracker
         WHERE
-            userapps_id = #{userAppsId}
+            userapps_id = #{userAppId}
             AND first_time_seen &gt;= #{startAt}
             AND last_time_seen &lt;= #{endAt}
     </select>
