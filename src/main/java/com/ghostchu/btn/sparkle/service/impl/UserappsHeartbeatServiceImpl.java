@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
@@ -62,7 +63,7 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Transactional
     public void deleteOldData() {
         var deleted = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
-                .le("last_seen_at", OffsetDateTime.now().minusSeconds(deleteBefore / 1000)));
+                .le("last_seen_at", OffsetDateTime.now().minus(deleteBefore, ChronoUnit.MILLIS)));
         if (deleted > 0) {
             log.info("Deleted {} expired heartbeats", deleted);
         }
