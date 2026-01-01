@@ -55,14 +55,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         List<Long> uids = userService.fetchAllUserIds();
         long total = uids.size();
         while (!uids.isEmpty()) {
-            if(processed % 100 == 0){
-                log.info("Processed {}/{} user swarm statistics updates.", processed, total);
-            }
             long uid = uids.removeLast();
             var result = generateUserSwarmStatistics(uid, startAt, endAt);
-            if(uid == 1){
-                log.info("Final result: {}", result);
-            }
             baseMapper.insertOrUpdate(new UserSwarmStatistic()
                     .setUserId(uid)
                     .setSentTraffic(result.getSentTraffic().get())
@@ -73,23 +67,18 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             );
             processed ++;
         }
+        log.info("Processed {} user swarm statistics updates", processed);
     }
 
     @NotNull
     public UserSwarmStatisticsResult generateUserSwarmStatistics(long userId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         UserSwarmStatisticsResult userSwarmStatistics = new UserSwarmStatisticsResult();
         var userApps = userappService.getUserAppsByUserId(userId);
-        if(userId == 1){
-            log.info("UserApps: {}", userApps);
-        }
         List<List<UserappsHeartbeat>> heartbeatBatches = new ArrayList<>();
         userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp.getId(), startAt, endAt)));
-        if(userId == 1){
-            log.info("Heartbeats: {}", heartbeatBatches);
-        }
         for (List<UserappsHeartbeat> heartbeats : heartbeatBatches) {
             for (UserappsHeartbeat heartbeat : heartbeats) {
-                TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);  // 1
+                TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
                 transactionTemplate.executeWithoutResult((status) -> {
                     try (var cursor = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt)) {
                         cursor.forEach(swarmTracker -> {
@@ -99,9 +88,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                             userSwarmStatistics.getTorrents().add(swarmTracker.getTorrentId());
                             userSwarmStatistics.getIps().add(swarmTracker.getPeerIp().getHostAddress());
                         });
-                        if(userId == 1){
-                            log.info("Logged a swarm tracker entity to record");
-                        }
                     } catch (Exception ex) {
                         log.warn("Unable to fetch swarm tracker for IP {} in time range {} - {}: {}", heartbeat.getIp().getHostAddress(), startAt, endAt, ex.getMessage());
                     }
