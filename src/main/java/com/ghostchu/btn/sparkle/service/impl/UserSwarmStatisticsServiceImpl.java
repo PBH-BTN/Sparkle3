@@ -82,12 +82,11 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         return userSwarmStatistics;
     }
 
-    @AllArgsConstructor
     @NoArgsConstructor
     @Data
     public static class UserSwarmStatisticsResult {
-        private AtomicLong sentTraffic;
-        private AtomicLong receivedTraffic;
+        private AtomicLong sentTraffic = new AtomicLong();
+        private AtomicLong receivedTraffic = new AtomicLong();
         private final Set<String> ips = new HashSet<>();
         private final Set<Long> torrents = new HashSet<>();
     }
