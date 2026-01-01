@@ -9,12 +9,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -39,14 +43,21 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
 
     @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
-    @Transactional
     public void cronUserSwarmStatisticsUpdate() {
         OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         OffsetDateTime endAt = OffsetDateTime.now();
+        long processed = 0;
         List<Long> uids = userService.fetchAllUserIds();
+        long total = uids.size();
         while (!uids.isEmpty()) {
+            if(processed % 10 == 0){
+                log.info("Processed {}/{} user swarm statistics updates.", processed, total);
+            }
             long uid = uids.removeLast();
             var result = generateUserSwarmStatistics(uid, startAt, endAt);
             baseMapper.insertOrUpdate(new UserSwarmStatistic()
@@ -57,6 +68,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                     .setTorrentCount(result.getTorrents().size())
                     .setLastUpdateAt(OffsetDateTime.now())
             );
+            processed ++;
         }
     }
 
@@ -68,17 +80,20 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp.getId(), startAt, endAt)));
         for (List<UserappsHeartbeat> heartbeats : heartbeatBatches) {
             for (UserappsHeartbeat heartbeat : heartbeats) {
-                try (var cursor = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt)) {
-                    cursor.forEach(swarmTracker -> {
-                        // 因为这里是从别人的视角来看的，所以应该反着来
-                        userSwarmStatistics.getSentTraffic().addAndGet(swarmTracker.getFromPeerTraffic());
-                        userSwarmStatistics.getReceivedTraffic().addAndGet(swarmTracker.getToPeerTraffic());
-                        userSwarmStatistics.getTorrents().add(swarmTracker.getTorrentId());
-                        userSwarmStatistics.getIps().add(swarmTracker.getPeerIp().getHostAddress());
-                    });
-                } catch (Exception ex) {
-                    log.warn("Unable to fetch swarm tracker for IP {} in time range {} - {}: {}", heartbeat.getIp().getHostAddress(), startAt, endAt, ex.getMessage());
-                }
+                TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);  // 1
+                transactionTemplate.executeWithoutResult((status) -> {
+                    try (var cursor = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt)) {
+                        cursor.forEach(swarmTracker -> {
+                            // 因为这里是从别人的视角来看的，所以应该反着来
+                            userSwarmStatistics.getSentTraffic().addAndGet(swarmTracker.getFromPeerTraffic());
+                            userSwarmStatistics.getReceivedTraffic().addAndGet(swarmTracker.getToPeerTraffic());
+                            userSwarmStatistics.getTorrents().add(swarmTracker.getTorrentId());
+                            userSwarmStatistics.getIps().add(swarmTracker.getPeerIp().getHostAddress());
+                        });
+                    } catch (Exception ex) {
+                        log.warn("Unable to fetch swarm tracker for IP {} in time range {} - {}: {}", heartbeat.getIp().getHostAddress(), startAt, endAt, ex.getMessage());
+                    }
+                });
             }
         }
         return userSwarmStatistics;

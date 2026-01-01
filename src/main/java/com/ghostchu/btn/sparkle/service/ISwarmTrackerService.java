@@ -56,6 +56,6 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
             @Nullable String sortOrder,
             @NotNull Page<SwarmTracker> page);
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @NotNull Cursor<SwarmTracker> fetchSwarmTrackerByIpInTimeRange(@NotNull String ip, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 }
