@@ -68,15 +68,15 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @NotNull
     public UserSwarmStatisticsResult generateUserSwarmStatistics(long userId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt) {
         UserSwarmStatisticsResult userSwarmStatistics = new UserSwarmStatisticsResult();
-        var userApps = userappService.getUserAppsByUserId(userId);
+        var userApps = userappService.getUserAppsByUserId(userId).stream().map(Userapp::getId).toList();
         handleOtherAck(userApps, startAt, endAt, userSwarmStatistics);
         handleSelfReport(userApps, startAt, endAt, userSwarmStatistics);
         return userSwarmStatistics;
     }
 
-    private void handleSelfReport(@NotNull List<Userapp> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
-        for (Userapp userApp : userApps) {
-            var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp.getId(), startAt, endAt);
+    private void handleSelfReport(@NotNull List<Long> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
+        for (Long userApp : userApps) {
+            var result = swarmTrackerService.fetchSwarmTrackerByUserAppsInTimeRange(userApp, startAt, endAt);
             // 以自己为视角
             if (result != null) {
                 userSwarmStatistics.getSentTrafficSelfReport().addAndGet(result.getSentTraffic());
@@ -85,9 +85,9 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         }
     }
 
-    private void handleOtherAck(@NotNull List<Userapp> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
+    private void handleOtherAck(@NotNull List<Long> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
         List<List<UserappsHeartbeat>> heartbeatBatches = new ArrayList<>();
-        userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp.getId(), startAt, endAt)));
+        userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp, startAt, endAt)));
         for (List<UserappsHeartbeat> heartbeats : heartbeatBatches) {
             for (UserappsHeartbeat heartbeat : heartbeats) {
                 var result = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt);
