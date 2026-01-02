@@ -72,7 +72,7 @@ mybatis-plus:
       logic-delete-value: "now()"
       logic-not-delete-value: null
 sparkle:
-  root-url: "http://127.0.0.1:7799"
+  root-url: "http://localhost:7799"
   chn-root-url: "http://chn.sparkle.local:7799"
   captcha:
     pow:

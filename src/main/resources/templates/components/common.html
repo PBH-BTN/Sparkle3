@@ -93,6 +93,43 @@
     </div>
 </nav>
 
+<!-- Traffic Info Bar Fragment -->
+<div th:fragment="traffic-info-bar" class="spk-traffic-info" th:if="${sessionUser != null and sessionUserSwarmStatistics != null}">
+    <div class="spk-container spk-container--fluid">
+        <div class="spk-traffic-info__inner">
+            <div class="spk-traffic-info__item spk-traffic-info__item--upload">
+                <i class="fas fa-upload"></i>
+                <span class="spk-traffic-info__label">汇报上传:</span>
+                <span class="spk-traffic-info__value" th:text="${unitConverter.formatSize(sessionUserSwarmStatistics.sentTrafficSelfReport)}">0 B</span>
+            </div>
+
+            <span class="spk-traffic-info__separator">|</span>
+
+            <div class="spk-traffic-info__item spk-traffic-info__item--download">
+                <i class="fas fa-download"></i>
+                <span class="spk-traffic-info__label">汇报下载:</span>
+                <span class="spk-traffic-info__value" th:text="${unitConverter.formatSize(sessionUserSwarmStatistics.receivedTrafficSelfReport)}">0 B</span>
+            </div>
+
+            <span class="spk-traffic-info__separator">|</span>
+
+            <div class="spk-traffic-info__item spk-traffic-info__item--upload">
+                <i class="fas fa-check-circle"></i>
+                <span class="spk-traffic-info__label">确认上传:</span>
+                <span class="spk-traffic-info__value" th:text="${unitConverter.formatSize(sessionUserSwarmStatistics.sentTrafficOtherAck)}">0 B</span>
+            </div>
+
+            <span class="spk-traffic-info__separator">|</span>
+
+            <div class="spk-traffic-info__item spk-traffic-info__item--download">
+                <i class="fas fa-check-circle"></i>
+                <span class="spk-traffic-info__label">确认下载:</span>
+                <span class="spk-traffic-info__value" th:text="${unitConverter.formatSize(sessionUserSwarmStatistics.receivedTrafficOtherAck)}">0 B</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Footer Fragment -->
 <footer th:fragment="footer" class="spk-footer">
     <div class="spk-container">

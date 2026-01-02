@@ -16,9 +16,32 @@
      */
     SPK.init = function() {
         SPK.initNavbar();
+        SPK.initTrafficInfoBar();
         SPK.initTooltips();
         SPK.initCopyButtons();
         SPK.initConfirmDialogs();
+    };
+
+    /**
+     * Adjust body padding based on traffic info bar presence
+     */
+    SPK.initTrafficInfoBar = function() {
+        const trafficInfoBar = document.querySelector('.spk-traffic-info');
+        const body = document.body;
+
+        if (trafficInfoBar && body) {
+            // Get the height of navbar and traffic info bar
+            const navbarHeight = getComputedStyle(document.documentElement)
+                .getPropertyValue('--spk-navbar-height') || '3.75rem';
+            const trafficInfoHeight = trafficInfoBar.offsetHeight;
+
+            // Calculate total top padding
+            const navbarPx = parseFloat(navbarHeight) * 16; // Convert rem to px (assuming 16px base)
+            const totalPadding = navbarPx + trafficInfoHeight;
+
+            // Apply padding to body
+            body.style.paddingTop = totalPadding + 'px';
+        }
     };
 
     /**
