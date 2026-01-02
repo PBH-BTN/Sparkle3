@@ -97,6 +97,13 @@
 <div th:fragment="traffic-info-bar" class="spk-traffic-info" th:if="${sessionUser != null and sessionUserSwarmStatistics != null}">
     <div class="spk-container spk-container--fluid">
         <div class="spk-traffic-info__inner">
+            <div class="spk-traffic-info__prefix">
+                <i class="fas fa-chart-line"></i>
+                <span>最近 7 日</span>
+            </div>
+
+            <span class="spk-traffic-info__separator">|</span>
+
             <div class="spk-traffic-info__item spk-traffic-info__item--upload">
                 <i class="fas fa-upload"></i>
                 <span class="spk-traffic-info__label">汇报上传:</span>

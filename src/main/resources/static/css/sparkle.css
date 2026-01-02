@@ -492,6 +492,22 @@ body.spk-body {
     width: 100%;
 }
 
+.spk-traffic-info__prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--spk-font-size-sm);
+    font-weight: 600;
+    color: var(--spk-text-primary);
+    line-height: 1;
+}
+
+.spk-traffic-info__prefix i {
+    font-size: 0.875rem;
+    color: var(--spk-primary-500);
+    line-height: 1;
+}
+
 .spk-traffic-info__item {
     display: inline-flex;
     align-items: center;
