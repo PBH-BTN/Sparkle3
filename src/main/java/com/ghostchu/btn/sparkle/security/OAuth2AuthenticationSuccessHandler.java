@@ -64,6 +64,10 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 }
             }
 
+            if (email.endsWith("sparkle.system")) {
+                throw new IllegalArgumentException("不允许使用的保留邮件地址");
+            }
+
             if (avatarUrl == null || avatarUrl.isBlank())
                 avatarUrl = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
             if (name == null || name.isBlank()) name = login;
