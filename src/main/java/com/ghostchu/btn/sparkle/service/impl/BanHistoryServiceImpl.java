@@ -79,6 +79,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 log.debug("Ignoring ban entry with out-of-range banAt time: {}", btnBan.getBanAt());
                 return null;
             }
+            if(btnBan.getModule().endsWith("IdleConnectionDosProtection")){
+                return null;
+            }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
             return new BanHistory()
                     .setInsertTime(nowTime)
