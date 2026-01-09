@@ -52,14 +52,18 @@ public class IPDB implements AutoCloseable {
         this.autoUpdate = autoUpdate;
         this.userAgent = userAgent;
         setupHttpClient();
-        if (needUpdateMMDB(mmdbCityFile)) {
-            updateMMDB("GeoLite2-City", mmdbCityFile);
-        }
-        if (needUpdateMMDB(mmdbASNFile)) {
-            updateMMDB("GeoLite2-ASN", mmdbASNFile);
-        }
-        if (needUpdateMMDB(mmdbGeoCNFile)) {
-            updateGeoCN(mmdbGeoCNFile);
+        try {
+            if (needUpdateMMDB(mmdbCityFile)) {
+                updateMMDB("GeoLite2-City", mmdbCityFile);
+            }
+            if (needUpdateMMDB(mmdbASNFile)) {
+                updateMMDB("GeoLite2-ASN", mmdbASNFile);
+            }
+            if (needUpdateMMDB(mmdbGeoCNFile)) {
+                updateGeoCN(mmdbGeoCNFile);
+            }
+        } catch (Exception e) {
+            log.warn("Unable to update MMDB databases, using existing files if available.", e);
         }
         loadMMDB();
     }
