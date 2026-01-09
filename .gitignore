@@ -39,3 +39,4 @@ application.yaml
 application-local.yaml
 application-production.yaml
 data/
+frontend/

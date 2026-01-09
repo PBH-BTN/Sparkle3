@@ -2,6 +2,11 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
+import com.ghostchu.btn.sparkle.entity.Userapp;
+import org.apache.ibatis.cursor.Cursor;
+import org.jetbrains.annotations.NotNull;
+
+import java.time.OffsetDateTime;
 
 /**
  * <p>

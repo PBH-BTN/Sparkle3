@@ -117,4 +117,8 @@
             AND first_time_seen &gt;= #{startAt}
             AND last_time_seen &lt;= #{endAt}
     </select>
+
+    <select id="selectExpiredSwarmTracker" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker">
+        SELECT * FROM swarm_tracker WHERE last_time_seen &lt; #{expiredTime}
+    </select>
 </mapper>

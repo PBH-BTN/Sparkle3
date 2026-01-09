@@ -10,21 +10,22 @@ import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +47,36 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
     @Value("${sparkle.ping.sync-swarm.cleanup-before}")
     private long deleteBefore;
+    @Value("${sparkle.ping.sync-swarm.data-retention-time}")
+    private long dataRetentionTime;
+    @Autowired
+    private IUserappsArchivedStatisticService userappsArchivedStatisticService;
+
+
+    @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
+    @Transactional
+    public void cronDataRetentionCleanup() {
+        OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
+        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {
+            long ct = 0;
+            for (SwarmTracker swarm : cursor) {
+                userappsArchivedStatisticService.updateArchivedStatistic(
+                        swarm.getUserappsId(),
+                        swarm.getToPeerTraffic(),
+                        swarm.getFromPeerTraffic(),
+                        0,
+                        1,
+                        OffsetDateTime.now()
+                );
+                ct++;
+            }
+            log.info("Archived {} swarm statistics.", ct);
+        } catch (IOException e) {
+            log.warn("Unable to cleanup expired user swarm statistics", e);
+        }
+
+    }
+
 
     @Transactional
     @Override
@@ -132,7 +163,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
             page.setOptimizeJoinOfCountSql(false);
         }
-
 
 
         return this.baseMapper.selectPage(page, wrapper);
