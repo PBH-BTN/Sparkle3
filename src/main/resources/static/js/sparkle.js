@@ -78,6 +78,21 @@
                 }
             });
         }
+
+        // Mobile Dropdown Toggle
+        const dropdownToggles = document.querySelectorAll('.spk-navbar__dropdown-toggle');
+        dropdownToggles.forEach(function(toggle) {
+            toggle.addEventListener('click', function(e) {
+                // On mobile, toggle dropdown
+                if (window.innerWidth <= 991) {
+                    e.preventDefault();
+                    const dropdown = toggle.closest('.spk-navbar__dropdown');
+                    if (dropdown) {
+                        dropdown.classList.toggle('spk-navbar__dropdown--open');
+                    }
+                }
+            });
+        });
     };
 
     /**
