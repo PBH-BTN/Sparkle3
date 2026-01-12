@@ -76,7 +76,7 @@
                            title="启用隐私模式后，将从公开界面中隐藏与您有关的记录。"></i>
                     </div>
                     <div class="spk-detail-value">
-                        <form id="privacyModeForm" method="post" th:action="@{/user/privacy-mode/toggle}" style="display: inline;">
+                        <form id="privacyModeForm" method="post" th:action="@{/user/privacy-mode/toggle}" class="spk-privacy-form">
                             <input type="hidden" name="enabled" id="privacyModeInput" th:value="${user.privacyMode}">
                             <label class="spk-toggle-switch">
                                 <input type="checkbox"
@@ -117,14 +117,30 @@
 <div th:replace="~{components/common::footer}"></div>
 
 <style>
+    /* Fix detail-value alignment - override any conflicting styles */
+    .spk-detail-value {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 32px;
+    }
+
+    /* Privacy Mode Form Layout */
+    .spk-privacy-form {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0;
+    }
+
     /* Toggle Switch Styles */
     .spk-toggle-switch {
         position: relative;
         display: inline-block;
         width: 50px;
         height: 24px;
-        margin-right: 10px;
-        vertical-align: middle;
+        flex-shrink: 0;
+        margin: 0 !important; /* Remove any default margins (e.g. from label) */
     }
 
     .spk-toggle-switch input {
@@ -166,7 +182,8 @@
     }
 
     .spk-toggle-label {
-        vertical-align: middle;
+        display: inline-flex;
+        align-items: center;
     }
 
     /* Dark mode support */

@@ -121,6 +121,56 @@
             background: linear-gradient(90deg, rgba(205, 127, 50, 0.25) 0%, rgba(205, 127, 50, 0.1) 100%);
         }
 
+        /* Banned & Privacy Styles */
+        .spk-ranking-row--banned {
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .spk-ranking-row--banned .spk-ranking-user,
+        .spk-ranking-row--banned .spk-ranking-traffic {
+            opacity: 0.7;
+        }
+
+        .spk-ranking-row--privacy .spk-ranking-nickname {
+            font-style: italic;
+            color: var(--spk-text-muted);
+        }
+
+        .spk-ranking-avatar--placeholder {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--spk-text-muted);
+            background-color: var(--spk-gray-200);
+            border: 2px solid var(--spk-border-color);
+        }
+
+        .spk-ranking-avatar--privacy {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--spk-gray-200);
+            color: var(--spk-text-muted);
+            font-size: 1.2rem;
+        }
+
+        .spk-text-dashed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .spk-badge--banned {
+            background-color: var(--spk-danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+            font-weight: normal;
+        }
+
         /* Ranking Medal Styles */
         .spk-ranking-rank {
             font-weight: 600;
@@ -271,6 +321,15 @@
             border-color: var(--spk-border-color);
         }
 
+        .spk-ranking-row--banned {
+            background-color: rgba(239, 68, 68, 0.15);
+        }
+        .spk-ranking-avatar--placeholder {
+            background-color: #374151;
+            color: #9ca3af;
+            border-color: #4b5563;
+        }
+
         /* Custom scrollbar for dark mode */
         .spk-ranking-table-container::-webkit-scrollbar {
             width: 12px;
@@ -325,6 +384,16 @@
         border-color: var(--spk-border-color);
     }
 
+    [data-theme="dark"] .spk-ranking-row--banned {
+        background-color: rgba(239, 68, 68, 0.15);
+    }
+
+    [data-theme="dark"] .spk-ranking-avatar--placeholder {
+        background-color: #374151;
+        color: #9ca3af;
+        border-color: #4b5563;
+    }
+
     /* Custom scrollbar for dark mode */
     [data-theme="dark"] .spk-ranking-table-container::-webkit-scrollbar {
         width: 12px;
@@ -369,7 +438,7 @@
                 <div class="spk-ranking-self">
                     <div class="spk-ranking-self__rank">
                         <div class="spk-ranking-self__rank-label">排名</div>
-                        <div class="spk-ranking-self__rank-value" th:text="${self.rank}">-</div>
+                        <div class="spk-ranking-self__rank-value" th:text="${self.rank > 1000 ? '>1000' : self.rank}">-</div>
                     </div>
                     <div class="spk-ranking-self__stats">
                         <div class="spk-row">
@@ -421,6 +490,11 @@
             <div class="spk-card__header">
                 <h3 class="spk-card__title">
                     <i class="fas fa-list-ol"></i> TOP 500
+                    <small style="font-size: 0.6em; margin-left: 0.5rem; vertical-align: middle;"
+                           data-toggle="tooltip"
+                           title="已启用隐私模式的用户将以匿名形式展示">
+                        <i class="fas fa-circle-info" style="color: var(--spk-text-muted); cursor: help;"></i>
+                    </small>
                 </h3>
             </div>
             <div class="spk-card__body">
@@ -437,7 +511,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 80px;">排名</th>
-                                <th style="width: 200px;">用户</th>
+                                <th style="width: 200px; text-align: left;">用户</th>
                                 <th>汇报上传</th>
                                 <th>汇报下载</th>
                                 <th>确认上传</th>
@@ -446,8 +520,9 @@
                         </thead>
                         <tbody>
                             <tr th:each="entry : ${data}"
-                                th:if="${!entry.value.privacyMode}"
-                                th:class="${entry.key.rank <= 3 ? 'spk-ranking-row spk-ranking-row--top' + entry.key.rank : 'spk-ranking-row'}">
+                                th:class="(${entry.key.rank <= 3 ? 'spk-ranking-row spk-ranking-row--top' + entry.key.rank : 'spk-ranking-row'}) +
+                                          (${entry.value.bannedAt != null ? ' spk-ranking-row--banned' : ''}) +
+                                          (${entry.value.privacyMode ? ' spk-ranking-row--privacy' : ''})">
                                 <td class="spk-ranking-rank">
                                     <span th:if="${entry.key.rank == 1}" class="spk-ranking-medal spk-ranking-medal--gold">
                                         <i class="fas fa-crown"></i>
@@ -464,15 +539,33 @@
                                     <span th:if="${entry.key.rank > 3}" th:text="${entry.key.rank}">4</span>
                                 </td>
                                 <td class="spk-ranking-user">
-                                    <img loading="lazy"
-                                         th:src="${entry.value.avatar}"
-                                         th:alt="${entry.value.nickname}"
-                                         class="spk-ranking-avatar">
-                                    <span class="spk-ranking-nickname"
-                                          th:text="${#strings.length(entry.value.nickname) <= 3 ?
-                                                    #strings.repeat('*', #strings.length(entry.value.nickname)) :
-                                                    #strings.substring(entry.value.nickname, 0, 3) + #strings.repeat('*', #strings.length(entry.value.nickname) - 3)}"
-                                          >昵称</span>
+<!--                                    <img th:if="${!entry.value.privacyMode}"-->
+<!--                                         loading="lazy"-->
+<!--                                         th:src="${entry.value.avatar}"-->
+<!--                                         th:alt="${entry.value.nickname}"-->
+<!--                                         class="spk-ranking-avatar">-->
+                                    <div th:if="${entry.value.privacyMode || entry.value.bannedAt != null}" class="spk-ranking-avatar spk-ranking-avatar--placeholder">
+                                         <i class="fas fa-user-secret"></i>
+                                    </div>
+
+                                    <div style="display: inline-block;">
+                                        <span th:if="${!entry.value.privacyMode}"
+                                              class="spk-ranking-nickname"
+                                              th:classappend="${entry.value.bannedAt != null ? 'spk-text-dashed' : ''}"
+                                              th:text="${#strings.length(entry.value.nickname) <= 3 ?
+                                                        #strings.repeat('*', #strings.length(entry.value.nickname)) :
+                                                        #strings.substring(entry.value.nickname, 0, 3) + #strings.repeat('*', #strings.length(entry.value.nickname) - 3)}"
+                                              th:title="${entry.value.bannedAt == null ? '隐私保护：用户名已脱敏' : ''}"
+                                              >昵称</span>
+                                        <span th:if="${entry.value.privacyMode && entry.value.bannedAt == null} " class="spk-ranking-nickname">匿名用户</span>
+                                        <span th:if="${entry.value.privacyMode && entry.value.bannedAt != null}" class="spk-ranking-nickname">用户已封禁</span>
+
+                                        <span th:if="${entry.value.bannedAt != null}" class="spk-badge--banned"
+                                              data-toggle="tooltip"
+                                              title="该用户已被封禁">
+                                            已封禁
+                                        </span>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="spk-ranking-traffic spk-ranking-traffic--upload"
