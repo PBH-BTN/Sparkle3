@@ -68,13 +68,13 @@ public class StatisticsRefreshServiceImpl {
     @Scheduled(cron = "${sparkle.statistics.swarm-tracker-count-refresh-cron}")
     public void onSwarmTracker() {
         long allTime = swarmTrackerMapper.countAll();
-        long last30Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", thirtyDaysAgo));
-        long last14Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", fourteenDaysAgo));
+        //long last30Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", thirtyDaysAgo));
+        //long last14Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", fourteenDaysAgo));
         long last7Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", sevenDaysAgo));
         long last24Hours = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", last24HoursAgo));
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_ALLTIME.getKey(), allTime);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), last30Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), last14Days);
+        //stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), last30Days);
+        //stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), last14Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey(), last7Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), last24Hours);
     }

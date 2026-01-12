@@ -76,40 +76,40 @@
                 </div>
             </div>
 
-            <!-- Swarm Tracker Statistics -->
-            <div class="spk-card spk-mb-3">
-                <div class="spk-card__header">
-                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> 跟踪 Peers 统计</h3>
-                </div>
-                <div class="spk-card__body">
-                    <div class="spk-row">
-                        <div class="spk-col-3">
-                            <div class="spk-stat">
-                                <div class="spk-stat__label">30天</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_30days != null ? #numbers.formatInteger(stats_swarmtracker_30days, 0, 'COMMA') : '0'}">0</div>
-                            </div>
-                        </div>
-                        <div class="spk-col-3">
-                            <div class="spk-stat">
-                                <div class="spk-stat__label">14天</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_14days != null ? #numbers.formatInteger(stats_swarmtracker_14days, 0, 'COMMA') : '0'}">0</div>
-                            </div>
-                        </div>
-                        <div class="spk-col-3">
-                            <div class="spk-stat">
-                                <div class="spk-stat__label">7天</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_7days != null ? #numbers.formatInteger(stats_swarmtracker_7days, 0, 'COMMA') : '0'}">0</div>
-                            </div>
-                        </div>
-                        <div class="spk-col-3">
-                            <div class="spk-stat">
-                                <div class="spk-stat__label">24小时</div>
-                                <div class="spk-stat__value" th:text="${stats_swarmtracker_24hours != null ? #numbers.formatInteger(stats_swarmtracker_24hours, 0, 'COMMA') : '0'}">0</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!--            &lt;!&ndash; Swarm Tracker Statistics &ndash;&gt;-->
+<!--            <div class="spk-card spk-mb-3">-->
+<!--                <div class="spk-card__header">-->
+<!--                    <h3 class="spk-card__title"><i class="fas fa-network-wired"></i> 跟踪 Peers 统计</h3>-->
+<!--                </div>-->
+<!--                <div class="spk-card__body">-->
+<!--                    <div class="spk-row">-->
+<!--                        <div class="spk-col-3">-->
+<!--                            <div class="spk-stat">-->
+<!--                                <div class="spk-stat__label">30天</div>-->
+<!--                                <div class="spk-stat__value" th:text="${stats_swarmtracker_30days != null ? #numbers.formatInteger(stats_swarmtracker_30days, 0, 'COMMA') : '0'}">0</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="spk-col-3">-->
+<!--                            <div class="spk-stat">-->
+<!--                                <div class="spk-stat__label">14天</div>-->
+<!--                                <div class="spk-stat__value" th:text="${stats_swarmtracker_14days != null ? #numbers.formatInteger(stats_swarmtracker_14days, 0, 'COMMA') : '0'}">0</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="spk-col-3">-->
+<!--                            <div class="spk-stat">-->
+<!--                                <div class="spk-stat__label">7天</div>-->
+<!--                                <div class="spk-stat__value" th:text="${stats_swarmtracker_7days != null ? #numbers.formatInteger(stats_swarmtracker_7days, 0, 'COMMA') : '0'}">0</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="spk-col-3">-->
+<!--                            <div class="spk-stat">-->
+<!--                                <div class="spk-stat__label">24小时</div>-->
+<!--                                <div class="spk-stat__value" th:text="${stats_swarmtracker_24hours != null ? #numbers.formatInteger(stats_swarmtracker_24hours, 0, 'COMMA') : '0'}">0</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
 
             <!-- User App Statistics -->
             <div class="spk-card spk-mb-3">
