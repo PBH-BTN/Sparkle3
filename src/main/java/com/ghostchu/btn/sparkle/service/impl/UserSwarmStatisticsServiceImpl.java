@@ -23,6 +23,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Service
@@ -48,29 +49,36 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-self-report}")
     private double rankingReceivedTrafficSelfReportWeight;
 
+    private final ReentrantLock cronLock = new ReentrantLock();
+
     @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
     public void cronUserSwarmStatisticsUpdate() {
         if (!enabled) return;
-        OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
-        OffsetDateTime endAt = OffsetDateTime.now();
-        List<Long> uids = userService.fetchAllUserIds();
-        log.info("Starting user swarm statistics update for {} users", uids.size());
+        try {
+            if(!cronLock.tryLock()) return;
+            OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
+            OffsetDateTime endAt = OffsetDateTime.now();
+            List<Long> uids = userService.fetchAllUserIds();
+            log.info("Starting user swarm statistics update for {} users", uids.size());
 
-        long start = System.currentTimeMillis();
-        int batchSize = 5; // Process 5 users at a time to keep queries light
-        int processed = 0;
+            long start = System.currentTimeMillis();
+            int batchSize = 5; // Process 5 users at a time to keep queries light
+            int processed = 0;
 
-        for (int i = 0; i < uids.size(); i += batchSize) {
-            List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
-            try {
-                 int updated = baseMapper.updateUserSwarmStatistics(startAt, endAt, batch);
-                 processed += updated;
-                 log.info("Processed batch {}/{}: {} records updated", (i / batchSize) + 1, (uids.size() + batchSize - 1) / batchSize, updated);
-            } catch (Exception e) {
-                log.error("Error updating swarm statistics for batch starting at index {}", i, e);
+            for (int i = 0; i < uids.size(); i += batchSize) {
+                List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
+                try {
+                    int updated = baseMapper.updateUserSwarmStatistics(startAt, endAt, batch);
+                    processed += updated;
+                    log.info("Processed batch {}/{}: {} records updated", (i / batchSize) + 1, (uids.size() + batchSize - 1) / batchSize, updated);
+                } catch (Exception e) {
+                    log.error("Error updating swarm statistics for batch starting at index {}", i, e);
+                }
             }
+            log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);
+        }finally {
+            cronLock.unlock();
         }
-        log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);
     }
 
     @Override
