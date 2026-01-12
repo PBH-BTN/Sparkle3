@@ -4,6 +4,7 @@ import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserDto;
 import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserRel;
+import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,18 +28,27 @@ public class UserViewController {
         if(userRel != null) {
             userRelDto = new UserRelDto(userRel);
         }
-        model.addAttribute("user", new UserDto(user));
+        model.addAttribute("user", user);
         model.addAttribute("userRel", userRelDto);
         model.addAttribute("userScoreBytesDisplay", "N/A");
         model.addAttribute("userScoreBytesRaw", -1);
         return "user/profile";
     }
 
-    @PostMapping("/user/privacy-mode/toggle")
-    public String togglePrivacyMode(@RequestParam boolean enabled, @AuthenticationPrincipal SparkleUserDetails userDetails) {
+    @GetMapping("/user/privacy-mode")
+    public String privacyMode(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails) {
         User user = userService.getById(userDetails.getUserId());
-        user.setPrivacyMode(enabled);
+        model.addAttribute("user", user);
+        model.addAttribute("privacyLevels", UserPrivacyLevel.values());
+        return "user/privacy-mode";
+    }
+
+    @PostMapping("/user/privacy-mode")
+    public String savePrivacyMode(@RequestParam("level") UserPrivacyLevel level,
+                                  @AuthenticationPrincipal SparkleUserDetails userDetails) {
+        User user = userService.getById(userDetails.getUserId());
+        user.setPrivacyLevel(level);
         userService.updateById(user);
-        return "redirect:/user/profile?privacyModeUpdated=true";
+        return "redirect:/user/privacy-mode?updated=true";
     }
 }

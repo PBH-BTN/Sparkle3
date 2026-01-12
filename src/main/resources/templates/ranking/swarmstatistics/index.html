@@ -522,7 +522,7 @@
                             <tr th:each="entry : ${data}"
                                 th:class="(${entry.key.rank <= 3 ? 'spk-ranking-row spk-ranking-row--top' + entry.key.rank : 'spk-ranking-row'}) +
                                           (${entry.value.bannedAt != null ? ' spk-ranking-row--banned' : ''}) +
-                                          (${entry.value.privacyMode ? ' spk-ranking-row--privacy' : ''})">
+                                          (${!entry.value.privacyLevel.allowBlurredUsername ? ' spk-ranking-row--privacy' : ''})">
                                 <td class="spk-ranking-rank">
                                     <span th:if="${entry.key.rank == 1}" class="spk-ranking-medal spk-ranking-medal--gold">
                                         <i class="fas fa-crown"></i>
@@ -539,26 +539,33 @@
                                     <span th:if="${entry.key.rank > 3}" th:text="${entry.key.rank}">4</span>
                                 </td>
                                 <td class="spk-ranking-user">
-<!--                                    <img th:if="${!entry.value.privacyMode}"-->
-<!--                                         loading="lazy"-->
-<!--                                         th:src="${entry.value.avatar}"-->
-<!--                                         th:alt="${entry.value.nickname}"-->
-<!--                                         class="spk-ranking-avatar">-->
-                                    <div th:if="${entry.value.privacyMode || entry.value.bannedAt != null}" class="spk-ranking-avatar spk-ranking-avatar--placeholder">
+                                    <img th:if="${entry.value.privacyLevel.allowOriginalAvatar}"
+                                         loading="lazy"
+                                         th:src="${entry.value.getAvatarUrl()}"
+                                         th:alt="${entry.value.nickname}"
+                                         class="spk-ranking-avatar">
+                                    <div th:if="${!entry.value.privacyLevel.allowOriginalAvatar}" class="spk-ranking-avatar spk-ranking-avatar--placeholder">
                                          <i class="fas fa-user-secret"></i>
                                     </div>
 
                                     <div style="display: inline-block;">
-                                        <span th:if="${!entry.value.privacyMode}"
+                                        <span th:if="${entry.value.privacyLevel.allowFullUserName}"
                                               class="spk-ranking-nickname"
                                               th:classappend="${entry.value.bannedAt != null ? 'spk-text-dashed' : ''}"
-                                              th:text="${#strings.length(entry.value.nickname) <= 3 ?
-                                                        #strings.repeat('*', #strings.length(entry.value.nickname)) :
-                                                        #strings.substring(entry.value.nickname, 0, 3) + #strings.repeat('*', #strings.length(entry.value.nickname) - 3)}"
+                                              th:text="${entry.value.nickname}"
+                                              >昵称</span>
+
+                                        <span th:if="${!entry.value.privacyLevel.allowFullUserName && entry.value.privacyLevel.allowBlurredUsername}"
+                                              class="spk-ranking-nickname"
+                                              th:classappend="${entry.value.bannedAt != null ? 'spk-text-dashed' : ''}"
+                                              th:text="${#strings.length(entry.value.nickname) > 4 ?
+                                                        #strings.substring(entry.value.nickname, 0, 3) + #strings.repeat('*', #strings.length(entry.value.nickname) - 4) + #strings.substring(entry.value.nickname, #strings.length(entry.value.nickname) - 1) :
+                                                        #strings.repeat('*', #strings.length(entry.value.nickname))}"
                                               th:title="${entry.value.bannedAt == null ? '隐私保护：用户名已脱敏' : ''}"
                                               >昵称</span>
-                                        <span th:if="${entry.value.privacyMode && entry.value.bannedAt == null} " class="spk-ranking-nickname">匿名用户</span>
-                                        <span th:if="${entry.value.privacyMode && entry.value.bannedAt != null}" class="spk-ranking-nickname">用户已封禁</span>
+
+                                        <span th:if="${!entry.value.privacyLevel.allowFullUserName && !entry.value.privacyLevel.allowBlurredUsername}"
+                                              class="spk-ranking-nickname">匿名用户</span>
 
                                         <span th:if="${entry.value.bannedAt != null}" class="spk-badge--banned"
                                               data-toggle="tooltip"

@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -58,6 +60,11 @@ public class User implements Serializable {
     @TableField("role")
     private String role;
 
-    @TableField("privacy_mode")
-    private boolean privacyMode;
+    @TableField("privacy_level")
+    private UserPrivacyLevel privacyLevel;
+
+    @NotNull
+    public String getAvatarUrl(){
+        return "/user/avatar/" + this.id;
+    }
 }

@@ -24,7 +24,6 @@ public class UserDto implements Serializable {
     private OffsetDateTime registerAt;
     private OffsetDateTime bannedAt;
     private String bannedReason;
-    private boolean privacyMode;
 
     public UserDto(User user) {
         this.id = user.getId();
@@ -34,6 +33,5 @@ public class UserDto implements Serializable {
         this.registerAt = user.getRegisterAt();
         this.bannedAt = user.getBannedAt();
         this.bannedReason = user.getBannedReason();
-        this.privacyMode = user.isPrivacyMode();
     }
 }

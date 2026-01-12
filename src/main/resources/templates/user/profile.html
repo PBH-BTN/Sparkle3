@@ -70,30 +70,21 @@
                 <div class="spk-detail-row">
                     <div class="spk-detail-label">
                         <i class="fas fa-user-secret"></i>
-                        隐私模式
+                        隐私保护
                         <i class="fa-solid fa-circle-info"
                            data-toggle="tooltip"
-                           title="启用隐私模式后，将从公开界面中隐藏与您有关的记录。"></i>
+                           title="隐私保护决定了您在公开界面中展示的信息详细程度。"></i>
                     </div>
                     <div class="spk-detail-value">
-                        <form id="privacyModeForm" method="post" th:action="@{/user/privacy-mode/toggle}" class="spk-privacy-form">
-                            <input type="hidden" name="enabled" id="privacyModeInput" th:value="${user.privacyMode}">
-                            <label class="spk-toggle-switch">
-                                <input type="checkbox"
-                                       id="privacyModeCheckbox"
-                                       th:checked="${user.privacyMode}"
-                                       onchange="togglePrivacyMode(this)">
-                                <span class="spk-toggle-slider"></span>
-                            </label>
-                            <span class="spk-toggle-label" id="privacyModeLabel">
-                                <span th:if="${user.privacyMode}" class="spk-badge spk-badge--warning">
-                                    <i class="fas fa-eye-slash"></i> 已开启
-                                </span>
-                                <span th:if="${!user.privacyMode}" class="spk-badge spk-badge--info">
-                                    <i class="fas fa-eye"></i> 已关闭
-                                </span>
-                            </span>
-                        </form>
+                         <span th:switch="${user.privacyLevel.name()}" style="margin-right: 10px;">
+                            <span th:case="'DISABLED'" class="spk-badge spk-badge--info"><i class="fas fa-globe"></i> 公开</span>
+                            <span th:case="'LOW'" class="spk-badge spk-badge--secondary"><i class="fas fa-shield-alt"></i> 低</span>
+                            <span th:case="'MEDIUM'" class="spk-badge spk-badge--warning"><i class="fas fa-shield-alt"></i> 中</span>
+                            <span th:case="'HIGH'" class="spk-badge spk-badge--danger"><i class="fas fa-shield-alt"></i> 高</span>
+                        </span>
+                        <a th:href="@{/user/privacy-mode}" class="spk-btn spk-btn--sm" style="padding: 2px 8px; font-size: 0.8em;">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
                     </div>
                 </div>
 
@@ -216,24 +207,7 @@
         }
     });
 
-    function togglePrivacyMode(checkbox) {
-        const form = document.getElementById('privacyModeForm');
-        const input = document.getElementById('privacyModeInput');
-        const label = document.getElementById('privacyModeLabel');
 
-        // Update hidden input value
-        input.value = checkbox.checked;
-
-        // Update label immediately for better UX
-        if (checkbox.checked) {
-            label.innerHTML = '<span class="spk-badge spk-badge--warning"><i class="fas fa-eye-slash"></i> 已开启</span>';
-        } else {
-            label.innerHTML = '<span class="spk-badge spk-badge--info"><i class="fas fa-eye"></i> 已关闭</span>';
-        }
-
-        // Submit form
-        form.submit();
-    }
 </script>
 </body>
 </html>

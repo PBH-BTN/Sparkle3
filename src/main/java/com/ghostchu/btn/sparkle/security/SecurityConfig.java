@@ -32,6 +32,7 @@ public class SecurityConfig {
                                 .requestMatchers("/favicon.ico").permitAll()
                                 .requestMatchers("/ping/**").permitAll()
                                 .requestMatchers("/login/**").permitAll()
+                                .requestMatchers("/proxy/**").permitAll()
                                 .requestMatchers("/announce").permitAll()
                                 .requestMatchers("/tracker/announce").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
