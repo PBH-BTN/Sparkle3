@@ -54,8 +54,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
     @Transactional
     public void cronDataRetentionCleanup() {
+        log.info("Performing scheduled cleanup of expired swarm tracker data...");
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
-        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {
+        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {;
             long ct = 0;
             for (SwarmTracker swarm : cursor) {
                 userappsArchivedStatisticService.updateArchivedStatistic(
@@ -68,6 +69,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 );
                 baseMapper.deleteById(swarm);
                 ct++;
+                if(ct % 50 == 0){
+                    log.info("Archived {} swarm statistics so far...", ct);
+                }
             }
             log.info("Archived {} swarm statistics.", ct);
         } catch (IOException e) {
