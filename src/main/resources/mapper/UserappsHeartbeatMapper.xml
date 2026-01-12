@@ -5,6 +5,7 @@
         INSERT INTO userapps_heartbeat (id, userapp_id, ip, first_seen_at, last_seen_at)
         VALUES (#{id}, #{userappId}, #{ip}, #{firstSeenAt}, #{lastSeenAt})
         ON CONFLICT (userapp_id, ip) DO UPDATE
-            SET last_seen_at = EXCLUDED.last_seen_at;
+            SET last_seen_at = EXCLUDED.last_seen_at,
+                first_seen_at = GREATEST(userapps_heartbeat.first_seen_at, NOW() - INTERVAL '7 days');
     </insert>
 </mapper>
