@@ -62,7 +62,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             log.info("Starting user swarm statistics update for {} users", uids.size());
 
             long start = System.currentTimeMillis();
-            int batchSize = 5; // Process 5 users at a time to keep queries light
+            int batchSize = 15; // Process 5 users at a time to keep queries light
             int processed = 0;
 
             for (int i = 0; i < uids.size(); i += batchSize) {
