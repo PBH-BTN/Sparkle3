@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -26,10 +27,7 @@ import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * <p>
@@ -49,6 +47,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private long dataRetentionTime;
     @Autowired
     private IUserappsArchivedStatisticService userappsArchivedStatisticService;
+    @Autowired
+    private PlatformTransactionManager platformTransactionManager;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -56,28 +56,78 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     public void cronDataRetentionCleanup() {
         log.info("Performing scheduled cleanup of expired swarm tracker data...");
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
-        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {;
+        final int batchSize = 5000;
+
+        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {
             long ct = 0;
+            List<Long> pendingDelete = new ArrayList<>(batchSize);
+            Map<Long, SwarmStatAccumulator> statsMap = new HashMap<>();
+
             for (SwarmTracker swarm : cursor) {
-                userappsArchivedStatisticService.updateArchivedStatistic(
-                        swarm.getUserappsId(),
-                        swarm.getToPeerTraffic(),
-                        swarm.getFromPeerTraffic(),
-                        0,
-                        1,
-                        OffsetDateTime.now()
-                );
-                baseMapper.deleteById(swarm);
+                statsMap.computeIfAbsent(swarm.getUserappsId(), k -> new SwarmStatAccumulator()).accumulate(swarm);
+                pendingDelete.add(swarm.getId());
                 ct++;
-                if(ct % 50 == 0){
+
+                if (pendingDelete.size() >= batchSize) {
+                    processBatch(statsMap, pendingDelete);
                     log.info("Archived {} swarm statistics so far...", ct);
                 }
             }
+
+            // Process remaining items
+            if (!pendingDelete.isEmpty()) {
+                processBatch(statsMap, pendingDelete);
+            }
+
             log.info("Archived {} swarm statistics.", ct);
         } catch (IOException e) {
             log.warn("Unable to cleanup expired user swarm statistics", e);
         }
+    }
 
+    private void processBatch(Map<Long, SwarmStatAccumulator> statsMap, List<Long> pendingDelete) {
+        if (statsMap.isEmpty() && pendingDelete.isEmpty()) {
+            return;
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        // Update aggregated statistics
+        for (Map.Entry<Long, SwarmStatAccumulator> entry : statsMap.entrySet()) {
+            SwarmStatAccumulator stat = entry.getValue();
+            userappsArchivedStatisticService.updateArchivedStatistic(
+                    entry.getKey(),
+                    stat.toPeerTraffic,
+                    stat.fromPeerTraffic,
+                    0,
+                    stat.count,
+                    now
+            );
+        }
+
+        // Delete processed records
+        if (!pendingDelete.isEmpty()) {
+            baseMapper.deleteByIds(pendingDelete);
+        }
+
+        // Clear batch containers
+        statsMap.clear();
+        pendingDelete.clear();
+    }
+
+    private static class SwarmStatAccumulator {
+        long toPeerTraffic = 0;
+        long fromPeerTraffic = 0;
+        long count = 0;
+
+        void accumulate(SwarmTracker swarm) {
+            if (swarm.getToPeerTraffic() != null) {
+                this.toPeerTraffic += swarm.getToPeerTraffic();
+            }
+            if (swarm.getFromPeerTraffic() != null) {
+                this.fromPeerTraffic += swarm.getFromPeerTraffic();
+            }
+            this.count++;
+        }
     }
 
 
