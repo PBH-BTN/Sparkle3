@@ -5,7 +5,7 @@
         INSERT INTO userapps_archived_statistic (userapp_id, archived_to_peer_traffic, archived_from_peer_traffic,
                                                  archived_ban_history_records, archived_swarm_tracker_records,
                                                  last_update_at)
-        VALUES (#{userappId}, #{archivedToPeerTraffic}, #{archivedFromPeerTraffic},
+        VALUES (#{userAppId}, #{archivedToPeerTraffic}, #{archivedFromPeerTraffic},
                 #{archivedBanHistoryRecords}, #{archivedSwarmTrackerRecords}, #{lastUpdateAt})
         ON CONFLICT (userapp_id) DO UPDATE
             SET (archived_to_peer_traffic, archived_from_peer_traffic,
