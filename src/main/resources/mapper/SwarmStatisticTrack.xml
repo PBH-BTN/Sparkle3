@@ -10,7 +10,7 @@
         <result property="receivedTrafficSelfReport" column="received_traffic_self_report"/>
     </resultMap>
 
-    <insert id="updateAllUserSwarmStatistics">
+    <insert id="updateUserSwarmStatistics">
         WITH self_report_stats AS (
             SELECT
                 usrapp.owner,
@@ -20,6 +20,12 @@
             JOIN swarm_tracker st ON st.userapps_id = usrapp.id
             WHERE st.first_time_seen &gt;= #{startAt}
               AND st.last_time_seen &lt;= #{endAt}
+            <if test="userIds != null and userIds.size() > 0">
+                AND usrapp.owner IN
+                <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
             GROUP BY usrapp.owner
         ),
         distinct_ips AS (
@@ -28,6 +34,12 @@
             JOIN userapps_heartbeat uah ON uah.userapp_id = ua.id
             WHERE uah.last_seen_at &gt;= #{startAt}
               AND uah.first_seen_at &lt;= #{endAt}
+            <if test="userIds != null and userIds.size() > 0">
+                AND ua.owner IN
+                <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
         ),
         other_ack_stats AS (
             SELECT
@@ -51,6 +63,13 @@
         FROM "user" usr
         LEFT JOIN self_report_stats s ON s.owner = usr.id
         LEFT JOIN other_ack_stats o ON o.owner = usr.id
+        WHERE 1=1
+        <if test="userIds != null and userIds.size() > 0">
+            AND usr.id IN
+            <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                #{uid}
+            </foreach>
+        </if>
         ON CONFLICT (user_id) DO UPDATE
         SET
             sent_traffic_other_ack = EXCLUDED.sent_traffic_other_ack,
