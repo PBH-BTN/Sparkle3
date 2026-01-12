@@ -11,10 +11,10 @@
             SET (archived_to_peer_traffic, archived_from_peer_traffic,
                  archived_ban_history_records, archived_swarm_tracker_records,
                  last_update_at) =
-                    (archived_to_peer_traffic + EXCLUDED.archived_to_peer_traffic,
-                     archived_from_peer_traffic + EXCLUDED.archived_from_peer_traffic,
-                     archived_ban_history_records + EXCLUDED.archived_ban_history_records,
-                     archived_swarm_tracker_records + EXCLUDED.archived_swarm_tracker_records,
+                    (userapps_archived_statistic.archived_to_peer_traffic + EXCLUDED.archived_to_peer_traffic,
+                     userapps_archived_statistic.archived_from_peer_traffic + EXCLUDED.archived_from_peer_traffic,
+                     userapps_archived_statistic.archived_ban_history_records + EXCLUDED.archived_ban_history_records,
+                     userapps_archived_statistic.archived_swarm_tracker_records + EXCLUDED.archived_swarm_tracker_records,
                      EXCLUDED.last_update_at);
     </insert>
 </mapper>
