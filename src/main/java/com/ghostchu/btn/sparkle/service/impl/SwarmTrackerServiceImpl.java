@@ -70,14 +70,13 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             Map<Long, SwarmStatAccumulator> statsMap = new HashMap<>();
 
             for (SwarmTracker swarm : cursor) {
-                statsMap.computeIfAbsent(swarm.getUserappsId(), k -> new SwarmStatAccumulator())
+                statsMap.computeIfAbsent(swarm.getUserappsId(), _ -> new SwarmStatAccumulator())
                         .accumulate(swarm);
                 pendingDelete.add(swarm.getId());
                 ct++;
 
                 if (pendingDelete.size() >= batchSize) {
                     processBatch(statsMap, pendingDelete);
-                    log.info("Archived {} swarm statistics so far...", ct);
                 }
             }
 
