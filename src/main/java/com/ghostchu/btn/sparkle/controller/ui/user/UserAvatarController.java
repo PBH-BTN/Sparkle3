@@ -81,7 +81,7 @@ public class UserAvatarController {
         }
         try (InputStream is = new ByteArrayInputStream(avatarData)) {
             BufferedImage bufferedImage = ImageIO.read(is);
-            BufferedImage blurredImage = ImageBlurUtil.blur(bufferedImage, Math.max(bufferedImage.getHeight(), bufferedImage.getWidth()));
+            BufferedImage blurredImage = ImageBlurUtil.blur(bufferedImage, 512);
             try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
                 ImageIO.write(blurredImage, "jpeg", os);
                 avatarData = os.toByteArray();
