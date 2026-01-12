@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 @Slf4j
 @Controller
@@ -81,7 +82,7 @@ public class UserAvatarController {
                 ImageIO.write(blurredImage, "jpeg", os);
                 avatarData = os.toByteArray();
             }
-            stringStringRedisTemplate.opsForValue().set("user:avatar:blur:" + user.getId(), new String(avatarData, StandardCharsets.ISO_8859_1));
+            stringStringRedisTemplate.opsForValue().set("user:avatar:blur:" + user.getId(), new String(avatarData, StandardCharsets.ISO_8859_1), Duration.ofHours(1));
             return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(avatarData);
         }
     }
