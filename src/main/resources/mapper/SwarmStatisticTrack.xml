@@ -13,17 +13,17 @@
     <insert id="updateAllUserSwarmStatistics">
         WITH self_report_stats AS (
             SELECT
-                ua.user_id,
+                usrapp.owner,
                 COALESCE(SUM(st.to_peer_traffic), 0) as sent_self,
                 COALESCE(SUM(st.from_peer_traffic), 0) as recv_self
-            FROM userapp ua
-            JOIN swarm_tracker st ON st.userapps_id = ua.id
+            FROM userapp usrapp
+            JOIN swarm_tracker st ON st.userapps_id = usrapp.id
             WHERE st.first_time_seen &gt;= #{startAt}
               AND st.last_time_seen &lt;= #{endAt}
-            GROUP BY ua.user_id
+            GROUP BY usrapp.owner
         ),
         distinct_ips AS (
-            SELECT DISTINCT ua.user_id, uah.ip
+            SELECT DISTINCT ua.owner, uah.ip
             FROM userapp ua
             JOIN userapps_heartbeat uah ON uah.userapp_id = ua.id
             WHERE uah.last_seen_at &gt;= #{startAt}
@@ -31,26 +31,26 @@
         ),
         other_ack_stats AS (
             SELECT
-                di.user_id,
+                di.owner,
                 COALESCE(SUM(st.from_peer_traffic), 0) as sent_other,
                 COALESCE(SUM(st.to_peer_traffic), 0) as recv_other
             FROM distinct_ips di
             JOIN swarm_tracker st ON st.peer_ip &lt;&lt;= di.ip::inet
             WHERE st.first_time_seen &gt;= #{startAt}
               AND st.last_time_seen &lt;= #{endAt}
-            GROUP BY di.user_id
+            GROUP BY di.owner
         )
         INSERT INTO user_swarm_statistic (user_id, sent_traffic_other_ack, received_traffic_other_ack, sent_traffic_self_report, received_traffic_self_report, last_update_at)
         SELECT
-            u.id,
+            usr.id,
             COALESCE(o.sent_other, 0),
             COALESCE(o.recv_other, 0),
             COALESCE(s.sent_self, 0),
             COALESCE(s.recv_self, 0),
             NOW()
-        FROM "user" u
-        LEFT JOIN self_report_stats s ON s.user_id = u.id
-        LEFT JOIN other_ack_stats o ON o.user_id = u.id
+        FROM "user" usr
+        LEFT JOIN self_report_stats s ON s.owner = usr.id
+        LEFT JOIN other_ack_stats o ON o.owner = usr.id
         ON CONFLICT (user_id) DO UPDATE
         SET
             sent_traffic_other_ack = EXCLUDED.sent_traffic_other_ack,
