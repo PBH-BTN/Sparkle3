@@ -50,12 +50,16 @@ public class UserAvatarController {
             return redirectTo(user.getAvatar()); // 自己永远使用原始头像
         }
         UserPrivacyLevel privacyLevel = user.getPrivacyLevel();
-
-        if (privacyLevel.isAllowOriginalAvatar()) {
-            return redirectTo(user.getAvatar());
-        } else if (privacyLevel.isAllowBlurredAvatar()) {
-            return handleBlurAvatar(user);
-        } else {
+        try {
+            if (privacyLevel.isAllowOriginalAvatar()) {
+                return redirectTo(user.getAvatar());
+            } else if (privacyLevel.isAllowBlurredAvatar()) {
+                return handleBlurAvatar(user);
+            } else {
+                return redirectTo("/img/anonymous-user.png");
+            }
+        }catch (Exception e){
+            log.warn("Unable to proxy avatar for userId {}, redirecting to anonymous avatar. Error: {}", userId, e.getMessage());
             return redirectTo("/img/anonymous-user.png");
         }
     }
