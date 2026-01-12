@@ -45,8 +45,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Autowired
     private ITorrentService torrentService;
 
-    @Value("${sparkle.ping.sync-swarm.cleanup-before}")
-    private long deleteBefore;
     @Value("${sparkle.ping.sync-swarm.data-retention-time}")
     private long dataRetentionTime;
     @Autowired
@@ -68,6 +66,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                         1,
                         OffsetDateTime.now()
                 );
+                baseMapper.deleteById(swarm);
                 ct++;
             }
             log.info("Archived {} swarm statistics.", ct);
@@ -206,15 +205,15 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.selectCount(wrapper);
     }
 
-    @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")
-    @Transactional
-    public void deleteOldData() {
-        var deleted = this.baseMapper.delete(new QueryWrapper<SwarmTracker>()
-                .le("last_time_seen", OffsetDateTime.now().minusSeconds(deleteBefore / 1000)));
-        if (deleted > 0) {
-            log.info("Deleted {} expired swarms", deleted);
-        }
-    }
+//    @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")
+//    @Transactional
+//    public void deleteOldData() {
+//        var deleted = this.baseMapper.delete(new QueryWrapper<SwarmTracker>()
+//                .le("last_time_seen", OffsetDateTime.now().minusSeconds(deleteBefore / 1000)));
+//        if (deleted > 0) {
+//            log.info("Deleted {} expired swarms", deleted);
+//        }
+//    }
 
     @Override
     public @NotNull IPage<SwarmTracker> querySwarmTracker(

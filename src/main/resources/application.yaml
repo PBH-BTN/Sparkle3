@@ -102,8 +102,6 @@ sparkle:
       endpoint: "${sparkle.root-url}/ping/syncSwarm"
       random-initial-delay: 3000
       interval: 10000
-      cleanup-before: 2592000000
-      cleanup-cron: "0 0 0 * * *"
       data-retention-time: 2592000000
       data-retention-cron: "0 0 */3 * * *"
     rule-ip-denylist:
