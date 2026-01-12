@@ -2,6 +2,8 @@ package com.ghostchu.btn.sparkle.util;
 
 public class UnitConverter {
 
+    public static final UnitConverter INSTANCE = new UnitConverter();
+
     public UnitConverter() {
 
     }
