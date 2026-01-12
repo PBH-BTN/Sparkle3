@@ -106,20 +106,13 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private void handleOtherAck(@NotNull List<Long> userApps, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt, UserSwarmStatisticsResult userSwarmStatistics) {
         List<List<UserappsHeartbeat>> heartbeatBatches = new ArrayList<>();
         userApps.forEach(userApp -> heartbeatBatches.add(heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(userApp, startAt, endAt)));
-        log.info("Calculating other-ack swarm statistics for user apps {}, found {} heartbeat batches", userApps, heartbeatBatches.size());
         for (List<UserappsHeartbeat> heartbeats : heartbeatBatches) {
-            log.info("Processing heartbeat batch of size {}", heartbeats.size());
             for (UserappsHeartbeat heartbeat : heartbeats) {
-                log.info("Processing single heartbeat {}", heartbeat);
                 var result = swarmTrackerService.fetchSwarmTrackerByIpInTimeRange(heartbeat.getIp().getHostAddress(), startAt, endAt);
                 // 以他人为视角
                 if (result != null) {
                     userSwarmStatistics.getSentTrafficOtherAck().addAndGet(result.getReceivedTraffic());
                     userSwarmStatistics.getReceivedTrafficOtherAck().addAndGet(result.getSentTraffic());
-                    log.info("Retrieved swarm tracker data for IP {}: sentTraffic={}, receivedTraffic={}",
-                            heartbeat.getIp().getHostAddress(), result.getSentTraffic(), result.getReceivedTraffic());
-                }else{
-                    log.info("No swarm tracker data found for IP {}", heartbeat.getIp().getHostAddress());
                 }
             }
         }
