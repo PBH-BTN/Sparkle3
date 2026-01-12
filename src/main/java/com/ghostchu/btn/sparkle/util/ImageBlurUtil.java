@@ -2,48 +2,49 @@ package com.ghostchu.btn.sparkle.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ConvolveOp;
-import java.awt.image.Kernel;
 
 public class ImageBlurUtil {
 
     /**
-     * 对图像进行高斯模糊
+     * 对图像进行马赛克处理
      *
      * @param srcBuffer 原图像
-     * @param radius    模糊半径
-     * @return 模糊后的图像
+     * @param blockSize 马赛克块大小
+     * @return 马赛克后的图像
      */
     @NotNull
-    public static BufferedImage blur(@NotNull BufferedImage srcBuffer, int radius) {
-        int size = radius * 2 + 1;
-        float[] data = new float[size * size];
+    public static BufferedImage blur(@NotNull BufferedImage srcBuffer, int blockSize) {
+        if (blockSize < 1) {
+            blockSize = 1;
+        }
 
-        // 1. 生成高斯核数据（这里简单演示，所有权重平摊，类似均值模糊）
-        // 若需严格高斯分布，需使用高斯函数计算每个点的权重
-        float sigma = radius / 3.0f;
-        float sum = 0;
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                int x = i - radius;
-                int y = j - radius;
-                data[i * size + j] = (float) (Math.exp(-(x * x + y * y) / (2 * sigma * sigma)));
-                sum += data[i * size + j];
+        int width = srcBuffer.getWidth();
+        int height = srcBuffer.getHeight();
+        int type = srcBuffer.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : srcBuffer.getType();
+
+        BufferedImage mosaicImage = new BufferedImage(width, height, type);
+        Graphics2D g = mosaicImage.createGraphics();
+
+        for (int y = 0; y < height; y += blockSize) {
+            for (int x = 0; x < width; x += blockSize) {
+                // 计算当前块的实际大小
+                int w = Math.min(blockSize, width - x);
+                int h = Math.min(blockSize, height - y);
+
+                // 取块中心点的颜色
+                int centerX = x + (w / 2);
+                int centerY = y + (h / 2);
+                int rgb = srcBuffer.getRGB(centerX, centerY);
+
+                g.setColor(new Color(rgb, true));
+                g.fillRect(x, y, w, h);
             }
         }
 
-        // 归一化，确保图像亮度不变
-        for (int i = 0; i < data.length; i++) {
-            data[i] /= sum;
-        }
-
-        // 2. 创建卷积核
-        Kernel kernel = new Kernel(size, size, data);
-
-        // 3. 应用模糊操作
-        // EDGE_NO_OP 表示边缘像素不处理，防止黑边
-        ConvolveOp op = new ConvolveOp(kernel, ConvolveOp.EDGE_NO_OP, null);
-        return op.filter(srcBuffer, null);
+        g.dispose();
+        return mosaicImage;
     }
 }
