@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.OffsetDateTime;
 import java.util.StringJoiner;
@@ -19,7 +20,7 @@ public class SwarmStatisticDebugController {
     private UserSwarmStatisticsServiceImpl userSwarmStatisticsService;
 
     @GetMapping("/debug/swarmStatistic/perUser/{uid}")
-    public ResponseEntity<@NotNull String> debugPerUserSwarmStatistic(@PathParam("uid") Long uid) {
+    public ResponseEntity<@NotNull String> debugPerUserSwarmStatistic(@PathVariable("uid") Long uid) {
         StringJoiner joiner = new StringJoiner("\n");
         joiner.add("DEBUG: Swarm Statistic for User " + uid);
         OffsetDateTime sevenDaysAgo = OffsetDateTime.now().minusDays(7);
