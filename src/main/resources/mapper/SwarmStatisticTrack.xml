@@ -25,10 +25,13 @@
                     (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
                     ) DESC
                 ) AS rank
-        FROM user_swarm_statistic WHERE user_id NOT IN
-        <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
-            #{ignoreUid}
-        </foreach>
+        FROM user_swarm_statistic
+        <if test="ignoreUserIds != null and ignoreUserIds.size() > 0">
+            WHERE user_id NOT IN
+            <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
+                #{ignoreUid}
+            </foreach>
+        </if>
     </select>
 
     <select id="calcUserRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
@@ -47,10 +50,13 @@
                         (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
                         ) DESC
                     ) AS rank
-            FROM user_swarm_statistic WHERE user_id NOT IN
-        <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
-            #{ignoreUid}
-        </foreach>
+            FROM user_swarm_statistic
+            <if test="ignoreUserIds != null and ignoreUserIds.size() > 0">
+                WHERE user_id NOT IN
+                <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
+                    #{ignoreUid}
+                </foreach>
+            </if>
         )
         SELECT * FROM UserRanks
         WHERE user_id = #{userId}

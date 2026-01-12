@@ -87,7 +87,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public @NotNull List<Long> getSystemUids() {
-        return baseMapper.selectList(new QueryWrapper<User>().likeRight("email", "sparkle.system")).stream().map(User::getId).toList();
+        return baseMapper.selectList(new QueryWrapper<User>().like("email", "%@sparkle.system")).stream().map(User::getId).toList();
     }
 
     @Override
