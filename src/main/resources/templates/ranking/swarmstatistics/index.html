@@ -539,12 +539,12 @@
                                     <span th:if="${entry.key.rank > 3}" th:text="${entry.key.rank}">4</span>
                                 </td>
                                 <td class="spk-ranking-user">
-                                    <img th:if="${entry.value.privacyLevel.allowOriginalAvatar}"
+                                    <img th:if="${entry.value.privacyLevel.allowOriginalAvatar || entry.value.privacyLevel.allowBlurredAvatar}"
                                          loading="lazy"
                                          th:src="${entry.value.getAvatarUrl()}"
                                          th:alt="${entry.value.nickname}"
                                          class="spk-ranking-avatar">
-                                    <div th:if="${!entry.value.privacyLevel.allowOriginalAvatar}" class="spk-ranking-avatar spk-ranking-avatar--placeholder">
+                                    <div th:if="${!entry.value.privacyLevel.allowOriginalAvatar && !entry.value.privacyLevel.allowBlurredAvatar}" class="spk-ranking-avatar spk-ranking-avatar--placeholder">
                                          <i class="fas fa-user-secret"></i>
                                     </div>
 

@@ -13,7 +13,7 @@
             <div class="spk-card__header">
                 <h3 class="spk-card__title">
                     <a th:href="@{/user/profile}" style="text-decoration: none; margin-right: 10px; color: inherit;"><i class="fas fa-arrow-left"></i></a>
-                    隐私设置 (Privacy Settings)
+                    隐私设置
                 </h3>
             </div>
             <div class="spk-card__body">
@@ -23,7 +23,6 @@
 
                 <p class="spk-text-muted" style="margin-bottom: 20px;">
                     请选择您的隐私保护级别。不同的级别决定了您在公开页面（如排行榜、统计数据）中展示的信息详细程度。<br>
-                    Please select your privacy protection level. This determines how much information is shown on public pages.
                 </p>
 
                 <form method="post" th:action="@{/user/privacy-mode}">
@@ -32,10 +31,10 @@
                              <label style="display: block; cursor: pointer; margin-bottom: 10px; font-weight: bold; font-size: 1.1em;">
                                 <input type="radio" name="level" th:value="${level}" th:checked="${user.privacyLevel == level}" style="margin-right: 10px;">
                                 <span th:switch="${level.name()}">
-                                    <span th:case="'DISABLED'"><i class="fas fa-globe"></i> 公开模式 (Public)</span>
-                                    <span th:case="'LOW'"><i class="fas fa-shield-alt" style="color: #bcbcbc"></i> 低隐私保护 (Low Privacy)</span>
-                                    <span th:case="'MEDIUM'"><i class="fas fa-shield-alt" style="color: #ffd700"></i> 中隐私保护 (Medium Privacy)</span>
-                                    <span th:case="'HIGH'"><i class="fas fa-shield-alt" style="color: #ff4500"></i> 高隐私保护 (High Privacy)</span>
+                                    <span th:case="'DISABLED'"><i class="fas fa-globe"></i> 公开模式</span>
+                                    <span th:case="'LOW'"><i class="fas fa-shield-alt" style="color: #bcbcbc"></i> 低隐私</span>
+                                    <span th:case="'MEDIUM'"><i class="fas fa-shield-alt" style="color: #ffd700"></i> 中隐私</span>
+                                    <span th:case="'HIGH'"><i class="fas fa-shield-alt" style="color: #ff4500"></i> 高隐私</span>
                                 </span>
                              </label>
                              <div class="spk-privacy-option__details" style="margin-left: 25px; font-size: 0.9em; color: #666;">
@@ -63,7 +62,7 @@
 
                     <div class="spk-form-actions" style="margin-top: 20px; text-align: right;">
                         <button type="submit" class="spk-btn spk-btn--primary">
-                            <i class="fas fa-save"></i> 保存设置 (Save Settings)
+                            <i class="fas fa-save"></i> 保存
                         </button>
                     </div>
                 </form>
