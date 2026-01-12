@@ -13,7 +13,7 @@
         .spk-ranking-self__rank {
             text-align: center;
             padding: 1rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #10b981;
             border-radius: 12px;
             color: white;
             min-width: 150px;
@@ -36,19 +36,56 @@
         }
 
         /* Ranking Table Styles */
+        .spk-ranking-table-container {
+            max-height: 800px;
+            overflow-y: auto;
+            border: 1px solid var(--spk-border-color);
+            border-radius: var(--spk-radius);
+            position: relative;
+        }
+
         .spk-ranking-table {
             margin: 0;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .spk-ranking-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .spk-ranking-table thead::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: rgba(0, 0, 0, 0.1);
         }
 
         .spk-ranking-table th {
             background-color: #f8f9fa;
             font-weight: 600;
             text-align: center;
+            padding: 1rem;
+            border: none;
+        }
+
+        .spk-ranking-table th:first-child {
+            border-top-left-radius: var(--spk-radius);
+        }
+
+        .spk-ranking-table th:last-child {
+            border-top-right-radius: var(--spk-radius);
         }
 
         .spk-ranking-table td {
             text-align: center;
             vertical-align: middle;
+            border: none;
         }
 
         .spk-ranking-row {
@@ -129,6 +166,16 @@
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #e9ecef;
+            background-color: #f0f0f0;
+            transition: opacity 0.3s ease;
+        }
+
+        .spk-ranking-avatar[data-src] {
+            opacity: 0.5;
+        }
+
+        .spk-ranking-avatar.loaded {
+            opacity: 1;
         }
 
         .spk-ranking-nickname {
@@ -190,7 +237,7 @@
     /* Dark Mode Adjustments */
     @media (prefers-color-scheme: dark) {
         .spk-ranking-self__rank {
-            background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+            background: #059669;
         }
 
         .spk-ranking-nickname {
@@ -209,11 +256,42 @@
 
         .spk-ranking-avatar {
             border-color: var(--spk-border-light);
+            background-color: #374151;
+        }
+
+        .spk-ranking-table th {
+            background-color: #374151;
+        }
+
+        .spk-ranking-table thead::after {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .spk-ranking-table-container {
+            border-color: var(--spk-border-color);
+        }
+
+        /* Custom scrollbar for dark mode */
+        .spk-ranking-table-container::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .spk-ranking-table-container::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        .spk-ranking-table-container::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 6px;
+        }
+
+        .spk-ranking-table-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
     }
 
     [data-theme="dark"] .spk-ranking-self__rank {
-        background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+        background: #059669;
     }
 
     [data-theme="dark"] .spk-ranking-nickname {
@@ -232,6 +310,37 @@
 
     [data-theme="dark"] .spk-ranking-avatar {
         border-color: var(--spk-border-light);
+        background-color: #374151;
+    }
+
+    [data-theme="dark"] .spk-ranking-table th {
+        background-color: #374151;
+    }
+
+    [data-theme="dark"] .spk-ranking-table thead::after {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .spk-ranking-table-container {
+        border-color: var(--spk-border-color);
+    }
+
+    /* Custom scrollbar for dark mode */
+    [data-theme="dark"] .spk-ranking-table-container::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    [data-theme="dark"] .spk-ranking-table-container::-webkit-scrollbar-track {
+        background: #1f2937;
+    }
+
+    [data-theme="dark"] .spk-ranking-table-container::-webkit-scrollbar-thumb {
+        background: #4b5563;
+        border-radius: 6px;
+    }
+
+    [data-theme="dark"] .spk-ranking-table-container::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
     }
 </style>
 </head>
@@ -244,7 +353,6 @@
         <h1 class="spk-page-header__title">
             <i class="fas fa-trophy"></i> 数据贡献排行榜
         </h1>
-        <p class="spk-page-header__subtitle">基于最近 7 日的数据汇报与确认统计</p>
     </div>
 </header>
 
@@ -324,7 +432,7 @@
                 </div>
 
                 <!-- Ranking Table -->
-                <div th:if="${data != null and !data.isEmpty()}" class="spk-table-wrapper">
+                <div th:if="${data != null and !data.isEmpty()}" class="spk-ranking-table-container">
                     <table class="spk-table spk-ranking-table">
                         <thead>
                             <tr>
@@ -338,6 +446,7 @@
                         </thead>
                         <tbody>
                             <tr th:each="entry : ${data}"
+                                th:if="${!entry.value.privacyMode}"
                                 th:class="${entry.key.rank <= 3 ? 'spk-ranking-row spk-ranking-row--top' + entry.key.rank : 'spk-ranking-row'}">
                                 <td class="spk-ranking-rank">
                                     <span th:if="${entry.key.rank == 1}" class="spk-ranking-medal spk-ranking-medal--gold">
@@ -355,10 +464,15 @@
                                     <span th:if="${entry.key.rank > 3}" th:text="${entry.key.rank}">4</span>
                                 </td>
                                 <td class="spk-ranking-user">
-                                    <img th:src="${entry.value.avatar}"
+                                    <img loading="lazy"
+                                         th:src="${entry.value.avatar}"
                                          th:alt="${entry.value.nickname}"
                                          class="spk-ranking-avatar">
-                                    <span class="spk-ranking-nickname" th:text="${entry.value.nickname}">用户昵称</span>
+                                    <span class="spk-ranking-nickname"
+                                          th:text="${#strings.length(entry.value.nickname) <= 3 ?
+                                                    #strings.repeat('*', #strings.length(entry.value.nickname)) :
+                                                    #strings.substring(entry.value.nickname, 0, 3) + #strings.repeat('*', #strings.length(entry.value.nickname) - 3)}"
+                                          >昵称</span>
                                 </td>
                                 <td>
                                     <span class="spk-ranking-traffic spk-ranking-traffic--upload"

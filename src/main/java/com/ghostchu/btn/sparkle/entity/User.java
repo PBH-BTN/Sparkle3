@@ -57,4 +57,7 @@ public class User implements Serializable {
 
     @TableField("role")
     private String role;
+
+    @TableField("privacy_mode")
+    private boolean privacyMode;
 }

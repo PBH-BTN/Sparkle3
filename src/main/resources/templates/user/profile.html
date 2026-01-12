@@ -67,6 +67,36 @@
                     </div>
                 </div>
 
+                <div class="spk-detail-row">
+                    <div class="spk-detail-label">
+                        <i class="fas fa-user-secret"></i>
+                        隐私模式
+                        <i class="fa-solid fa-circle-info"
+                           data-toggle="tooltip"
+                           title="启用隐私模式后，将从公开界面中隐藏与您有关的记录。"></i>
+                    </div>
+                    <div class="spk-detail-value">
+                        <form id="privacyModeForm" method="post" th:action="@{/user/privacy-mode/toggle}" style="display: inline;">
+                            <input type="hidden" name="enabled" id="privacyModeInput" th:value="${user.privacyMode}">
+                            <label class="spk-toggle-switch">
+                                <input type="checkbox"
+                                       id="privacyModeCheckbox"
+                                       th:checked="${user.privacyMode}"
+                                       onchange="togglePrivacyMode(this)">
+                                <span class="spk-toggle-slider"></span>
+                            </label>
+                            <span class="spk-toggle-label" id="privacyModeLabel">
+                                <span th:if="${user.privacyMode}" class="spk-badge spk-badge--warning">
+                                    <i class="fas fa-eye-slash"></i> 已开启
+                                </span>
+                                <span th:if="${!user.privacyMode}" class="spk-badge spk-badge--info">
+                                    <i class="fas fa-eye"></i> 已关闭
+                                </span>
+                            </span>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="spk-detail-row" th:if="${userRel != null}">
                     <div class="spk-detail-label">
                         <i class="fa-brands fa-github"></i>
@@ -86,6 +116,71 @@
 
 <div th:replace="~{components/common::footer}"></div>
 
+<style>
+    /* Toggle Switch Styles */
+    .spk-toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+
+    .spk-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .spk-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.3s;
+        border-radius: 24px;
+    }
+
+    .spk-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    .spk-toggle-switch input:checked + .spk-toggle-slider {
+        background-color: #f59e0b;
+    }
+
+    .spk-toggle-switch input:checked + .spk-toggle-slider:before {
+        transform: translateX(26px);
+    }
+
+    .spk-toggle-label {
+        vertical-align: middle;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .spk-toggle-slider {
+            background-color: #4b5563;
+        }
+    }
+
+    [data-theme="dark"] .spk-toggle-slider {
+        background-color: #4b5563;
+    }
+</style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Format all timestamps using formatTime from sparkle.js
@@ -95,7 +190,33 @@
                 el.textContent = formatTime(time);
             }
         });
+
+        // Show success message if privacy mode was updated
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('privacyModeUpdated') === 'true') {
+            // You can add a toast notification here if you have one
+            console.log('Privacy mode updated successfully');
+        }
     });
+
+    function togglePrivacyMode(checkbox) {
+        const form = document.getElementById('privacyModeForm');
+        const input = document.getElementById('privacyModeInput');
+        const label = document.getElementById('privacyModeLabel');
+
+        // Update hidden input value
+        input.value = checkbox.checked;
+
+        // Update label immediately for better UX
+        if (checkbox.checked) {
+            label.innerHTML = '<span class="spk-badge spk-badge--warning"><i class="fas fa-eye-slash"></i> 已开启</span>';
+        } else {
+            label.innerHTML = '<span class="spk-badge spk-badge--info"><i class="fas fa-eye"></i> 已关闭</span>';
+        }
+
+        // Submit form
+        form.submit();
+    }
 </script>
 </body>
 </html>
