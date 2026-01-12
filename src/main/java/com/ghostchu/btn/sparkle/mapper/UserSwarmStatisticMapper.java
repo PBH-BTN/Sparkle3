@@ -3,10 +3,13 @@ package com.ghostchu.btn.sparkle.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
  * <p>
@@ -17,5 +20,15 @@ import java.time.OffsetDateTime;
  * @since 2025-11-29
  */
 public interface UserSwarmStatisticMapper extends BaseMapper<UserSwarmStatistic> {
-
+    @NotNull
+    List<UserSwarmStatisticTrackRankingDto> calcUsersRanking(double sentTrafficOtherAckWeight,
+                                                            double sentTrafficSelfReportWeight,
+                                                            double receivedTrafficOtherAckWeight,
+                                                             double receivedTrafficSelfReportWeight);
+    @Nullable
+    UserSwarmStatisticTrackRankingDto calcUserRanking(long userId,
+                                                            double sentTrafficOtherAckWeight,
+                                                            double sentTrafficSelfReportWeight,
+                                                            double receivedTrafficOtherAckWeight,
+                                                            double receivedTrafficSelfReportWeight);
 }

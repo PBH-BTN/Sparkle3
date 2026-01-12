@@ -6,18 +6,17 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
+import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -31,7 +30,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private boolean enabled;
     @Value("${sparkle.swarm-statistics-track.duration}")
     private long duration;
-
     @Autowired
     private IUserService userService;
     @Autowired
@@ -40,7 +38,14 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
-
+    @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
+    private double rankingSentTrafficOtherAckWeight;
+    @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
+    private double rankingReceivedTrafficOtherAckWeight;
+    @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-self-report}")
+    private double rankingSentTrafficSelfReportWeight;
+    @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-self-report}")
+    private double rankingReceivedTrafficSelfReportWeight;
 
     @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
     public void cronUserSwarmStatisticsUpdate() {
@@ -64,6 +69,18 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             processed++;
         }
         log.info("Processed {} user swarm statistics updates", processed);
+    }
+
+    @Override
+    public @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking() {
+        return baseMapper.calcUsersRanking(rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
+                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight);
+    }
+
+    @Override
+    public @Nullable UserSwarmStatisticTrackRankingDto getUserRanking(long userId) {
+        return baseMapper.calcUserRanking(userId, rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
+                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight);
     }
 
     @NotNull

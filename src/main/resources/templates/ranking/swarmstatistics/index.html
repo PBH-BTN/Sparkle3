@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{components/common::header}"></head>
+<head>
+    <style>
+        /* Self Ranking Card Styles */
+        .spk-ranking-self {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .spk-ranking-self__rank {
+            text-align: center;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+            min-width: 150px;
+        }
+
+        .spk-ranking-self__rank-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .spk-ranking-self__rank-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .spk-ranking-self__stats {
+            flex: 1;
+        }
+
+        /* Ranking Table Styles */
+        .spk-ranking-table {
+            margin: 0;
+        }
+
+        .spk-ranking-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .spk-ranking-table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .spk-ranking-row {
+            transition: background-color 0.2s ease;
+        }
+
+        .spk-ranking-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Top 3 Special Styling */
+        .spk-ranking-row--top1 {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+        }
+
+        .spk-ranking-row--top1:hover {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.1) 100%);
+        }
+
+        .spk-ranking-row--top2 {
+            background: linear-gradient(90deg, rgba(192, 192, 192, 0.15) 0%, rgba(192, 192, 192, 0.05) 100%);
+        }
+
+        .spk-ranking-row--top2:hover {
+            background: linear-gradient(90deg, rgba(192, 192, 192, 0.25) 0%, rgba(192, 192, 192, 0.1) 100%);
+        }
+
+        .spk-ranking-row--top3 {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%);
+        }
+
+        .spk-ranking-row--top3:hover {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.25) 0%, rgba(205, 127, 50, 0.1) 100%);
+        }
+
+        /* Ranking Medal Styles */
+        .spk-ranking-rank {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .spk-ranking-medal {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .spk-ranking-medal i {
+            font-size: 1.4rem;
+        }
+
+        .spk-ranking-medal--gold {
+            color: #FFD700;
+        }
+
+        .spk-ranking-medal--silver {
+            color: #C0C0C0;
+        }
+
+        .spk-ranking-medal--bronze {
+            color: #CD7F32;
+        }
+
+        /* User Display */
+        .spk-ranking-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: flex-start;
+            text-align: left !important;
+        }
+
+        .spk-ranking-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e9ecef;
+        }
+
+        .spk-ranking-nickname {
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        /* Traffic Display */
+        .spk-ranking-traffic {
+            font-weight: 500;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .spk-ranking-traffic--upload {
+            background-color: #e8f4fd;
+            color: #1e88e5;
+        }
+
+        .spk-ranking-traffic--download {
+            background-color: #e8f5e9;
+            color: #43a047;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .spk-ranking-self {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .spk-ranking-self__rank {
+                width: 100%;
+            }
+
+            .spk-table-wrapper {
+                overflow-x: auto;
+            }
+
+            .spk-ranking-table {
+                font-size: 0.875rem;
+            }
+
+            .spk-ranking-avatar {
+                width: 32px;
+                height: 32px;
+            }
+
+            .spk-ranking-medal {
+                font-size: 1rem;
+            }
+
+            .spk-ranking-medal i {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body class="spk-body">
+<nav th:replace="~{components/common::navbar}"></nav>
+<div th:replace="~{components/common::traffic-info-bar}"></div>
+
+<header class="spk-page-header">
+    <div class="spk-container spk-page-header__inner">
+        <h1 class="spk-page-header__title">
+            <i class="fas fa-trophy"></i> 数据贡献排行榜
+        </h1>
+        <p class="spk-page-header__subtitle">基于最近 7 日的数据汇报与确认统计</p>
+    </div>
+</header>
+
+<main class="spk-main" style="padding-top: 0;">
+    <div class="spk-container">
+        <!-- User's Own Ranking Card -->
+        <div class="spk-card spk-mb-4" th:if="${self != null}">
+            <div class="spk-card__header">
+                <h3 class="spk-card__title">
+                    <i class="fas fa-user"></i> 我的排名
+                </h3>
+            </div>
+            <div class="spk-card__body">
+                <div class="spk-ranking-self">
+                    <div class="spk-ranking-self__rank">
+                        <div class="spk-ranking-self__rank-label">排名</div>
+                        <div class="spk-ranking-self__rank-value" th:text="${self.rank}">-</div>
+                    </div>
+                    <div class="spk-ranking-self__stats">
+                        <div class="spk-row">
+                            <div class="spk-col-3">
+                                <div class="spk-stat">
+                                    <div class="spk-stat__label">
+                                        <i class="fas fa-upload"></i> 汇报上传
+                                    </div>
+                                    <div class="spk-stat__value" th:text="${unitConverter.formatSize(self.sentTrafficSelfReport)}">0 B</div>
+                                </div>
+                            </div>
+                            <div class="spk-col-3">
+                                <div class="spk-stat">
+                                    <div class="spk-stat__label">
+                                        <i class="fas fa-download"></i> 汇报下载
+                                    </div>
+                                    <div class="spk-stat__value" th:text="${unitConverter.formatSize(self.receivedTrafficSelfReport)}">0 B</div>
+                                </div>
+                            </div>
+                            <div class="spk-col-3">
+                                <div class="spk-stat">
+                                    <div class="spk-stat__label">
+                                        <i class="fas fa-check-circle"></i> 确认上传
+                                    </div>
+                                    <div class="spk-stat__value" th:text="${unitConverter.formatSize(self.sentTrafficOtherAck)}">0 B</div>
+                                </div>
+                            </div>
+                            <div class="spk-col-3">
+                                <div class="spk-stat">
+                                    <div class="spk-stat__label">
+                                        <i class="fas fa-check-circle"></i> 确认下载
+                                    </div>
+                                    <div class="spk-stat__value" th:text="${unitConverter.formatSize(self.receivedTrafficOtherAck)}">0 B</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Self Ranking Message -->
+        <div class="spk-alert spk-alert--info spk-mb-4" th:if="${self == null}">
+            <i class="fas fa-info-circle"></i> 您还没有统计数据，如果您是新注册用户或刚刚创建用户应用程序，数据可能需要一段时间才会显示。
+        </div>
+
+        <!-- Ranking Table Card -->
+        <div class="spk-card">
+            <div class="spk-card__header">
+                <h3 class="spk-card__title">
+                    <i class="fas fa-list-ol"></i> TOP 1000
+                </h3>
+            </div>
+            <div class="spk-card__body">
+                <!-- Empty State -->
+                <div th:if="${data == null or data.isEmpty()}" class="spk-empty">
+                    <i class="fas fa-trophy spk-empty__icon"></i>
+                    <h4 class="spk-empty__title">暂无排名数据</h4>
+                    <p class="spk-empty__text">当前还没有用户排名数据</p>
+                </div>
+
+                <!-- Ranking Table -->
+                <div th:if="${data != null and !data.isEmpty()}" class="spk-table-wrapper">
+                    <table class="spk-table spk-ranking-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">排名</th>
+                                <th style="width: 200px;">用户</th>
+                                <th>汇报上传</th>
+                                <th>汇报下载</th>
+                                <th>确认上传</th>
+                                <th>确认下载</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="entry : ${data}"
+                                th:class="${entry.key.rank <= 3 ? 'spk-ranking-row spk-ranking-row--top' + entry.key.rank : 'spk-ranking-row'}">
+                                <td class="spk-ranking-rank">
+                                    <span th:if="${entry.key.rank == 1}" class="spk-ranking-medal spk-ranking-medal--gold">
+                                        <i class="fas fa-crown"></i>
+                                        <span th:text="${entry.key.rank}">1</span>
+                                    </span>
+                                    <span th:if="${entry.key.rank == 2}" class="spk-ranking-medal spk-ranking-medal--silver">
+                                        <i class="fas fa-medal"></i>
+                                        <span th:text="${entry.key.rank}">2</span>
+                                    </span>
+                                    <span th:if="${entry.key.rank == 3}" class="spk-ranking-medal spk-ranking-medal--bronze">
+                                        <i class="fas fa-medal"></i>
+                                        <span th:text="${entry.key.rank}">3</span>
+                                    </span>
+                                    <span th:if="${entry.key.rank > 3}" th:text="${entry.key.rank}">4</span>
+                                </td>
+                                <td class="spk-ranking-user">
+                                    <img th:src="${entry.value.avatar}"
+                                         th:alt="${entry.value.nickname}"
+                                         class="spk-ranking-avatar">
+                                    <span class="spk-ranking-nickname" th:text="${entry.value.nickname}">用户昵称</span>
+                                </td>
+                                <td>
+                                    <span class="spk-ranking-traffic spk-ranking-traffic--upload"
+                                          th:text="${unitConverter.formatSize(entry.key.sentTrafficSelfReport)}">0 B</span>
+                                </td>
+                                <td>
+                                    <span class="spk-ranking-traffic spk-ranking-traffic--download"
+                                          th:text="${unitConverter.formatSize(entry.key.receivedTrafficSelfReport)}">0 B</span>
+                                </td>
+                                <td>
+                                    <span class="spk-ranking-traffic spk-ranking-traffic--upload"
+                                          th:text="${unitConverter.formatSize(entry.key.sentTrafficOtherAck)}">0 B</span>
+                                </td>
+                                <td>
+                                    <span class="spk-ranking-traffic spk-ranking-traffic--download"
+                                          th:text="${unitConverter.formatSize(entry.key.receivedTrafficOtherAck)}">0 B</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{components/common::footer}"></div>
+
+
+</body>
+</html>
+

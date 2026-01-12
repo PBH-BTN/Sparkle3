@@ -204,3 +204,13 @@ sparkle:
     enabled: true
     cron: "0 0 * * * *"
     duration: 604800000
+  ranking:
+      weight:
+        user-swarm-statistics:
+          sent-traffic-other-ack: 10
+          sent-traffic-self-report: 5
+          received-traffic-other-ack: 3
+          received-traffic-self-report: 5
+
+
+

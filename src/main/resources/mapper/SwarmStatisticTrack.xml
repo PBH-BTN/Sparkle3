@@ -1,5 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper">
+    <resultMap id="userSwarmStatisticTrackRankingDtoResultMap" type="com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto">
+        <result property="rank" column="rank"/>
+        <result property="userId" column="user_id"/>
+        <result property="sentTrafficSelfReport" column="sent_traffic_self_report"/>
+        <result property="sentTrafficOtherAck" column="sent_traffic_other_ack"/>
+        <result property="receivedTrafficOtherAck" column="received_traffic_other_ack"/>
+        <result property="receivedTrafficSelfReport" column="received_traffic_self_report"/>
+    </resultMap>
 
+    <select id="calcUsersRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
+        SELECT
+            user_id,
+            sent_traffic_self_report,
+            sent_traffic_other_ack,
+            received_traffic_other_ack,
+            received_traffic_self_report,
+            RANK() OVER (
+                ORDER BY (
+                    (sent_traffic_other_ack * #{sentTrafficOtherAckWeight}) +
+                    (sent_traffic_self_report * #{sentTrafficSelfReportWeight}) +
+                    (received_traffic_other_ack * #{receivedTrafficOtherAckWeight}) +
+                    (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
+                    ) DESC
+                ) AS rank
+        FROM user_swarm_statistic
+    </select>
+
+    <select id="calcUserRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
+        WITH UserRanks AS (
+            SELECT
+                user_id,
+                sent_traffic_self_report,
+                sent_traffic_other_ack,
+                received_traffic_other_ack,
+                received_traffic_self_report,
+                RANK() OVER (
+                    ORDER BY (
+                        (sent_traffic_other_ack * #{sentTrafficOtherAckWeight}) +
+                        (sent_traffic_self_report * #{sentTrafficSelfReportWeight}) +
+                        (received_traffic_other_ack * #{receivedTrafficOtherAckWeight}) +
+                        (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
+                        ) DESC
+                    ) AS rank
+            FROM user_swarm_statistic
+        )
+        SELECT * FROM UserRanks
+        WHERE user_id = #{userId}
+        LIMIT 1;
+    </select>
 </mapper>
