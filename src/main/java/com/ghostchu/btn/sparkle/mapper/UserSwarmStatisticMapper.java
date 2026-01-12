@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -17,6 +18,8 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface UserSwarmStatisticMapper extends BaseMapper<UserSwarmStatistic> {
+    int updateAllUserSwarmStatistics(@NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
+
     @NotNull
     List<UserSwarmStatisticTrackRankingDto> calcUsersRanking(double sentTrafficOtherAckWeight,
                                                              double sentTrafficSelfReportWeight,

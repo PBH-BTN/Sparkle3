@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -48,27 +49,14 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private double rankingReceivedTrafficSelfReportWeight;
 
     @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
+    @Transactional
     public void cronUserSwarmStatisticsUpdate() {
         if (!enabled) return;
         OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         OffsetDateTime endAt = OffsetDateTime.now();
-        long processed = 0;
-        List<Long> uids = userService.fetchAllUserIds();
-        long total = uids.size();
-        while (!uids.isEmpty()) {
-            long uid = uids.removeLast();
-            var result = generateUserSwarmStatistics(uid, startAt, endAt);
-            baseMapper.insertOrUpdate(new UserSwarmStatistic()
-                    .setUserId(uid)
-                    .setSentTrafficOtherAck(result.getSentTrafficOtherAck().get())
-                    .setReceivedTrafficOtherAck(result.getReceivedTrafficOtherAck().get())
-                    .setSentTrafficSelfReport(result.getSentTrafficSelfReport().get())
-                    .setReceivedTrafficSelfReport(result.getReceivedTrafficSelfReport().get())
-                    .setLastUpdateAt(OffsetDateTime.now())
-            );
-            processed++;
-        }
-        log.info("Processed {} user swarm statistics updates", processed);
+        long start = System.currentTimeMillis();
+        int processed = baseMapper.updateAllUserSwarmStatistics(startAt, endAt);
+        log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);
     }
 
     @Override
