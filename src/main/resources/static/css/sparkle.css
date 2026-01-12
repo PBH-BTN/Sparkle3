@@ -433,7 +433,7 @@ body.spk-body {
 .spk-navbar__dropdown-menu {
     display: none;
     position: absolute;
-    top: 100%;
+    top: calc(100% + 0.25rem);
     left: 0;
     min-width: 200px;
     background-color: var(--spk-bg-primary);
@@ -441,9 +441,20 @@ body.spk-body {
     border-radius: var(--spk-radius);
     box-shadow: var(--spk-shadow-md);
     list-style: none;
-    margin: 0.25rem 0 0 0;
+    margin: 0;
     padding: 0.5rem 0;
     z-index: 1040;
+}
+
+/* Add invisible bridge area to prevent menu closing when moving mouse to dropdown */
+.spk-navbar__dropdown::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 0.25rem;
+    z-index: 1039;
 }
 
 .spk-navbar__dropdown:hover .spk-navbar__dropdown-menu {

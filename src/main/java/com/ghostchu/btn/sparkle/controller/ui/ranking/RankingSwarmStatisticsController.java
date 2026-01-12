@@ -23,7 +23,7 @@ public class RankingSwarmStatisticsController {
 
     @GetMapping("/ranking/swarmStatistics")
     public String ranking(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails){
-        var list = userSwarmStatisticsService.getUsersRanking().stream().limit(1000).toList();
+        var list = userSwarmStatisticsService.getUsersRanking().stream().limit(500).toList();
         Map<UserSwarmStatisticTrackRankingDto, User> data = new LinkedHashMap<>();
         for (var item : list) {
             var user = userService.getById(item.getUserId());
