@@ -74,13 +74,13 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @Override
     public @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking() {
         return baseMapper.calcUsersRanking(rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
-                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight);
+                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight, userService.getSystemUids());
     }
 
     @Override
     public @Nullable UserSwarmStatisticTrackRankingDto getUserRanking(long userId) {
         return baseMapper.calcUserRanking(userId, rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
-                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight);
+                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight, userService.getSystemUids());
     }
 
     @NotNull

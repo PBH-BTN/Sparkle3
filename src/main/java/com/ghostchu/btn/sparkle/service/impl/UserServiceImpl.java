@@ -86,12 +86,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    public @NotNull List<Long> fetchAllUserIds(){
+    public @NotNull List<Long> getSystemUids() {
+        return baseMapper.selectList(new QueryWrapper<User>().likeRight("email", "sparkle.system")).stream().map(User::getId).toList();
+    }
+
+    @Override
+    public @NotNull List<Long> fetchAllUserIds() {
         return baseMapper.fetchAllUserIds();
     }
 
     @Override
-    public @NotNull Cursor<User> fetchAllUsers(){
+    public @NotNull Cursor<User> fetchAllUsers() {
         return baseMapper.fetchAllUsers();
     }
 }

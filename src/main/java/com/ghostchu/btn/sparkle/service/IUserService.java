@@ -28,6 +28,8 @@ public interface IUserService extends IService<User> {
     User userGithubOAuthLogin(@NotNull Authentication authentication, @NotNull InetAddress loginIp, @NotNull Long githubUid,
                               @NotNull String githubLogin, @NotNull String githubAvatarUrl, @NotNull String githubName, @NotNull String githubEmail);
 
+    @NotNull List<Long> getSystemUids();
+
     @NotNull List<Long> fetchAllUserIds();
 
     @NotNull Cursor<User> fetchAllUsers();

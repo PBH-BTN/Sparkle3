@@ -2,13 +2,10 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
-import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
-import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -22,13 +19,16 @@ import java.util.List;
 public interface UserSwarmStatisticMapper extends BaseMapper<UserSwarmStatistic> {
     @NotNull
     List<UserSwarmStatisticTrackRankingDto> calcUsersRanking(double sentTrafficOtherAckWeight,
-                                                            double sentTrafficSelfReportWeight,
-                                                            double receivedTrafficOtherAckWeight,
-                                                             double receivedTrafficSelfReportWeight);
+                                                             double sentTrafficSelfReportWeight,
+                                                             double receivedTrafficOtherAckWeight,
+                                                             double receivedTrafficSelfReportWeight,
+                                                             List<Long> ignoreUserIds);
+
     @Nullable
     UserSwarmStatisticTrackRankingDto calcUserRanking(long userId,
-                                                            double sentTrafficOtherAckWeight,
-                                                            double sentTrafficSelfReportWeight,
-                                                            double receivedTrafficOtherAckWeight,
-                                                            double receivedTrafficSelfReportWeight);
+                                                      double sentTrafficOtherAckWeight,
+                                                      double sentTrafficSelfReportWeight,
+                                                      double receivedTrafficOtherAckWeight,
+                                                      double receivedTrafficSelfReportWeight,
+                                                      List<Long> ignoreUserIds);
 }

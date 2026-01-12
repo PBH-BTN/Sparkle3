@@ -182,11 +182,58 @@
                 font-size: 1rem;
             }
 
-            .spk-ranking-medal i {
-                font-size: 1.1rem;
-            }
+        .spk-ranking-medal i {
+            font-size: 1.1rem;
         }
-    </style>
+    }
+
+    /* Dark Mode Adjustments */
+    @media (prefers-color-scheme: dark) {
+        .spk-ranking-self__rank {
+            background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+        }
+
+        .spk-ranking-nickname {
+            color: var(--spk-text-primary);
+        }
+
+        .spk-ranking-traffic--upload {
+            background-color: #1e3a8a;
+            color: #93c5fd;
+        }
+
+        .spk-ranking-traffic--download {
+            background-color: #065f46;
+            color: #6ee7b7;
+        }
+
+        .spk-ranking-avatar {
+            border-color: var(--spk-border-light);
+        }
+    }
+
+    [data-theme="dark"] .spk-ranking-self__rank {
+        background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+    }
+
+    [data-theme="dark"] .spk-ranking-nickname {
+        color: var(--spk-text-primary);
+    }
+
+    [data-theme="dark"] .spk-ranking-traffic--upload {
+        background-color: #1e3a8a;
+        color: #93c5fd;
+    }
+
+    [data-theme="dark"] .spk-ranking-traffic--download {
+        background-color: #065f46;
+        color: #6ee7b7;
+    }
+
+    [data-theme="dark"] .spk-ranking-avatar {
+        border-color: var(--spk-border-light);
+    }
+</style>
 </head>
 <body class="spk-body">
 <nav th:replace="~{components/common::navbar}"></nav>
