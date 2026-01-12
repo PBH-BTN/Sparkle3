@@ -18,6 +18,6 @@ import java.time.OffsetDateTime;
  */
 public interface UserappsArchivedStatisticMapper extends BaseMapper<UserappsArchivedStatistic> {
 
-   void updateArchivedStatistic(long userAppId, long addArchivedToPeerTraffic, long addArchivedFromPeerTraffic, long addArchivedBanHistoryRecords, long addArchivedSwarmTrackerRecords, @NotNull OffsetDateTime lastUpdateAt);
+   void updateArchivedStatistic(long userAppId, long archivedToPeerTraffic, long archivedFromPeerTraffic, long archivedBanHistoryRecords, long archivedSwarmTrackerRecords, @NotNull OffsetDateTime lastUpdateAt);
 
 }
