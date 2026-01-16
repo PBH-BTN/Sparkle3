@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
@@ -66,7 +67,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setAvatar(githubAvatarUrl)
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(OffsetDateTime.now())
-                .setRole("user");
+                .setRole("user")
+                .setPrivacyLevel(UserPrivacyLevel.MEDIUM);
         boolean success = baseMapper.insert(newUser) != 0;
         if (!success) {
             throw new IllegalStateException("Failed to create new user, the changed records count is 0.");
