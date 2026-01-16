@@ -40,6 +40,7 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
     @Value("${sparkle.client-discovery.enabled}")
     private boolean useClientDiscovery;
 
+    @Transactional
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
         if(!useClientDiscovery) return;
