@@ -74,9 +74,12 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         for (IPv4Address prefix : prefixes) {
             // 收集该前缀下的第一个值作为聚合结果
             T aggregatedValue = null;
-            var it = trie.elementsContainedBy(prefix).nodeIterator(false);
-            if (it.hasNext()) {
-                aggregatedValue = it.next().getValue();
+            var containedElements = trie.elementsContainedBy(prefix);
+            if (containedElements != null) {
+                var it = containedElements.nodeIterator(false);
+                if (it.hasNext()) {
+                    aggregatedValue = it.next().getValue();
+                }
             }
 
             // 删除所有被该前缀包含的元素
