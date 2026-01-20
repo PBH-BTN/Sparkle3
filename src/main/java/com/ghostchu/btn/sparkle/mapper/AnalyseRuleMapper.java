@@ -49,4 +49,10 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
 
     @NotNull
     List<AnalyseIPAndIdentityResult> analyseGopeeddevIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<String> analyseDatacenterHighRiskBanHistory(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    List<String> analyseDatacenterHighRiskSwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 }

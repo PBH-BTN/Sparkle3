@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.ghostchu.btn.sparkle.converter.JsonbTypeHandler;
+import com.ghostchu.btn.sparkle.util.ipdb.IPGeoData;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -83,4 +85,7 @@ public class SwarmTracker implements Serializable {
 
     @JsonProperty("user_progress")
     private double userProgress;
+
+    @TableField(value = "peer_geoip", typeHandler = JsonbTypeHandler.class)
+    private IPGeoData peerGeoip;
 }

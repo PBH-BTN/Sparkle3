@@ -102,11 +102,13 @@
                         peer_id,
                         peer_client_name
         FROM ban_history
-        WHERE peer_id &lt;> ''
+        WHERE populate_time >= #{afterTimestamp}
+          AND peer_id &lt;> ''
           AND starts_with(peer_client_name, peer_id)
           AND NOT starts_with(peer_client_name, '-XL00')
           AND NOT starts_with(peer_client_name, 'FD')
           AND NOT starts_with(peer_client_name, 'MG')
+          AND populate_time >= #{afterTimestamp}
         ORDER BY peer_ip
     </select>
     <select id="analyseRandomIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
@@ -114,7 +116,8 @@
                         peer_id,
                         peer_client_name
         FROM swarm_tracker
-        WHERE peer_id &lt;> ''
+        WHERE last_time_seen >= #{afterTimestamp}
+          AND peer_id &lt;> ''
           AND starts_with(peer_client_name, peer_id)
           AND NOT starts_with(peer_client_name, '-XL00')
           AND NOT starts_with(peer_client_name, 'FD')
@@ -126,9 +129,10 @@
                         peer_id,
                         peer_client_name
         FROM ban_history
-        WHERE peer_id &lt;> ''
-            AND starts_with(peer_client_name, 'Rain 0.0.0')
-            AND NOT starts_with(peer_id, '-RN')
+        WHERE populate_time >= #{afterTimestamp}
+          AND peer_id &lt;> ''
+          AND starts_with(peer_client_name, 'Rain 0.0.0')
+          AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
     </select>
     <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
@@ -136,7 +140,8 @@
                         peer_id,
                         peer_client_name
         FROM swarm_tracker
-        WHERE peer_id &lt;> ''
+        WHERE last_time_seen >= #{afterTimestamp}
+          AND peer_id &lt;> ''
           AND starts_with(peer_client_name, 'Rain 0.0.0')
           AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
@@ -146,7 +151,8 @@
                         peer_id,
                         peer_client_name
         FROM ban_history
-        WHERE peer_id &lt;> ''
+        WHERE populate_time >= #{afterTimestamp}
+          AND peer_id &lt;> ''
           AND starts_with(peer_client_name, 'Gopeed dev')
           AND NOT starts_with(peer_id, '-GP')
         ORDER BY peer_ip
@@ -156,9 +162,36 @@
                         peer_id,
                         peer_client_name
         FROM swarm_tracker
-        WHERE peer_id &lt;> ''
+        WHERE last_time_seen >= #{afterTimestamp}
+          AND peer_id &lt;> ''
           AND starts_with(peer_client_name, 'Gopeed dev')
           AND NOT starts_with(peer_id, '-GP')
         ORDER BY peer_ip
     </select>
+    <select id="analyseDatacenterHighRiskBanHistory" resultType="string">
+        SELECT DISTINCT peer_ip
+        FROM ban_history
+        WHERE populate_time >= #{afterTimestamp}
+          AND ((peer_client_name LIKE 'qBittorrent/4.6.7%'
+            OR peer_client_name LIKE 'qBittorrent 4.6.7%')
+            OR (peer_client_name LIKE 'aria2/1.37.0%'
+                OR peer_client_name LIKE 'aria2/1.37.0%')
+            OR (peer_client_name LIKE 'Gopeed dev%'
+                OR peer_client_name LIKE 'Gopeed dev%'))
+          AND peer_geoip ->> 'netType' LIKE '数据中心'
+        ORDER BY peer_ip
+    </select>
+    <select id="analyseDatacenterHighRiskSwarmTracker" resultType="string">
+    SELECT DISTINCT peer_ip
+    FROM swarm_tracker
+    WHERE last_time_seen >= #{afterTimestamp}
+      AND ((peer_client_name LIKE 'qBittorrent/4.6.7%'
+        OR peer_client_name LIKE 'qBittorrent 4.6.7%')
+        OR (peer_client_name LIKE 'aria2/1.37.0%'
+            OR peer_client_name LIKE 'aria2/1.37.0%')
+        OR (peer_client_name LIKE 'Gopeed dev%'
+            OR peer_client_name LIKE 'Gopeed dev%'))
+      AND peer_geoip ->> 'netType' LIKE '数据中心'
+    ORDER BY peer_ip
+</select>
 </mapper>

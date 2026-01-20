@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.AnalyseRule;
 import com.ghostchu.btn.sparkle.mapper.AnalyseRuleMapper;
 import com.ghostchu.btn.sparkle.service.IAnalyseRuleService;
@@ -47,6 +48,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         });
         return map;
     }
+
 
     private <T> void commonTriesMergeV6(@NotNull AssociativeAddressTrie<IPv6Address, T> trie, @NotNull IPv6Address[] prefixes) {
         for (IPv6Address prefix : prefixes) {

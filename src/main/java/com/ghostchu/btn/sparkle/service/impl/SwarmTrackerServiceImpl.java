@@ -12,6 +12,7 @@ import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,6 +53,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private IUserappsArchivedStatisticService userappsArchivedStatisticService;
     @Autowired
     private PlatformTransactionManager platformTransactionManager;
+    @Autowired
+    private GeoIPManager geoIPManager;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -184,6 +187,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}", lastSeenTime);
                 continue;
             }
+            var inet = InetAddress.ofLiteral(swarm.getPeerIp());
             SwarmTracker tracker = new SwarmTracker()
                     .setUserappsId(userAppId)
                     .setUserDownloader(swarm.getDownloader())
@@ -200,8 +204,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     .setToPeerTrafficOffset(swarm.getToPeerTrafficOffset())
                     .setFlags(swarm.getPeerLastFlags())
                     .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
-                    .setLastTimeSeen(lastSeenTime);
-
+                    .setLastTimeSeen(lastSeenTime)
+                    .setPeerGeoip(geoIPManager.geoData(inet));
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->
                     newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
