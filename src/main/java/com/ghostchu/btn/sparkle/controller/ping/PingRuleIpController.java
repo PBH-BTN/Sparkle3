@@ -47,7 +47,9 @@ public class PingRuleIpController extends BasePingController {
         }
         MessageDigest versionDigest = MessageDigest.getInstance("SHA-256");
         for (IPDenyListRuleProvider ipDenyListRuleProvider : ipDenyListRuleProviders) {
-            versionDigest.update(ipDenyListRuleProvider.getVersion().getBytes(StandardCharsets.UTF_8));
+            var v = ipDenyListRuleProvider.getVersion();
+            if (v == null) continue;
+            versionDigest.update(v.getBytes(StandardCharsets.UTF_8));
         }
         byte[] digest = versionDigest.digest();
         String listVersion = HexUtil.bytesToHex(digest);
