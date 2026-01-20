@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.AnalyseRule;
 import com.ghostchu.btn.sparkle.mapper.AnalyseRuleMapper;
 import com.ghostchu.btn.sparkle.service.IAnalyseRuleService;
+import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.format.util.AssociativeAddressTrie;
 import inet.ipaddr.format.util.DualIPv4v6AssociativeTries;
@@ -108,7 +109,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         List<IPv6Address> ips = new ArrayList<>();
         while (it.hasNext()) {
             var node = it.next();
-            ips.add(node.getKey());
+            ips.add(node.getKey().withoutPrefixLength().toPrefixBlock(60).toZeroHost());
         }
         IPv6Address[] array = new IPv6Address[ips.size()];
         return firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));
