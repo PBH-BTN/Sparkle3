@@ -1,11 +1,9 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.AnalyseRule;
 import com.ghostchu.btn.sparkle.mapper.AnalyseRuleMapper;
 import com.ghostchu.btn.sparkle.service.IAnalyseRuleService;
-import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.format.util.AssociativeAddressTrie;
 import inet.ipaddr.format.util.DualIPv4v6AssociativeTries;
@@ -19,7 +17,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<AnalyseRuleMapper, AnalyseRule> implements IAnalyseRuleService {
 
@@ -40,7 +37,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         Map<IPAddress, T> map = new LinkedHashMap<>();
         tries.nodeIterator(false).forEachRemaining(node -> {
             IPAddress outputAddr = node.getKey();
-            if(outputAddr.getPrefixLength() != null) {
+            if (outputAddr.getPrefixLength() != null) {
                 if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
                     outputAddr = outputAddr.withoutPrefixLength();
                 }
@@ -55,9 +52,12 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         for (IPv6Address prefix : prefixes) {
             // 收集该前缀下的第一个值作为聚合结果
             T aggregatedValue = null;
-            var it = trie.elementsContainedBy(prefix).nodeIterator(false);
-            if (it.hasNext()) {
-                aggregatedValue = it.next().getValue();
+            var containedElements = trie.elementsContainedBy(prefix);
+            if (containedElements != null) {
+                var it = containedElements.nodeIterator(false);
+                if (it.hasNext()) {
+                    aggregatedValue = it.next().getValue();
+                }
             }
 
             // 删除所有被该前缀包含的元素
