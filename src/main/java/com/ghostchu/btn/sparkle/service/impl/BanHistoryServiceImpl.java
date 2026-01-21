@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
+import com.ghostchu.btn.sparkle.machinelearn.smile.SmileML;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
@@ -20,10 +21,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
@@ -32,6 +33,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -51,6 +53,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private ObjectMapper objectMapper;
     @Autowired
     private GeoIPManager geoIPManager;
+    @Autowired
+    private SmileML machineLearning;
+    @Value("${sparkle.machine-learning.banhistory-sample-rate}")
+    private double banHistorySampleRate;
 
     @Autowired
     @Qualifier("stringStringRedisTemplate")
@@ -79,7 +85,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 log.debug("Ignoring ban entry with out-of-range banAt time: {}", btnBan.getBanAt());
                 return null;
             }
-            if(btnBan.getModule().endsWith("IdleConnectionDosProtection")){
+            if (btnBan.getModule().endsWith("IdleConnectionDosProtection")) {
                 return null;
             }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
@@ -104,6 +110,15 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setStructuredData(structuredDataMap);
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
+
+        // 抽样到 MachineLearning 里
+        list.forEach(banHistory -> {
+            if (banHistory == null) return;
+            if (ThreadLocalRandom.current().nextDouble() <= banHistorySampleRate) {
+                machineLearning.learnFromBanHistory(banHistory);
+            }
+        });
+
         this.baseMapper.insert(list, 1000);
     }
 

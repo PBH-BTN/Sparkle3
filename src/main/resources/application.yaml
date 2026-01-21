@@ -211,5 +211,11 @@ sparkle:
           received-traffic-other-ack: 3
           received-traffic-self-report: 5
 
+  machine-learning:
+    enabled: true
+    banhistory-sample-rate: 0.1
+    swarmtracker-sample-rate: 0.08
+    queue-capacity: 10000
+
 
 

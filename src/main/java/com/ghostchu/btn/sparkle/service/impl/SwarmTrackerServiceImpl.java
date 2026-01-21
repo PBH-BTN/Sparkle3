@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.machinelearn.smile.SmileML;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
@@ -26,12 +27,15 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -55,6 +59,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private PlatformTransactionManager platformTransactionManager;
     @Autowired
     private GeoIPManager geoIPManager;
+
+    @Autowired
+    private SmileML machineLearning;
+    @Value("${sparkle.machine-learning.swarmtracker-sample-rate}")
+    private double swarmTrackerSampleRate;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -214,6 +223,12 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
+            swarmMap.values().forEach(swarmTracker -> {
+                if (swarmTracker == null) return;
+                if (ThreadLocalRandom.current().nextDouble() <= swarmTrackerSampleRate) {
+                    machineLearning.learnFromSwarmTracker(swarmTracker);
+                }
+            });
         }
     }
 
