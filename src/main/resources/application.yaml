@@ -213,8 +213,9 @@ sparkle:
 
   machine-learning:
     enabled: true
-    banhistory-sample-rate: 0.1
-    swarmtracker-sample-rate: 0.08
+    learning-rate: 1.0
+    banhistory-sample-rate: 1.0
+    swarmtracker-sample-rate: 0.005
     queue-capacity: 10000
 
 

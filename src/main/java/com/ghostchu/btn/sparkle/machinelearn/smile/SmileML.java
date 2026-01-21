@@ -30,8 +30,9 @@ public class SmileML {
     private boolean enabled;
     @Value("${sparkle.machine-learning.queue-capacity}")
     private int queueCapacity;
+    @Value("${sparkle.machine-learning.learning-rate}")
+    private double learningRate;
     private static final int VECTOR_SIZE = 2048;
-    private static final double LEARNING_RATE = 0.03;
     private LogisticRegression model;
     @Autowired
     private ObjectMapper objectMapper;
@@ -56,7 +57,7 @@ public class SmileML {
 
     private void createNewModel() {
         this.model = LogisticRegression.fit(new double[2][VECTOR_SIZE], new int[]{0, 1});
-        this.model.setLearningRate(LEARNING_RATE);
+        this.model.setLearningRate(learningRate);
         log.info("AI model initialized from scratch.");
     }
 
