@@ -49,8 +49,8 @@ server:
   compression:
     enabled: true
   tomcat:
-    relaxed-query-chars: "<>[\\]^`{|}"
-    relaxed-path-chars: "<>[\\]^`{|}"
+    relaxed-query-chars: "<,>,[,\\,],^,`,{,|,}"
+    relaxed-path-chars: "<,>,[,\\,],^,`,{,|,}"
     max-http-form-post-size: 50MB
 management:
   endpoints:
