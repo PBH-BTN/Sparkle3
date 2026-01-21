@@ -28,18 +28,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class SmileML {
     @Value("${sparkle.machine-learning.enabled}")
     private boolean enabled;
-    @Value("${sparkle.machine-learning.queue-capacity}")
-    private int queueCapacity;
-    @Value("${sparkle.machine-learning.learning-rate}")
     private double learningRate;
     private static final int VECTOR_SIZE = 2048;
     private LogisticRegression model;
     @Autowired
     private ObjectMapper objectMapper;
     private static final String MODEL_PATH = "data/ai_model.bin";
-    private  BlockingQueue<LearningTask> trainingQueue;
+    private BlockingQueue<LearningTask> trainingQueue;
 
-    public SmileML() {
+    public SmileML(@Value("${sparkle.machine-learning.queue-capacity}") int queueCapacity, @Value("${sparkle.machine-learning.learning-rate}") double learningRate) {
+        this.learningRate =  learningRate;
         trainingQueue = new LinkedBlockingQueue<>(queueCapacity);
         if (Files.exists(Paths.get(MODEL_PATH))) {
             try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(MODEL_PATH))) {
@@ -76,21 +74,21 @@ public class SmileML {
     }
 
     public boolean learnFromBanHistory(@NotNull BanHistory banHistory) { // It's bad!
-        if(!enabled) return false;
-        if(!banHistory.getModuleName().contains("ProgressCheatBlocker")) return false;
+        if (!enabled) return false;
+        if (!banHistory.getModuleName().contains("ProgressCheatBlocker")) return false;
         double[] data = LearningData.fromBanHistory(objectMapper, banHistory).extractIdentity();
         return trainingQueue.offer(new LearningTask(data, 1));
     }
 
     public boolean learnFromSwarmTracker(@NotNull SwarmTracker swarmTracker) { // Unknown!
-        if(!enabled) return false;
+        if (!enabled) return false;
         double[] data = LearningData.fromSwarmTracker(objectMapper, swarmTracker).extractIdentity();
         return trainingQueue.offer(new LearningTask(data, 0));
     }
 
     // 2. 启动一个单线程消费逻辑
     public void startTrainer() {
-        if(!enabled) return;
+        if (!enabled) return;
         Thread trainer = new Thread(() -> {
             while (true) {
                 try {
