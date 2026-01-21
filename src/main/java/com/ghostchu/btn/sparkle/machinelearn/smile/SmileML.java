@@ -76,6 +76,7 @@ public class SmileML {
 
     public boolean learnFromBanHistory(@NotNull BanHistory banHistory) { // It's bad!
         if(!enabled) return false;
+        if(!banHistory.getModuleName().contains("ProgressCheatBlocker")) return false;
         double[] data = LearningData.fromBanHistory(objectMapper, banHistory).extractIdentity();
         return trainingQueue.offer(new LearningTask(data, 1));
     }
@@ -166,10 +167,10 @@ public class SmileML {
             hashTo(vector, "peerId:" + peerId, reserved);
             hashTo(vector, "peerClientName:" + (peerClientName != null ? peerClientName.replace(" (n/a)", "") : null), reserved);
             hashTo(vector, "peerFlags:" + peerFlags, reserved);
-            hashTo(vector, "moduleName:" + moduleName, reserved);
-            hashTo(vector, "rule:" + rule, reserved);
-            hashTo(vector, "description:" + description, reserved);
-            hashTo(vector, "structuredData:" + structuredData, reserved);
+            //hashTo(vector, "moduleName:" + moduleName, reserved);
+            //hashTo(vector, "rule:" + rule, reserved);
+            //hashTo(vector, "description:" + description, reserved);
+            //hashTo(vector, "structuredData:" + structuredData, reserved);
             hashTo(vector, "cityName:" + cityName, reserved);
             hashTo(vector, "cityCnProvince:" + cityCnProvince, reserved);
             hashTo(vector, "cityCnCity:" + cityCnCity, reserved);
