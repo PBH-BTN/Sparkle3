@@ -49,10 +49,8 @@ server:
   compression:
     enabled: true
   tomcat:
-    remoteip:
-      host-header: X-Forwarded-For
-      port-header: X-Forwarded-Port
-      protocol-header: X-Forwarded-Proto
+    relaxed-query-chars: "<>[\\]^`{|}"
+    relaxed-path-chars: "<>[\\]^`{|}"
     max-http-form-post-size: 50MB
 management:
   endpoints:
