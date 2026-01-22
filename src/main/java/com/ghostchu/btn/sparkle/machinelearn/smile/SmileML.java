@@ -75,7 +75,8 @@ public class SmileML {
 
     public boolean learnFromBanHistory(@NotNull BanHistory banHistory) { // It's bad!
         if (!enabled) return false;
-        if (!banHistory.getModuleName().contains("ProgressCheatBlocker")) return false;
+        if (!banHistory.getModuleName().contains("ProgressCheatBlocker") &&
+                !banHistory.getModuleName().contains("MultiDialingBlocker")) return false;
         double[] data = LearningData.fromBanHistory(objectMapper, banHistory).extractIdentity();
         return trainingQueue.offer(new LearningTask(data, 1));
     }
@@ -157,10 +158,11 @@ public class SmileML {
             vector[0] = peerPort;
             vector[1] = peerProgress;
             vector[2] = reporterProgress;
-            vector[3] = toPeerTraffic;
-            vector[4] = fromPeerTraffic;
+            vector[3] = Math.log1p(toPeerTraffic) / 20.0;
+            vector[4] = Math.log1p(fromPeerTraffic) / 20.0;
             vector[5] = asNumber;
             vector[6] = asNetworkPrefixLength;
+
 
             hashTo(vector, "peerIp:" + (peerId != null && peerId.length() > 8 ? peerId.substring(0, 8) : peerId), reserved);
             hashTo(vector, "peerId:" + peerId, reserved);
