@@ -178,7 +178,7 @@
                 OR peer_client_name LIKE 'aria2/1.37.0%')
             OR (peer_client_name LIKE 'Gopeed dev%'
                 OR peer_client_name LIKE 'Gopeed dev%'))
-          AND peer_geoip ->> 'netType' LIKE '数据中心'
+          AND peer_geoip ->> 'netType' = '数据中心'
         ORDER BY peer_ip
     </select>
     <select id="analyseDatacenterHighRiskSwarmTracker" resultType="string">
@@ -191,7 +191,7 @@
             OR peer_client_name LIKE 'aria2/1.37.0%')
         OR (peer_client_name LIKE 'Gopeed dev%'
             OR peer_client_name LIKE 'Gopeed dev%'))
-      AND peer_geoip ->> 'netType' LIKE '数据中心'
+      AND peer_geoip ->> 'netType' = '数据中心'
     ORDER BY peer_ip
 </select>
 </mapper>
