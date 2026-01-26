@@ -23,7 +23,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @ToString
-@TableName("rules")
+@TableName(value = "rules", autoResultMap = true)
 @Accessors(chain = true)
 public class Rule implements Serializable {
     @Serial

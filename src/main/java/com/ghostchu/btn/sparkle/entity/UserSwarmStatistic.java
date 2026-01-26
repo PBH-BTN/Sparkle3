@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @ToString
-@TableName("user_swarm_statistic")
+@TableName(value = "user_swarm_statistic", autoResultMap = true)
 @Accessors(chain = true)
 public class UserSwarmStatistic implements Serializable {
 

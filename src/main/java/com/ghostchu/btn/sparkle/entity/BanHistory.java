@@ -29,7 +29,7 @@ import java.util.Map;
 @Setter
 @ToString
 @Accessors(chain = true)
-@TableName("ban_history")
+@TableName(value = "ban_history", autoResultMap = true)
 public class BanHistory implements Serializable {
 
     @Serial

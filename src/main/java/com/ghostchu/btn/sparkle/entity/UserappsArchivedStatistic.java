@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @ToString
-@TableName("userapps_archived_statistic")
+@TableName(value = "userapps_archived_statistic", autoResultMap = true)
 @Accessors(chain = true)
 public class UserappsArchivedStatistic implements Serializable {
 

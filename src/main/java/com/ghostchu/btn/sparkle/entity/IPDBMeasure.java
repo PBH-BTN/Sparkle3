@@ -30,7 +30,7 @@ import java.util.Map;
 @Getter
 @Setter
 @ToString
-@TableName("ipdb_measure")
+@TableName(value = "ipdb_measure", autoResultMap = true)
 @Accessors(chain = true)
 public class IPDBMeasure implements Serializable {
 

@@ -25,7 +25,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @ToString
-@TableName("userapps_heartbeat")
+@TableName(value = "userapps_heartbeat", autoResultMap = true)
 @Accessors(chain = true)
 public class UserappsHeartbeat implements Serializable {
 

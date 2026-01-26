@@ -24,7 +24,7 @@ import java.io.Serializable;
 @Setter
 @ToString
 @Accessors(chain = true)
-@TableName("analyse_rule")
+@TableName(value = "analyse_rule", autoResultMap = true)
 public class AnalyseRule implements Serializable {
 
     @Serial

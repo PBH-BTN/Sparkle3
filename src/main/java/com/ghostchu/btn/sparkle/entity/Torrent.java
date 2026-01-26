@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @ToString
-@TableName("torrent")
+@TableName(value = "torrent", autoResultMap = true)
 @Accessors(chain = true)
 public class Torrent implements Serializable {
 

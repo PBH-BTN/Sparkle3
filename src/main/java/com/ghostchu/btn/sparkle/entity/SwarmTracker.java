@@ -29,7 +29,7 @@ import java.time.OffsetDateTime;
 @Setter
 @ToString
 @Accessors(chain = true)
-@TableName("swarm_tracker")
+@TableName(value = "swarm_tracker", autoResultMap = true)
 public class SwarmTracker implements Serializable {
 
     @Serial

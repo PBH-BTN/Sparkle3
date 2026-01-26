@@ -25,7 +25,7 @@ import java.time.OffsetDateTime;
 @Setter
 @ToString
 @Accessors(chain = true)
-@TableName("client_discovery")
+@TableName(value = "client_discovery", autoResultMap = true)
 public class ClientDiscovery implements Serializable {
 
     @Serial
