@@ -52,6 +52,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.apache.commons:commons-pool2")
 	implementation("com.baomidou:mybatis-plus-spring-boot4-starter")
+	implementation("com.baomidou:dynamic-datasource-spring-boot-starter:4.3.1")
 	implementation("com.baomidou:lock4j-redis-template-spring-boot-starter:2.2.7")
 	//implementation("com.baomidou:mybatis-plus-generator:3.5.14")
 	//implementation("org.freemarker:freemarker:2.3.34")
@@ -94,6 +95,7 @@ dependencies {
     implementation("org.kohsuke:github-api:1.330")
     implementation("com.baomidou:mybatis-plus-jsqlparser")
     implementation("com.github.haifengl:smile-core:5.1.0")
+    implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

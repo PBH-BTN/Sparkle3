@@ -10,10 +10,20 @@ spring:
   thymeleaf:
     cache: false
   datasource:
-    url: jdbc:postgresql://local:5432/sparkle
-    username: username
-    password: password
-    driver-class-name: org.postgresql.Driver
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          url: jdbc:postgresql://local:5432/sparkle
+          username: username
+          password: password
+          driver-class-name: org.postgresql.Driver
+        clickhouse:
+          url: jdbc:clickhouse://localhost:8123/default
+          username: default
+          password: ""
+          driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
   data:
     redis:
       host: localhost
