@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
-import com.ghostchu.btn.sparkle.machinelearn.smile.SmileML;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
@@ -59,11 +58,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private PlatformTransactionManager platformTransactionManager;
     @Autowired
     private GeoIPManager geoIPManager;
-
-    @Autowired
-    private SmileML machineLearning;
-    @Value("${sparkle.machine-learning.swarmtracker-sample-rate}")
-    private double swarmTrackerSampleRate;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -223,12 +217,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
-            swarmMap.values().forEach(swarmTracker -> {
-                if (swarmTracker == null) return;
-                if (ThreadLocalRandom.current().nextDouble() <= swarmTrackerSampleRate) {
-                    machineLearning.learnFromSwarmTracker(swarmTracker);
-                }
-            });
         }
     }
 

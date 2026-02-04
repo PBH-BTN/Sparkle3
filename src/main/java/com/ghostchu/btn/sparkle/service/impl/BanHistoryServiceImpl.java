@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
-import com.ghostchu.btn.sparkle.machinelearn.smile.SmileML;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
@@ -53,8 +52,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private ObjectMapper objectMapper;
     @Autowired
     private GeoIPManager geoIPManager;
-    @Autowired
-    private SmileML machineLearning;
     @Value("${sparkle.machine-learning.banhistory-sample-rate}")
     private double banHistorySampleRate;
 
@@ -110,15 +107,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setStructuredData(structuredDataMap);
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
-
-        // 抽样到 MachineLearning 里
-        list.forEach(banHistory -> {
-            if (banHistory == null) return;
-            if (ThreadLocalRandom.current().nextDouble() <= banHistorySampleRate) {
-                machineLearning.learnFromBanHistory(banHistory);
-            }
-        });
-
         this.baseMapper.insert(list, 1000);
     }
 
