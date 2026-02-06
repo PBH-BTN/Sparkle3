@@ -20,7 +20,7 @@ spring:
           password: password
           driver-class-name: org.postgresql.Driver
         clickhouse:
-          url: jdbc:clickhouse://localhost:8123/default
+          url: jdbc:clickhouse://localhost:8123/sparkle3
           username: default
           password: ""
           driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
@@ -214,12 +214,13 @@ sparkle:
     cron: "0 0 * * * *"
     duration: 604800000
   ranking:
-      weight:
-        user-swarm-statistics:
-          sent-traffic-other-ack: 10
-          sent-traffic-self-report: 5
-          received-traffic-other-ack: 3
-          received-traffic-self-report: 5
+    database-type: clickhouse  # Options: clickhouse, postgres
+    weight:
+      user-swarm-statistics:
+        sent-traffic-other-ack: 10
+        sent-traffic-self-report: 5
+        received-traffic-other-ack: 3
+        received-traffic-self-report: 5
 
   machine-learning:
     enabled: true

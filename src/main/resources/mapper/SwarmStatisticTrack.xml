@@ -10,6 +10,20 @@
         <result property="receivedTrafficSelfReport" column="received_traffic_self_report"/>
     </resultMap>
 
+    <insert id="upsertUserSwarmStatistic" parameterType="com.ghostchu.btn.sparkle.entity.UserSwarmStatistic">
+        INSERT INTO user_swarm_statistic (user_id, sent_traffic_other_ack, received_traffic_other_ack,
+                                          sent_traffic_self_report, received_traffic_self_report, last_update_at)
+        VALUES (#{userId}, #{sentTrafficOtherAck}, #{receivedTrafficOtherAck},
+                #{sentTrafficSelfReport}, #{receivedTrafficSelfReport}, #{lastUpdateAt})
+        ON CONFLICT (user_id) DO UPDATE
+        SET
+            sent_traffic_other_ack = EXCLUDED.sent_traffic_other_ack,
+            received_traffic_other_ack = EXCLUDED.received_traffic_other_ack,
+            sent_traffic_self_report = EXCLUDED.sent_traffic_self_report,
+            received_traffic_self_report = EXCLUDED.received_traffic_self_report,
+            last_update_at = EXCLUDED.last_update_at
+    </insert>
+
     <insert id="updateUserSwarmStatistics">
         WITH self_report_stats AS (
             SELECT

@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
+import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -40,6 +40,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
+    @Autowired
+    private ISwarmStatisticsAggrService aggrService;
+    @Autowired
+    private IUserSwarmStatisticPersistenceService persistenceService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -62,17 +66,28 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             log.info("Starting user swarm statistics update for {} users", uids.size());
 
             long start = System.currentTimeMillis();
-            int batchSize = 15; // Process 5 users at a time to keep queries light
+            int batchSize = 15; // Process 15 users at a time to keep queries light
             int processed = 0;
 
             for (int i = 0; i < uids.size(); i += batchSize) {
                 List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
                 try {
-                    int updated = baseMapper.updateUserSwarmStatistics(startAt, endAt, batch);
+                    // Fetch aggregated statistics from ClickHouse/PostgreSQL (read-only)
+                    List<UserSwarmStatisticAggregationDto> aggregations =
+                            aggrService.fetchAggregatedStatistics(startAt, endAt, batch);
+
+                    // Upsert to PostgreSQL (primary datasource)
+                    int updated = persistenceService.upsertStatistics(aggregations);
                     processed += updated;
-                    log.info("Processed batch {}/{}: {} records updated", (i / batchSize) + 1, (uids.size() + batchSize - 1) / batchSize, updated);
+
+                    log.info("Processed batch {}/{}: {} records updated",
+                            (i / batchSize) + 1,
+                            (uids.size() + batchSize - 1) / batchSize,
+                            updated);
                 } catch (Exception e) {
                     log.error("Error updating swarm statistics for batch starting at index {}", i, e);
+                }finally{
+
                 }
             }
             log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);
@@ -80,6 +95,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             cronLock.unlock();
         }
     }
+
 
     @Override
     public @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking() {
