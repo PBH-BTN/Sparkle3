@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
 import com.baomidou.dynamic.datasource.annotation.DS;
+import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.ghostchu.btn.sparkle.mapper.clickhouse.SwarmStatisticsClickHouseMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmStatisticsClickHouseService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
@@ -37,12 +39,13 @@ public class SwarmStatisticsClickHouseServiceImpl implements ISwarmStatisticsCli
     }
 
     @Override
+    @DS("clickhouse")
     public @NotNull List<UserSwarmStatisticAggregationDto> fetchAggregatedStatistics(
             @NotNull OffsetDateTime startAt,
             @NotNull OffsetDateTime endAt,
             @NotNull List<Long> userIds) {
 
-        log.debug("Fetching aggregated statistics from ClickHouse for {} users", userIds.size());
+        log.info("Fetching aggregated statistics from {} for {} users", DynamicDataSourceContextHolder.peek(), userIds.size());
 
         // Fetch self-report statistics
         List<UserSwarmStatisticAggregationDto> selfReportStats =

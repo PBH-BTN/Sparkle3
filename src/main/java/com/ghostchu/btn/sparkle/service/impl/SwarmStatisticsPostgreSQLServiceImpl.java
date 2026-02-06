@@ -42,7 +42,7 @@ public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsCli
             @NotNull OffsetDateTime endAt,
             @NotNull List<Long> userIds) {
 
-        log.debug("Fetching aggregated statistics from PostgreSQL for {} users", userIds.size());
+        log.info("Fetching aggregated statistics from PostgreSQL for {} users", userIds.size());
 
         // Fetch self-report statistics
         List<UserSwarmStatisticAggregationDto> selfReportStats =
