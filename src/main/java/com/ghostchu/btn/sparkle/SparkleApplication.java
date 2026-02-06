@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle;
 
+import io.sentry.Sentry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -20,6 +21,8 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 public class SparkleApplication {
 
     public static void main(String[] args) {
+        Sentry.init();
+        Sentry.init("https://72052bef98414ea29bc78b5333c2a527@glitchtip.pbh-btn.com/3");
         SpringApplication.run(SparkleApplication.class, args);
     }
 

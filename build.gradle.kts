@@ -96,6 +96,9 @@ dependencies {
     implementation("com.baomidou:mybatis-plus-jsqlparser")
     implementation("com.github.haifengl:smile-core:5.1.0")
     implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
+    implementation(platform("io.sentry:sentry-bom:8.31.0")) //import bom
+    implementation("io.sentry:sentry")
+    implementation("io.sentry:sentry-logback")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
