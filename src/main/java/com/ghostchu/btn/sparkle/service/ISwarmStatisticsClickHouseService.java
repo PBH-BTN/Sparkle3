@@ -10,7 +10,7 @@ import java.util.List;
  * Service for querying swarm statistics from ClickHouse
  * All methods in this service read from ClickHouse (read-only datasource)
  */
-public interface ISwarmStatisticsAggrService {
+public interface ISwarmStatisticsClickHouseService {
 
     /**
      * Fetch aggregated swarm statistics for given users from ClickHouse

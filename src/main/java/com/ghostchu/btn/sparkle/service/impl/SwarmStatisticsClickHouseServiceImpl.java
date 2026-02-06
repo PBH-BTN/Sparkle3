@@ -1,6 +1,9 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
-import com.ghostchu.btn.sparkle.mapper.postgresql.SwarmStatisticsPostgreSQLMapper;
+import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
+import com.baomidou.dynamic.datasource.annotation.DS;
+import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
+import com.ghostchu.btn.sparkle.mapper.clickhouse.SwarmStatisticsClickHouseMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmStatisticsClickHouseService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
 import jakarta.annotation.PostConstruct;
@@ -17,24 +20,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * PostgreSQL Service Implementation for Swarm Statistics
- * This implementation is used when ClickHouse is disabled
- * All methods use the primary PostgreSQL datasource
- * This is the default implementation (matchIfMissing = true)
+ * ClickHouse Service Implementation for Swarm Statistics
+ * All methods use the ClickHouse datasource for read-only analytics queries
+ * This implementation is active when sparkle.ranking.database-type=clickhouse
+ * DataSource is controlled by @DS annotation on Mapper level
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "postgres", matchIfMissing = true)
-public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsClickHouseService {
+@ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "clickhouse")
+public class SwarmStatisticsClickHouseServiceImpl implements ISwarmStatisticsClickHouseService {
 
     @Autowired
-    private SwarmStatisticsPostgreSQLMapper postgreSQLMapper;
+    private SwarmStatisticsClickHouseMapper clickHouseMapper;
 
     @PostConstruct
     public void loaded(){
-        log.info("SwarmStatisticsPostgresServiceImpl loaded");
+        log.info("SwarmStatisticsClickHouseServiceImpl loaded");
     }
-
 
     @Override
     public @NotNull List<UserSwarmStatisticAggregationDto> fetchAggregatedStatistics(
@@ -42,15 +44,15 @@ public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsCli
             @NotNull OffsetDateTime endAt,
             @NotNull List<Long> userIds) {
 
-        log.info("Fetching aggregated statistics from PostgreSQL for {} users", userIds.size());
+        log.info("Fetching aggregated statistics from ClickHouse for {} users", userIds.size());
 
         // Fetch self-report statistics
         List<UserSwarmStatisticAggregationDto> selfReportStats =
-                postgreSQLMapper.fetchSelfReportStats(startAt, endAt, userIds);
+                clickHouseMapper.fetchSelfReportStats(startAt, endAt, userIds);
 
         // Fetch other-acknowledgment statistics
         List<UserSwarmStatisticAggregationDto> otherAckStats =
-                postgreSQLMapper.fetchOtherAckStats(startAt, endAt, userIds);
+                clickHouseMapper.fetchOtherAckStats(startAt, endAt, userIds);
 
         // Merge the results by user ID
         Map<Long, UserSwarmStatisticAggregationDto> mergedMap = new HashMap<>();
@@ -80,7 +82,7 @@ public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsCli
             }
         }
 
-        log.debug("Aggregated statistics for {} users from PostgreSQL", mergedMap.size());
+        log.debug("Aggregated statistics for {} users from ClickHouse", mergedMap.size());
 
         return new ArrayList<>(mergedMap.values());
     }
