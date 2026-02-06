@@ -23,10 +23,10 @@ import java.util.Map;
  * ClickHouse Service Implementation for Swarm Statistics
  * All methods use the ClickHouse datasource for read-only analytics queries
  * This implementation is active when sparkle.ranking.database-type=clickhouse
+ * DataSource is controlled by @DS annotation on Mapper level
  */
 @Slf4j
 @Service
-@DS("clickhouse")
 @ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "clickhouse")
 public class SwarmStatisticsClickHouseServiceImpl implements ISwarmStatisticsClickHouseService {
 
@@ -39,13 +39,12 @@ public class SwarmStatisticsClickHouseServiceImpl implements ISwarmStatisticsCli
     }
 
     @Override
-    @DS("clickhouse")
     public @NotNull List<UserSwarmStatisticAggregationDto> fetchAggregatedStatistics(
             @NotNull OffsetDateTime startAt,
             @NotNull OffsetDateTime endAt,
             @NotNull List<Long> userIds) {
 
-        log.info("Fetching aggregated statistics from {} for {} users", DynamicDataSourceContextHolder.peek(), userIds.size());
+        log.info("Fetching aggregated statistics from ClickHouse for {} users", userIds.size());
 
         // Fetch self-report statistics
         List<UserSwarmStatisticAggregationDto> selfReportStats =
