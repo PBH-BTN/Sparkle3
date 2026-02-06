@@ -4,7 +4,6 @@ import com.baomidou.dynamic.datasource.annotation.DS;
 import com.ghostchu.btn.sparkle.mapper.clickhouse.SwarmStatisticsClickHouseMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmStatisticsClickHouseService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,21 +19,16 @@ import java.util.Map;
 /**
  * ClickHouse Service Implementation for Swarm Statistics
  * All methods use the ClickHouse datasource for read-only analytics queries
- * This implementation is active when sparkle.ranking.database-type=clickhouse
+ * This implementation is active when sparkle.ranking.use-clickhouse=true
  */
 @Slf4j
 @Service
 @DS("clickhouse")
-@ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "clickhouse")
+@ConditionalOnProperty(name = "sparkle.ranking.use-clickhouse", havingValue = "true")
 public class SwarmStatisticsClickHouseServiceImpl implements ISwarmStatisticsClickHouseService {
 
     @Autowired
     private SwarmStatisticsClickHouseMapper clickHouseMapper;
-
-    @PostConstruct
-    public void loaded(){
-        log.info("SwarmStatisticsClickHouseServiceImpl loaded");
-    }
 
     @Override
     public @NotNull List<UserSwarmStatisticAggregationDto> fetchAggregatedStatistics(

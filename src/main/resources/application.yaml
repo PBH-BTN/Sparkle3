@@ -214,7 +214,7 @@ sparkle:
     cron: "0 0 * * * *"
     duration: 604800000
   ranking:
-    database-type: clickhouse  # Options: clickhouse, postgres
+    use-clickhouse: true
     weight:
       user-swarm-statistics:
         sent-traffic-other-ack: 10
