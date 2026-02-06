@@ -1,6 +1,5 @@
 package com.ghostchu.btn.sparkle.mapper.clickhouse;
 
-import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
@@ -15,7 +14,6 @@ import java.util.List;
  * This mapper is used to read aggregated data from ClickHouse
  * All methods use ClickHouse-compatible SQL dialects
  */
-@DS("clickhouse")
 public interface SwarmStatisticsClickHouseMapper extends BaseMapper<UserSwarmStatistic> {
 
     /**
