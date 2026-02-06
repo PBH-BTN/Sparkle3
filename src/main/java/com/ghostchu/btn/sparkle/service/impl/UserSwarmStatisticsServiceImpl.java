@@ -41,7 +41,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
     @Autowired
-    private ISwarmStatisticsClickHouseService clickHouseService;
+    private ISwarmStatisticsAggrService aggrService;
     @Autowired
     private IUserSwarmStatisticPersistenceService persistenceService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
@@ -74,7 +74,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                 try {
                     // Fetch aggregated statistics from ClickHouse/PostgreSQL (read-only)
                     List<UserSwarmStatisticAggregationDto> aggregations =
-                            clickHouseService.fetchAggregatedStatistics(startAt, endAt, batch);
+                            aggrService.fetchAggregatedStatistics(startAt, endAt, batch);
 
                     // Upsert to PostgreSQL (primary datasource)
                     int updated = persistenceService.upsertStatistics(aggregations);
@@ -86,6 +86,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                             updated);
                 } catch (Exception e) {
                     log.error("Error updating swarm statistics for batch starting at index {}", i, e);
+                }finally{
+
                 }
             }
             log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);

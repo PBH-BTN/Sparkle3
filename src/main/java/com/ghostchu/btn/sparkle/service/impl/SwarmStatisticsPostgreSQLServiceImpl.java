@@ -1,7 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.mapper.postgresql.SwarmStatisticsPostgreSQLMapper;
-import com.ghostchu.btn.sparkle.service.ISwarmStatisticsClickHouseService;
+import com.ghostchu.btn.sparkle.service.ISwarmStatisticsAggrService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "postgres", matchIfMissing = true)
-public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsClickHouseService {
+public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsAggrService {
 
     @Autowired
     private SwarmStatisticsPostgreSQLMapper postgreSQLMapper;
@@ -41,8 +41,6 @@ public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsCli
             @NotNull OffsetDateTime startAt,
             @NotNull OffsetDateTime endAt,
             @NotNull List<Long> userIds) {
-
-        log.info("Fetching aggregated statistics from PostgreSQL for {} users", userIds.size());
 
         // Fetch self-report statistics
         List<UserSwarmStatisticAggregationDto> selfReportStats =
