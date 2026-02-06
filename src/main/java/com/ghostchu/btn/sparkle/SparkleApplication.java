@@ -21,7 +21,6 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 public class SparkleApplication {
 
     public static void main(String[] args) {
-        Sentry.init();
         Sentry.init("https://72052bef98414ea29bc78b5333c2a527@glitchtip.pbh-btn.com/3");
         SpringApplication.run(SparkleApplication.class, args);
     }
