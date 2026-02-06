@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.impl;
 import com.ghostchu.btn.sparkle.mapper.postgresql.SwarmStatisticsPostgreSQLMapper;
 import com.ghostchu.btn.sparkle.service.ISwarmStatisticsClickHouseService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +20,21 @@ import java.util.Map;
  * PostgreSQL Service Implementation for Swarm Statistics
  * This implementation is used when ClickHouse is disabled
  * All methods use the primary PostgreSQL datasource
+ * This is the default implementation (matchIfMissing = true)
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "sparkle.ranking.use-clickhouse", havingValue = "false")
+@ConditionalOnProperty(name = "sparkle.ranking.database-type", havingValue = "postgres", matchIfMissing = true)
 public class SwarmStatisticsPostgreSQLServiceImpl implements ISwarmStatisticsClickHouseService {
 
     @Autowired
     private SwarmStatisticsPostgreSQLMapper postgreSQLMapper;
+
+    @PostConstruct
+    public void loaded(){
+        log.info("SwarmStatisticsPostgresServiceImpl loaded");
+    }
+
 
     @Override
     public @NotNull List<UserSwarmStatisticAggregationDto> fetchAggregatedStatistics(
