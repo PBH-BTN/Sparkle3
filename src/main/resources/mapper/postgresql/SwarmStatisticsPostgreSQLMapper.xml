@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.postgresql.SwarmStatisticsPostgreSQLMapper">
+
+    <resultMap id="userSwarmStatisticAggregationDtoResultMap" type="com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto">
+        <result property="userId" column="user_id"/>
+        <result property="sentTrafficSelfReport" column="sent_traffic_self_report"/>
+        <result property="receivedTrafficSelfReport" column="received_traffic_self_report"/>
+        <result property="sentTrafficOtherAck" column="sent_traffic_other_ack"/>
+        <result property="receivedTrafficOtherAck" column="received_traffic_other_ack"/>
+    </resultMap>
+
+    <!-- Fetch self-report statistics from PostgreSQL -->
+    <select id="fetchSelfReportStats" resultMap="userSwarmStatisticAggregationDtoResultMap">
+        SELECT
+            usrapp.owner as user_id,
+            COALESCE(SUM(st.to_peer_traffic), 0) as sent_traffic_self_report,
+            COALESCE(SUM(st.from_peer_traffic), 0) as received_traffic_self_report,
+            0 as sent_traffic_other_ack,
+            0 as received_traffic_other_ack
+        FROM userapp usrapp
+        JOIN swarm_tracker st ON st.userapps_id = usrapp.id
+        WHERE st.first_time_seen &gt;= #{startAt}
+          AND st.last_time_seen &lt;= #{endAt}
+        <if test="userIds != null and userIds.size() > 0">
+            AND usrapp.owner IN
+            <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                #{uid}
+            </foreach>
+        </if>
+        GROUP BY usrapp.owner
+    </select>
+
+    <!-- Fetch other-acknowledgment statistics from PostgreSQL -->
+    <select id="fetchOtherAckStats" resultMap="userSwarmStatisticAggregationDtoResultMap">
+        WITH distinct_ips AS (
+            SELECT DISTINCT ua.owner as user_id, uah.ip
+            FROM userapp ua
+            JOIN userapps_heartbeat uah ON uah.userapp_id = ua.id
+            WHERE uah.last_seen_at &gt;= #{startAt}
+              AND uah.first_seen_at &lt;= #{endAt}
+            <if test="userIds != null and userIds.size() > 0">
+                AND ua.owner IN
+                <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+        )
+        SELECT
+            di.user_id,
+            0 as sent_traffic_self_report,
+            0 as received_traffic_self_report,
+            COALESCE(SUM(st.from_peer_traffic), 0) as sent_traffic_other_ack,
+            COALESCE(SUM(st.to_peer_traffic), 0) as received_traffic_other_ack
+        FROM distinct_ips di
+        JOIN swarm_tracker st ON st.peer_ip &lt;&lt;= di.ip::inet
+        WHERE st.first_time_seen &gt;= #{startAt}
+          AND st.last_time_seen &lt;= #{endAt}
+        GROUP BY di.user_id
+    </select>
+
+</mapper>
