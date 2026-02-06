@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -44,7 +43,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @Autowired
     private ISwarmStatisticsClickHouseService clickHouseService;
     @Autowired
-    private UserSwarmStatisticsServiceImpl self; // Self-injection to handle @Transactional properly
+    private IUserSwarmStatisticPersistenceService persistenceService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -73,12 +72,12 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             for (int i = 0; i < uids.size(); i += batchSize) {
                 List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
                 try {
-                    // Fetch aggregated statistics from ClickHouse (read-only)
+                    // Fetch aggregated statistics from ClickHouse/PostgreSQL (read-only)
                     List<UserSwarmStatisticAggregationDto> aggregations =
                             clickHouseService.fetchAggregatedStatistics(startAt, endAt, batch);
 
-                    // Upsert to PostgreSQL (primary datasource) - use self-reference for proper transaction handling
-                    int updated = self.upsertStatisticsToPrimary(aggregations);
+                    // Upsert to PostgreSQL (primary datasource)
+                    int updated = persistenceService.upsertStatistics(aggregations);
                     processed += updated;
 
                     log.info("Processed batch {}/{}: {} records updated",
@@ -95,32 +94,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         }
     }
 
-    /**
-     * Upsert aggregated statistics to the primary PostgreSQL database
-     * This method uses the default (primary) datasource
-     *
-     * @param aggregations List of aggregated statistics from ClickHouse
-     * @return Number of records updated
-     */
-    @Transactional
-    protected int upsertStatisticsToPrimary(@NotNull List<UserSwarmStatisticAggregationDto> aggregations) {
-        OffsetDateTime now = OffsetDateTime.now();
-        int count = 0;
-
-        for (UserSwarmStatisticAggregationDto dto : aggregations) {
-            UserSwarmStatistic statistic = new UserSwarmStatistic();
-            statistic.setUserId(dto.getUserId());
-            statistic.setSentTrafficSelfReport(dto.getSentTrafficSelfReport() != null ? dto.getSentTrafficSelfReport() : 0L);
-            statistic.setReceivedTrafficSelfReport(dto.getReceivedTrafficSelfReport() != null ? dto.getReceivedTrafficSelfReport() : 0L);
-            statistic.setSentTrafficOtherAck(dto.getSentTrafficOtherAck() != null ? dto.getSentTrafficOtherAck() : 0L);
-            statistic.setReceivedTrafficOtherAck(dto.getReceivedTrafficOtherAck() != null ? dto.getReceivedTrafficOtherAck() : 0L);
-            statistic.setLastUpdateAt(now);
-
-            count += baseMapper.upsertUserSwarmStatistic(statistic);
-        }
-
-        return count;
-    }
 
     @Override
     public @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking() {
