@@ -6,7 +6,6 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
-import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticAggregationDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -41,10 +40,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
-    @Autowired
-    private ISwarmStatisticsClickHouseService clickHouseService;
-    @Autowired
-    private UserSwarmStatisticsServiceImpl self; // Self-injection to handle @Transactional properly
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -67,24 +62,15 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             log.info("Starting user swarm statistics update for {} users", uids.size());
 
             long start = System.currentTimeMillis();
-            int batchSize = 15; // Process 15 users at a time to keep queries light
+            int batchSize = 15; // Process 5 users at a time to keep queries light
             int processed = 0;
 
             for (int i = 0; i < uids.size(); i += batchSize) {
                 List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
                 try {
-                    // Fetch aggregated statistics from ClickHouse (read-only)
-                    List<UserSwarmStatisticAggregationDto> aggregations =
-                            clickHouseService.fetchAggregatedStatistics(startAt, endAt, batch);
-
-                    // Upsert to PostgreSQL (primary datasource) - use self-reference for proper transaction handling
-                    int updated = self.upsertStatisticsToPrimary(aggregations);
+                    int updated = baseMapper.updateUserSwarmStatistics(startAt, endAt, batch);
                     processed += updated;
-
-                    log.info("Processed batch {}/{}: {} records updated",
-                            (i / batchSize) + 1,
-                            (uids.size() + batchSize - 1) / batchSize,
-                            updated);
+                    log.info("Processed batch {}/{}: {} records updated", (i / batchSize) + 1, (uids.size() + batchSize - 1) / batchSize, updated);
                 } catch (Exception e) {
                     log.error("Error updating swarm statistics for batch starting at index {}", i, e);
                 }
@@ -93,33 +79,6 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         }finally {
             cronLock.unlock();
         }
-    }
-
-    /**
-     * Upsert aggregated statistics to the primary PostgreSQL database
-     * This method uses the default (primary) datasource
-     *
-     * @param aggregations List of aggregated statistics from ClickHouse
-     * @return Number of records updated
-     */
-    @Transactional
-    protected int upsertStatisticsToPrimary(@NotNull List<UserSwarmStatisticAggregationDto> aggregations) {
-        OffsetDateTime now = OffsetDateTime.now();
-        int count = 0;
-
-        for (UserSwarmStatisticAggregationDto dto : aggregations) {
-            UserSwarmStatistic statistic = new UserSwarmStatistic();
-            statistic.setUserId(dto.getUserId());
-            statistic.setSentTrafficSelfReport(dto.getSentTrafficSelfReport() != null ? dto.getSentTrafficSelfReport() : 0L);
-            statistic.setReceivedTrafficSelfReport(dto.getReceivedTrafficSelfReport() != null ? dto.getReceivedTrafficSelfReport() : 0L);
-            statistic.setSentTrafficOtherAck(dto.getSentTrafficOtherAck() != null ? dto.getSentTrafficOtherAck() : 0L);
-            statistic.setReceivedTrafficOtherAck(dto.getReceivedTrafficOtherAck() != null ? dto.getReceivedTrafficOtherAck() : 0L);
-            statistic.setLastUpdateAt(now);
-
-            count += baseMapper.upsertUserSwarmStatistic(statistic);
-        }
-
-        return count;
     }
 
     @Override

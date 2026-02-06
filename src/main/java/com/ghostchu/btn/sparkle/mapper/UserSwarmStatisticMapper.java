@@ -23,13 +23,6 @@ public interface UserSwarmStatisticMapper extends BaseMapper<UserSwarmStatistic>
                                   @Param("endAt") @NotNull OffsetDateTime endAt,
                                   @Param("userIds") @NotNull List<Long> userIds);
 
-    /**
-     * Upsert a single user swarm statistic record
-     * @param statistic The statistic record to upsert
-     * @return Number of rows affected
-     */
-    int upsertUserSwarmStatistic(@NotNull UserSwarmStatistic statistic);
-
     @NotNull
     List<UserSwarmStatisticTrackRankingDto> calcUsersRanking(double sentTrafficOtherAckWeight,
                                                              double sentTrafficSelfReportWeight,
