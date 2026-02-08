@@ -50,7 +50,7 @@ class GzipSizeLimitedInputStream extends FilterInputStream {
     private void checkLimit() throws IOException {
         if (totalBytesRead > maxSize) {
             throw new IOException(String.format(
-                    "解压缩数据超过限制: 已解压 %d 字节数据, 原始 servlet 流缓冲区仍剩余 %d 压缩的字节 (最大允许: %d 未压缩字节)。Zip-Bomb?",
+                    "解压缩数据超过限制: 已解压 %d 字节数据, 原始 servlet 流缓冲区仍剩余 %d 未解压字节 (最大允许: %d 未压缩字节)。Zip-Bomb?",
                     totalBytesRead, servletInputStream.available(), maxSize
             ));
         }
