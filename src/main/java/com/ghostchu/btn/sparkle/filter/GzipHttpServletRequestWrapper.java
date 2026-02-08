@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 
 public class GzipHttpServletRequestWrapper extends HttpServletRequestWrapper {
-    
+
     private final long zipBombThreshold;
 
     public GzipHttpServletRequestWrapper(@NotNull HttpServletRequest request, long zipBombThreshold) {
@@ -20,7 +20,7 @@ public class GzipHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     public ServletInputStream getInputStream() throws IOException {
         GZIPInputStream gzipInputStream = new GZIPInputStream(super.getInputStream());
-        GzipSizeLimitedInputStream gzipSizeLimitedInputStream = new GzipSizeLimitedInputStream(gzipInputStream, zipBombThreshold);
+        GzipSizeLimitedInputStream gzipSizeLimitedInputStream = new GzipSizeLimitedInputStream(super.getInputStream(), gzipInputStream, zipBombThreshold);
         return new GzipServletInputStreamWrapper(gzipSizeLimitedInputStream);
     }
 }

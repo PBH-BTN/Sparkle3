@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.filter;
 
+import jakarta.servlet.ServletInputStream;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.FilterInputStream;
@@ -12,10 +13,12 @@ import java.io.InputStream;
 class GzipSizeLimitedInputStream extends FilterInputStream {
 
     private final long maxSize;
+    private final ServletInputStream servletInputStream;
     private long totalBytesRead = 0;
 
-    public GzipSizeLimitedInputStream(@NotNull InputStream in, long maxSize) {
+    public GzipSizeLimitedInputStream(ServletInputStream inputStream, @NotNull InputStream in, long maxSize) {
         super(in);
+        this.servletInputStream = inputStream;
         this.maxSize = maxSize;
     }
 
@@ -47,8 +50,8 @@ class GzipSizeLimitedInputStream extends FilterInputStream {
     private void checkLimit() throws IOException {
         if (totalBytesRead > maxSize) {
             throw new IOException(String.format(
-                    "解压缩数据超过限制: 已读取 %d 字节, 缓冲区仍剩余 %d 字节 (最大允许: %d 字节)。Zip-Bomb?",
-                    totalBytesRead, in.available(), maxSize
+                    "解压缩数据超过限制: 已解压 %d 字节数据, 原始 servlet 流缓冲区仍剩余 %d 压缩的字节 (最大允许: %d 未压缩字节)。Zip-Bomb?",
+                    totalBytesRead, servletInputStream.available(), maxSize
             ));
         }
     }
