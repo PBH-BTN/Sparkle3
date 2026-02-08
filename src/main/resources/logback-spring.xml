@@ -17,8 +17,20 @@
         <appender-ref ref="CONSOLE"/>
     </logger>
 
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>data/logs/latest.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>data/logs/%d{yyyy-MM-dd}-%i.log.gz</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%d{HH:mm:ss}] [%t/%level]: %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <!-- Root logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </root>
 </configuration>
