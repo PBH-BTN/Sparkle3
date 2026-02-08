@@ -39,6 +39,9 @@ sentry {
     autoInstallation {
         enabled = true
     }
+    org = System.getenv("SENTRY_ORG")
+    projectName = System.getenv("SENTRY_PROJECT_SLUG")
+    authToken = System.getenv("SENTRY_AUTH_TOKEN")
 }
 
 configurations {
