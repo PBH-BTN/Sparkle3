@@ -37,7 +37,11 @@ public class UserIPWarningServiceImpl {
     public void userIpWarning() {
         Map<IPAddress, String> map = new LinkedHashMap<>();
         DualIPv4v6AssociativeTries<String> ips = new DualIPv4v6AssociativeTries<>();
-        ipDenyListRuleProviders.forEach(provider -> stringToIPList(provider.getContent(), ips));
+        ipDenyListRuleProviders.forEach(provider -> {
+            var content = provider.getContent();
+            if(content != null)
+                stringToIPList(provider.getContent(), ips);
+        });
         ips.nodeIterator(false).forEachRemaining(node -> {
             var records = heartbeatService.fetchIpHeartbeatRecords(node.getKey().toNormalizedString(),
                     OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
