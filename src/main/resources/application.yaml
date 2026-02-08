@@ -82,7 +82,7 @@ sentry:
   # Enable logs
   logs:
     enabled: true
-  exception-resolver-order: -2147483647
+    level: WARN
 logging:
   level:
     org.apache.catalina.connector: OFF

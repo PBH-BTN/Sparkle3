@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.handler;
 
 import java.nio.charset.MalformedInputException;
 
+import io.sentry.Sentry;
 import org.apache.catalina.connector.ClientAbortException;
 import org.apache.tomcat.util.http.InvalidParameterException;
 import org.jetbrains.annotations.NotNull;
@@ -113,6 +114,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<@NotNull StdResp<String>> jvmExceptionHandler(Exception e, HttpServletRequest request) {
         // Check if it's a parameter encoding issue deep in the stack
+        var sentryId = Sentry.captureException(e);
         Throwable cause = e;
         int depth = 0;
         while (cause != null && depth < 20) {
@@ -125,9 +127,10 @@ public class GlobalExceptionHandler {
             cause = cause.getCause();
             depth++;
         }
-        
-        log.error("Unexpected exception", e);
+
+        log.error("Unexpected exception. Tracing Id: {}", sentryId, e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new StdResp<>(false, "服务器内部错误，请联系服务器管理员。", null));
+                .body(new StdResp<>(false, "很抱歉，由于服务器内部错误，您的请求未能完成。此错误我们已收悉，错误跟踪ID：" + sentryId, null));
+
     }
 }

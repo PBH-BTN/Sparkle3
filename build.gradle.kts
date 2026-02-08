@@ -17,6 +17,30 @@ java {
 	}
 }
 
+sentry {
+    // Enables more detailed log output, e.g. for sentry-cli.
+    //
+    // Default is false.
+    debug = false
+    // Generates a source bundle and uploads it to Sentry.
+    // This enables source context, allowing you to see your source
+    // code as part of your stack traces in Sentry.
+    //
+    // Default is disabled. To enable, see the source context guide.
+    includeSourceContext = true
+    // Disables or enables dependencies metadata reporting for Sentry.
+    // If enabled, the plugin will collect external dependencies and
+    // upload them to Sentry as part of events. If disabled, all the logic
+    // related to the dependencies metadata report will be excluded.
+    //
+    // Default is enabled.
+    includeDependenciesReport = true
+    // Automatically adds Sentry dependencies to your project.
+    autoInstallation {
+        enabled = true
+    }
+}
+
 configurations {
 	compileOnly {
 		extendsFrom(configurations.annotationProcessor.get())
@@ -98,7 +122,8 @@ dependencies {
     implementation("com.github.haifengl:smile-core:5.1.0")
     implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
     implementation(platform("io.sentry:sentry-bom:8.31.0")) //import bom
-    implementation("io.sentry:sentry-async-profiler:8.31.0")
+    implementation("io.sentry:sentry-async-profiler")
+    implementation("io.sentry:sentry-logback");
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

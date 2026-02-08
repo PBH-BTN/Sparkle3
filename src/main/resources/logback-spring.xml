@@ -27,6 +27,7 @@
             <pattern>[%d{HH:mm:ss}] [%t/%level]: %msg%n</pattern>
         </encoder>
     </appender>
+    
 
     <!-- Root logger -->
     <root level="INFO">
