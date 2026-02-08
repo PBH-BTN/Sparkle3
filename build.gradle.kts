@@ -4,6 +4,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.0.0"
 	id("io.spring.dependency-management") version "1.1.7"
+    id("io.sentry.jvm.gradle") version "6.0.0"
 }
 
 group = "com.ghostchu.btn"
@@ -97,8 +98,7 @@ dependencies {
     implementation("com.github.haifengl:smile-core:5.1.0")
     implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
     implementation(platform("io.sentry:sentry-bom:8.31.0")) //import bom
-    implementation("io.sentry:sentry")
-    implementation("io.sentry:sentry-logback")
+    implementation("io.sentry:sentry-async-profiler:8.31.0")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

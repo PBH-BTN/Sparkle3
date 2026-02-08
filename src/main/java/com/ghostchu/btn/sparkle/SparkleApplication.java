@@ -28,17 +28,6 @@ import java.util.concurrent.TimeoutException;
 public class SparkleApplication {
 
     public static void main(String[] args) {
-        Sentry.init(sentryOptions -> {
-            sentryOptions.setDsn("https://72052bef98414ea29bc78b5333c2a527@glitchtip.pbh-btn.com/3");
-            sentryOptions.setEnableExternalConfiguration(true); // Read DSN from sentry.properties
-            sentryOptions.setAttachThreads(true);
-            sentryOptions.setPrintUncaughtStackTrace(true);
-            sentryOptions.setEnableUncaughtExceptionHandler(true);
-            sentryOptions.setProfilesSampleRate(1.0d);
-            sentryOptions.setTag("os", System.getProperty("os.name"));
-            sentryOptions.setTag("osarch", System.getProperty("os.arch"));
-            sentryOptions.setTag("osversion", System.getProperty("os.version"));
-        });
         SpringApplication.run(SparkleApplication.class, args);
     }
 

@@ -67,7 +67,22 @@ management:
     web:
       exposure:
           include: prometheus,health,info
-
+sentry:
+  dsn: https://72052bef98414ea29bc78b5333c2a527@glitchtip.pbh-btn.com/3
+  # Add data like request headers and IP for users,
+  # see https://docs.sentry.io/platforms/java/guides/spring-boot/data-management/data-collected/ for more info
+  send-default-pii: true
+  # Set traces_sample_rate to 1.0 to capture 100%
+  # of transactions for tracing.
+  # We recommend adjusting this value in production.
+  tracesSampleRate: 1.0
+  # Enable profiling
+  profileSessionSampleRate: 1.0
+  profileLifecycle: TRACE
+  # Enable logs
+  logs:
+    enabled: true
+  exception-resolver-order: -2147483647
 logging:
   level:
     org.apache.catalina.connector: OFF
@@ -227,6 +242,3 @@ sparkle:
     banhistory-sample-rate: 1.0
     swarmtracker-sample-rate: 0.005
     queue-capacity: 10000
-
-
-
