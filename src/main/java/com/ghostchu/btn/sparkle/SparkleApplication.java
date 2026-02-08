@@ -1,22 +1,11 @@
 package com.ghostchu.btn.sparkle;
 
-import com.maxmind.geoip2.exception.AddressNotFoundException;
-import com.zaxxer.hikari.pool.HikariPool;
-import io.sentry.Sentry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.retry.annotation.EnableRetry;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
-
-import javax.crypto.BadPaddingException;
-import javax.net.ssl.SSLHandshakeException;
-import java.net.SocketTimeoutException;
-import java.util.concurrent.TimeoutException;
 
 @SpringBootApplication
 @MapperScan("com.ghostchu.btn.sparkle.mapper")
