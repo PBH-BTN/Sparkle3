@@ -19,7 +19,7 @@ import java.util.List;
  */
 public interface IUserappService extends IService<Userapp> {
     @Nullable
-    Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp);
+    Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent);
 
     @NotNull
     List<Userapp> getUserAppsByUserId(long userId);
@@ -34,5 +34,5 @@ public interface IUserappService extends IService<Userapp> {
     @NotNull Userapp createUserAppForUser(Long userId, String comment, InetAddress creatorIp);
 
     @Transactional
-    void updateUserAppLastSeen(long id);
+    void updateUserAppLastSeen(long id, String userAgent);
 }

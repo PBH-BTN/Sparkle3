@@ -67,4 +67,7 @@ public class Userapp implements Serializable {
 
     @TableField("last_seen_at")
     private OffsetDateTime lastSeenAt;
+
+    @TableField("last_user_agent")
+    private String lastUserAgent;
 }

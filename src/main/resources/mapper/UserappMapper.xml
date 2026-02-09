@@ -4,9 +4,9 @@
     <select id="fetchAllUserApps" resultType="com.ghostchu.btn.sparkle.entity.Userapp" fetchSize="100">
         SELECT * FROM userapp
     </select>
-    <insert id="updateUserAppLastSeen">
+    <insert id="updateUserAppLastThing">
         UPDATE userapp
-        SET last_seen_at = NOW()
+        SET last_seen_at = NOW(), last_user_agent = #{lastUserAgent}
         WHERE id = #{id}
     </insert>
 </mapper>

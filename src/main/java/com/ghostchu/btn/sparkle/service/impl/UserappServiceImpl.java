@@ -43,7 +43,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
 
     @Nullable
     @Transactional
-    public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp) {
+    public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent) {
         Userapp userApp;
         if (("example-app-id".equals(appId) || appId.isBlank())
                 && ("example-app-secret".equals(appSecret) || appSecret.isBlank())
@@ -72,7 +72,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
             userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
         }
         if (userApp != null) {
-            this.baseMapper.updateUserAppLastSeen(userApp.getId());
+            this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
         }
         return userApp;
     }
@@ -130,7 +130,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
 
     @Transactional
     @Override
-    public void updateUserAppLastSeen(long id) {
-        baseMapper.updateUserAppLastSeen(id);
+    public void updateUserAppLastSeen(long id, String userAgent) {
+        baseMapper.updateUserAppLastThing(id,userAgent);
     }
 }

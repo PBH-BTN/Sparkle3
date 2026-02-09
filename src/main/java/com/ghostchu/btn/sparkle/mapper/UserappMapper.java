@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
  * @since 2025-11-29
  */
 public interface UserappMapper extends BaseMapper<Userapp> {
-    int updateUserAppLastSeen(long id);
+    int updateUserAppLastThing(long id, String lastUserAgent);
 
     @NotNull
     Cursor<Userapp> fetchAllUserApps();

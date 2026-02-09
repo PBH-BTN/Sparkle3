@@ -48,7 +48,7 @@ public class BasePingController {
     public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()));
+        var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
         if (userApp == null) {
             throw new UserApplicationNotFoundException();
         }
@@ -62,7 +62,7 @@ public class BasePingController {
     public Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        return userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()));
+        return userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
     }
 
     public String cutPeerId(String in) {
