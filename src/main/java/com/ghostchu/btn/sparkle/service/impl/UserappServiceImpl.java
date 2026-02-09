@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import io.sentry.Sentry;
 import jakarta.mail.Message;
+import jakarta.mail.internet.InternetAddress;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -91,6 +92,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
                 if (success == Boolean.TRUE) {
                     try {
                         var mimeMessage = javaMailSender.createMimeMessage();
+                        mimeMessage.setFrom(new InternetAddress("sparkle@pbh-btn.com", "SparkleBTN 系统通知"));
                         mimeMessage.setRecipients(Message.RecipientType.TO, user.getEmail()); // testing
                         mimeMessage.setSubject("[SparkleBTN] 您使用的 PeerBanHelper (v9.3.0) 存在安全风险，建议您及时升级");
                         mimeMessage.setText("""
