@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
+import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import io.sentry.Sentry;
+import jakarta.mail.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +44,10 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     private boolean autoAccountAllowLogin;
     @Value("${sparkle.userapp.auto-account.holder-uid}")
     private long autoAccountHolderUid;
+    @Autowired
+    private JavaMailSender javaMailSender;
+    @Autowired
+    private IUserService userService;
 
     @Nullable
     @Transactional
@@ -73,6 +81,32 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
         }
         if (userApp != null) {
             this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
+        }
+        // TODO: delete after emerg alert
+        if (userAgent != null && userAgent.contains("PeerBanHelper/9.3.0") && userApp != null) {
+            var ownerId = userApp.getOwner();
+            var user = userService.getById(ownerId);
+            if(user != null) {
+                Boolean success = userAppsRedisTemplate.opsForValue().setIfAbsent("pbh-930-security-alert-testscope:" + ownerId, System.currentTimeMillis());
+                if (success == Boolean.TRUE) {
+                    try {
+                        var mimeMessage = javaMailSender.createMimeMessage();
+                        mimeMessage.setRecipients(Message.RecipientType.TO, "ghostchu@pbh-btn.com"); // testing
+                        mimeMessage.setSubject("[SparkleBTN] 您使用的 PeerBanHelper (v9.3.0) 存在安全风险，建议您及时升级");
+                        mimeMessage.setText("""
+                                您好 %s，
+                                  您之所以收到这封邮件，是因为 SparkleBTN 系统已检测到您正在使用存在已知安全问题的 PeerBanHelper 版本 (%s)。
+                                  我们已发布紧急安全更新，并修复了相关安全漏洞，请您及时更新！您可以从下面的链接或者 PeerBanHelper 自带的更新程序进行更新：
+                                  https://github.com/PBH-BTN/PeerBanHelper/releases/tag/v9.3.1
+                                  对您带来的不便，我们致以诚挚歉意。
+                                """);
+                        javaMailSender.send(mimeMessage);
+                    }catch (Exception e){
+                        Sentry.captureException(e);
+                        log.warn("Failed to send security alert email to user ID {}", ownerId, e);
+                    }
+                }
+            }
         }
         return userApp;
     }
@@ -131,6 +165,6 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     @Transactional
     @Override
     public void updateUserAppLastSeen(long id, String userAgent) {
-        baseMapper.updateUserAppLastThing(id,userAgent);
+        baseMapper.updateUserAppLastThing(id, userAgent);
     }
 }

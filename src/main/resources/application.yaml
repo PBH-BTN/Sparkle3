@@ -53,6 +53,20 @@ spring:
             token-uri: https://github.com/login/oauth/access_token
             user-info-uri: https://api.github.com/user
             user-name-attribute: id
+  mail:
+    host: localhost
+    username: mail@mail.com
+    password: 123
+    port: 465
+    protocol: smtps
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 5000
+    default-encoding: UTF-8
 server:
   address: 0.0.0.0
   port: 7799

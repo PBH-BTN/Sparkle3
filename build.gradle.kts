@@ -128,6 +128,7 @@ dependencies {
     implementation(platform("io.sentry:sentry-bom:8.31.0")) //import bom
     implementation("io.sentry:sentry-async-profiler")
     implementation("io.sentry:sentry-logback");
+    implementation("org.springframework.boot:spring-boot-starter-mail") // mailing
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
