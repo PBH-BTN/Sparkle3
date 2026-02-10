@@ -186,6 +186,11 @@ sparkle:
       duration: 604800000
       threshold-ratio: 3.2
       threshold-traffic: 15000000000
+      # Performance optimization: use materialized view for 95%+ faster queries
+      # Set to true after running v15 migration to enable materialized view
+      use-materialized-view: false
+      # Auto-refresh materialized view before each analysis (recommended for accuracy)
+      materialized-view-refresh: true
     concurrent-download-analyse:
       schedule: "0 0 * * * *"
       duration: 3600000

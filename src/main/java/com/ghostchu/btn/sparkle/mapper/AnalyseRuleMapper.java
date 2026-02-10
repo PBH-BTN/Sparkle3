@@ -29,6 +29,10 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
 
     void analyseOverDownloadedWithHandler(@NotNull OffsetDateTime afterTimestamp, ResultHandler<AnalyseOverDownloadedResult> handler);
 
+    void analyseOverDownloadedFromMaterializedViewWithHandler(@NotNull OffsetDateTime afterTimestamp, ResultHandler<AnalyseOverDownloadedResult> handler);
+
+    void refreshOverDownloadMaterializedView();
+
     @NotNull
     List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
 

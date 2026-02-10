@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
 import com.google.common.hash.Hashing;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,9 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
+@Slf4j
 @Service
 public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
 
@@ -31,20 +34,57 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     private double thresholdRatio;
     @Value("${sparkle.analyse.overdownload-analyse.threshold-traffic}")
     private long thresholdTraffic;
+    @Value("${sparkle.analyse.overdownload-analyse.use-materialized-view:false}")
+    private boolean useMaterializedView;
+    @Value("${sparkle.analyse.overdownload-analyse.materialized-view-refresh:true}")
+    private boolean materializedViewRefresh;
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
     public void analyseOverDownload() {
+        long startTime = System.currentTimeMillis();
+        log.info("[OverDownload Analysis] Starting over-download analysis for last {} days (mode: {})", 
+                duration / (24 * 60 * 60 * 1000), useMaterializedView ? "Materialized View" : "Direct Query");
+        
+        // Refresh materialized view if enabled and using materialized view
+        if (useMaterializedView && materializedViewRefresh) {
+            try {
+                long refreshStart = System.currentTimeMillis();
+                log.info("[OverDownload Analysis] Refreshing materialized view...");
+                this.baseMapper.refreshOverDownloadMaterializedView();
+                long refreshTime = System.currentTimeMillis() - refreshStart;
+                log.info("[OverDownload Analysis] Materialized view refreshed in {} ms", refreshTime);
+            } catch (Exception e) {
+                log.error("[OverDownload Analysis] Failed to refresh materialized view, falling back to direct query", e);
+                // Fall back to direct query on refresh failure
+                analyseWithDirectQuery(startTime);
+                return;
+            }
+        }
+        
+        if (useMaterializedView) {
+            analyseWithMaterializedView(startTime);
+        } else {
+            analyseWithDirectQuery(startTime);
+        }
+    }
+    
+    private void analyseWithMaterializedView(long startTime) {
         Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+        AtomicLong processedRows = new AtomicLong(0);
+        AtomicLong filteredRows = new AtomicLong(0);
 
-        // Use ResultHandler to process results one by one, avoiding loading all data into memory
-        this.baseMapper.analyseOverDownloadedWithHandler(
+        this.baseMapper.analyseOverDownloadedFromMaterializedViewWithHandler(
             OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
             resultContext -> {
+                processedRows.incrementAndGet();
                 AnalyseOverDownloadedResult result = resultContext.getResultObject();
-                if (result.getTorrentSize() <= 0) return;
+                if (result.getTorrentSize() <= 0) {
+                    filteredRows.incrementAndGet();
+                    return;
+                }
 
                 var inet = InetAddress.ofLiteral(result.getPeerIp());
                 var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
@@ -56,13 +96,56 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             }
         );
 
+        long queryEndTime = System.currentTimeMillis();
+        log.info("[OverDownload Analysis] Materialized view query completed in {} ms, processed {} rows, filtered {} rows, aggregated to {} unique IPs",
+                queryEndTime - startTime, processedRows.get(), filteredRows.get(), aggregateMap.size());
+
+        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
+    }
+    
+    private void analyseWithDirectQuery(long startTime) {
+        Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+        AtomicLong processedRows = new AtomicLong(0);
+        AtomicLong filteredRows = new AtomicLong(0);
+
+        // Use ResultHandler to process results one by one, avoiding loading all data into memory
+        this.baseMapper.analyseOverDownloadedWithHandler(
+            OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
+            resultContext -> {
+                processedRows.incrementAndGet();
+                AnalyseOverDownloadedResult result = resultContext.getResultObject();
+                if (result.getTorrentSize() <= 0) {
+                    filteredRows.incrementAndGet();
+                    return;
+                }
+
+                var inet = InetAddress.ofLiteral(result.getPeerIp());
+                var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
+                mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
+                mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
+                mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
+                mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
+                aggregateMap.put(inet, mixCalc);
+            }
+        );
+
+        long queryEndTime = System.currentTimeMillis();
+        log.info("[OverDownload Analysis] Direct query completed in {} ms, processed {} rows, filtered {} rows, aggregated to {} unique IPs",
+                queryEndTime - startTime, processedRows.get(), filteredRows.get(), aggregateMap.size());
+
+        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
+    }
+    
+    private void processResults(Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap, long startTime, long queryEndTime, long processedRows) {
         StringBuilder sb = new StringBuilder();
+        int violationCount = 0;
 
         for (Map.Entry<InetAddress, AggregateCrossTorrentMixCalc> entry : aggregateMap.entrySet()) {
             InetAddress ip = entry.getKey();
             AggregateCrossTorrentMixCalc calc = entry.getValue();
             if(calc.getOverDownloadRatio() > thresholdRatio){
                 if(calc.getPureToPeerTraffic() > thresholdTraffic){
+                    violationCount++;
                     sb.append("# [Sparkle3 过量下载在线分析] ")
                             .append(" 过量下载比率: ").append(String.format("%.2f", calc.getOverDownloadRatio() * 100)).append("%")
                             .append(" (100% = 完整下载一次种子大小)")
@@ -74,8 +157,17 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                 }
             }
         }
+        
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey(), sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
+        
+        long totalTime = System.currentTimeMillis() - startTime;
+        long queryTime = queryEndTime - startTime;
+        log.info("[OverDownload Analysis] Completed in {} ms (query: {} ms, processing: {} ms), detected {} violations (ratio > {}, traffic > {} bytes)",
+                totalTime, queryTime, totalTime - queryTime, violationCount, thresholdRatio, thresholdTraffic);
+        if (queryTime > 0) {
+            log.info("[OverDownload Analysis] Performance: {:.2f} rows/sec", processedRows * 1000.0 / queryTime);
+        }
     }
 
     @Override
