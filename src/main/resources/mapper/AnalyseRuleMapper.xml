@@ -52,7 +52,7 @@
           AND (to_peer_traffic - from_peer_traffic) > 0
         GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
         ORDER BY pure_to_peer_traffic DESC
-        LIMIT 5000
+        LIMIT 1000
     </select>
     <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="500">
         -- noinspection SqlShouldBeInGroupBy
