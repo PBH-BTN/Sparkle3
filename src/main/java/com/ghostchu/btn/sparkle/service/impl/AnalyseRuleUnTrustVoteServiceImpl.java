@@ -4,7 +4,6 @@ import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
-import com.ghostchu.btn.sparkle.util.UnitConverter;
 import com.google.common.hash.Hashing;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.format.util.AssociativeAddressTrie;
@@ -29,7 +28,6 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -57,64 +55,84 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
 
     @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")
     public void analyseUntrusted() {
-        List<GeneratedRule> rules = new ArrayList<>();
-        List<GeneratedRule> resultList = this.baseMapper.analyseByModule(
-                        OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
-                        List.of(untrustedVoteIncludeModules.split(",")))
-                .stream()
-                .map(analysis -> {
-                    IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
-                    return new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0, analysis.getToPeerTraffic(), analysis.getFromPeerTraffic());
-                }).collect(Collectors.toCollection(ArrayList::new));
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
-        for (GeneratedRule result : resultList) {
-            IPAddress ipAddress = result.getPeerIpCidr();
-            tries.put(ipAddress, result);
+
+        try (var cursor = this.baseMapper.analyseByModule(
+                OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
+                List.of(untrustedVoteIncludeModules.split(",")))) {
+            cursor.forEach(analysis -> {
+                IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
+
+                // 直接检查是否存在，如果存在则合并数据
+                GeneratedRule existingRule = tries.get(ip);
+                if (existingRule != null) {
+                    // 合并规则数据
+                    existingRule.setBanCount(existingRule.getBanCount() + analysis.getBanCount());
+                    existingRule.setUserappsCount(existingRule.getUserappsCount() + analysis.getUserappsCount());
+                    existingRule.setToPeerTraffic(existingRule.getToPeerTraffic() + analysis.getToPeerTraffic());
+                    existingRule.setFromPeerTraffic(existingRule.getFromPeerTraffic() + analysis.getFromPeerTraffic());
+                } else {
+                    // 新规则
+                    GeneratedRule rule = new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0, analysis.getToPeerTraffic(), analysis.getFromPeerTraffic());
+                    tries.put(ip, rule);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error processing analyseByModule cursor", e);
+            return;
         }
+
+        // 执行 IP 合并
         IPv4Address[] ipv4Prefixes = mergeIpsV4(tries.getIPv4Trie());
         IPv6Address[] ipv6Prefixes = mergeIpsV6(tries.getIPv6Trie());
         triesMergeV4(tries.getIPv4Trie(), ipv4Prefixes);
         triesMergeV6(tries.getIPv6Trie(), ipv6Prefixes);
-        // 此时 Tries 就是已经合并好的结果，过滤一下规则
+
+        // 构建最终结果，边遍历边过滤边构建输出
+        StringBuilder sb = new StringBuilder();
         tries.nodeIterator(false).forEachRemaining(node -> {
             var ip = node.getKey();
             var rule = node.getValue();
+            boolean shouldInclude = false;
+
             if (ip.isIPv4()) {
                 if (useIPv4 && rule.getUserappsCount() >= ipv4MinUserAppsVote && rule.getBanCount() >= ipv4MinBanCountVote) {
-                    rules.add(rule);
+                    shouldInclude = true;
                 }
             } else {
                 if (useIPv6 && rule.getUserappsCount() >= ipv6MinUserAppsVote && rule.getBanCount() >= ipv6MinBanCountVote) {
-                    rules.add(rule);
+                    shouldInclude = true;
                 }
             }
+
+            if (shouldInclude) {
+                // 过滤掉无效的 IP 地址（0.0.0.0 或全 0 的 IPv6）
+                IPAddress ipAddr = rule.getPeerIpCidr();
+                Integer prefixLength = ipAddr.getPrefixLength();
+
+                // 检查是否为无效的全 0 地址或过大的 CIDR 块
+                if (ipAddr.isZero() || (prefixLength != null && prefixLength == 0)) {
+                    return;
+                }
+
+                sb.append("# [Sparkle3 不受信任投票] 封禁计数: ").append(rule.getBanCount())
+                        .append(", 不信任票数: ").append(rule.getUserappsCount())
+                        .append(", 合并记录数量: ").append(rule.getMergedRecords())
+                        .append(", BTN网络发送到此Peer流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getToPeerTraffic()))
+                        .append(", BTN网络从此Peer获取流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getFromPeerTraffic()))
+                        .append("\n");
+
+                // 先调用 toZeroHost()，然后再决定是否移除前缀长度
+                IPAddress outputAddr = rule.getPeerIpCidr().toZeroHost();
+                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
+                        || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
+                    outputAddr = outputAddr.withoutPrefixLength();
+                }
+                String outputIp = outputAddr.toNormalizedString();
+                sb.append(outputIp).append("\n");
+            }
         });
-        StringBuilder sb = new StringBuilder();
-        for (GeneratedRule rule : rules) {
-            // 过滤掉无效的 IP 地址（0.0.0.0 或全 0 的 IPv6）
-            IPAddress ipAddr = rule.getPeerIpCidr();
-            Integer prefixLength = ipAddr.getPrefixLength();
 
-            // 检查是否为无效的全 0 地址或过大的 CIDR 块
-            if (ipAddr.isZero() || (prefixLength != null && prefixLength == 0)) {
-                continue;
-            }
-            sb.append("# [Sparkle3 不受信任投票] 封禁计数: ").append(rule.getBanCount())
-                    .append(", 不信任票数: ").append(rule.getUserappsCount())
-                    .append(", 合并记录数量: ").append(rule.getMergedRecords())
-                    .append(", BTN网络发送到此Peer流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getToPeerTraffic()))
-                    .append(", BTN网络从此Peer获取流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getFromPeerTraffic()))
-                    .append("\n");
-
-            // 先调用 toZeroHost()，然后再决定是否移除前缀长度
-            IPAddress outputAddr = rule.getPeerIpCidr().toZeroHost();
-            if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
-                    || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                outputAddr = outputAddr.withoutPrefixLength();
-            }
-            String outputIp = outputAddr.toNormalizedString();
-            sb.append(outputIp).append("\n");
-        }
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey(), sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }

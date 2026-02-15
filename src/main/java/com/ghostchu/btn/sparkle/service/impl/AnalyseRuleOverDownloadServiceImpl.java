@@ -139,10 +139,16 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     private void processResults(Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap, long startTime, long queryEndTime, long processedRows) {
         StringBuilder sb = new StringBuilder();
         int violationCount = 0;
+        int processedCount = 0;
 
-        for (Map.Entry<InetAddress, AggregateCrossTorrentMixCalc> entry : aggregateMap.entrySet()) {
+        // 使用迭代器遍历，处理完立即从 map 中移除，减少内存占用
+        var iterator = aggregateMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
             InetAddress ip = entry.getKey();
             AggregateCrossTorrentMixCalc calc = entry.getValue();
+            processedCount++;
+
             if(calc.getOverDownloadRatio() > thresholdRatio){
                 if(calc.getPureToPeerTraffic() > thresholdTraffic){
                     violationCount++;
@@ -156,6 +162,15 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                     sb.append(ip.getHostAddress()).append("\n");
                 }
             }
+
+            // 处理完立即移除，释放内存
+            iterator.remove();
+
+            // 每处理 1000 条记录记录一次进度
+            if (processedCount % 1000 == 0) {
+                log.debug("[OverDownload Analysis] Processed {}/{} IPs, found {} violations so far",
+                    processedCount, processedCount, violationCount);
+            }
         }
         
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey(), sb.toString());
@@ -166,7 +181,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         log.info("[OverDownload Analysis] Completed in {} ms (query: {} ms, processing: {} ms), detected {} violations (ratio > {}, traffic > {} bytes)",
                 totalTime, queryTime, totalTime - queryTime, violationCount, thresholdRatio, thresholdTraffic);
         if (queryTime > 0) {
-            log.info("[OverDownload Analysis] Performance: {:.2f} rows/sec", processedRows * 1000.0 / queryTime);
+            log.info("[OverDownload Analysis] Performance: {} rows/sec", processedRows * 1000.0 / queryTime);
         }
     }
 

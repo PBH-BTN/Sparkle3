@@ -1,7 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
-import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
@@ -20,8 +19,6 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @Slf4j
@@ -35,20 +32,40 @@ public class AnalyseRandomIdentityServiceImpl extends AbstractAnalyseRuleService
 
     @Scheduled(cron = "${sparkle.analyse.random-identity-analyse.schedule}")
     public void analyseRandomIdentity() {
-        var banhistory = baseMapper.analyseRandomIdentityBanHistory(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
-        var swarm = baseMapper.analyseRandomIdentitySwarmTracker(OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
+        var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         DualIPv4v6AssociativeTries<Pair<String, String>> tries = new DualIPv4v6AssociativeTries<>();
-        banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
-        swarm.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
-        mergeIps(tries);
-        var map = formatAndIterateIp(tries);
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<IPAddress, Pair<String, String>> entry : map.entrySet()) {
-            sb.append("# [Sparkle3] 随机特征识别: ")
-                    .append("采样数据: ").append("PeerId: ").append(entry.getValue().getLeft()).append(" ClientName: ").append(entry.getValue().getRight())
-                    .append("\n");
-            sb.append(entry.getKey().toNormalizedString()).append("\n");
+
+        try (var banhistory = baseMapper.analyseRandomIdentityBanHistory(afterTimestamp);
+             var swarm = baseMapper.analyseRandomIdentitySwarmTracker(afterTimestamp)) {
+            banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
+            swarm.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
+        } catch (Exception e) {
+            log.error("Error processing random identity analysis cursors", e);
+            return;
         }
+
+        mergeIps(tries);
+
+        // 边遍历边输出，不创建中间 Map
+        StringBuilder sb = new StringBuilder();
+        tries.nodeIterator(false).forEachRemaining(node -> {
+            IPAddress ip = node.getKey();
+            Pair<String, String> value = node.getValue();
+
+            sb.append("# [Sparkle3] 随机特征识别: ")
+                    .append("采样数据: ").append("PeerId: ").append(value.getLeft()).append(" ClientName: ").append(value.getRight())
+                    .append("\n");
+
+            // 格式化输出 IP 地址
+            IPAddress outputAddr = ip;
+            if (outputAddr.getPrefixLength() != null) {
+                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
+                    outputAddr = outputAddr.withoutPrefixLength();
+                }
+            }
+            sb.append(outputAddr.toNormalizedString()).append("\n");
+        });
+
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_RANDOM_IDENTITY_VALUE.getKey(),  sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_RANDOM_IDENTITY_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }

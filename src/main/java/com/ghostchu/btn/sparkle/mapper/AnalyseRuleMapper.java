@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult;
+import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.session.ResultHandler;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,10 +23,10 @@ import java.util.List;
  */
 public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
     @NotNull
-    List<AnalyseByModuleResult> analyseByModule(@NotNull OffsetDateTime afterTimestamp, @NotNull List<String> moduleName);
+    Cursor<AnalyseByModuleResult> analyseByModule(@NotNull OffsetDateTime afterTimestamp, @NotNull List<String> moduleName);
 
     @NotNull
-    List<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseOverDownloadedResult> analyseOverDownloaded(@NotNull OffsetDateTime afterTimestamp);
 
     void analyseOverDownloadedWithHandler(@NotNull OffsetDateTime afterTimestamp, ResultHandler<AnalyseOverDownloadedResult> handler);
 
@@ -34,29 +35,29 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
     void refreshOverDownloadMaterializedView();
 
     @NotNull
-    List<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseRandomIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseRandomIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseRandomIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseRandomIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseRain000IdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseRain000IdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseRain000IdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseRain000IdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseGopeeddevIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseGopeeddevIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<AnalyseIPAndIdentityResult> analyseGopeeddevIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<AnalyseIPAndIdentityResult> analyseGopeeddevIdentitySwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<String> analyseDatacenterHighRiskBanHistory(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<String> analyseDatacenterHighRiskBanHistory(@NotNull OffsetDateTime afterTimestamp);
 
     @NotNull
-    List<String> analyseDatacenterHighRiskSwarmTracker(@NotNull OffsetDateTime afterTimestamp);
+    Cursor<String> analyseDatacenterHighRiskSwarmTracker(@NotNull OffsetDateTime afterTimestamp);
 }

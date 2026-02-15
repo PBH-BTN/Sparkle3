@@ -10,7 +10,7 @@
         <result column="to_peer_traffic" property="toPeerTraffic"/>
         <result column="from_peer_traffic" property="fromPeerTraffic"/>
     </resultMap>
-    <select id="analyseByModule" resultMap="analyseByModuleResult">
+    <select id="analyseByModule" resultMap="analyseByModuleResult" fetchSize="1000">
         SELECT peer_ip AS peer_ip_cidr,
         (peer_geoip ->> 'countryIso'::text) AS iso,
         (peer_geoip ->> 'cityName'::text) AS city,
@@ -26,7 +26,6 @@
         ))
         GROUP BY peer_ip_cidr, iso, city
         ORDER BY ban_count DESC, userapps_count DESC
-        LIMIT 1000
     </select>
     <resultMap id="analyseOverDownloadedResult"
                type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult">
@@ -37,7 +36,7 @@
         <result column="t_torrent_size" property="torrentSize"/>
         <result column="pure_to_peer_traffic" property="pureToPeerTraffic"/>
     </resultMap>
-    <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult">
+    <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult" fetchSize="1000">
         -- noinspection SqlShouldBeInGroupBy
         SELECT swarm_tracker.peer_ip                                                     AS st_peer_ip,
                swarm_tracker.torrent_id                                                  AS st_torrent_id,
@@ -51,10 +50,8 @@
           AND torrent.size > 0
           AND (to_peer_traffic - from_peer_traffic) > 0
         GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
-        ORDER BY pure_to_peer_traffic DESC
-        LIMIT 1000
     </select>
-    <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="500">
+    <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="1000">
         -- noinspection SqlShouldBeInGroupBy
         -- Optimized query for 50M+ records: uses partial indexes, CTE for early filtering, and optimized join order
         -- Performance gain: 70-80% reduction in execution time expected
@@ -84,11 +81,10 @@
                  JOIN torrent t ON fs.torrent_id = t.id
         WHERE t.size > 0  -- Filter applied after join using torrent_size_idx
         ORDER BY fs.pure_upload DESC
-        LIMIT 1000
     </select>
     
     <!-- Materialized View Query - Ultra-fast alternative using pre-aggregated data -->
-    <select id="analyseOverDownloadedFromMaterializedViewWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="500">
+    <select id="analyseOverDownloadedFromMaterializedViewWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="1000">
         -- Query from materialized view for millisecond-level performance
         -- Expected 95%+ performance improvement over raw table query
         SELECT mv.peer_ip::text              AS st_peer_ip,
@@ -104,7 +100,6 @@
           AND mv.pure_upload > 0
         GROUP BY mv.peer_ip, mv.torrent_id, t.size
         ORDER BY SUM(mv.pure_upload) DESC
-        LIMIT 1000
     </select>
     
     <!-- Refresh Materialized View -->
@@ -122,7 +117,7 @@
         <result column="total_to_peer_traffic" property="totalToPeerTraffic"/>
         <result column="total_from_peer_traffic" property="totalFromPeerTraffic"/>
     </resultMap>
-    <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult">
+    <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult" fetchSize="1000">
         SELECT peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
@@ -140,7 +135,7 @@
         <result column="peer_id" property="peerId"/>
         <result column="peer_client_name" property="peerClientName"/>
     </resultMap>
-    <select id="analyseRandomIdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseRandomIdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -154,7 +149,7 @@
           AND populate_time >= #{afterTimestamp}
         ORDER BY peer_ip
     </select>
-    <select id="analyseRandomIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseRandomIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -167,7 +162,7 @@
           AND NOT starts_with(peer_client_name, 'MG')
         ORDER BY peer_ip
     </select>
-    <select id="analyseRain000IdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseRain000IdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -178,7 +173,7 @@
           AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
     </select>
-    <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -189,7 +184,7 @@
           AND NOT starts_with(peer_id, '-RN')
         ORDER BY peer_ip
     </select>
-    <select id="analyseGopeeddevIdentityBanHistory" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseGopeeddevIdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -200,7 +195,7 @@
           AND NOT starts_with(peer_id, '-GP')
         ORDER BY peer_ip
     </select>
-    <select id="analyseGopeeddevIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult">
+    <select id="analyseGopeeddevIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="1000">
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -211,7 +206,7 @@
           AND NOT starts_with(peer_id, '-GP')
         ORDER BY peer_ip
     </select>
-    <select id="analyseDatacenterHighRiskBanHistory" resultType="string">
+    <select id="analyseDatacenterHighRiskBanHistory" resultType="string" fetchSize="1000">
         SELECT DISTINCT peer_ip
         FROM ban_history
         WHERE populate_time >= #{afterTimestamp}
@@ -224,7 +219,7 @@
           AND peer_geoip ->> 'netType' = '数据中心'
         ORDER BY peer_ip
     </select>
-    <select id="analyseDatacenterHighRiskSwarmTracker" resultType="string">
+    <select id="analyseDatacenterHighRiskSwarmTracker" resultType="string" fetchSize="1000">
     SELECT DISTINCT peer_ip
     FROM swarm_tracker
     WHERE last_time_seen >= #{afterTimestamp}

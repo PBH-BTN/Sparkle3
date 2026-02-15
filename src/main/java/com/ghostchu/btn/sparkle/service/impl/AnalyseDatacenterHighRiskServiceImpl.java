@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 @Service
 @Slf4j
@@ -34,18 +33,36 @@ public class AnalyseDatacenterHighRiskServiceImpl extends AbstractAnalyseRuleSer
     @Scheduled(cron = "${sparkle.analyse.datacenter-highrisk-analyse.schedule}")
     public void analyseDatacenterHighRisk() {
         var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
-        var banhistory = baseMapper.analyseDatacenterHighRiskBanHistory(afterTimestamp);
-        var swarmTracker = baseMapper.analyseDatacenterHighRiskSwarmTracker(afterTimestamp);
         DualIPv4v6AssociativeTries<String> tries = new DualIPv4v6AssociativeTries<>();
-        banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
-        swarmTracker.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
-        mergeIps(tries);
-        var map = formatAndIterateIp(tries);
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<IPAddress, String> entry : map.entrySet()) {
-            sb.append("# [Sparkle3] 数据中心高风险特征识别").append("\n");
-            sb.append(entry.getKey().toNormalizedString()).append("\n");
+
+        try (var banhistory = baseMapper.analyseDatacenterHighRiskBanHistory(afterTimestamp);
+             var swarmTracker = baseMapper.analyseDatacenterHighRiskSwarmTracker(afterTimestamp)) {
+            banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
+            swarmTracker.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
+        } catch (Exception e) {
+            log.error("Error processing datacenter high risk analysis cursors", e);
+            return;
         }
+
+        mergeIps(tries);
+
+        // 边遍历边输出，不创建中间 Map
+        StringBuilder sb = new StringBuilder();
+        tries.nodeIterator(false).forEachRemaining(node -> {
+            IPAddress ip = node.getKey();
+
+            sb.append("# [Sparkle3] 数据中心高风险特征识别").append("\n");
+
+            // 格式化输出 IP 地址
+            IPAddress outputAddr = ip;
+            if (outputAddr.getPrefixLength() != null) {
+                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
+                    outputAddr = outputAddr.withoutPrefixLength();
+                }
+            }
+            sb.append(outputAddr.toNormalizedString()).append("\n");
+        });
+
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VALUE.getKey(),  sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }
