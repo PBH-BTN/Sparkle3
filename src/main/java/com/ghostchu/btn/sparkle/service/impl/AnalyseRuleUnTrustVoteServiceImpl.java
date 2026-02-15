@@ -57,10 +57,13 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     public void analyseUntrusted() {
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
 
+        // 在 try-with-resources 块内完成所有 Cursor 操作
         try (var cursor = this.baseMapper.analyseByModule(
                 OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
                 List.of(untrustedVoteIncludeModules.split(",")))) {
-            cursor.forEach(analysis -> {
+
+            // 必须在 try 块内完成迭代，因为 Cursor 离开 try 块后会自动关闭
+            for (var analysis : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
 
                 // 直接检查是否存在，如果存在则合并数据
@@ -76,7 +79,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                     GeneratedRule rule = new GeneratedRule(ip, analysis.getBanCount(), analysis.getUserappsCount(), 0, analysis.getToPeerTraffic(), analysis.getFromPeerTraffic());
                     tries.put(ip, rule);
                 }
-            });
+            }
         } catch (Exception e) {
             log.error("Error processing analyseByModule cursor", e);
             return;

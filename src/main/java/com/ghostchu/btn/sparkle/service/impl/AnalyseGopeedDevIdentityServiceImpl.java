@@ -37,8 +37,13 @@ public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServ
 
         try (var banhistory = baseMapper.analyseGopeeddevIdentityBanHistory(afterTimestamp);
              var swarm = baseMapper.analyseGopeeddevIdentitySwarmTracker(afterTimestamp)) {
-            banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
-            swarm.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName())));
+            // 必须在 try 块内完成迭代
+            for (var r : banhistory) {
+                tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName()));
+            }
+            for (var r : swarm) {
+                tries.put(IPAddressUtil.getIPAddress(r.getPeerIp()), Pair.of(r.getPeerId(), r.getPeerClientName()));
+            }
         } catch (Exception e) {
             log.error("Error processing gopeed dev identity analysis cursors", e);
             return;

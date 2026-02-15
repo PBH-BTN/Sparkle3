@@ -37,8 +37,13 @@ public class AnalyseDatacenterHighRiskServiceImpl extends AbstractAnalyseRuleSer
 
         try (var banhistory = baseMapper.analyseDatacenterHighRiskBanHistory(afterTimestamp);
              var swarmTracker = baseMapper.analyseDatacenterHighRiskSwarmTracker(afterTimestamp)) {
-            banhistory.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
-            swarmTracker.forEach(r -> tries.put(IPAddressUtil.getIPAddress(r), "Datacenter"));
+            // 必须在 try 块内完成迭代
+            for (String r : banhistory) {
+                tries.put(IPAddressUtil.getIPAddress(r), "Datacenter");
+            }
+            for (String r : swarmTracker) {
+                tries.put(IPAddressUtil.getIPAddress(r), "Datacenter");
+            }
         } catch (Exception e) {
             log.error("Error processing datacenter high risk analysis cursors", e);
             return;

@@ -41,7 +41,8 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
         StringBuilder sb = new StringBuilder();
 
         try (var cursor = this.baseMapper.analyseConcurrentDownload(afterTimestamp)) {
-            cursor.forEach(result -> {
+            // 必须在 try 块内完成迭代
+            for (var result : cursor) {
                 // 边遍历边过滤边输出，不创建中间 List
                 if (result.getTorrentCount() >= thresholdConcurrent && result.getUserappsCount() >= thresholdUserapps) {
                     sb.append("# [Sparkle3 并发下载在线分析] 过去给定时间内并发下载计数: ").append(result.getTorrentCount())
@@ -52,7 +53,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
                     IPAddress ipAddress = IPAddressUtil.getIPAddress(result.getPeerIp());
                     sb.append(ipAddress.toNormalizedString()).append("\n");
                 }
-            });
+            }
         } catch (Exception e) {
             log.error("Error processing concurrent download analysis cursor", e);
             return;
