@@ -79,7 +79,7 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
             // Select IDs first, then delete by IDs
             List<Long> idsToDelete = this.baseMapper.selectList(new LambdaQueryWrapper<UserappsHeartbeat>()
                     .select(UserappsHeartbeat::getId)
-                    .le(UserappsHeartbeat::getId, cutoffTime)
+                    .le(UserappsHeartbeat::getLastSeenAt, cutoffTime)
                     .last("LIMIT 1000"))
                     .stream()
                     .map(UserappsHeartbeat::getId)
