@@ -129,6 +129,7 @@ dependencies {
     implementation("io.sentry:sentry-async-profiler")
     implementation("io.sentry:sentry-logback");
     implementation("org.springframework.boot:spring-boot-starter-mail") // mailing
+
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

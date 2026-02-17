@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -188,6 +187,10 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             // 相差不能超过 7 天
             if (lastSeenTime.isAfter(nowTime.plusHours(1)) || lastSeenTime.isBefore(nowTime.minusDays(7))) {
                 log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}", lastSeenTime);
+                continue;
+            }
+            if (swarm.getFromPeerTraffic() <= 0 && swarm.getToPeerTraffic() <= 0
+                    && swarm.getFromPeerTrafficOffset() <= 0 && swarm.getToPeerTrafficOffset() <= 0) {
                 continue;
             }
             var inet = InetAddress.ofLiteral(swarm.getPeerIp());
