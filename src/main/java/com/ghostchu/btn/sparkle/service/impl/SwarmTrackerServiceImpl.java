@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,10 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
@@ -63,84 +61,60 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     public void cronDataRetentionCleanup() {
         log.info("Performing scheduled cleanup of expired swarm tracker data...");
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
-        final int batchSize = 5000;
-
-        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-        def.setReadOnly(true);
-        TransactionStatus status = platformTransactionManager.getTransaction(def);
-
-        try (var cursor = baseMapper.selectExpiredSwarmTracker(threshold)) {
-            long ct = 0;
-            List<Long> pendingDelete = new ArrayList<>(batchSize);
-            Map<Long, SwarmStatAccumulator> statsMap = new HashMap<>();
-
-            for (SwarmTracker swarm : cursor) {
-                statsMap.computeIfAbsent(swarm.getUserappsId(), _ -> new SwarmStatAccumulator())
-                        .accumulate(swarm);
-                pendingDelete.add(swarm.getId());
-                ct++;
-
-                if (pendingDelete.size() >= batchSize) {
-                    processBatch(statsMap, pendingDelete);
-                }
+        long deleted = 0;
+        int lastDeleted;
+        do {
+            lastDeleted = baseMapper.delete(new LambdaQueryWrapper<SwarmTracker>()
+                    .le(SwarmTracker::getLastTimeSeen, threshold).last("LIMIT 1000"));
+            deleted += lastDeleted;
+            if (deleted % 10000 == 0) {
+                log.info("Deleted {} expired swarm tracker data so far...", deleted);
             }
-
-            // Process remaining items
-            if (!pendingDelete.isEmpty()) {
-                processBatch(statsMap, pendingDelete);
-            }
-
-            log.info("Archived {} swarm statistics.", ct);
-            platformTransactionManager.commit(status);
-        } catch (Exception e) {
-            if (!status.isCompleted()) {
-                platformTransactionManager.rollback(status);
-            }
-            log.warn("Unable to cleanup expired user swarm statistics", e);
-        }
+        } while (lastDeleted > 0);
+        log.info("Completed scheduled cleanup. Total expired swarm tracker records deleted: {}", deleted);
     }
-
-    private void processBatch(Map<Long, SwarmStatAccumulator> statsMap, List<Long> pendingDelete) {
-        if (statsMap.isEmpty() && pendingDelete.isEmpty()) {
-            return;
-        }
-
-        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        TransactionStatus status = platformTransactionManager.getTransaction(def);
-
-        try {
-            OffsetDateTime now = OffsetDateTime.now();
-            // Update aggregated statistics
-            for (Map.Entry<Long, SwarmStatAccumulator> entry : statsMap.entrySet()) {
-                SwarmStatAccumulator stat = entry.getValue();
-                userappsArchivedStatisticService.updateArchivedStatistic(
-                        entry.getKey(),
-                        stat.toPeerTraffic,
-                        stat.fromPeerTraffic,
-                        0,
-                        stat.count,
-                        now
-                );
-            }
-
-            // Delete processed records
-            if (!pendingDelete.isEmpty()) {
-                baseMapper.deleteByIds(pendingDelete);
-            }
-
-            platformTransactionManager.commit(status);
-
-            // Clear batch containers
-            statsMap.clear();
-            pendingDelete.clear();
-        } catch (Exception e) {
-            if (!status.isCompleted()) {
-                platformTransactionManager.rollback(status);
-            }
-            throw new RuntimeException("Error processing batch during cleanup", e);
-        }
-    }
+//
+//    private void processBatch(Map<Long, SwarmStatAccumulator> statsMap, List<Long> pendingDelete) {
+//        if (statsMap.isEmpty() && pendingDelete.isEmpty()) {
+//            return;
+//        }
+//
+//        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+//        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+//        TransactionStatus status = platformTransactionManager.getTransaction(def);
+//
+//        try {
+//            OffsetDateTime now = OffsetDateTime.now();
+//            // Update aggregated statistics
+//            for (Map.Entry<Long, SwarmStatAccumulator> entry : statsMap.entrySet()) {
+//                SwarmStatAccumulator stat = entry.getValue();
+//                userappsArchivedStatisticService.updateArchivedStatistic(
+//                        entry.getKey(),
+//                        stat.toPeerTraffic,
+//                        stat.fromPeerTraffic,
+//                        0,
+//                        stat.count,
+//                        now
+//                );
+//            }
+//
+//            // Delete processed records
+//            if (!pendingDelete.isEmpty()) {
+//                baseMapper.deleteByIds(pendingDelete);
+//            }
+//
+//            platformTransactionManager.commit(status);
+//
+//            // Clear batch containers
+//            statsMap.clear();
+//            pendingDelete.clear();
+//        } catch (Exception e) {
+//            if (!status.isCompleted()) {
+//                platformTransactionManager.rollback(status);
+//            }
+//            throw new RuntimeException("Error processing batch during cleanup", e);
+//        }
+//    }
 
     private static class SwarmStatAccumulator {
         long toPeerTraffic = 0;

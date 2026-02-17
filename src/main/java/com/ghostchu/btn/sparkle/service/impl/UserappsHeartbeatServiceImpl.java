@@ -58,7 +58,7 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Override
     public void onHeartBeat(long userAppId, @NotNull InetAddress ip) {
         var changes = this.baseMapper.upsert(new UserappsHeartbeat()
-                .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress() + System.currentTimeMillis()+seq.incrementAndGet(), StandardCharsets.UTF_8).asLong())
+                .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress() + System.currentTimeMillis() + seq.incrementAndGet(), StandardCharsets.UTF_8).asLong())
                 .setUserappId(userAppId)
                 .setIp(ip)
                 .setFirstSeenAt(OffsetDateTime.now())
@@ -71,10 +71,16 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Scheduled(cron = "${sparkle.ping.heartbeat.cleanup-cron}")
     @Transactional
     public void deleteOldData() {
-        var deleted = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
-                .le("last_seen_at", OffsetDateTime.now().minus(deleteBefore, ChronoUnit.MILLIS)));
-        if (deleted > 0) {
-            log.info("Deleted {} expired heartbeats", deleted);
-        }
+        long deleted = 0;
+        int lastDelete;
+        do {
+            lastDelete = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
+                    .le("last_seen_at", OffsetDateTime.now().minus(deleteBefore, ChronoUnit.MILLIS)).last("LIMIT 1000"));
+            deleted += lastDelete;
+            if(deleted % 10000 == 0) {
+                log.info("Deleted {} old heartbeat records so far...", deleted);
+            }
+        } while (lastDelete > 0);
+        log.info("Deleted {} old heartbeat records", deleted);
     }
 }
