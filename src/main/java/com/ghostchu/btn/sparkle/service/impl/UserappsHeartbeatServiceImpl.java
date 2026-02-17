@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
@@ -73,12 +74,25 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     public void deleteOldData() {
         long deleted = 0;
         int lastDelete;
+        OffsetDateTime cutoffTime = OffsetDateTime.now().minus(deleteBefore, ChronoUnit.MILLIS);
         do {
-            lastDelete = this.baseMapper.delete(new QueryWrapper<UserappsHeartbeat>()
-                    .le("last_seen_at", OffsetDateTime.now().minus(deleteBefore, ChronoUnit.MILLIS)).last("LIMIT 1000"));
-            deleted += lastDelete;
-            if(deleted % 10000 == 0) {
-                log.info("Deleted {} old heartbeat records so far...", deleted);
+            // Select IDs first, then delete by IDs
+            List<Long> idsToDelete = this.baseMapper.selectList(new LambdaQueryWrapper<UserappsHeartbeat>()
+                    .select(UserappsHeartbeat::getId)
+                    .le(UserappsHeartbeat::getId, cutoffTime)
+                    .last("LIMIT 1000"))
+                    .stream()
+                    .map(UserappsHeartbeat::getId)
+                    .toList();
+
+            if (idsToDelete.isEmpty()) {
+                lastDelete = 0;
+            } else {
+                lastDelete = this.baseMapper.deleteByIds(idsToDelete);
+                deleted += lastDelete;
+                if(deleted % 10000 == 0) {
+                    log.info("Deleted {} old heartbeat records so far...", deleted);
+                }
             }
         } while (lastDelete > 0);
         log.info("Deleted {} old heartbeat records", deleted);

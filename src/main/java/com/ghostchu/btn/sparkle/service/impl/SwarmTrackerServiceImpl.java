@@ -64,11 +64,22 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         long deleted = 0;
         int lastDeleted;
         do {
-            lastDeleted = baseMapper.delete(new LambdaQueryWrapper<SwarmTracker>()
-                    .le(SwarmTracker::getLastTimeSeen, threshold).last("LIMIT 1000"));
-            deleted += lastDeleted;
-            if (deleted % 10000 == 0) {
-                log.info("Deleted {} expired swarm tracker data so far...", deleted);
+            // Select IDs first, then delete by IDs
+            List<Long> idsToDelete = baseMapper.selectList(new LambdaQueryWrapper<SwarmTracker>()
+                    .select(SwarmTracker::getId)
+                    .le(SwarmTracker::getLastTimeSeen, threshold)
+                    .last("LIMIT 1000"))
+                    .stream()
+                    .map(SwarmTracker::getId)
+                    .toList();
+            if (idsToDelete.isEmpty()) {
+                lastDeleted = 0;
+            } else {
+                lastDeleted = baseMapper.deleteByIds(idsToDelete);
+                deleted += lastDeleted;
+                if (deleted % 10000 == 0) {
+                    log.info("Deleted {} expired swarm tracker data so far...", deleted);
+                }
             }
         } while (lastDeleted > 0);
         log.info("Completed scheduled cleanup. Total expired swarm tracker records deleted: {}", deleted);
