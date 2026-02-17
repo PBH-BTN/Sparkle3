@@ -82,7 +82,7 @@ management:
       exposure:
           include: prometheus,health,info
 sentry:
-  dsn: https://72052bef98414ea29bc78b5333c2a527@glitchtip.pbh-btn.com/3
+  dsn: https://8bdd45a05e9b4342b81320e2f9c465f9@glitchtip.pbh-btn.com/3
   # Add data like request headers and IP for users,
   # see https://docs.sentry.io/platforms/java/guides/spring-boot/data-management/data-collected/ for more info
   send-default-pii: true
