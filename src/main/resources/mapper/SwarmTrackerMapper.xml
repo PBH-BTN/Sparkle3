@@ -60,7 +60,6 @@
     </insert>
 
     <select id="calcPeerConcurrentDownloads" resultType="long">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
         FROM swarm_tracker
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
@@ -75,7 +74,6 @@
     </resultMap>
 
     <select id="sumPeerIpTraffic" resultMap="sumPeerIpTrafficResultDto">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT peer_ip, SUM(to_peer_traffic) AS sum_to_peer_traffic, SUM(from_peer_traffic) AS sum_from_peer_traffic FROM swarm_tracker
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp}
@@ -83,7 +81,6 @@
     </select>
 
     <select id="selectPeerTorrents" resultType="long">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT torrent_id AS torrent_count
         FROM swarm_tracker
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
@@ -95,7 +92,6 @@
     </select>
 
     <select id="fetchSwarmTrackerByIpInTimeRange" resultMap="userSwarmStatisticByUserAppResult">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT
             SUM(to_peer_traffic) AS sentTraffic,
             SUM(from_peer_traffic) AS receivedTraffic
@@ -112,7 +108,6 @@
     </resultMap>
 
     <select id="fetchSwarmTrackerByUserAppsInTimeRange" resultMap="userSwarmStatisticByUserAppResult">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT
             SUM(to_peer_traffic) AS sentTraffic,
             SUM(from_peer_traffic) AS receivedTraffic
