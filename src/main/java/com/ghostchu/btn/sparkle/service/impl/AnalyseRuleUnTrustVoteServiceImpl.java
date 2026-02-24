@@ -32,7 +32,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServiceImpl  implements IPDenyListRuleProvider {
+public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServiceImpl implements IPDenyListRuleProvider {
     @Value("${sparkle.analyse.untrusted-vote.duration}")
     private long duration;
     @Value("${sparkle.analyse.untrusted-vote.include-modules}")
@@ -67,7 +67,9 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             // 必须在 try 块内完成迭代，因为 Cursor 离开 try 块后会自动关闭
             for (var analysis : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
-
+                if (ip.isIPv6()) {
+                    ip = IPAddressUtil.toPrefixBlockAndZeroHost(ip, 56);
+                }
                 // 直接检查是否存在，如果存在则合并数据
                 GeneratedRule existingRule = tries.get(ip);
                 if (existingRule != null) {
