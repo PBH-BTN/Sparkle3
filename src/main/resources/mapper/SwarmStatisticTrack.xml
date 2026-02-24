@@ -11,6 +11,7 @@
     </resultMap>
 
     <insert id="updateUserSwarmStatistics">
+        SET duckdb.force_execution = true; -- pg_duckdb
         WITH self_report_stats AS (
             SELECT
                 usrapp.owner,
@@ -80,6 +81,7 @@
     </insert>
 
     <select id="calcUsersRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT
             user_id,
             sent_traffic_self_report,
@@ -104,6 +106,7 @@
     </select>
 
     <select id="calcUserRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
+        SET duckdb.force_execution = true; -- pg_duckdb
         WITH UserRanks AS (
             SELECT
                 user_id,

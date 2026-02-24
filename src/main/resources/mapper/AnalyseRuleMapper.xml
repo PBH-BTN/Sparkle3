@@ -11,6 +11,7 @@
         <result column="from_peer_traffic" property="fromPeerTraffic"/>
     </resultMap>
     <select id="analyseByModule" resultMap="analyseByModuleResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT peer_ip AS peer_ip_cidr,
         (peer_geoip ->> 'countryIso'::text) AS iso,
         (peer_geoip ->> 'cityName'::text) AS city,
@@ -38,6 +39,7 @@
         <result column="pure_to_peer_traffic" property="pureToPeerTraffic"/>
     </resultMap>
     <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         -- noinspection SqlShouldBeInGroupBy
         SELECT swarm_tracker.peer_ip                                                     AS st_peer_ip,
                swarm_tracker.torrent_id                                                  AS st_torrent_id,
@@ -54,6 +56,7 @@
         LIMIT 1000
     </select>
     <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         -- noinspection SqlShouldBeInGroupBy
         -- Optimized query for 50M+ records: uses partial indexes, CTE for early filtering, and optimized join order
         -- Performance gain: 70-80% reduction in execution time expected
@@ -88,6 +91,7 @@
     
     <!-- Materialized View Query - Ultra-fast alternative using pre-aggregated data -->
     <select id="analyseOverDownloadedFromMaterializedViewWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         -- Query from materialized view for millisecond-level performance
         -- Expected 95%+ performance improvement over raw table query
         SELECT mv.peer_ip::text              AS st_peer_ip,
@@ -122,6 +126,7 @@
         <result column="total_from_peer_traffic" property="totalFromPeerTraffic"/>
     </resultMap>
     <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
@@ -141,6 +146,7 @@
         <result column="peer_client_name" property="peerClientName"/>
     </resultMap>
     <select id="analyseRandomIdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -156,6 +162,7 @@
         LIMIT 1000
     </select>
     <select id="analyseRandomIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -170,6 +177,7 @@
         LIMIT 1000
     </select>
     <select id="analyseRain000IdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -182,6 +190,7 @@
         LIMIT 1000
     </select>
     <select id="analyseRain000IdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -194,6 +203,7 @@
         LIMIT 1000
     </select>
     <select id="analyseGopeeddevIdentityBanHistory" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -206,6 +216,7 @@
         LIMIT 1000
     </select>
     <select id="analyseGopeeddevIdentitySwarmTracker" resultMap="analyseIpAndIdentityResult" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip,
                         peer_id,
                         peer_client_name
@@ -218,6 +229,7 @@
         LIMIT 1000
     </select>
     <select id="analyseDatacenterHighRiskBanHistory" resultType="string" fetchSize="100">
+        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT peer_ip
         FROM ban_history
         WHERE populate_time >= #{afterTimestamp}
@@ -232,7 +244,8 @@
         LIMIT 1000
     </select>
     <select id="analyseDatacenterHighRiskSwarmTracker" resultType="string" fetchSize="100">
-    SELECT DISTINCT peer_ip
+        SET duckdb.force_execution = true; -- pg_duckdb
+        SELECT DISTINCT peer_ip
     FROM swarm_tracker
     WHERE last_time_seen >= #{afterTimestamp}
       AND ((peer_client_name LIKE 'qBittorrent/4.6.7%'
