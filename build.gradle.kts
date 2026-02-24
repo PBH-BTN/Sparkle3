@@ -27,14 +27,14 @@ sentry {
     // code as part of your stack traces in Sentry.
     //
     // Default is disabled. To enable, see the source context guide.
-    includeSourceContext = true
+    includeSourceContext = false
     // Disables or enables dependencies metadata reporting for Sentry.
     // If enabled, the plugin will collect external dependencies and
     // upload them to Sentry as part of events. If disabled, all the logic
     // related to the dependencies metadata report will be excluded.
     //
     // Default is enabled.
-    includeDependenciesReport = true
+    includeDependenciesReport = false
     // Automatically adds Sentry dependencies to your project.
     autoInstallation {
         enabled = true
