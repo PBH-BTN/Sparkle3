@@ -86,28 +86,30 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
         // TODO: delete after emerg alert
         if (userAgent != null && userAgent.contains("PeerBanHelper/9.3.0") && userApp != null) {
             var ownerId = userApp.getOwner();
-            var user = userService.getById(ownerId);
-            if(user != null) {
-                Boolean success = userAppsRedisTemplate.opsForValue().setIfAbsent("pbh-930-security-alert:" + ownerId, System.currentTimeMillis());
-                if (success == Boolean.TRUE) {
-                    try {
-                        var mimeMessage = javaMailSender.createMimeMessage();
-                        mimeMessage.setFrom(new InternetAddress("sparkle@pbh-btn.com", "SparkleBTN 系统通知"));
-                        mimeMessage.setRecipients(Message.RecipientType.TO, user.getEmail()); // testing
-                        mimeMessage.setSubject("[SparkleBTN] 您使用的 PeerBanHelper (v9.3.0) 存在安全风险，建议您及时升级");
-                        mimeMessage.setText("""
-                                您好 %s，
-                                  您之所以收到这封邮件，是因为 SparkleBTN 系统已检测到您正在使用存在已知安全问题的 PeerBanHelper 版本 (%s)。
-                                  作为对用户安全性负责的一部分，SparkleBTN 会向使用存在已知安全问题的注册用户发送安全通知邮件。不幸的是，您处于受影响的范围内。
-                                  我们已发布紧急安全更新，并修复了相关安全漏洞，请您及时更新！您可以从下面的链接或者通过 PeerBanHelper 自带的更新程序进行更新：
-                                  https://github.com/PBH-BTN/PeerBanHelper/releases/latest
-                                  对您带来的不便，我们致以诚挚歉意。
-                                  此邮件仅发送一次。
-                                """.formatted(user.getNickname(), userAgent));
-                        javaMailSender.send(mimeMessage);
-                    }catch (Exception e){
-                        Sentry.captureException(e);
-                        log.warn("Failed to send security alert email to user ID {}", ownerId, e);
+            if(ownerId != null) {
+                var user = userService.getById(ownerId);
+                if (user != null) {
+                    Boolean success = userAppsRedisTemplate.opsForValue().setIfAbsent("pbh-930-security-alert:" + ownerId, System.currentTimeMillis());
+                    if (success == Boolean.TRUE) {
+                        try {
+                            var mimeMessage = javaMailSender.createMimeMessage();
+                            mimeMessage.setFrom(new InternetAddress("sparkle@pbh-btn.com", "SparkleBTN 系统通知"));
+                            mimeMessage.setRecipients(Message.RecipientType.TO, user.getEmail()); // testing
+                            mimeMessage.setSubject("[SparkleBTN] 您使用的 PeerBanHelper (v9.3.0) 存在安全风险，建议您及时升级");
+                            mimeMessage.setText("""
+                                    您好 %s，
+                                      您之所以收到这封邮件，是因为 SparkleBTN 系统已检测到您正在使用存在已知安全问题的 PeerBanHelper 版本 (%s)。
+                                      作为对用户安全性负责的一部分，SparkleBTN 会向使用存在已知安全问题的注册用户发送安全通知邮件。不幸的是，您处于受影响的范围内。
+                                      我们已发布紧急安全更新，并修复了相关安全漏洞，请您及时更新！您可以从下面的链接或者通过 PeerBanHelper 自带的更新程序进行更新：
+                                      https://github.com/PBH-BTN/PeerBanHelper/releases/latest
+                                      对您带来的不便，我们致以诚挚歉意。
+                                      此邮件仅发送一次。
+                                    """.formatted(user.getNickname(), userAgent));
+                            javaMailSender.send(mimeMessage);
+                        } catch (Exception e) {
+                            Sentry.captureException(e);
+                            log.warn("Failed to send security alert email to user ID {}", ownerId, e);
+                        }
                     }
                 }
             }
