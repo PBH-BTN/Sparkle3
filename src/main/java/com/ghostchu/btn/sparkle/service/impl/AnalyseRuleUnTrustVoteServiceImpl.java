@@ -59,7 +59,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     @Transactional
     public void analyseUntrusted() {
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
-
+        log.info("Performing untrusted vote analysis with duration: {} ms, includeModules: {}, useIPv4: {}, ipv4MinUserAppsVote: {}, ipv4MinBanCountVote: {}, useIPv6: {}, ipv6MinUserAppsVote: {}, ipv6MinBanCountVote: {}",
+                duration, untrustedVoteIncludeModules, useIPv4, ipv4MinUserAppsVote, ipv4MinBanCountVote, useIPv6, ipv6MinUserAppsVote, ipv6MinBanCountVote);
         // 在 try-with-resources 块内完成所有 Cursor 操作
         try (var cursor = this.baseMapper.analyseByModule(
                 OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
@@ -142,6 +143,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
 
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VALUE.getKey(), sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_UNTRUSTED_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
+        log.info("Untrusted vote analysis completed. Generated content length: {}, version: {}", sb.length(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
     }
 
     @Override

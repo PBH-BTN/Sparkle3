@@ -39,6 +39,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
     @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")
     @Transactional
     public void analyseOverDownload() {
+        log.info("Performing concurrent download analysis with duration: {} ms, thresholdConcurrent: {}, thresholdUserapps: {}", duration, thresholdConcurrent, thresholdUserapps);
         var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         StringBuilder sb = new StringBuilder();
 
@@ -63,6 +64,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
 
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE.getKey(), sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
+        log.info("Concurrent download analysis completed. Result length: {}, version: {}", sb.length(), redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION.getKey()));
     }
 
     @Override
