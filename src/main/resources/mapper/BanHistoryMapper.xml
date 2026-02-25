@@ -13,14 +13,12 @@
         GROUP BY peer_ip
     </select>
     <select id="selectPeerTorrents" resultType="long">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT DISTINCT torrent_id AS torrent_count
         FROM ban_history
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND populate_time >= #{afterTimestamp};
     </select>
     <select id="countAll" resultType="long">
-        SET duckdb.force_execution = true; -- pg_duckdb
         SELECT COUNT(*) FROM ban_history
     </select>
 </mapper>
