@@ -61,9 +61,11 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         try (var cursor = this.baseMapper.analyseByModule(
                 OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
                 List.of(untrustedVoteIncludeModules.split(",")))) {
-
+            var it = cursor.iterator();
             // 必须在 try 块内完成迭代，因为 Cursor 离开 try 块后会自动关闭
-            for (var analysis : cursor) {
+            //noinspection WhileLoopReplaceableByForEach
+            while (it.hasNext()) {
+                var analysis = it.next();
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
                 if (ip.isIPv6()) {
                     ip = IPAddressUtil.toPrefixBlockAndZeroHost(ip, 56);
