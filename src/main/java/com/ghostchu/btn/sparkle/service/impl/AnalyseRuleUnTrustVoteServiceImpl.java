@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
+import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -54,6 +56,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")
+    @Transactional
     public void analyseUntrusted() {
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
 
@@ -61,11 +64,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
         try (var cursor = this.baseMapper.analyseByModule(
                 OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
                 List.of(untrustedVoteIncludeModules.split(",")))) {
-            var it = cursor.iterator();
             // 必须在 try 块内完成迭代，因为 Cursor 离开 try 块后会自动关闭
-            //noinspection WhileLoopReplaceableByForEach
-            while (it.hasNext()) {
-                var analysis = it.next();
+            for (AnalyseByModuleResult analysis : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
                 if (ip.isIPv6()) {
                     ip = IPAddressUtil.toPrefixBlockAndZeroHost(ip, 56);
