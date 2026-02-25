@@ -19,11 +19,13 @@
         SUM(to_peer_traffic) AS to_peer_traffic,
         SUM(from_peer_traffic) AS from_peer_traffic
         FROM ban_history
-        WHERE ((populate_time > #{afterTimestamp}) AND (module_name IN
+        WHERE ((populate_time > #{afterTimestamp})
+        AND (module_name IN
         <foreach collection="moduleName" item="item" open="(" separator="," close=")">
             #{item}
         </foreach>
         ))
+        AND (to_peer_traffic - from_peer_traffic) > 268435456
         GROUP BY peer_ip_cidr, iso, city
         ORDER BY ban_count DESC, userapps_count DESC
         LIMIT 1000
