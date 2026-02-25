@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
@@ -44,7 +43,6 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
-    @Transactional(readOnly = true)
     public void analyseOverDownload() {
         long startTime = System.currentTimeMillis();
         log.info("[OverDownload Analysis] Starting over-download analysis for last {} days (mode: {})", 

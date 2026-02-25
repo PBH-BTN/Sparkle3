@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -32,7 +31,6 @@ public class AnalyseDatacenterHighRiskServiceImpl extends AbstractAnalyseRuleSer
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.datacenter-highrisk-analyse.schedule}")
-    @Transactional(readOnly = true)
     public void analyseDatacenterHighRisk() {
         var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         DualIPv4v6AssociativeTries<String> tries = new DualIPv4v6AssociativeTries<>();

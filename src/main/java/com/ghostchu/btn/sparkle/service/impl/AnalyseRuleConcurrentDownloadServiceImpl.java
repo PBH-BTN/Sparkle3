@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -37,7 +36,6 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
     protected RedisTemplate<String, String> redisTemplate;
 
     @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")
-    @Transactional(readOnly = true)
     public void analyseOverDownload() {
         var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         StringBuilder sb = new StringBuilder();
