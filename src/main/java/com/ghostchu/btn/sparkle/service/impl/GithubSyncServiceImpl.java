@@ -79,12 +79,16 @@ public class GithubSyncServiceImpl {
             var sha = oldFile != null ? oldFile.getSha() : null;
             var content = contentSupplier.get();
             if (oldFile != null) {
-                @Cleanup
-                var is = oldFile.read();
-                var oldData = is.readAllBytes();
-                if (Arrays.equals(content, oldData)) {
-                    log.info("{}: 无需更新，跳过", file);
-                    return;
+                try {
+                    @Cleanup
+                    var is = oldFile.read();
+                    var oldData = is.readAllBytes();
+                    if (Arrays.equals(content, oldData)) {
+                        log.info("{}: 无需更新，跳过", file);
+                        return;
+                    }
+                }catch (Exception e){
+                    log.warn("Unable to read existing file content for {}, will attempt to overwrite. Error: {}", file, e.getMessage());
                 }
             }
             var commitResponse = repository.createContent()
