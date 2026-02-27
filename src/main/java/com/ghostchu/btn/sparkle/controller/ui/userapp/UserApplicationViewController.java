@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.exception.UserNotFoundException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,7 +23,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.Objects;
+import java.util.StringJoiner;
 
 @Controller
 public class UserApplicationViewController {
@@ -31,13 +34,21 @@ public class UserApplicationViewController {
     private IUserService userService;
     @Autowired
     private IUserappService userappService;
+    @Autowired
+    private IUserappsHeartbeatService heartbeatService;
 
     @GetMapping("/userapp")
     public String userApplicationIndex(Model model, @AuthenticationPrincipal SparkleUserDetails userDetails) {
         var list = userappService.getUserAppsByUserId(userDetails.getUserId())
                 .stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .map(UserApplicationDto::new).toList();
+                .map(entity->{
+                   var heartBeats = heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(entity.getId(), OffsetDateTime.now().minusHours(1), OffsetDateTime.now());
+                    StringJoiner joiner = new StringJoiner("\n");
+                    joiner.add("此用户应用程序正在关联以下 IP 地址:");
+                    heartBeats.forEach(h->joiner.add(h.getIp().getHostAddress()));
+                    return new UserApplicationDto(entity, joiner.toString());
+                }).toList();
         model.addAttribute("userapps", list);
         return "userapp/index";
     }

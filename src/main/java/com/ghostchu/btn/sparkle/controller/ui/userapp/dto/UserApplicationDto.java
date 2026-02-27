@@ -22,8 +22,9 @@ public class UserApplicationDto implements Serializable {
     private OffsetDateTime bannedAt;
     private String bannedReason;
     private Boolean btnBypass;
+    private String statusText;
 
-    public UserApplicationDto(Userapp userapp) {
+    public UserApplicationDto(Userapp userapp, String statusText) {
         this.id = userapp.getId();
         this.appId = userapp.getAppId();
         this.comment = userapp.getComment();
@@ -32,5 +33,6 @@ public class UserApplicationDto implements Serializable {
         this.bannedAt = userapp.getBannedAt();
         this.bannedReason = userapp.getBannedReason();
         this.btnBypass = userapp.getBtnBypass();
+        this.statusText = statusText;
     }
 }
