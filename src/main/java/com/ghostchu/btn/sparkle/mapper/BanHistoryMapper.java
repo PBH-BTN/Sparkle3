@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,5 +27,8 @@ public interface BanHistoryMapper extends BaseMapper<BanHistory> {
 
     List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    long countAll();
+    long estimateCountAll();
+
+    @NotNull
+    UniversalCountDto countTimeStatistics();
 }

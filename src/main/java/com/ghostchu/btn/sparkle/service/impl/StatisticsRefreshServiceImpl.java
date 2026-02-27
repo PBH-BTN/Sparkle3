@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.TorrentMapper;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -53,30 +54,24 @@ public class StatisticsRefreshServiceImpl {
 
     @Scheduled(cron = "${sparkle.statistics.ban-count-refresh-cron}")
     public void onBanCountRefresh() {
-        long allTime = banHistoryMapper.countAll();
-        long last30Days = banHistoryMapper.selectCount(new QueryWrapper<BanHistory>().ge("insert_time", thirtyDaysAgo));
-        long last14Days = banHistoryMapper.selectCount(new QueryWrapper<BanHistory>().ge("insert_time", fourteenDaysAgo));
-        long last7Days = banHistoryMapper.selectCount(new QueryWrapper<BanHistory>().ge("insert_time", sevenDaysAgo));
-        long last24Hours = banHistoryMapper.selectCount(new QueryWrapper<BanHistory>().ge("insert_time", last24HoursAgo));
+        long allTime = banHistoryMapper.estimateCountAll();
+        UniversalCountDto count = banHistoryMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_ALLTIME.getKey(), allTime);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_30DAYS.getKey(), last30Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), last14Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_7DAYS.getKey(), last7Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey(), last24Hours);
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_30DAYS.getKey(), count.getDays30());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_7DAYS.getKey(), count.getDays7());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey(), count.getDays1());
     }
 
     @Scheduled(cron = "${sparkle.statistics.swarm-tracker-count-refresh-cron}")
     public void onSwarmTracker() {
-        long allTime = swarmTrackerMapper.countAll();
-        //long last30Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", thirtyDaysAgo));
-        //long last14Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", fourteenDaysAgo));
-        long last7Days = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", sevenDaysAgo));
-        long last24Hours = swarmTrackerMapper.selectCount(new QueryWrapper<SwarmTracker>().ge("last_time_seen", last24HoursAgo));
+        long allTime = swarmTrackerMapper.estimateCountAll();
+        UniversalCountDto count = swarmTrackerMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_ALLTIME.getKey(), allTime);
-        //stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), last30Days);
-        //stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), last14Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey(), last7Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), last24Hours);
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), count.getDays30());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey(), count.getDays7());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), count.getDays1());
     }
 
     @Scheduled(cron = "${sparkle.statistics.userapp-count-refresh-cron}")

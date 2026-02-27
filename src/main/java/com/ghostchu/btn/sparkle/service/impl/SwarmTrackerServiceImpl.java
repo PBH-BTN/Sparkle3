@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -362,6 +363,16 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         return this.baseMapper.fetchSwarmTrackerByUserAppsInTimeRange(userAppId, startAt, endAt);
     }
 
+    @Override
+    public long estimateCountAll() {
+        return this.baseMapper.estimateCountAll();
+    }
+
+    @Override
+    public @NotNull UniversalCountDto countTimeStatistics(){
+        return this.baseMapper.countTimeStatistics();
+    }
+
     /**
      * Check if the query has any search conditions (excluding pagination and sorting)
      */
@@ -391,4 +402,5 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 || lastTimeSeenAfter != null
                 || userProgress != null;
     }
+
 }

@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -234,4 +234,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }
     }
 
+    @Override
+    public long estimateCountAll() {
+        return this.baseMapper.estimateCountAll();
+    }
+
+    @Override
+    public @NotNull UniversalCountDto countTimeStatistics(){
+        return this.baseMapper.countTimeStatistics();
+    }
 }

@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,4 +41,8 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     @NotNull
     Cursor<SwarmTracker> selectExpiredSwarmTracker(@NotNull OffsetDateTime expiredTime);
+
+    long estimateCountAll();
+
+    @NotNull UniversalCountDto countTimeStatistics();
 }

@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,4 +45,8 @@ public interface IBanHistoryService extends IService<BanHistory> {
      * @return List of distinct module names
      */
     @NotNull List<String> getDistinctModuleNames();
+
+    long estimateCountAll();
+
+    @NotNull UniversalCountDto countTimeStatistics();
 }

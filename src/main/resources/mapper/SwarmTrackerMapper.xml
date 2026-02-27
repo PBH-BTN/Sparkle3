@@ -121,4 +121,26 @@
     <select id="selectExpiredSwarmTracker" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker">
         SELECT * FROM swarm_tracker WHERE last_time_seen &lt; #{expiredTime}
     </select>
+
+    <select id="estimateCountAll" resultType="long">
+        SELECT reltuples::bigint AS estimate_count
+        FROM pg_class
+        WHERE relname = 'ban_history';
+    </select>
+    <resultMap id="countTimeStatistics" type="com.ghostchu.btn.sparkle.service.dto.UniversalCountDto">
+        <result column="days30" property="days30"/>
+        <result column="days15" property="days15"/>
+        <result column="days7" property="days7"/>
+        <result column="days3" property="days3"/>
+        <result column="days1" property="days1"/>
+    </resultMap>
+    <select id="countTimeStatistics" resultMap="countTimeStatistics">
+        SELECT
+            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '30 days') AS days30,
+            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '15 days') AS days15,
+            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '7 days') AS days7,
+            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '3 days') AS days3,
+            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '1 days') AS days1
+        FROM swarm_tracker;
+    </select>
 </mapper>
