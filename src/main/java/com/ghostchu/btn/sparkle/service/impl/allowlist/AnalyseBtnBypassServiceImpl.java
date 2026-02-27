@@ -56,7 +56,8 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
         for (Userapp uapp : bypassedUserAppsId) {
             var heartBeats = iUserappsHeartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(uapp.getId(), start, end);
             for (UserappsHeartbeat heartBeat : heartBeats) {
-                User user = iUserService.getById(heartBeat);
+                User user = iUserService.getById(heartBeat.getId());
+                if(user == null) continue;
                 stringBuilder.append("#[BTN-Bypassing] 用户名称: ").append(user.getNickname()).append(" (UID=").append(user.getId()).append(", Email=").append(user.getEmail()).append("), 应用程序名称: ").append(uapp.getComment()).append(", 同步时间: ").append(heartBeat.getLastSeenAt().toString()).append("\n");
                 stringBuilder.append(IPAddressUtil.getIPAddress(heartBeat.getIp().getHostAddress()).toNormalizedString());
                 totalIpsAdded++;
