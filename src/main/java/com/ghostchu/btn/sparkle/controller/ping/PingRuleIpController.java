@@ -75,7 +75,7 @@ public class PingRuleIpController extends BasePingController {
                 .contentType(MediaType.TEXT_PLAIN).body(joiner.toString());
     }
 
-    @GetMapping("/ping/rule/ruleIpAllowlist")
+    @GetMapping("/ping/ruleIpAllowlist")
     public ResponseEntity<@NotNull String> ipAllowList(@RequestParam("rev") String version) throws NoSuchAlgorithmException {
         if (allowListPowCaptcha) {
             validatePowCaptcha();
