@@ -1,8 +1,9 @@
-package com.ghostchu.btn.sparkle.service.impl;
+package com.ghostchu.btn.sparkle.service.impl.denylist;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
 import com.google.common.hash.Hashing;

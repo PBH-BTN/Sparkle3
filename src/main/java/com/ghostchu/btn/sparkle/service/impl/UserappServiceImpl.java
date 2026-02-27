@@ -69,6 +69,7 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
                 newRegister.setCreateIp(loginIp);
                 newRegister.setCreatedAt(OffsetDateTime.now());
                 newRegister.setInstallationId(installationId);
+                newRegister.setBtnBypass(false);
                 if (baseMapper.insert(newRegister) <= 0)
                     throw new IllegalStateException("Failed to create userapp for user");
                 userApp = newRegister;

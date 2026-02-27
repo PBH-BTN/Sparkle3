@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
+import com.ghostchu.btn.sparkle.service.impl.denylist.*;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.GHRepository;

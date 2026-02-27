@@ -1,8 +1,8 @@
 package com.ghostchu.btn.sparkle.controller.debug;
 
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleConcurrentDownloadServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleOverDownloadServiceImpl;
-import com.ghostchu.btn.sparkle.service.impl.AnalyseRuleUnTrustVoteServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleConcurrentDownloadServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleOverDownloadServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleUnTrustVoteServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

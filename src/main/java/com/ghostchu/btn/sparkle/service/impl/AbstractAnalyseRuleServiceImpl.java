@@ -25,7 +25,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
 
     public abstract Pair<@Nullable String, @Nullable String> getGeneratedContent();
 
-    <T> void mergeIps(@NotNull DualIPv4v6AssociativeTries<T> tries) {
+    protected <T> void mergeIps(@NotNull DualIPv4v6AssociativeTries<T> tries) {
         IPv4Address[] ipv4Prefixes = commonMergeIpsV4(tries.getIPv4Trie());
         IPv6Address[] ipv6Prefixes = commonMergeIpsV6(tries.getIPv6Trie());
         commonTriesMergeV4(tries.getIPv4Trie(), ipv4Prefixes);
@@ -33,7 +33,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
     }
 
     @NotNull
-    <T> Map<IPAddress, T> formatAndIterateIp(@NotNull DualIPv4v6AssociativeTries<T> tries) {
+    protected  <T> Map<IPAddress, T> formatAndIterateIp(@NotNull DualIPv4v6AssociativeTries<T> tries) {
         Map<IPAddress, T> map = new LinkedHashMap<>();
         tries.nodeIterator(false).forEachRemaining(node -> {
             IPAddress outputAddr = node.getKey();

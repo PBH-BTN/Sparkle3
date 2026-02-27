@@ -22,6 +22,8 @@ public enum RedisKeyConstant {
     ANALYSE_GOPEEDDEV_IDENTITY_VALUE("sparkle:analyse:gopeeddev_identity:value"),
     ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VERSION("sparkle:analyse:datacenter_high_risk_identity:version"),
     ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VALUE("sparkle:analyse:datacenter_high_risk_identity:value"),
+    ANALYSE_BTN_BYPASS_USERAPPS_VERSION("sparkle:analyse:btn_bypass_userapps:version"),
+    ANALYSE_BTN_BYPASS_USERAPPS_VALUE("sparkle:analyse:btn_bypass_userapps:value"),
     STATS_BANHISTORY_ALLTIME("sparkle:stats:banhistory:alltime"),
     STATS_BANHISTORY_30DAYS("sparkle:stats:banhistory:30days"),
     STATS_BANHISTORY_14DAYS("sparkle:stats:banhistory:14days"),

@@ -148,6 +148,11 @@ sparkle:
       endpoint: "${sparkle.root-url}/ping/ruleIpDenylist"
       random-initial-delay: 3000
       interval: 10000
+    rule-ip-allowlist:
+      pow-captcha: false
+      endpoint: "${sparkle.root-url}/ping/ruleIpAllowlist"
+      random-initial-delay: 3000
+      interval: 10000
     rule-peer-identity:
       pow-captcha: false
       endpoint: "${sparkle.root-url}/ping/rulePeerIdentity"
@@ -208,6 +213,8 @@ sparkle:
     datacenter-highrisk-analyse:
       schedule: "0 0 * * * *"
       duration: 1209600000
+    btnbypass-userapps:
+      schedule: "0 */20 * * * *"
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"

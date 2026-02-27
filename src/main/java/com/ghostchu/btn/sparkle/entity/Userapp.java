@@ -70,4 +70,7 @@ public class Userapp implements Serializable {
 
     @TableField("last_user_agent")
     private String lastUserAgent;
+
+    @TableField("btn_bypass")
+    private Boolean btnBypass;
 }
