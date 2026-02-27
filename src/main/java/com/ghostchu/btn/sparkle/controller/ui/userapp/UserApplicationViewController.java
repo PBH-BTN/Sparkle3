@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.controller.ui.userapp;
 
 import com.ghostchu.btn.sparkle.controller.ui.userapp.dto.UserApplicationDto;
+import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.TooManyUserApplicationException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
@@ -44,9 +45,10 @@ public class UserApplicationViewController {
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(entity -> {
                     var heartBeats = heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(entity.getId(), OffsetDateTime.now().minusHours(2), OffsetDateTime.now());
+                    var ips = heartBeats.stream().map(UserappsHeartbeat::getIp).distinct().toList();
                     StringJoiner joiner = new StringJoiner("\n");
                     joiner.add("此用户应用程序正在关联以下 IP 地址:");
-                    heartBeats.forEach(h -> joiner.add(h.getIp().getHostAddress()));
+                    ips.forEach(h -> joiner.add(h.getHostAddress()));
                     return new UserApplicationDto(entity, joiner.toString());
                 }).toList();
         model.addAttribute("userapps", list);
