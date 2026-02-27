@@ -42,11 +42,11 @@ public class UserApplicationViewController {
         var list = userappService.getUserAppsByUserId(userDetails.getUserId())
                 .stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .map(entity->{
-                   var heartBeats = heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(entity.getId(), OffsetDateTime.now().minusHours(1), OffsetDateTime.now());
+                .map(entity -> {
+                    var heartBeats = heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(entity.getId(), OffsetDateTime.now().minusHours(2), OffsetDateTime.now());
                     StringJoiner joiner = new StringJoiner("\n");
                     joiner.add("此用户应用程序正在关联以下 IP 地址:");
-                    heartBeats.forEach(h->joiner.add(h.getIp().getHostAddress()));
+                    heartBeats.forEach(h -> joiner.add(h.getIp().getHostAddress()));
                     return new UserApplicationDto(entity, joiner.toString());
                 }).toList();
         model.addAttribute("userapps", list);
