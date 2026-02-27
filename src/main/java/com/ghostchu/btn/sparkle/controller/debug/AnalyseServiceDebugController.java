@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.controller.debug;
 
+import com.ghostchu.btn.sparkle.service.impl.allowlist.AnalyseBtnBypassServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleConcurrentDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleOverDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleUnTrustVoteServiceImpl;
@@ -18,6 +19,8 @@ public class AnalyseServiceDebugController {
     private AnalyseRuleUnTrustVoteServiceImpl analyseRuleUnTrustVoteService;
     @Autowired
     private AnalyseRuleConcurrentDownloadServiceImpl analyseRuleConcurrentDownloadService;
+    @Autowired
+    private AnalyseBtnBypassServiceImpl analyseBtnBypassServiceImpl;
 
     @RequestMapping("/executeAnalyseOverDownload")
     @ResponseBody
@@ -37,6 +40,13 @@ public class AnalyseServiceDebugController {
     @ResponseBody
     public String executeAnalyseConcurrentDownload() {
         analyseRuleConcurrentDownloadService.analyseOverDownload();
+        return "OK!";
+    }
+
+    @RequestMapping("/executeAnalyseBtnBypass")
+    @ResponseBody
+    public String executeAnalyseBtnBypassImpl() {
+        analyseBtnBypassServiceImpl.analyseBtnBypass();
         return "OK!";
     }
 }

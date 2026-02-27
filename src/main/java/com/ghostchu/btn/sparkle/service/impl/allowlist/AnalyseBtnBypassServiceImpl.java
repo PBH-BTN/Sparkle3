@@ -48,7 +48,6 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
         OffsetDateTime end = OffsetDateTime.now();
         StringBuilder stringBuilder = new StringBuilder();
         List<Userapp> bypassedUserAppsId = userappService.list(new LambdaQueryWrapper<Userapp>()
-                        .select(Userapp::getId)
                         .eq(Userapp::getBtnBypass, true)
                         .isNull(Userapp::getBannedAt))
                 .stream().toList();
