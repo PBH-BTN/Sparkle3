@@ -57,7 +57,7 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
             if(user == null) continue;
             var heartBeats = iUserappsHeartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(uapp.getId(), start, end);
             for (UserappsHeartbeat heartBeat : heartBeats) {
-                stringBuilder.append("#[BTN-Bypassing] 用户名称: ").append(user.getNickname()).append(" (UID=").append(user.getId()).append(", Email=").append(user.getEmail()).append("), 应用程序名称: ").append(uapp.getComment()).append(", 同步时间: ").append(heartBeat.getLastSeenAt().toString()).append("\n");
+                stringBuilder.append("#[BTN-允许列表] 用户名称: ").append(user.getNickname()).append(" (UID=").append(user.getId()).append(", Email=").append(user.getEmail()).append("), 应用程序名称: ").append(uapp.getComment()).append(", 同步时间: ").append(heartBeat.getLastSeenAt().toString()).append("; 如需更多信息，请参见：https://bbs.pbh-btn.com/d/58").append("\n");
                 stringBuilder.append(IPAddressUtil.getIPAddress(heartBeat.getIp().getHostAddress()).toNormalizedString()).append("\n");
                 totalIpsAdded++;
             }
