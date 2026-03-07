@@ -4,8 +4,10 @@ import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
+import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
 import com.google.common.hash.Hashing;
+import inet.ipaddr.IPAddress;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -75,7 +77,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     }
     
     private void analyseWithMaterializedView(long startTime) {
-        Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+        Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
         AtomicLong processedRows = new AtomicLong(0);
         AtomicLong filteredRows = new AtomicLong(0);
 
@@ -89,7 +91,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                     return;
                 }
 
-                var inet = InetAddress.ofLiteral(result.getPeerIp());
+                var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
                 var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
                 mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
                 mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
@@ -107,7 +109,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     }
     
     private void analyseWithDirectQuery(long startTime) {
-        Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+        Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
         AtomicLong processedRows = new AtomicLong(0);
         AtomicLong filteredRows = new AtomicLong(0);
 
@@ -122,7 +124,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                     return;
                 }
 
-                var inet = InetAddress.ofLiteral(result.getPeerIp());
+                var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
                 var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
                 mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
                 mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
@@ -139,7 +141,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
     }
     
-    private void processResults(Map<InetAddress, AggregateCrossTorrentMixCalc> aggregateMap, long startTime, long queryEndTime, long processedRows) {
+    private void processResults(Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap, long startTime, long queryEndTime, long processedRows) {
         StringBuilder sb = new StringBuilder();
         int violationCount = 0;
         int processedCount = 0;
@@ -148,7 +150,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         var iterator = aggregateMap.entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            InetAddress ip = entry.getKey();
+            IPAddress ip = entry.getKey();
             AggregateCrossTorrentMixCalc calc = entry.getValue();
             processedCount++;
 
@@ -162,7 +164,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                             .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalFromPeerTraffic()))
                             .append(", 跨种计算数量: ").append(calc.getTorrentCount())
                             .append("\n");
-                    sb.append(ip.getHostAddress()).append("\n");
+                    sb.append(ip.toNormalizedString()).append("\n");
                 }
             }
 
