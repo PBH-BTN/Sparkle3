@@ -11,7 +11,11 @@
         <result column="from_peer_traffic" property="fromPeerTraffic"/>
     </resultMap>
     <select id="analyseByModule" resultMap="analyseByModuleResult" fetchSize="100">
-        SELECT peer_ip AS peer_ip_cidr,
+        SELECT
+        CASE
+        WHEN family(peer_ip::inet) = 4 THEN host(peer_ip::inet)
+        WHEN family(peer_ip::inet) = 6 THEN set_masklen(peer_ip::inet, 52)::text
+        END AS peer_ip_cidr,
         (peer_geoip ->> 'countryIso'::text) AS iso,
         (peer_geoip ->> 'cityName'::text) AS city,
         count(peer_ip) AS ban_count,
@@ -41,7 +45,10 @@
     </resultMap>
     <select id="analyseOverDownloaded" resultMap="analyseOverDownloadedResult" fetchSize="100">
         -- noinspection SqlShouldBeInGroupBy
-        SELECT swarm_tracker.peer_ip                                                     AS st_peer_ip,
+        SELECT CASE
+                   WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::inet)
+                   WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::inet, 52)::text
+                   END                                                                   AS st_peer_ip,
                swarm_tracker.torrent_id                                                  AS st_torrent_id,
                SUM(swarm_tracker.from_peer_traffic)                                      AS st_from_peer_traffic,
                SUM(swarm_tracker.to_peer_traffic)                                        AS st_to_peer_traffic,
@@ -62,28 +69,31 @@
         WITH filtered_swarm AS (
             -- Pre-filter and aggregate swarm_tracker data before joining
             -- Uses swarm_tracker_overdownload_covering_idx (covering index with INCLUDE columns)
-            SELECT peer_ip,
+            SELECT CASE
+                       WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::inet)
+                       WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::inet, 52)::text
+                       END                                       AS peer_ip,
                    torrent_id,
-                   SUM(from_peer_traffic) AS total_from_traffic,
-                   SUM(to_peer_traffic) AS total_to_traffic,
+                   SUM(from_peer_traffic)                        AS total_from_traffic,
+                   SUM(to_peer_traffic)                          AS total_to_traffic,
                    SUM(to_peer_traffic) - SUM(from_peer_traffic) AS pure_upload
             FROM swarm_tracker
             WHERE last_time_seen >= #{afterTimestamp}
-              AND (to_peer_traffic - from_peer_traffic) > 0  -- Leverages partial index condition
+              AND (to_peer_traffic - from_peer_traffic) > 0 -- Leverages partial index condition
             GROUP BY peer_ip, torrent_id
-            HAVING SUM(to_peer_traffic) - SUM(from_peer_traffic) > 0  -- Additional safety check post-aggregation
+            HAVING SUM(to_peer_traffic) - SUM(from_peer_traffic) > 0 -- Additional safety check post-aggregation
         )
         -- Join with torrent table only for size validation
         -- Uses torrent_size_idx for fast size > 0 filtering
-        SELECT fs.peer_ip                AS st_peer_ip,
-               fs.torrent_id             AS st_torrent_id,
-               fs.total_from_traffic     AS st_from_peer_traffic,
-               fs.total_to_traffic       AS st_to_peer_traffic,
-               t.size                    AS t_torrent_size,
-               fs.pure_upload            AS pure_to_peer_traffic
+        SELECT fs.peer_ip            AS st_peer_ip,
+               fs.torrent_id         AS st_torrent_id,
+               fs.total_from_traffic AS st_from_peer_traffic,
+               fs.total_to_traffic   AS st_to_peer_traffic,
+               t.size                AS t_torrent_size,
+               fs.pure_upload        AS pure_to_peer_traffic
         FROM filtered_swarm fs
                  JOIN torrent t ON fs.torrent_id = t.id
-        WHERE t.size > 0  -- Filter applied after join using torrent_size_idx
+        WHERE t.size > 0 -- Filter applied after join using torrent_size_idx
         ORDER BY fs.pure_upload DESC
         LIMIT 1000
     </select>
@@ -124,13 +134,17 @@
         <result column="total_from_peer_traffic" property="totalFromPeerTraffic"/>
     </resultMap>
     <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult" fetchSize="100">
-        SELECT peer_ip,
+        SELECT CASE
+                   WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::inet)
+                   WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::inet, 52)::text
+                   END,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
                SUM(to_peer_traffic)        AS total_to_peer_traffic,
                SUM(from_peer_traffic)      AS total_from_peer_traffic
         FROM swarm_tracker
-        WHERE last_time_seen >= #{afterTimestamp} AND peer_progress &lt; 1.0
+        WHERE last_time_seen >= #{afterTimestamp}
+          AND peer_progress &lt; 1.0
         GROUP BY peer_ip
         ORDER BY torrent_count DESC,
                  userapps_count DESC
