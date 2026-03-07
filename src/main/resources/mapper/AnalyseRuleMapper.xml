@@ -137,7 +137,7 @@
         SELECT CASE
                    WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::inet)
                    WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::inet, 52)::text
-                   END,
+                   END AS peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
                SUM(to_peer_traffic)        AS total_to_peer_traffic,
