@@ -19,6 +19,7 @@ import java.util.Map;
 public class BanHistoryResponseDto {
     private Long id;
     private OffsetDateTime insertTime;
+    private Long userappId;
     private Long torrentId;
     private String peerIp;
     private Integer peerPort;
@@ -39,6 +40,7 @@ public class BanHistoryResponseDto {
         this.id = entity.getId();
         this.insertTime = entity.getInsertTime();
         this.torrentId = entity.getTorrentId();
+        this.userappId = entity.getUserappsId();
         this.peerIp = entity.getPeerIp() != null ? entity.getPeerIp().getHostAddress() : null;
         this.peerPort = entity.getPeerPort();
         this.peerId = entity.getPeerId();
