@@ -14,7 +14,8 @@
                 #{peerProgress}, #{fromPeerTraffic}, #{toPeerTraffic},
                 #{fromPeerTrafficOffset}, #{toPeerTrafficOffset}, #{flags},
                 #{firstTimeSeen}, #{lastTimeSeen})
-        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+        -- ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip) DO UPDATE
             SET (userapps_id, user_downloader, torrent_id,
                  peer_ip, user_progress,
                  peer_port, peer_id, peer_client_name,
@@ -45,7 +46,8 @@
             #{item.fromPeerTrafficOffset}, #{item.toPeerTrafficOffset}, #{item.flags},
             #{item.firstTimeSeen}, #{item.lastTimeSeen})
         </foreach>
-        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+        -- ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
+        ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip) DO UPDATE
             SET user_progress = EXCLUDED.user_progress,
                 peer_id = EXCLUDED.peer_id,
                 peer_client_name = EXCLUDED.peer_client_name,
