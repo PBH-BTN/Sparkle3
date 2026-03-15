@@ -1,14 +1,10 @@
 package com.ghostchu.btn.sparkle.controller.ping.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import smile.neighbor.lsh.Hash;
 
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 
 @Data
@@ -49,8 +45,4 @@ public class BtnSwarm {
     private Timestamp lastTimeSeen;
     @JsonProperty("peer_last_flags")
     private String peerLastFlags;
-
-    public long uniqueHashCode(){
-        return Hashing.crc32c().hashString(downloader + torrentIdentifier + peerIp, StandardCharsets.ISO_8859_1).padToLong();
-    }
 }

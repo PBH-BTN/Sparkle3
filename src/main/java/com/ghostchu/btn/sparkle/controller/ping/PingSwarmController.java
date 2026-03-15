@@ -1,7 +1,6 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarmPeerPing;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
@@ -22,11 +21,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 @Slf4j
 @RestController
 public class PingSwarmController extends BasePingController {
@@ -40,7 +34,7 @@ public class PingSwarmController extends BasePingController {
 
     @PostMapping("/ping/syncSwarm")
     public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
-        if (powCaptcha) {
+        if(powCaptcha){
             validatePowCaptcha();
         }
         Userapp userapp = verifyUserApplication();
@@ -58,17 +52,8 @@ public class PingSwarmController extends BasePingController {
             swarm.setClientName(sanitizeU0(swarm.getClientName()));
             swarm.setPeerLastFlags(sanitizeU0(swarm.getPeerLastFlags()));
         }
-        swarms.sort((o1, o2) -> o2.getLastTimeSeen().compareTo(o1.getLastTimeSeen()));
-        // 仅保留 swarm#uniqueHashCode 相同的最新的一个 item
-        List<BtnSwarm> btnSwarmList = new ArrayList<>();
-        Set<Long> distinctList = new HashSet<>();
-        for (BtnSwarm swarm : swarms) {
-            if (distinctList.add(swarm.uniqueHashCode())) {
-                btnSwarmList.add(swarm);
-            }
-        }
-        swarmTrackerService.syncSwarm(userapp.getId(), btnSwarmList);
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), btnSwarmList.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList());
+        swarmTrackerService.syncSwarm(userapp.getId(), swarms);
+        clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList());
         return ResponseEntity.status(200).build();
     }
 
