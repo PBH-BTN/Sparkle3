@@ -77,7 +77,7 @@
         -- noinspection SqlShouldBeInGroupBy
         -- Optimized query for 50M+ records with DISTINCT ON deduplication
         WITH latest_swarm AS (
-            -- Step 1: 精确取同一 userapps_id, peer_ip, torrent_id 的最新一次上报快照
+            -- Step 1: 改为按 to_peer_traffic 降序排列，取每个组内流量最大的一行
             SELECT DISTINCT ON (userapps_id, peer_ip, torrent_id)
                 peer_ip,
                 torrent_id,
@@ -85,7 +85,8 @@
                 to_peer_traffic
             FROM swarm_tracker
             WHERE last_time_seen >= #{afterTimestamp}
-            ORDER BY userapps_id, peer_ip, torrent_id, last_time_seen DESC
+            -- 必须先排 DISTINCT ON 的字段，然后紧跟你的目标排序字段
+            ORDER BY userapps_id, peer_ip, torrent_id, to_peer_traffic DESC, last_time_seen DESC
         ),
              filtered_swarm AS (
                  -- Step 2: 聚合经过预处理/去重后的数据
