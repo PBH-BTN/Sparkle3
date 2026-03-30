@@ -32,7 +32,6 @@
         AND (to_peer_traffic - from_peer_traffic) > 268435456
         GROUP BY peer_ip_cidr, iso, city
         ORDER BY ban_count DESC, userapps_count DESC
-        LIMIT 1000
     </select>
     <resultMap id="analyseOverDownloadedResult"
                type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult">
@@ -71,7 +70,6 @@
           -- 在去重后筛选出有效上传的数据
           AND (ls.to_peer_traffic - ls.from_peer_traffic) > 0
         GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
-        LIMIT 1000
     </select>
     <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="100">
         -- noinspection SqlShouldBeInGroupBy
@@ -114,7 +112,6 @@
                  JOIN torrent t ON fs.torrent_id = t.id
         WHERE t.size > 0
         ORDER BY fs.pure_upload DESC
-        LIMIT 1000
     </select>
     
     <!-- Materialized View Query - Ultra-fast alternative using pre-aggregated data -->
