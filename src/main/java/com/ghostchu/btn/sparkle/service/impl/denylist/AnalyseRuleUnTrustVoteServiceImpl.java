@@ -117,7 +117,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             if (shouldInclude) {
 
                 // 检查是否为无效的全 0 地址或过大的 CIDR 块
-                if (ip.isZero() || (ip.getPrefixLength() == 0)) {
+                if (ip.isZero() || (ip.getPrefixLength() != null && ip.getPrefixLength() == 0)) {
                     return;
                 }
 
