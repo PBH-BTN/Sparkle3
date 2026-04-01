@@ -43,7 +43,7 @@ public class UserIPWarningServiceImpl {
                 stringToIPList(provider.getContent(), ips);
         });
         ips.nodeIterator(false).forEachRemaining(node -> {
-            var records = heartbeatService.fetchIpHeartbeatRecords(node.getKey().toNormalizedString(),
+            var records = heartbeatService.fetchIpHeartbeatRecords(node.getKey().toCompressedString(),
                     OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS));
             if (!records.isEmpty()) {
                 map.put(node.getKey(), "AppID: " + records.getFirst().getUserappId());

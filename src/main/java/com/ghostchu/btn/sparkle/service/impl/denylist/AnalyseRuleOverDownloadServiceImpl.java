@@ -164,7 +164,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                             .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalFromPeerTraffic()))
                             .append(", 跨种计算数量: ").append(calc.getTorrentCount())
                             .append("\n");
-                    sb.append(ip.toNormalizedString()).append("\n");
+                    sb.append(ip.toCompressedString()).append("\n");
                 }
             }
 

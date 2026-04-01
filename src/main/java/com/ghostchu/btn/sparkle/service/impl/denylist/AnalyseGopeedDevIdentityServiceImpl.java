@@ -71,7 +71,7 @@ public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServ
                     outputAddr = outputAddr.withoutPrefixLength();
                 }
             }
-            sb.append(outputAddr.toNormalizedString()).append("\n");
+            sb.append(outputAddr.toCompressedString()).append("\n");
         });
 
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_GOPEEDDEV_IDENTITY_VALUE.getKey(), sb.toString());

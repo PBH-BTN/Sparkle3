@@ -54,7 +54,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
                             .append(", BTN 网络从此 Peer 接收的总流量: ").append(UnitConverter.autoUnit(result.getTotalFromPeerTraffic()))
                             .append("\n");
                     IPAddress ipAddress = IPAddressUtil.getIPAddress(result.getPeerIp());
-                    sb.append(ipAddress.toNormalizedString()).append("\n");
+                    sb.append(ipAddress.toCompressedString()).append("\n");
                 }
             }
         } catch (Exception e) {
