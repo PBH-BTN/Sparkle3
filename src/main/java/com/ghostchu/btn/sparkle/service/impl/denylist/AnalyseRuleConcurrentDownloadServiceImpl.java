@@ -38,7 +38,7 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
 
     @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")
     @Transactional
-    public void analyseOverDownload() {
+    public void analyseConcurrentDownload() {
         log.info("Performing concurrent download analysis with duration: {} ms, thresholdConcurrent: {}, thresholdUserapps: {}", duration, thresholdConcurrent, thresholdUserapps);
         var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
         StringBuilder sb = new StringBuilder();
@@ -46,15 +46,18 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
         try (var cursor = this.baseMapper.analyseConcurrentDownload(afterTimestamp)) {
             // 必须在 try 块内完成迭代
             for (var result : cursor) {
+                IPAddress ip = IPAddressUtil.getIPAddress(result.getPeerIp());
                 // 边遍历边过滤边输出，不创建中间 List
                 if (result.getTorrentCount() >= thresholdConcurrent && result.getUserappsCount() >= thresholdUserapps) {
+                    if (ip.isIPv6()) {
+                        ip = ip.toPrefixBlock(56);
+                    }
                     sb.append("# [Sparkle3 并发下载在线分析] 过去给定时间内并发下载计数: ").append(result.getTorrentCount())
                             .append(", 标记人数: ").append(result.getUserappsCount())
                             .append(", BTN 网络发送到此 Peer 的总流量: ").append(UnitConverter.autoUnit(result.getTotalToPeerTraffic()))
                             .append(", BTN 网络从此 Peer 接收的总流量: ").append(UnitConverter.autoUnit(result.getTotalFromPeerTraffic()))
-                            .append("\n");
-                    IPAddress ipAddress = IPAddressUtil.getIPAddress(result.getPeerIp());
-                    sb.append(ipAddress.toCompressedString()).append("\n");
+                            .append("\n")
+                            .append(ip.toCompressedString()).append("\n");
                 }
             }
         } catch (Exception e) {

@@ -125,6 +125,9 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                 }
 
                 var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
+                if (inet.isIPv6()) {
+                    inet = inet.toPrefixBlock(56);
+                }
                 var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
                 mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
                 mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
