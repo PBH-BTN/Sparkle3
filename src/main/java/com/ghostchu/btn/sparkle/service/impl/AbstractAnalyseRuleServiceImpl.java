@@ -112,7 +112,7 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         List<IPv6Address> ips = new ArrayList<>();
         while (it.hasNext()) {
             var node = it.next();
-            ips.add(node.getKey().withoutPrefixLength().toPrefixBlock(60).toZeroHost());
+            ips.add(node.getKey().toPrefixBlock(60));
         }
         IPv6Address[] array = new IPv6Address[ips.size()];
         return firstAddedNode.getKey().mergeToPrefixBlocks(ips.toArray(array));

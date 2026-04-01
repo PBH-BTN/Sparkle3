@@ -70,7 +70,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             for (AnalyseByModuleResult analysis : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
                 if (ip.isIPv6()) {
-                    ip = IPAddressUtil.toPrefixBlockAndZeroHost(ip, 56);
+                    ip = ip.toPrefixBlock(56);
                 }
                 // 直接检查是否存在，如果存在则合并数据
                 GeneratedRule existingRule = tries.get(ip);
@@ -115,12 +115,9 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             }
 
             if (shouldInclude) {
-                // 过滤掉无效的 IP 地址（0.0.0.0 或全 0 的 IPv6）
-                IPAddress ipAddr = rule.getPeerIpCidr();
-                Integer prefixLength = ipAddr.getPrefixLength();
 
                 // 检查是否为无效的全 0 地址或过大的 CIDR 块
-                if (ipAddr.isZero() || (prefixLength != null && prefixLength == 0)) {
+                if (ip.isZero() || (ip.getPrefixLength() == 0)) {
                     return;
                 }
 
@@ -131,14 +128,7 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                         .append(", BTN网络从此Peer获取流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getFromPeerTraffic()))
                         .append("\n");
 
-                // 先调用 toZeroHost()，然后再决定是否移除前缀长度
-                IPAddress outputAddr = rule.getPeerIpCidr().toZeroHost();
-                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
-                        || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                    outputAddr = outputAddr.withoutPrefixLength();
-                }
-                String outputIp = outputAddr.toNormalizedString();
-                sb.append(outputIp).append("\n");
+                sb.append(ip.toCompressedString()).append("\n");
             }
         });
 
