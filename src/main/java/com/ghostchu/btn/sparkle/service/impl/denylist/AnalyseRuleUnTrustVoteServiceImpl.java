@@ -133,13 +133,11 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
 
                 // 先调用 toZeroHost()，然后再决定是否移除前缀长度
                 IPAddress outputAddr = rule.getPeerIpCidr().toZeroHost();
-                String outputIp;
                 if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32)
                         || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                    outputIp = outputAddr.withoutPrefixLength().toNormalizedString();
-                } else {
-                    outputIp = ipAddr.toZeroHost().toNormalizedString();
+                    outputAddr = outputAddr.withoutPrefixLength();
                 }
+                String outputIp = outputAddr.toNormalizedString();
                 sb.append(outputIp).append("\n");
             }
         });
