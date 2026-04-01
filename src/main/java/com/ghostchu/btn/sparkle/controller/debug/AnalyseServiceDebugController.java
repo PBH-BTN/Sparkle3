@@ -39,7 +39,7 @@ public class AnalyseServiceDebugController {
     @RequestMapping("/executeAnalyseConcurrentDownload")
     @ResponseBody
     public String executeAnalyseConcurrentDownload() {
-        analyseRuleConcurrentDownloadService.analyseOverDownload();
+        analyseRuleConcurrentDownloadService.analyseConcurrentDownload();
         return "OK!";
     }
 
