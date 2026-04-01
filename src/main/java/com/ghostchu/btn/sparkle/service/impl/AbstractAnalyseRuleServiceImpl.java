@@ -32,22 +32,6 @@ public abstract class AbstractAnalyseRuleServiceImpl extends ServiceImpl<Analyse
         commonTriesMergeV6(tries.getIPv6Trie(), ipv6Prefixes);
     }
 
-    @NotNull
-    protected  <T> Map<IPAddress, T> formatAndIterateIp(@NotNull DualIPv4v6AssociativeTries<T> tries) {
-        Map<IPAddress, T> map = new LinkedHashMap<>();
-        tries.nodeIterator(false).forEachRemaining(node -> {
-            IPAddress outputAddr = node.getKey();
-            if (outputAddr.getPrefixLength() != null) {
-                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                    outputAddr = outputAddr.withoutPrefixLength();
-                }
-            }
-            map.put(outputAddr, node.getValue());
-        });
-        return map;
-    }
-
-
     private <T> void commonTriesMergeV6(@NotNull AssociativeAddressTrie<IPv6Address, T> trie, @NotNull IPv6Address[] prefixes) {
         for (IPv6Address prefix : prefixes) {
             // 收集该前缀下的第一个值作为聚合结果

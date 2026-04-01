@@ -59,16 +59,8 @@ public class AnalyseDatacenterHighRiskServiceImpl extends AbstractAnalyseRuleSer
         tries.nodeIterator(false).forEachRemaining(node -> {
             IPAddress ip = node.getKey();
 
-            sb.append("# [Sparkle3] 数据中心高风险特征识别").append("\n");
-
-            // 格式化输出 IP 地址
-            IPAddress outputAddr = ip;
-            if (outputAddr.getPrefixLength() != null) {
-                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                    outputAddr = outputAddr.withoutPrefixLength();
-                }
-            }
-            sb.append(outputAddr.toCompressedString()).append("\n");
+            sb.append("# [Sparkle3] 数据中心高风险特征识别").append("\n")
+                    .append(ip.toCompressedString()).append("\n");
         });
 
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VALUE.getKey(),  sb.toString());

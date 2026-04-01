@@ -62,16 +62,8 @@ public class AnalyseRain000IdentityServiceImpl extends AbstractAnalyseRuleServic
 
             sb.append("# [Sparkle3] Rain0.0.0 特征识别: ")
                     .append("采样数据: ").append("PeerId: ").append(value.getLeft()).append(" ClientName: ").append(value.getRight())
-                    .append("\n");
-
-            // 格式化输出 IP 地址
-            IPAddress outputAddr = ip;
-            if (outputAddr.getPrefixLength() != null) {
-                if ((outputAddr.isIPv4() && outputAddr.getPrefixLength() == 32) || (outputAddr.isIPv6() && outputAddr.getPrefixLength() == 128)) {
-                    outputAddr = outputAddr.withoutPrefixLength();
-                }
-            }
-            sb.append(outputAddr.toCompressedString()).append("\n");
+                    .append("\n")
+                    .append(ip.toCompressedString()).append("\n");
         });
 
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_RAIN000_IDENTITY_VALUE.getKey(), sb.toString());
