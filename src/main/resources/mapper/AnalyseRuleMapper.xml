@@ -13,8 +13,8 @@
     <select id="analyseByModule" resultMap="analyseByModuleResult" fetchSize="100">
         SELECT
         CASE
-        WHEN family(peer_ip::inet) = 4 THEN host(peer_ip::inet)
-        WHEN family(peer_ip::inet) = 6 THEN set_masklen(peer_ip::inet, 56)::text
+        WHEN family(peer_ip::inet) = 4 THEN host(peer_ip::cidr)
+        WHEN family(peer_ip::inet) = 6 THEN set_masklen(peer_ip::cidr, 56)::text
         END AS peer_ip_cidr,
         (peer_geoip ->> 'countryIso'::text) AS iso,
         (peer_geoip ->> 'cityName'::text) AS city,
@@ -56,8 +56,8 @@
             ORDER BY userapps_id, peer_ip, torrent_id, last_time_seen DESC
         )
         SELECT CASE
-                   WHEN family(ls.peer_ip::inet) = 4 THEN host(ls.peer_ip::inet)
-                   WHEN family(ls.peer_ip::inet) = 6 THEN set_masklen(ls.peer_ip::inet, 56)::text
+                   WHEN family(ls.peer_ip::inet) = 4 THEN host(ls.peer_ip::cidr)
+                   WHEN family(ls.peer_ip::inet) = 6 THEN set_masklen(ls.peer_ip::cidr, 56)::text
                    END                                           AS st_peer_ip,
                ls.torrent_id                                     AS st_torrent_id,
                SUM(ls.from_peer_traffic)                         AS st_from_peer_traffic,
@@ -89,8 +89,8 @@
              filtered_swarm AS (
                  -- Step 2: 聚合经过预处理/去重后的数据
                  SELECT CASE
-                            WHEN family(peer_ip::inet) = 4 THEN host(peer_ip::inet)
-                            WHEN family(peer_ip::inet) = 6 THEN set_masklen(peer_ip::inet, 56)::text
+                            WHEN family(peer_ip::inet) = 4 THEN host(peer_ip::cidr)
+                            WHEN family(peer_ip::inet) = 6 THEN set_masklen(peer_ip::cidr, 56)::text
                             END                                       AS peer_ip,
                         torrent_id,
                         SUM(from_peer_traffic)                        AS total_from_traffic,
@@ -151,8 +151,8 @@
     </resultMap>
     <select id="analyseConcurrentDownload" resultMap="analyseConcurrentDownloadResult" fetchSize="100">
         SELECT CASE
-                   WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::inet)
-                   WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::inet, 56)::text
+                   WHEN family(swarm_tracker.peer_ip::inet) = 4 THEN host(swarm_tracker.peer_ip::cidr)
+                   WHEN family(swarm_tracker.peer_ip::inet) = 6 THEN set_masklen(swarm_tracker.peer_ip::cidr, 56)::text
                    END AS peer_ip,
                COUNT(DISTINCT torrent_id)  AS torrent_count,
                COUNT(DISTINCT userapps_id) AS userapps_count,
