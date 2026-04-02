@@ -126,9 +126,8 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
                         .append(", 合并记录数量: ").append(rule.getMergedRecords())
                         .append(", BTN网络发送到此Peer流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getToPeerTraffic()))
                         .append(", BTN网络从此Peer获取流量: ").append(MsgUtil.humanReadableByteCountBin(rule.getFromPeerTraffic()))
-                        .append("\n");
-
-                sb.append(ip.toCompressedString()).append("\n");
+                        .append("\n")
+                        .append(ip.toCompressedString()).append("\n");
             }
         });
 

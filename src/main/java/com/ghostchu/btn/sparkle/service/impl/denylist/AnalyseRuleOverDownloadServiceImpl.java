@@ -92,6 +92,9 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                 }
 
                 var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
+                if (inet.isIPv6()) {
+                    inet = inet.toPrefixBlock(56);
+                }
                 var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
                 mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
                 mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
@@ -166,8 +169,8 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                             .append(", BTN 网络发送到此 Peer 的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalToPeerTraffic()))
                             .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalFromPeerTraffic()))
                             .append(", 跨种计算数量: ").append(calc.getTorrentCount())
-                            .append("\n");
-                    sb.append(ip.toCompressedString()).append("\n");
+                            .append("\n")
+                            .append(ip.toCompressedString()).append("\n");
                 }
             }
 
