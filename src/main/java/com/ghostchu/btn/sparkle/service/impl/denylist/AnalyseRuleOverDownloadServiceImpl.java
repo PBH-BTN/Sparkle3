@@ -20,12 +20,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -50,9 +49,9 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     @Transactional
     public void analyseOverDownload() {
         long startTime = System.currentTimeMillis();
-        log.info("[OverDownload Analysis] Starting over-download analysis for last {} days (mode: {})", 
+        log.info("[OverDownload Analysis] Starting over-download analysis for last {} days (mode: {})",
                 duration / (24 * 60 * 60 * 1000), useMaterializedView ? "Materialized View" : "Direct Query");
-        
+
         // Refresh materialized view if enabled and using materialized view
         if (useMaterializedView && materializedViewRefresh) {
             try {
@@ -68,107 +67,94 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
                 return;
             }
         }
-        
+
         if (useMaterializedView) {
-            analyseWithMaterializedView(startTime);
+            throw new UnsupportedOperationException("materialized view not support!");
+            // analyseWithMaterializedView(startTime);
         } else {
             analyseWithDirectQuery(startTime);
         }
     }
-    
-    private void analyseWithMaterializedView(long startTime) {
-        Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
-        AtomicLong processedRows = new AtomicLong(0);
-        AtomicLong filteredRows = new AtomicLong(0);
 
-        this.baseMapper.analyseOverDownloadedFromMaterializedViewWithHandler(
-            OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
-            resultContext -> {
-                processedRows.incrementAndGet();
-                AnalyseOverDownloadedResult result = resultContext.getResultObject();
-                if (result.getTorrentSize() <= 0) {
-                    filteredRows.incrementAndGet();
-                    return;
-                }
+//    private void analyseWithMaterializedView(long startTime) {
+//        Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+//        AtomicLong processedRows = new AtomicLong(0);
+//        AtomicLong filteredRows = new AtomicLong(0);
+//
+//        this.baseMapper.analyseOverDownloadedFromMaterializedViewWithHandler(
+//                OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
+//                resultContext -> {
+//                    processedRows.incrementAndGet();
+//                    AnalyseOverDownloadedResult result = resultContext.getResultObject();
+//                    if (result.getTorrentSize() <= 0) {
+//                        filteredRows.incrementAndGet();
+//                        return;
+//                    }
+//
+//                    var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
+//                    if (inet.isIPv6()) {
+//                        inet = inet.toPrefixBlock(56);
+//                    }
+//                    var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
+//                    mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
+//                    mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
+//                    mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
+//                    mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
+//                    aggregateMap.put(inet, mixCalc);
+//                }
+//        );
+//
+//        long queryEndTime = System.currentTimeMillis();
+//        log.info("[OverDownload Analysis] Materialized view query completed in {} ms, processed {} rows, filtered {} rows, aggregated to {} unique IPs",
+//                queryEndTime - startTime, processedRows.get(), filteredRows.get(), aggregateMap.size());
+//
+//        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
+//    }
 
-                var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
-                if (inet.isIPv6()) {
-                    inet = inet.toPrefixBlock(56);
-                }
-                var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
-                mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
-                mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
-                mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
-                mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
-                aggregateMap.put(inet, mixCalc);
-            }
-        );
-
-        long queryEndTime = System.currentTimeMillis();
-        log.info("[OverDownload Analysis] Materialized view query completed in {} ms, processed {} rows, filtered {} rows, aggregated to {} unique IPs",
-                queryEndTime - startTime, processedRows.get(), filteredRows.get(), aggregateMap.size());
-
-        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
-    }
-    
     private void analyseWithDirectQuery(long startTime) {
-        Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap = new HashMap<>();
+        List<AnalyseOverDownloadedResult> resultList = new LinkedList<>(); // do not use array copy because it may grow insane
         AtomicLong processedRows = new AtomicLong(0);
-        AtomicLong filteredRows = new AtomicLong(0);
 
         // Use ResultHandler to process results one by one, avoiding loading all data into memory
         this.baseMapper.analyseOverDownloadedWithHandler(
-            OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
-            resultContext -> {
-                processedRows.incrementAndGet();
-                AnalyseOverDownloadedResult result = resultContext.getResultObject();
-                if (result.getTorrentSize() <= 0) {
-                    filteredRows.incrementAndGet();
-                    return;
+                OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
+                resultContext -> {
+                    processedRows.incrementAndGet();
+                    var result = resultContext.getResultObject();
+                    resultList.add(result);
                 }
-
-                var inet = IPAddressUtil.getIPAddress(result.getPeerIp());
-                if (inet.isIPv6()) {
-                    inet = inet.toPrefixBlock(56);
-                }
-                var mixCalc = aggregateMap.getOrDefault(inet, new AggregateCrossTorrentMixCalc());
-                mixCalc.setTorrentCount(mixCalc.getTorrentCount() + 1);
-                mixCalc.setTotalFromPeerTraffic(mixCalc.getTotalFromPeerTraffic() + result.getTotalFromPeerTraffic());
-                mixCalc.setTotalToPeerTraffic(mixCalc.getTotalToPeerTraffic() + result.getTotalToPeerTraffic());
-                mixCalc.setTotalTorrentSize(mixCalc.getTotalTorrentSize() + result.getTorrentSize());
-                aggregateMap.put(inet, mixCalc);
-            }
         );
 
         long queryEndTime = System.currentTimeMillis();
-        log.info("[OverDownload Analysis] Direct query completed in {} ms, processed {} rows, filtered {} rows, aggregated to {} unique IPs",
-                queryEndTime - startTime, processedRows.get(), filteredRows.get(), aggregateMap.size());
+        log.info("[OverDownload Analysis] Direct query completed in {} ms, processed {} rows",
+                queryEndTime - startTime, processedRows.get());
 
-        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
+        processResults(resultList, startTime, queryEndTime, processedRows.get());
     }
-    
-    private void processResults(Map<IPAddress, AggregateCrossTorrentMixCalc> aggregateMap, long startTime, long queryEndTime, long processedRows) {
+
+    private void processResults(List<AnalyseOverDownloadedResult> resultList, long startTime, long queryEndTime, long processedRows) {
         StringBuilder sb = new StringBuilder();
         int violationCount = 0;
         int processedCount = 0;
 
         // 使用迭代器遍历，处理完立即从 map 中移除，减少内存占用
-        var iterator = aggregateMap.entrySet().iterator();
+        var iterator = resultList.iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            IPAddress ip = entry.getKey();
-            AggregateCrossTorrentMixCalc calc = entry.getValue();
+            if (entry.getTorrentSize() <= 0) continue;
+            IPAddress ip = IPAddressUtil.getIPAddress(entry.getPeerIp());
             processedCount++;
-
-            if(calc.getOverDownloadRatio() > thresholdRatio){
-                if(calc.getPureToPeerTraffic() > thresholdTraffic){
+            var pureUploaded = entry.getTotalToPeerTraffic() - entry.getTotalFromPeerTraffic();
+            var ratio = ((double) pureUploaded / entry.getTorrentSize());
+            if (ratio > thresholdRatio) {
+                if (pureUploaded > thresholdTraffic) {
                     violationCount++;
                     sb.append("# [Sparkle3 过量下载在线分析] ")
-                            .append(" 过量下载比率: ").append(String.format("%.2f", calc.getOverDownloadRatio() * 100)).append("%")
+                            .append(" 过量下载比率: ").append(String.format("%.2f", ratio * 100)).append("%")
                             .append(" (100% = 完整下载一次种子大小)")
-                            .append(", BTN 网络发送到此 Peer 的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalToPeerTraffic()))
-                            .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(calc.getTotalFromPeerTraffic()))
-                            .append(", 跨种计算数量: ").append(calc.getTorrentCount())
+                            .append("BTN 网络发送到此 Peer 的流量: ").append(MsgUtil.humanReadableByteCountBin(entry.getTotalToPeerTraffic()))
+                            .append(", BTN 网络从此 Peer 接收的流量: ").append(MsgUtil.humanReadableByteCountBin(entry.getTotalFromPeerTraffic()))
+                            //.append(", 跨种计算数量: ").append(calc.getTorrentCount())
                             .append("\n")
                             .append(ip.toCompressedString()).append("\n");
                 }
@@ -180,13 +166,13 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             // 每处理 1000 条记录记录一次进度
             if (processedCount % 1000 == 0) {
                 log.debug("[OverDownload Analysis] Processed {}/{} IPs, found {} violations so far",
-                    processedCount, processedCount, violationCount);
+                        processedCount, processedCount, violationCount);
             }
         }
-        
+
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey(), sb.toString());
         redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VERSION.getKey(), Hashing.crc32c().hashString(sb.toString(), StandardCharsets.UTF_8).toString());
-        
+
         long totalTime = System.currentTimeMillis() - startTime;
         long queryTime = queryEndTime - startTime;
         log.info("[OverDownload Analysis] Completed in {} ms (query: {} ms, processing: {} ms), detected {} violations (ratio > {}, traffic > {} bytes)",
@@ -213,6 +199,7 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         return redisTemplate.opsForValue().get(RedisKeyConstant.ANALYSE_OVER_DOWNLOAD_VOTE_VALUE.getKey());
     }
 
+
     @Data
     public static class AggregateCrossTorrentMixCalc {
         private long torrentCount;
@@ -224,14 +211,14 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             return totalToPeerTraffic - totalFromPeerTraffic;
         }
 
-        public double getOverDownloadRatio(){
+        public double getOverDownloadRatio() {
             if (totalTorrentSize == 0) {
                 return 0.0;
             }
             return (double) getPureToPeerTraffic() / (double) totalTorrentSize;
         }
 
-        public double getShareRatio(){
+        public double getShareRatio() {
             if (totalFromPeerTraffic == 0) {
                 return 0.0;
             }
