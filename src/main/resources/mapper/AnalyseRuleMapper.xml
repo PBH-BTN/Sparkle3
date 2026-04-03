@@ -67,8 +67,6 @@
         FROM latest_swarm ls
                  JOIN torrent ON ls.torrent_id = torrent.id
         WHERE torrent.size > 0
-          -- 在去重后筛选出有效上传的数据
-          AND (ls.to_peer_traffic - ls.from_peer_traffic) > 0
         GROUP BY st_peer_ip, st_torrent_id, t_torrent_size
     </select>
     <select id="analyseOverDownloadedWithHandler" resultMap="analyseOverDownloadedResult" fetchSize="100">
