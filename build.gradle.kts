@@ -17,34 +17,6 @@ java {
 	}
 }
 
-sentry {
-    // Enables more detailed log output, e.g. for sentry-cli.
-    //
-    // Default is false.
-    debug = false
-    // Generates a source bundle and uploads it to Sentry.
-    // This enables source context, allowing you to see your source
-    // code as part of your stack traces in Sentry.
-    //
-    // Default is disabled. To enable, see the source context guide.
-    includeSourceContext = false
-    // Disables or enables dependencies metadata reporting for Sentry.
-    // If enabled, the plugin will collect external dependencies and
-    // upload them to Sentry as part of events. If disabled, all the logic
-    // related to the dependencies metadata report will be excluded.
-    //
-    // Default is enabled.
-    includeDependenciesReport = false
-    // Automatically adds Sentry dependencies to your project.
-    autoInstallation {
-        enabled = true
-    }
-    url = System.getenv("SENTRY_URL")
-    org = System.getenv("SENTRY_ORG")
-    projectName = System.getenv("SENTRY_PROJECT_SLUG")
-    authToken = System.getenv("SENTRY_AUTH_TOKEN")
-}
-
 configurations {
 	compileOnly {
 		extendsFrom(configurations.annotationProcessor.get())
@@ -125,9 +97,6 @@ dependencies {
     implementation("com.baomidou:mybatis-plus-jsqlparser")
     implementation("com.github.haifengl:smile-core:5.1.0")
     implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
-    implementation(platform("io.sentry:sentry-bom:8.31.0")) //import bom
-    implementation("io.sentry:sentry-async-profiler")
-    implementation("io.sentry:sentry-logback");
     implementation("org.springframework.boot:spring-boot-starter-mail") // mailing
 
 }
