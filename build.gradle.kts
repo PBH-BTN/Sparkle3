@@ -61,7 +61,7 @@ dependencies {
 	//implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 	compileOnly("org.projectlombok:lombok")
-	compileOnly("org.jetbrains:annotations:26.0.2")
+	compileOnly("org.jetbrains:annotations:26.1.0")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 	implementation("org.postgresql:postgresql")
