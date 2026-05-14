@@ -85,6 +85,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             if (btnBan.getModule().endsWith("IdleConnectionDosProtection")) {
                 return null;
             }
+            if (btnBan.getModule().endsWith("AntiVampire")) {
+                return null;
+            }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
             return new BanHistory()
                     .setInsertTime(nowTime)
