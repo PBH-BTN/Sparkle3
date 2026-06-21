@@ -92,7 +92,7 @@ dependencies {
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("com.vdurmont:semver4j:3.1.0")
     implementation("com.github.seancfoley:ipaddress:5.5.0")
-    implementation("com.maxmind.geoip2:geoip2:4.2.0")
+    implementation("com.maxmind.geoip2:geoip2:5.0.2")
     implementation("org.kohsuke:github-api:1.330")
     implementation("com.baomidou:mybatis-plus-jsqlparser")
     implementation("com.github.haifengl:smile-core:5.1.0")
