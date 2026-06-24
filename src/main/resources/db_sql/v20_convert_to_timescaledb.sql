@@ -50,4 +50,34 @@ ALTER TABLE ban_history_new RENAME TO ban_history;
 
 COMMIT;
 
-DROP TABLE ban_history_old;
+DROP TABLE ban_history_old CASCADE;
+
+CREATE UNIQUE INDEX banhistory_pkey ON ONLY public.ban_history USING btree (id, populate_time);
+CREATE INDEX ban_history_analyse_idx ON ONLY public.ban_history USING btree (insert_time, peer_ip, peer_id, peer_client_name);
+CREATE INDEX ban_history_description_trgm ON ONLY public.ban_history USING gin (description gin_trgm_ops);
+CREATE INDEX ban_history_insert_time_idx ON ONLY public.ban_history USING btree (insert_time DESC);
+CREATE INDEX idx_ban_history_module_time_traffic ON ONLY public.ban_history USING btree (module_name, populate_time) INCLUDE (peer_ip, userapps_id, to_peer_traffic, from_peer_traffic);
+CREATE INDEX ban_history_modulename_idx ON ONLY public.ban_history USING btree (module_name);
+CREATE INDEX ban_history_peer_client_name_idx ON ONLY public.ban_history USING btree (peer_client_name);
+CREATE INDEX ban_history_peer_client_name_trgm ON ONLY public.ban_history USING gin (peer_client_name gin_trgm_ops);
+CREATE INDEX ban_history_userapps_idx ON ONLY public.ban_history USING btree (userapps_id);
+CREATE INDEX ban_history_peer_id_idx ON ONLY public.ban_history USING btree (peer_id);
+CREATE INDEX ban_history_peer_ip_idx ON ONLY public.ban_history USING gist (peer_ip inet_ops);
+CREATE INDEX ban_history_peer_flags_idx ON ONLY public.ban_history USING btree (peer_flags);
+CREATE INDEX ban_history_populate_time_idx ON ONLY public.ban_history USING btree (populate_time DESC);
+CREATE INDEX ban_history_torrent_id_idx ON ONLY public.ban_history USING btree (torrent_id);
+CREATE INDEX ban_history_peer_geoip_idx ON ONLY public.ban_history USING gin (peer_geoip) WITH (gin_pending_list_limit='4096');
+CREATE INDEX ban_history_structured_data ON ONLY public.ban_history USING gin (structured_data) WITH (gin_pending_list_limit='4096');
+CREATE INDEX idx_ban_history_peer_ip_cidr ON ONLY public.ban_history USING btree ((
+CASE
+    WHEN (family(peer_ip) = 4) THEN network(set_masklen(peer_ip, 32))
+    WHEN (family(peer_ip) = 6) THEN network(set_masklen(peer_ip, 56))
+    ELSE NULL::cidr
+END));
+CREATE INDEX idx_ban_history_peer_cidr ON ONLY public.ban_history USING btree ((
+CASE
+    WHEN (family(peer_ip) = 4) THEN host(peer_ip)
+    WHEN (family(peer_ip) = 6) THEN (set_masklen(peer_ip, 52))::text
+    ELSE NULL::text
+END));
+
