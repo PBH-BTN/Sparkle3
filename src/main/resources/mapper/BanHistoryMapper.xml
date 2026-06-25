@@ -18,10 +18,13 @@
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND populate_time >= #{afterTimestamp};
     </select>
-    <select id="estimateCountAll" resultType="long">
-        SELECT reltuples::bigint AS estimate_count
-        FROM pg_class
-        WHERE relname = 'ban_history';
+<!--    <select id="estimateCountAll" resultType="long">-->
+<!--        SELECT reltuples::bigint AS estimate_count-->
+<!--        FROM pg_class-->
+<!--        WHERE relname = 'ban_history';-->
+<!--    </select>-->
+    <select id="estimateCountAll" resultType="long"> <!-- TimescaleDB Fast Path -->
+        SELECT approximate_row_count('ban_history');
     </select>
     <resultMap id="countTimeStatistics" type="com.ghostchu.btn.sparkle.service.dto.UniversalCountDto">
         <result column="days30" property="days30"/>
