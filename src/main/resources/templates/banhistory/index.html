@@ -133,7 +133,7 @@
 const BanHistoryApp = {
     currentPage: 1,
     pageSize: 50,
-    sortBy: 'insert_time',
+    sortBy: 'populate_time',
     sortOrder: 'desc',
     
     init() {
@@ -231,7 +231,7 @@ const BanHistoryApp = {
                 <table class="spk-table">
                     <thead>
                         <tr>
-                            <th>${this.renderSortHeader('insert_time', '记录时间')}</th>
+                            <th>${this.renderSortHeader('populate_time', '记录时间')}</th>
                             <th>${this.renderSortHeader('torrent_id', '种子 ID')}</th>
                             <th>${this.renderSortHeader('peer_ip', 'Peer IP')}</th>
                             <th>${this.renderSortHeader('peer_port', 'Peer 端口号')}</th>
