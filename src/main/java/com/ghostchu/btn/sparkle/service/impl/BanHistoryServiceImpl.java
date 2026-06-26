@@ -173,7 +173,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
 
         // Sorting
-        String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "insert_time";
+        String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "populate_time";
         String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
 
         if ("asc".equals(sortOrder)) {
