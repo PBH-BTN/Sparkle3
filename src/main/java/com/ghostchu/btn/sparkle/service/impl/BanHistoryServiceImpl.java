@@ -149,7 +149,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         // Check if there are any search conditions
         boolean hasSearchConditions = hasSearchConditions(queryDto);
 
-        OffsetDateTime insertTimeStart = Objects.requireNonNullElse(queryDto.getInsertTimeStart(), OffsetDateTime.now().minusDays(3));
+        OffsetDateTime insertTimeStart = Objects.requireNonNullElse(queryDto.getInsertTimeStart(), OffsetDateTime.now().minusDays(7));
         OffsetDateTime insertTimeNow = Objects.requireNonNullElse(queryDto.getInsertTimeEnd(), OffsetDateTime.now());
 
         if (insertTimeStart.isAfter(insertTimeNow)) {
@@ -161,8 +161,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }
 
         // Time range filter
-        queryWrapper.ge("insert_time", insertTimeStart)
-                .le("insert_time", insertTimeNow)
+        queryWrapper.ge("populate_time", insertTimeStart)
+                .le("populate_time", insertTimeNow)
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
