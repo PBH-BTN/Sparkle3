@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -148,9 +149,20 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         // Check if there are any search conditions
         boolean hasSearchConditions = hasSearchConditions(queryDto);
 
+        OffsetDateTime insertTimeStart = Objects.requireNonNullElse(queryDto.getInsertTimeStart(), OffsetDateTime.now().minusDays(3));
+        OffsetDateTime insertTimeNow = Objects.requireNonNullElse(queryDto.getInsertTimeEnd(), OffsetDateTime.now());
+
+        if (insertTimeStart.isAfter(insertTimeNow)) {
+            throw new IllegalArgumentException("Illegal query duration");
+        }
+
+        if (insertTimeStart.until(insertTimeNow, ChronoUnit.DAYS) > 14) {
+            throw new IllegalArgumentException("The query date start to end duration cannot over 14 days.");
+        }
+
         // Time range filter
-        queryWrapper.ge(queryDto.getInsertTimeStart() != null, "insert_time", queryDto.getInsertTimeStart())
-                .le(queryDto.getInsertTimeEnd() != null, "insert_time", queryDto.getInsertTimeEnd())
+        queryWrapper.ge("insert_time", insertTimeStart)
+                .le("insert_time", insertTimeNow)
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
@@ -243,7 +255,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @NotNull UniversalCountDto countTimeStatistics(){
+    public @NotNull UniversalCountDto countTimeStatistics() {
         return this.baseMapper.countTimeStatistics();
     }
 }
