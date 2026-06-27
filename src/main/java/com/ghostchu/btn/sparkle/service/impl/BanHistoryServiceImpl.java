@@ -165,11 +165,11 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 .le("populate_time", insertTimeNow)
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
-                .eq(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
-                .eq(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())
+                .likeRight(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
+                .likeRight(queryDto.getPeerClientName() != null && !queryDto.getPeerClientName().isBlank(), "peer_client_name", queryDto.getPeerClientName())
                 .eq(queryDto.getModuleName() != null && !queryDto.getModuleName().isBlank(), "module_name", queryDto.getModuleName())
-                .like(queryDto.getRule() != null && !queryDto.getRule().isBlank(), "rule", queryDto.getRule())
-                .like(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
+                .likeRight(queryDto.getRule() != null && !queryDto.getRule().isBlank(), "rule", queryDto.getRule())
+                .likeRight(queryDto.getDescription() != null && !queryDto.getDescription().isBlank(), "description", queryDto.getDescription());
 
 
         // Sorting
