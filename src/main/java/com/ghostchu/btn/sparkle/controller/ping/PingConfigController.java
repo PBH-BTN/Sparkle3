@@ -52,22 +52,41 @@ public class PingConfigController extends BasePingController {
             config = userappConfigService.configLoggedInUserapp(userapp);
         }
         var geoData = ipdb.geoData(InetAddress.ofLiteral(request.getRemoteAddr()));
-        if (geoData != null && geoData.getCountryIso() != null && "cn".equals(geoData.getCountryIso().toLowerCase(Locale.ROOT))) {
-            if (chnRootUrl != null && !chnRootUrl.isBlank()) {
-                for (SparkleBtnAbility ability : config.getAbility().values()) {
-                    // get endpoint private field content
-                    try {
-                        var field = ability.getClass().getDeclaredField("endpoint");
-                        String endpoint = (String) field.get(ability);
-                        if (endpoint != null && endpoint.startsWith(rootUrl)) {
-                            String newEndpoint = endpoint.replaceFirst(rootUrl, chnRootUrl);
-                            field.set(ability, newEndpoint);
-                            //log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
+        if (geoData != null) {
+            if (geoData.getCountryIso() != null && "cn".equals(geoData.getCountryIso().toLowerCase(Locale.ROOT))) {
+                boolean useCNOptimizeRoute = false;
+                // 条件check
+                if (geoData.getIsp() != null && geoData.getIsp().contains("移动")) {
+                    useCNOptimizeRoute = true;
+                }
+                if (geoData.getCityCnProvince() != null) {
+                    if (geoData.getCityCnProvince().contains("福建")
+                            || geoData.getCityCnProvince().contains("江苏")
+                            || geoData.getCityCnProvince().contains("浙江")
+                            || geoData.getCityCnProvince().contains("四川")
+                            || geoData.getCityCnProvince().contains("重庆")
+                            || geoData.getCityCnProvince().contains("河南")
+                            || geoData.getCityCnProvince().contains("湖北")
+                    ) {
+                        useCNOptimizeRoute = true;
+                    }
+                }
+                if (chnRootUrl != null && !chnRootUrl.isBlank() && useCNOptimizeRoute) {
+                    for (SparkleBtnAbility ability : config.getAbility().values()) {
+                        // get endpoint private field content
+                        try {
+                            var field = ability.getClass().getDeclaredField("endpoint");
+                            String endpoint = (String) field.get(ability);
+                            if (endpoint != null && endpoint.startsWith(rootUrl)) {
+                                String newEndpoint = endpoint.replaceFirst(rootUrl, chnRootUrl);
+                                field.set(ability, newEndpoint);
+                                //log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
+                            }
+                        } catch (NoSuchFieldException e) {
+                            //log.warn("Field 'endpoint' not found in ability class: {}", ability.getClass().getName(), e);
+                        } catch (IllegalAccessException e) {
+                            log.warn("Failed to access field 'endpoint' in ability class: {}", ability.getClass().getName(), e);
                         }
-                    } catch (NoSuchFieldException e) {
-                        //log.warn("Field 'endpoint' not found in ability class: {}", ability.getClass().getName(), e);
-                    } catch (IllegalAccessException e) {
-                        log.warn("Failed to access field 'endpoint' in ability class: {}", ability.getClass().getName(), e);
                     }
                 }
             }
