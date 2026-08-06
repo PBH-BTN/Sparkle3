@@ -39,9 +39,8 @@ public class PingConfigController extends BasePingController {
     @Value("${sparkle.chn-root-url}")
     private String chnRootUrl;
 
-
     @GetMapping("/ping/config")
-    public ResponseEntity<@NotNull BtnConfig> config(@RequestParam(required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
+    public ResponseEntity<@NotNull BtnConfig> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
         Userapp userapp = verifyUserApplicationFailSafe();
         BtnConfig config;
         if (userapp == null) {
@@ -52,8 +51,7 @@ public class PingConfigController extends BasePingController {
             }
             config = userappConfigService.configLoggedInUserapp(userapp);
         }
-        String preferRouteOption = StringUtils.isBlank(forceRoute) ? "default" : forceRoute;
-        String routeUrl = switch (preferRouteOption) {
+        String routeUrl = switch (forceRoute) {
             case "chinamainland" -> chnRootUrl;
             case "global" -> rootUrl;
             default -> detectRoute(InetAddress.ofLiteral(request.getRemoteAddr()));
@@ -74,6 +72,8 @@ public class PingConfigController extends BasePingController {
                 log.warn("Failed to access field 'endpoint' in ability class: {}", ability.getClass().getName(), e);
             }
         }
+        var powEndpoint = config.getProofOfWorkConfig().getEndpoint();
+        config.getProofOfWorkConfig().setEndpoint(powEndpoint.replace("{rooturl}", routeUrl));
         return ResponseEntity.ok(config);
     }
 
