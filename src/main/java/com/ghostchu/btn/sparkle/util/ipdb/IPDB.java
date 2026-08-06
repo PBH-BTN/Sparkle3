@@ -66,17 +66,17 @@ public final class IPDB implements AutoCloseable {
         this.autoUpdate = autoUpdate;
 //        this.userAgent = userAgent;
         this.httpClient = new OkHttpClient.Builder()
-                        .connectTimeout(Duration.ofSeconds(15))
-                        .readTimeout(Duration.ofMinutes(3))
-                        .callTimeout(Duration.ofMinutes(3))
-                        .followRedirects(true)
-                        .authenticator((route, response) -> {
-                            if (response.request().header("Authorization") != null) {
-                                return null; // 已经尝试过认证，不再重试
-                            }
-                            String credential = Credentials.basic(accountId, licenseKey);
-                            return response.request().newBuilder().header("Authorization", credential).build();
-                        })
+                .connectTimeout(Duration.ofSeconds(15))
+                .readTimeout(Duration.ofMinutes(3))
+                .callTimeout(Duration.ofMinutes(3))
+                .followRedirects(true)
+                .authenticator((route, response) -> {
+                    if (response.request().header("Authorization") != null) {
+                        return null; // 已经尝试过认证，不再重试
+                    }
+                    String credential = Credentials.basic(accountId, licenseKey);
+                    return response.request().newBuilder().header("Authorization", credential).build();
+                })
                 .build();
         if (needUpdateMMDB(mmdbCityFile)) {
             updateMMDB(databaseCity, mmdbCityFile);
@@ -92,10 +92,26 @@ public final class IPDB implements AutoCloseable {
 
     public IPGeoData query(InetAddress address) {
         IPGeoData geoData = new IPGeoData();
-        geoData.setAs(queryAS(address));
-        geoData.setCountry(queryCountry(address));
-        geoData.setCity(queryCity(address));
-        geoData.setNetwork(queryNetwork(address));
+        try {
+            geoData.setAs(queryAS(address));
+        } catch (Exception e) {
+            log.debug("Unable to query AS", e);
+        }
+        try {
+            geoData.setCountry(queryCountry(address));
+        } catch (Exception e) {
+            log.debug("Unable to query Country", e);
+        }
+        try {
+            geoData.setCity(queryCity(address));
+        } catch (Exception e) {
+            log.debug("Unable to query City", e);
+        }
+        try {
+            geoData.setNetwork(queryNetwork(address));
+        } catch (Exception e) {
+            log.debug("Unable to query Network", e);
+        }
         if (geoData.getCountry() != null && geoData.getCountry().getIso() != null) {
             String iso = geoData.getCountry().getIso();
             if ("CN".equalsIgnoreCase(iso) || "TW".equalsIgnoreCase(iso)
@@ -326,7 +342,7 @@ public final class IPDB implements AutoCloseable {
                             log.info("IPDB update {} success", databaseName);
                             return;
                         } catch (IOException e) {
-                            log.warn("IPDB update {} failed: unable to unzip the archive",  databaseName, e);
+                            log.warn("IPDB update {} failed: unable to unzip the archive", databaseName, e);
                         }
                     } else {
                         // 直接保存文件
