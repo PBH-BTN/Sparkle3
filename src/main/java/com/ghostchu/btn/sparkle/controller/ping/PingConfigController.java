@@ -55,8 +55,14 @@ public class PingConfigController extends BasePingController {
             forceRoute = ""; // go default case
         }
         String routeUrl = switch (forceRoute) {
-            case "chinamainland" -> chnRootUrl;
-            case "global" -> rootUrl;
+            case "chinamainland" -> {
+                log.info("Selected chainmainland for forceRoute arguments for userApp: {}", userapp != null ? userapp.getAppId() : "anonymous");
+                yield chnRootUrl;
+            }
+            case "global" -> {
+                log.info("Selected global for forceRoute arguments for userApp: {}", userapp != null ? userapp.getAppId() : "anonymous");
+                yield rootUrl;
+            }
             default -> detectRoute(InetAddress.ofLiteral(request.getRemoteAddr()));
         };
         for (SparkleBtnAbility ability : config.getAbility().values()) {
@@ -92,8 +98,10 @@ public class PingConfigController extends BasePingController {
             }
         }
         if (geoData.getCity() != null && geoData.getCity().getCnProvince() != null) {
-            if (cnOptimizeProvinces.contains(geoData.getCity().getCnProvince())) {
-                return chnRootUrl;
+            for (String cnOptimizeProvince : cnOptimizeProvinces) {
+                if(geoData.getCity().getCnProvince().contains(cnOptimizeProvince)){
+                    return chnRootUrl;
+                }
             }
         }
         return rootUrl;
