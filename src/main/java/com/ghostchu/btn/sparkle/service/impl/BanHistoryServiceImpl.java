@@ -14,7 +14,7 @@ import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
-import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
+import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -52,7 +52,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private GeoIPManager geoIPManager;
+    private IPDBManager geoIPManager;
     @Value("${sparkle.machine-learning.banhistory-sample-rate}")
     private double banHistorySampleRate;
 
@@ -107,7 +107,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setModuleName(btnBan.getModule())
                     .setRule(btnBan.getRule())
                     .setDescription(btnBan.getDescription())
-                    .setPeerGeoip(geoIPManager.geoData(inet))
+                    .setPeerGeoip(geoIPManager.getIpdb().query(inet))
                     .setStructuredData(structuredDataMap);
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
