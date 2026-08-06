@@ -135,10 +135,10 @@ public final class IPDB implements AutoCloseable {
                     geoData.mergeFrom(data, true);
                 }
             } catch (IOException ioe1) {
-                log.error("Unable to query GeoCN", ioe1);
+                log.debug("Unable to query GeoCN", ioe1);
             }
         } catch (IOException ioe) {
-            log.error("Unable to query GeoCN", ioe);
+            log.debug("Unable to query GeoCN", ioe);
         }
     }
 
@@ -153,7 +153,7 @@ public final class IPDB implements AutoCloseable {
             networkData.setNetType(null);
             return networkData;
         } catch (Exception e) {
-            log.error("Unable to query Network", e);
+            log.debug("Unable to query Network", e);
             return null;
         }
     }
@@ -178,7 +178,7 @@ public final class IPDB implements AutoCloseable {
 //            cityData.setLocation(locationData);
             return cityData;
         } catch (Exception e) {
-            log.error("Unable to query City", e);
+            log.debug("Unable to query City", e);
             return null;
         }
     }
@@ -204,7 +204,7 @@ public final class IPDB implements AutoCloseable {
             countryData.setName(countryRegionName);
             return countryData;
         } catch (Exception e) {
-            log.error("Unable to query Country", e);
+            log.debug("Unable to query Country", e);
             return null;
         }
     }
@@ -226,7 +226,7 @@ public final class IPDB implements AutoCloseable {
             asData.setNetwork(network);
             return asData;
         } catch (Exception e) {
-            log.error("Unable to query AS", e);
+            log.debug("Unable to query AS", e);
             return null;
         }
     }
