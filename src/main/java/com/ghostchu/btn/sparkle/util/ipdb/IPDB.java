@@ -263,7 +263,7 @@ public final class IPDB implements AutoCloseable {
         IPDBDownloadSource mirror3 = new IPDBDownloadSource("https://pbh-static.paulzzh.com/ipdb/", databaseName, true);
         IPDBDownloadSource mirror4 = new IPDBDownloadSource("https://pbh-static.ghostchu.com/ipdb/", databaseName, true);
         Path tmp = Files.createTempFile(databaseName, ".mmdb");
-        downloadFile(tmp, databaseName, null, null, mirror1, mirror3, mirror4).join();
+        downloadFile(tmp, databaseName, mirror1, mirror3, mirror4).join();
         if (!tmp.toFile().exists()) {
             if (isMmdbNeverDownloaded(target)) {
                 throw new IllegalStateException("Download mmdb database failed!");
