@@ -18,11 +18,13 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -39,9 +41,11 @@ public class PingConfigController extends BasePingController {
     private String rootUrl;
     @Value("${sparkle.chn-root-url}")
     private String chnRootUrl;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @GetMapping("/ping/config")
-    public ResponseEntity<@NotNull BtnConfig> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
+    public ResponseEntity<@NotNull String> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
         Userapp userapp = verifyUserApplicationFailSafe();
         BtnConfig config;
         if (userapp == null) {
@@ -56,37 +60,14 @@ public class PingConfigController extends BasePingController {
             forceRoute = ""; // go default case
         }
         String routeUrl = switch (forceRoute) {
-            case "chinamainland" -> {
-                log.info("Selected chainmainland for forceRoute arguments for userApp: {}", userapp != null ? userapp.getAppId() : "anonymous");
-                yield chnRootUrl;
-            }
-            case "global" -> {
-                log.info("Selected global for forceRoute arguments for userApp: {}", userapp != null ? userapp.getAppId() : "anonymous");
-                yield rootUrl;
-            }
+            case "chinamainland" -> chnRootUrl;
+            case "global" -> rootUrl;
             default -> detectRoute(InetAddress.ofLiteral(request.getRemoteAddr()));
         };
-        for (SparkleBtnAbility ability : config.getAbility().values()) {
-            // get endpoint private field content
-            try {
-                var field = ability.getClass().getDeclaredField("endpoint");
-                String endpoint = (String) field.get(ability);
-                if (endpoint != null) {
-                    String newEndpoint = endpoint.replace("{rooturl}", routeUrl);
-                    field.set(ability, newEndpoint);
-                    //log.info("Replaced endpoint for ability {} from {} to {} for CN user", ability.getConfigKey(), endpoint, newEndpoint);
-                }
-            } catch (NoSuchFieldException e) {
-                //log.warn("Field 'endpoint' not found in ability class: {}", ability.getClass().getName(), e);
-            } catch (IllegalAccessException e) {
-                log.warn("Failed to access field 'endpoint' in ability class: {}", ability.getClass().getName(), e);
-            }
-        }
-        var powEndpoint = config.getProofOfWorkConfig().getEndpoint();
-        config.getProofOfWorkConfig().setEndpoint(powEndpoint.replace("{rooturl}", routeUrl));
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noCache())
-                .body(config);
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(objectMapper.writeValueAsString(config).replace("{rooturl}", routeUrl));
     }
 
     private final static List<String> cnOptimizeProvinces = List.of(
