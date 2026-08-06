@@ -17,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -83,7 +84,9 @@ public class PingConfigController extends BasePingController {
         }
         var powEndpoint = config.getProofOfWorkConfig().getEndpoint();
         config.getProofOfWorkConfig().setEndpoint(powEndpoint.replace("{rooturl}", routeUrl));
-        return ResponseEntity.ok(config);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noCache())
+                .body(config);
     }
 
     private final static List<String> cnOptimizeProvinces = List.of(
