@@ -14,7 +14,7 @@ import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
-import com.ghostchu.btn.sparkle.util.ipdb.GeoIPManager;
+import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,7 +55,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Autowired
     private PlatformTransactionManager platformTransactionManager;
     @Autowired
-    private GeoIPManager geoIPManager;
+    private IPDBManager geoIPManager;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -197,7 +197,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     .setFlags(swarm.getPeerLastFlags())
                     .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
                     .setLastTimeSeen(lastSeenTime)
-                    .setPeerGeoip(geoIPManager.geoData(inet));
+                    .setPeerGeoip(geoIPManager.getIpdb().query(inet));
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->
                     newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
