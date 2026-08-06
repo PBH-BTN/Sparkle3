@@ -51,6 +51,9 @@ public class PingConfigController extends BasePingController {
             }
             config = userappConfigService.configLoggedInUserapp(userapp);
         }
+        if (forceRoute == null) {
+            forceRoute = ""; // go default case
+        }
         String routeUrl = switch (forceRoute) {
             case "chinamainland" -> chnRootUrl;
             case "global" -> rootUrl;
