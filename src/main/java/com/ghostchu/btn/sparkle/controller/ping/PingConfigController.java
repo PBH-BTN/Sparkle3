@@ -82,7 +82,7 @@ public class PingConfigController extends BasePingController {
     );
 
     private String detectRoute(InetAddress inetAddress) {
-        var geoData = ipdb.getIpdb().query(inetAddress);
+        var geoData = ipdb.queryIPDB(inetAddress).geoData().get();
         if (geoData.getNetwork() != null && geoData.getNetwork().getIsp() != null) {
             if (geoData.getNetwork().getIsp().contains("移动")) {
                 return chnRootUrl;

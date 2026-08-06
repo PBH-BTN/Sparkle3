@@ -197,7 +197,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     .setFlags(swarm.getPeerLastFlags())
                     .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
                     .setLastTimeSeen(lastSeenTime)
-                    .setPeerGeoip(geoIPManager.getIpdb().query(inet));
+                    .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get());
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->
                     newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing

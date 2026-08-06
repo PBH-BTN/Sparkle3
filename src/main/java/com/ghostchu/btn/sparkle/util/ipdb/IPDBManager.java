@@ -11,8 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.net.InetAddress;
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +39,7 @@ public class IPDBManager {
             this.ipdb = new IPDB(new File("data/geoip"), "", "",
                     databaseCity, databaseASN, databaseGeoCN, true, "Sparkle/2.1");
         } catch (Exception e) {
-            Sentry.captureException(e);
+            log.error("Unable to setup IPDB", e);
         }
     }
 

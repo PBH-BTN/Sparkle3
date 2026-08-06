@@ -107,7 +107,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setModuleName(btnBan.getModule())
                     .setRule(btnBan.getRule())
                     .setDescription(btnBan.getDescription())
-                    .setPeerGeoip(geoIPManager.getIpdb().query(inet))
+                    .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get())
                     .setStructuredData(structuredDataMap);
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
