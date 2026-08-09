@@ -118,9 +118,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     public @NotNull IPage<BanHistory> fetchBanHistory(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @Nullable List<String> moduleNames, @NotNull Page<BanHistory> page) {
         QueryWrapper<BanHistory> wrapper = new QueryWrapper<BanHistory>()
                 .eq(torrentId != null, "torrent_id", torrentId)
-                .ge("insert_time", afterTime)
+                .ge("populate_time", afterTime)
                 .in(moduleNames != null && !moduleNames.isEmpty(), "module_name", moduleNames)
-                .orderByDesc("insert_time");
+                .orderByDesc("populate_time");
 
         // Peer IP filter - supports both single IP and CIDR notation using <<= operator
         if (peerIp != null && !peerIp.isBlank()) {
