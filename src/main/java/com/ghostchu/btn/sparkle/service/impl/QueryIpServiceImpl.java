@@ -9,6 +9,7 @@ import com.ghostchu.btn.sparkle.util.TimeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+@Slf4j
 @Service
 public class QueryIpServiceImpl {
     @Value("${sparkle.ping.query-ip.pow-captcha}")
@@ -52,41 +54,51 @@ public class QueryIpServiceImpl {
     private IUserappService userappService;
     @Autowired
     private IUserService userService;
-    ;
 
     public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
+        long startTime = System.currentTimeMillis();
         IpQueryResult result = new IpQueryResult();
         result.setColor("#808080");
         result.setLabels(new ArrayList<>());
         var bans = banHistoryService.fetchBanHistory(
-                OffsetDateTime.now().minusSeconds(bansCountingDuration / 1000),
+                OffsetDateTime.now().minus(bansCountingDuration, ChronoUnit.MILLIS),
                 peerIp,
                 null,
                 List.of(queryIpIncludeModules.split(",")),
                 Page.of(1, 1000)
         );
         result.setBans(new IpQueryResult.IpQueryResultBans(bansCountingDuration, bans.getTotal(), bans.getRecords().stream().map(BanHistoryDto::new).toList()));
+        log.info("Query BanHistory for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         var swarms = swarmTrackerService.fetchSwarmTrackersAfter(
-                OffsetDateTime.now().minusSeconds(swarmsCountingDuration / 1000),
+                OffsetDateTime.now().minus(swarmsCountingDuration, ChronoUnit.MILLIS),
                 peerIp,
                 null,
                 Page.of(1, 1000)
         );
+        log.info("Query swarm for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
-                OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
+                OffsetDateTime.now().minus((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload + 120000), ChronoUnit.MILLIS),
                 peerIp
         );
+        log.info("Query concurrentDownloads for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         var concurrentSeeds = swarmTrackerService.calcPeerConcurrentSeeds(
-                OffsetDateTime.now().minusSeconds((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload) / 1000 + 120),
+                OffsetDateTime.now().minus((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload + 120000), ChronoUnit.MILLIS),
                 peerIp
         );
         result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads, concurrentSeeds));
-
+        log.info("Query concurrentSeeds for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
         var trafficMeasureSince = OffsetDateTime.now().minus(trafficMeasureDuration, ChronoUnit.MILLIS);
         var banHistoryTraffic = banHistoryService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
+        log.info("Query sumPeerIpTrafficForBanHistory for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         var swarmTrackerTraffic = swarmTrackerService.sumPeerIpTraffic(trafficMeasureSince, peerIp);
+        log.info("Query sumPeerIpTrafficForSwarmTracker for widget costs: {}ms",  System.currentTimeMillis() - startTime);
         if (banHistoryTraffic != null) {
             totalToPeerTraffic += banHistoryTraffic.getSumToPeerTraffic();
             totalFromPeerTraffic += banHistoryTraffic.getSumFromPeerTraffic();
@@ -103,9 +115,14 @@ public class QueryIpServiceImpl {
                 (double) totalFromPeerTraffic / totalToPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
         Set<Long> distinctTorrentIds = new HashSet<>();
-        OffsetDateTime torrentsCountingSince =OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
+        OffsetDateTime torrentsCountingSince = OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
+        startTime =  System.currentTimeMillis();
         distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
+        log.info("Query banHistoryUniqueTorrents for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
+        log.info("Query swarmUniqueTorrents for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
         result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
 
         var heartbeats = userappsHeartbeatService.fetchIpHeartbeatRecords(peerIp, OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));
@@ -119,6 +136,9 @@ public class QueryIpServiceImpl {
                 }
             }
         }
+
+        log.info("Query heartbeats data for widget costs: {}ms",  System.currentTimeMillis() - startTime);
+        startTime =  System.currentTimeMillis();
 
         return result;
     }
