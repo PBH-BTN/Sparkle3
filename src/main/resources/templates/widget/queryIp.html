@@ -268,7 +268,7 @@
                         </thead>
                         <tbody>
                         <tr th:each="ban : ${result.bans.records}">
-                            <td class="timestamp spk-timestamp" th:data-time="${ban.populateTime}"></td>
+                            <td class="timestamp spk-timestamp" th:data-time="${ban.populateTime}" th:text="${#dates.format(ban.populateTime, 'yyyy-MM-dd HH:mm:ss')}"></td>
                             <td><span class="text-truncate d-inline-block" style="max-width: 120px;" th:text="${ban.torrent}" th:title="${ban.torrent}"></span></td>
                             <td th:text="${ban.peerPort}"></td>
                             <td th:text="${ban.peerClientName}"></td>
