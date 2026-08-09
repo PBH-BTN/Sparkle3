@@ -87,6 +87,10 @@ public class BasePingController {
         if (cred.isValid()) {
             return cred;
         }
+        cred = readQueryFromUri(request); // 显然，BUG 变成了特性
+        if (cred.isValid()) {
+            return cred;
+        }
         cred = readLegacy(request);
         return cred;
     }
