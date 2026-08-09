@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.util.ipdb;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class IPGeoData {
     @Nullable
     private CityData city;
@@ -21,6 +23,7 @@ public final class IPGeoData {
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class CityData {
         @Nullable
         private String name;
@@ -60,6 +63,7 @@ public final class IPGeoData {
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class CountryData {
         @Nullable
         private String name;
@@ -81,6 +85,7 @@ public final class IPGeoData {
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class ASData {
         @Nullable
         private Long number;
@@ -131,6 +136,7 @@ public final class IPGeoData {
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class NetworkData {
         @Nullable
         private String isp;
