@@ -343,8 +343,8 @@
                             <td class="text-nowrap"><small th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTraffic) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTraffic)}"></small></td>
                             <td class="text-nowrap"><small th:text="${T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.toPeerTrafficOffset) + ' / ' + T(com.ghostchu.btn.sparkle.util.MsgUtil).humanReadableByteCountBin(swarm.fromPeerTrafficOffset)}"></small></td>
                             <td th:text="${swarm.flags}"></td>
-                            <td class="timestamp spk-timestamp" th:data-time="${swarm.firstTimeSeen}"></td>
-                            <td class="timestamp spk-timestamp" th:data-time="${swarm.lastTimeSeen}"></td>
+                            <td class="timestamp spk-timestamp" th:data-time="${swarm.firstTimeSeen}" th:text="${#dates.format(swarm.firstTimeSeen, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                            <td class="timestamp spk-timestamp" th:data-time="${swarm.lastTimeSeen}" th:text="${#dates.format(swarm.lastTimeSeen, 'yyyy-MM-dd HH:mm:ss')}"></td>
                         </tr>
                         </tbody>
                     </table>
