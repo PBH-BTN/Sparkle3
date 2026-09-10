@@ -29,7 +29,7 @@ repositories {
 
 dependencyManagement {
     imports {
-        mavenBom("com.baomidou:mybatis-plus-bom:3.5.15")
+        mavenBom("com.baomidou:mybatis-plus-bom:3.5.17")
     }
 }
 
@@ -90,9 +90,9 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.22.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.22.1")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.22.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.22.2")
     implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.22.2")
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("com.vdurmont:semver4j:3.1.0")
