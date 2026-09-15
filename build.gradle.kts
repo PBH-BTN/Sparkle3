@@ -29,7 +29,7 @@ repositories {
 
 dependencyManagement {
     imports {
-        mavenBom("com.baomidou:mybatis-plus-bom:3.5.17")
+        mavenBom("com.baomidou:mybatis-plus-bom:3.5.15")
     }
 }
 

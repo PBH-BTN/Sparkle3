@@ -55,9 +55,14 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             String clientType = null;
             String clientSemver = null;
 
-            if(peerId != null && peerId.startsWith("-XL0012") && peerClientName.startsWith("-XL0012-"))
-                continue;
-
+            if(peerId != null){
+                if(peerId.startsWith("-XL0012") && peerClientName.startsWith("-XL0012-"))
+                    continue;
+                if(peerClientName.startsWith("Gopeed") && !peerId.startsWith("-GP"))
+                    continue;
+                if(peerId.startsWith("FD6"))
+                    continue;
+            }
             // 处理 PeerId
             if (peerIdIn != null) {
                 var parsed = PeerIdParser.parse(peerIdIn);
