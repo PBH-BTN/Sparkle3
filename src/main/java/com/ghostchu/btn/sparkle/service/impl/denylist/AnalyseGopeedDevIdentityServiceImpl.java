@@ -60,7 +60,7 @@ public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServ
             IPAddress ip = node.getKey();
             Pair<String, String> value = node.getValue();
 
-            sb.append("# [Sparkle3] Gopeed dev 特征识别: ")
+            sb.append("# [Sparkle3] Gopeed 家族特征识别: ")
                     .append("采样数据: ").append("PeerId: ").append(value.getLeft()).append(" ClientName: ").append(value.getRight())
                     .append("\n")
                     .append(ip.toCompressedString()).append("\n");

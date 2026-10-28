@@ -232,7 +232,7 @@
         FROM ban_history
         WHERE populate_time >= #{afterTimestamp}
           AND peer_id &lt;> ''
-          AND starts_with(peer_client_name, 'Gopeed dev')
+          AND starts_with(peer_client_name, 'Gopeed'
           AND NOT starts_with(peer_id, '-GP')
         ORDER BY peer_ip
         LIMIT 1000
