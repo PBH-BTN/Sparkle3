@@ -4,7 +4,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.0.0"
 	id("io.spring.dependency-management") version "1.1.7"
-    id("io.sentry.jvm.gradle") version "6.0.0"
+    id("io.sentry.jvm.gradle") version "6.24.0"
 }
 
 group = "com.ghostchu.btn"
