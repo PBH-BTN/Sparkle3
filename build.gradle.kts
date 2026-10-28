@@ -58,7 +58,7 @@ dependencies {
 	implementation("de.siegmar:fastcsv:4.4.0")
 	implementation("com.maxmind.geoip2:geoip2:5.2.0")
 	implementation("org.tukaani:xz:1.12")
-	implementation("com.squareup.okhttp3:okhttp:5.4.0")
+	implementation("com.squareup.okhttp3:okhttp:5.5.0")
 	implementation("org.apache.commons:commons-collections4:4.5.0")
 	//implementation("com.baomidou:mybatis-plus-generator:3.5.14")
 	//implementation("org.freemarker:freemarker:2.3.34")
