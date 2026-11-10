@@ -55,7 +55,7 @@ public final class AdminModels {
     }
 
     public record AdminUserView(
-            Long id,
+            String id,
             String email,
             String nickname,
             String avatarUrl,

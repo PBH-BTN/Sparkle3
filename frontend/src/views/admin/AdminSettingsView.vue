@@ -253,7 +253,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
             BTN
           </span>
         </template>
-        <a-form :model="form" layout="vertical" @submit.prevent="save">
+        <a-form :model="form" layout="vertical" @submit="save">
           <div class="settings-grid">
             <a-form-item :label="t('admin.settings.protocolMin')" required>
               <a-input-number v-model="form.protocolMinVersion" :min="1" :max="10000" />

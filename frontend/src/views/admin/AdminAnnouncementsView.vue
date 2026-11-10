@@ -335,7 +335,7 @@ onMounted(load)
         </span>
       </template>
 
-      <a-form :model="editor" layout="vertical" @submit.prevent="save">
+      <a-form :model="editor" layout="vertical" @submit="save">
         <div class="editor-grid">
           <a-form-item :label="t('admin.announcements.level')" required>
             <a-select v-model="editor.level">

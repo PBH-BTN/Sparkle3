@@ -114,7 +114,7 @@ onMounted(async () => {
     />
 
     <a-card class="surface-card filter-card">
-      <a-form :model="form" layout="vertical" @submit.prevent="search">
+      <a-form :model="form" layout="vertical" @submit="search">
         <a-row :gutter="16">
           <a-col :xs="24" :sm="12" :lg="6">
             <a-form-item :label="t('clientDiscovery.peerId')">

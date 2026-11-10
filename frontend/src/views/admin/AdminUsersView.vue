@@ -35,7 +35,7 @@ const filters = reactive({
 
 const editorVisible = ref(false)
 const editorSaving = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<string | null>(null)
 const editorForm = reactive<AdminUserInput>({
   email: '',
   nickname: '',
@@ -207,7 +207,7 @@ onMounted(load)
     </PageHeader>
 
     <a-card class="surface-card filter-card">
-      <a-form :model="filters" layout="vertical" @submit.prevent="search">
+      <a-form :model="filters" layout="vertical" @submit="search">
         <a-row :gutter="16">
           <a-col :xs="24" :md="10">
             <a-form-item :label="t('admin.common.keyword')">

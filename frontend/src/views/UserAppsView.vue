@@ -93,82 +93,177 @@ onMounted(loadApplications)
     </PageHeader>
 
     <a-card class="surface-card table-card">
-      <a-table
-        :columns="columns"
-        :data="applications"
-        :loading="loading"
-        :pagination="false"
-        :scroll="{ x: 1050 }"
-        row-key="id"
-        stripe
-      >
-        <template #empty>
-          <EmptyState :title="t('userApps.emptyTitle')" :description="t('userApps.emptyText')" />
-        </template>
+      <div class="desktop-applications">
+        <a-table
+          :columns="columns"
+          :data="applications"
+          :loading="loading"
+          :pagination="false"
+          :scroll="{ x: 1050 }"
+          row-key="appId"
+          stripe
+        >
+          <template #empty>
+            <EmptyState :title="t('userApps.emptyTitle')" :description="t('userApps.emptyText')" />
+          </template>
 
-        <template #appId="{ record }">
-          <div class="app-id-cell">
-            <code class="mono">{{ record.appId }}</code>
-            <a-tooltip :content="t('common.copy')">
-              <a-button size="mini" type="text" @click="copyText(record.appId)">
-                <template #icon><IconCopy /></template>
-              </a-button>
+          <template #appId="{ record }">
+            <div class="app-id-cell">
+              <code class="mono">{{ record.appId }}</code>
+              <a-tooltip :content="t('common.copy')">
+                <a-button size="mini" type="text" @click="copyText(record.appId)">
+                  <template #icon><IconCopy /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
+
+          <template #comment="{ record }">
+            <span class="app-comment" :title="record.comment">{{ record.comment }}</span>
+          </template>
+
+          <template #lastSeenAt="{ record }">
+            {{ formatDate(record.lastSeenAt) }}
+          </template>
+
+          <template #status="{ record }">
+            <a-tooltip
+              v-if="record.bannedAt"
+              :content="t('userApps.pausedReason', { reason: record.bannedReason || 'N/A' })"
+            >
+              <a-tag color="red">{{ t('common.paused') }}</a-tag>
             </a-tooltip>
+            <a-tag v-else color="green">{{ t('common.normal') }}</a-tag>
+          </template>
+
+          <template #actions="{ record }">
+            <a-space>
+              <a-popconfirm
+                :content="t('userApps.resetConfirm')"
+                position="left"
+                @ok="resetSecret(record)"
+              >
+                <a-button
+                  type="text"
+                  size="small"
+                  :loading="actionLoading === record.appId"
+                >
+                  <template #icon><IconRefresh /></template>
+                  {{ t('userApps.resetSecret') }}
+                </a-button>
+              </a-popconfirm>
+              <a-popconfirm
+                :content="t('userApps.deleteConfirm')"
+                position="left"
+                @ok="deleteApplication(record)"
+              >
+                <a-button
+                  status="danger"
+                  type="text"
+                  size="small"
+                  :loading="actionLoading === record.appId"
+                >
+                  <template #icon><IconDelete /></template>
+                  {{ t('userApps.delete') }}
+                </a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
+        </a-table>
+      </div>
+
+      <div class="mobile-applications">
+        <a-spin :loading="loading" class="mobile-applications-spin">
+          <EmptyState
+            v-if="!loading && applications.length === 0"
+            :title="t('userApps.emptyTitle')"
+            :description="t('userApps.emptyText')"
+          />
+          <div v-else class="mobile-app-list">
+            <article
+              v-for="application in applications"
+              :key="application.appId"
+              class="mobile-app-card"
+            >
+              <header class="mobile-app-header">
+                <div>
+                  <h3>{{ application.comment }}</h3>
+                  <span>
+                    {{ t('common.createdAt') }} · {{ formatDate(application.createdAt) }}
+                  </span>
+                </div>
+                <a-tooltip
+                  v-if="application.bannedAt"
+                  :content="t('userApps.pausedReason', {
+                    reason: application.bannedReason || 'N/A',
+                  })"
+                >
+                  <a-tag color="red">{{ t('common.paused') }}</a-tag>
+                </a-tooltip>
+                <a-tag v-else color="green">{{ t('common.normal') }}</a-tag>
+              </header>
+
+              <div class="mobile-field">
+                <span>{{ t('userApps.appId') }}</span>
+                <div class="mobile-app-id">
+                  <code>{{ application.appId }}</code>
+                  <a-button size="mini" type="text" @click="copyText(application.appId)">
+                    <template #icon><IconCopy /></template>
+                    {{ t('common.copy') }}
+                  </a-button>
+                </div>
+              </div>
+
+              <div class="mobile-field">
+                <span>{{ t('common.lastSeenAt') }}</span>
+                <strong>{{ formatDate(application.lastSeenAt) }}</strong>
+              </div>
+
+              <a-alert
+                v-if="application.bannedAt"
+                type="error"
+                class="mobile-ban-reason"
+              >
+                {{
+                  t('userApps.pausedReason', {
+                    reason: application.bannedReason || 'N/A',
+                  })
+                }}
+              </a-alert>
+
+              <footer class="mobile-app-actions">
+                <a-popconfirm
+                  :content="t('userApps.resetConfirm')"
+                  position="top"
+                  @ok="resetSecret(application)"
+                >
+                  <a-button
+                    long
+                    :loading="actionLoading === application.appId"
+                  >
+                    <template #icon><IconRefresh /></template>
+                    {{ t('userApps.resetSecret') }}
+                  </a-button>
+                </a-popconfirm>
+                <a-popconfirm
+                  :content="t('userApps.deleteConfirm')"
+                  position="top"
+                  @ok="deleteApplication(application)"
+                >
+                  <a-button
+                    long
+                    status="danger"
+                    :loading="actionLoading === application.appId"
+                  >
+                    <template #icon><IconDelete /></template>
+                    {{ t('userApps.delete') }}
+                  </a-button>
+                </a-popconfirm>
+              </footer>
+            </article>
           </div>
-        </template>
-
-        <template #comment="{ record }">
-          <span class="app-comment" :title="record.comment">{{ record.comment }}</span>
-        </template>
-
-        <template #lastSeenAt="{ record }">
-          {{ formatDate(record.lastSeenAt) }}
-        </template>
-
-        <template #status="{ record }">
-          <a-tooltip
-            v-if="record.bannedAt"
-            :content="t('userApps.pausedReason', { reason: record.bannedReason || 'N/A' })"
-          >
-            <a-tag color="red">{{ t('common.paused') }}</a-tag>
-          </a-tooltip>
-          <a-tag v-else color="green">{{ t('common.normal') }}</a-tag>
-        </template>
-
-        <template #actions="{ record }">
-          <a-space>
-            <a-popconfirm
-              :content="t('userApps.resetConfirm')"
-              position="left"
-              @ok="resetSecret(record)"
-            >
-              <a-button
-                type="text"
-                size="small"
-                :loading="actionLoading === record.appId"
-              >
-                <template #icon><IconRefresh /></template>
-                {{ t('userApps.resetSecret') }}
-              </a-button>
-            </a-popconfirm>
-            <a-popconfirm
-              :content="t('userApps.deleteConfirm')"
-              position="left"
-              @ok="deleteApplication(record)"
-            >
-              <a-button
-                status="danger"
-                type="text"
-                size="small"
-                :loading="actionLoading === record.appId"
-              >
-                <template #icon><IconDelete /></template>
-                {{ t('userApps.delete') }}
-              </a-button>
-            </a-popconfirm>
-          </a-space>
-        </template>
-      </a-table>
+        </a-spin>
+      </div>
     </a-card>
   </div>
 </template>
@@ -186,5 +281,108 @@ onMounted(loadApplications)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mobile-applications {
+  display: none;
+}
+
+.mobile-applications-spin {
+  display: block;
+  width: 100%;
+}
+
+.mobile-app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-app-card {
+  padding: 16px;
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+}
+
+.mobile-app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.mobile-app-header > div {
+  min-width: 0;
+}
+
+.mobile-app-header h3 {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.mobile-app-header span {
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.mobile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+}
+
+.mobile-field > span {
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.mobile-field strong {
+  font-size: 13px;
+}
+
+.mobile-app-id {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+}
+
+.mobile-app-id code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mobile-ban-reason {
+  margin-top: 14px;
+}
+
+.mobile-app-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .desktop-applications {
+    display: none;
+  }
+
+  .mobile-applications {
+    display: block;
+    padding: 16px;
+  }
 }
 </style>

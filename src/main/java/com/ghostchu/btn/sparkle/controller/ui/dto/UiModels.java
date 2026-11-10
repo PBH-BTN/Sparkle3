@@ -36,7 +36,7 @@ public final class UiModels {
     }
 
     public record UserView(
-            Long id,
+            String id,
             String nickname,
             String email,
             String avatarUrl,
@@ -48,7 +48,7 @@ public final class UiModels {
     ) {
         public static UserView from(User user) {
             return new UserView(
-                    user.getId(),
+                    String.valueOf(user.getId()),
                     user.getNickname(),
                     user.getEmail(),
                     user.getAvatarUrl(),

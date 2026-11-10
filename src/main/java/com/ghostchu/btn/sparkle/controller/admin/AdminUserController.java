@@ -60,9 +60,9 @@ public class AdminUserController {
             String search = keyword.trim();
             Long id = parseLong(search);
             wrapper.and(condition -> {
-                condition.like("email", search)
+                condition.apply("LOWER(email) LIKE LOWER({0})", "%" + search + "%")
                         .or()
-                        .like("nickname", search);
+                        .apply("LOWER(nickname) LIKE LOWER({0})", "%" + search + "%");
                 if (id != null) {
                     condition.or().eq("id", id);
                 }
@@ -201,7 +201,7 @@ public class AdminUserController {
 
     private AdminUserView toView(User user, String githubLogin) {
         return new AdminUserView(
-                user.getId(),
+                String.valueOf(user.getId()),
                 user.getEmail(),
                 user.getNickname(),
                 user.getAvatarUrl(),

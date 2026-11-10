@@ -254,7 +254,7 @@ onMounted(load)
     </PageHeader>
 
     <a-card class="surface-card filter-card">
-      <a-form :model="filters" layout="vertical" @submit.prevent="search">
+      <a-form :model="filters" layout="vertical" @submit="search">
         <a-row :gutter="16">
           <a-col :xs="24" :md="10">
             <a-form-item :label="t('admin.common.keyword')">

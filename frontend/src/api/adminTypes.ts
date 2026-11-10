@@ -43,7 +43,7 @@ export interface AdminDashboard {
 }
 
 export interface AdminUser {
-  id: number
+  id: string
   email: string
   nickname: string
   avatarUrl: string

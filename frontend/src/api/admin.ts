@@ -53,18 +53,18 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  updateUser: (id: number, body: AdminUserInput) =>
-    request<AdminUser>(`/api/admin/users/${id}`, {
+  updateUser: (id: string, body: AdminUserInput) =>
+    request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  setUserBanned: (id: number, banned: boolean, reason?: string) =>
-    request<AdminUser>(`/api/admin/users/${id}/ban`, {
+  setUserBanned: (id: string, banned: boolean, reason?: string) =>
+    request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/ban`, {
       method: 'POST',
       body: JSON.stringify({ banned, reason }),
     }),
-  deleteUser: (id: number) =>
-    request<void>(`/api/admin/users/${id}`, {
+  deleteUser: (id: string) =>
+    request<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
 

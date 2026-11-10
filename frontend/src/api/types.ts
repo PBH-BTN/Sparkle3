@@ -8,7 +8,7 @@ export interface PrivacyLevel {
 }
 
 export interface SessionUser {
-  id: number
+  id: string
   nickname: string
   email: string
   avatarUrl: string

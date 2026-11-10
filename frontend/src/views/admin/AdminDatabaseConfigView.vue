@@ -165,7 +165,7 @@ onMounted(load)
         </div>
 
         <a-card class="surface-card filter-card">
-          <a-form :model="filters" layout="vertical" @submit.prevent="load">
+          <a-form :model="filters" layout="vertical" @submit="load">
             <a-row :gutter="16">
               <a-col :xs="24" :md="16">
                 <a-form-item :label="t('admin.databaseConfig.search')">
