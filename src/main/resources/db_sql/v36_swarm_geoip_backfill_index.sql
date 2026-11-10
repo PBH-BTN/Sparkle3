@@ -1,2 +1,0 @@
--- The GeoIP backfill index is now created asynchronously after application
--- startup. No manual migration step is required.

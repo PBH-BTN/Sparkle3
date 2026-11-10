@@ -1,5 +1,0 @@
--- Intentionally empty.
---
--- The GeoIP backfill index is created by GeoIpBackfillService after the
--- application is fully started, so startup and Flyway migrations never block
--- on the index build or GeoIP write-back.
