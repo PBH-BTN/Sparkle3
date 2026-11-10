@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.ClientDiscovery;
 import com.ghostchu.btn.sparkle.mapper.ClientDiscoveryMapper;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import com.ghostchu.btn.sparkle.util.PeerIdParser;
@@ -14,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,14 +38,17 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMapper, ClientDiscovery> implements IClientDiscoveryService {
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "peer_id", "peer_client_name", "client_type", "client_semver", "found_at"
+    );
 
-    @Value("${sparkle.client-discovery.enabled}")
-    private boolean useClientDiscovery;
+    @Autowired
+    private AdminConfigService adminConfigService;
 
     @Transactional
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
-        if(!useClientDiscovery) return;
+        if (!adminConfigService.get().clientDiscoveryEnabled()) return;
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
         for (Pair<String, String> pair : data) {
             var peerIdIn = pair.getKey();
@@ -112,7 +117,7 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                 .like(clientSemver != null && !clientSemver.isBlank(), "client_semver", clientSemver);
 
         // 添加排序
-        String sort = (sortBy != null && !sortBy.isBlank()) ? sortBy : "found_at";
+        String sort = sortBy != null && SORTABLE_FIELDS.contains(sortBy) ? sortBy : "found_at";
         String order = (sortOrder != null && !sortOrder.isBlank()) ? sortOrder : "desc";
         if ("desc".equalsIgnoreCase(order)) {
             wrapper.orderByDesc(sort);

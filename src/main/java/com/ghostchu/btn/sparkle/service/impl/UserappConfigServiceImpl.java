@@ -2,8 +2,10 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnConfig;
+import com.ghostchu.btn.sparkle.controller.ping.PingQueryIpController;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import lombok.AllArgsConstructor;
@@ -21,12 +23,10 @@ import java.util.UUID;
 
 @Service
 public class UserappConfigServiceImpl implements IUserappConfigService {
-    @Value("${sparkle.ping.config.min-protocol-version}")
-    private int minProtocolVersion;
-    @Value("${sparkle.ping.config.max-protocol-version}")
-    private int maxProtocolVersion;
     @Autowired
     private List<SparkleBtnAbility> btnAbilities;
+    @Autowired
+    private AdminConfigService adminConfigService;
 
     @Value("${sparkle.captcha.pow.endpoint}")
     private String powCaptchaEndpoint;
@@ -38,11 +38,15 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
 
     @Override
     public BtnConfig configLoggedInUserapp(Userapp userapp) {
+        var runtimeConfig = adminConfigService.get();
         BtnConfig btnConfig = new BtnConfig();
-        btnConfig.setMinProtocolVersion(minProtocolVersion);
-        btnConfig.setMaxProtocolVersion(maxProtocolVersion);
+        btnConfig.setMinProtocolVersion(runtimeConfig.protocolMinVersion());
+        btnConfig.setMaxProtocolVersion(runtimeConfig.protocolMaxVersion());
         Map<String, SparkleBtnAbility> ability = new LinkedHashMap<>();
         for (SparkleBtnAbility btnAbility : btnAbilities) {
+            if (btnAbility instanceof PingQueryIpController.IpQueryBtnModule ipQueryModule) {
+                ipQueryModule.setPowCaptcha(runtimeConfig.queryIpPowCaptcha());
+            }
             ability.put(btnAbility.getConfigKey(), btnAbility);
         }
         btnConfig.setAbility(ability);

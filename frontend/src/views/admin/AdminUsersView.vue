@@ -1,0 +1,490 @@
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Message, type TableColumnData } from '@arco-design/web-vue'
+import {
+  IconDelete,
+  IconEdit,
+  IconLock,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
+  IconUnlock,
+  IconUser,
+} from '@arco-design/web-vue/es/icon'
+import PageHeader from '@/components/PageHeader.vue'
+import TablePager from '@/components/TablePager.vue'
+import { adminApi } from '@/api/admin'
+import type { AdminUser, AdminUserInput } from '@/api/adminTypes'
+import { useSessionStore } from '@/stores/session'
+import { errorMessage, useFormatters } from '@/utils/format'
+
+const { t } = useI18n()
+const { formatDate } = useFormatters()
+const session = useSessionStore()
+const records = ref<AdminUser[]>([])
+const loading = ref(false)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+const filters = reactive({
+  keyword: '',
+  role: '',
+  status: '',
+})
+
+const editorVisible = ref(false)
+const editorSaving = ref(false)
+const editingId = ref<number | null>(null)
+const editorForm = reactive<AdminUserInput>({
+  email: '',
+  nickname: '',
+  avatarUrl: '/img/anonymous-user.png',
+  role: 'user',
+  privacyLevel: 'MEDIUM',
+})
+
+const banVisible = ref(false)
+const banSaving = ref(false)
+const banUser = ref<AdminUser | null>(null)
+const banReason = ref('')
+
+const columns = computed<TableColumnData[]>(() => [
+  { title: 'ID', dataIndex: 'id', width: 70 },
+  { title: t('admin.users.nickname'), slotName: 'user', width: 190 },
+  { title: t('admin.users.email'), dataIndex: 'email', slotName: 'email', width: 210 },
+  { title: t('admin.users.access'), slotName: 'access', width: 120 },
+  { title: t('admin.users.registerAt'), slotName: 'registerAt', width: 150 },
+  { title: t('admin.users.lastLoginAt'), slotName: 'lastLoginAt', width: 150 },
+  { title: t('admin.common.actions'), slotName: 'actions', width: 210 },
+])
+
+async function load() {
+  loading.value = true
+  try {
+    const result = await adminApi.users({
+      page: page.value,
+      size: pageSize.value,
+      keyword: filters.keyword.trim() || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined,
+    })
+    records.value = result.records
+    total.value = result.total
+    page.value = result.current
+    pageSize.value = result.size
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.loadFailed')))
+  } finally {
+    loading.value = false
+  }
+}
+
+function search() {
+  page.value = 1
+  load()
+}
+
+function resetFilters() {
+  filters.keyword = ''
+  filters.role = ''
+  filters.status = ''
+  search()
+}
+
+function openCreate() {
+  editingId.value = null
+  Object.assign(editorForm, {
+    email: '',
+    nickname: '',
+    avatarUrl: '/img/anonymous-user.png',
+    role: 'user',
+    privacyLevel: 'MEDIUM',
+  })
+  editorVisible.value = true
+}
+
+function openEdit(user: AdminUser) {
+  editingId.value = user.id
+  Object.assign(editorForm, {
+    email: user.email,
+    nickname: user.nickname,
+    avatarUrl: user.avatarUrl,
+    role: user.role === 'admin' ? 'admin' : 'user',
+    privacyLevel: user.privacyLevel,
+  })
+  editorVisible.value = true
+}
+
+async function saveUser() {
+  if (!editorForm.email.includes('@')) {
+    Message.warning(t('admin.users.emailRequired'))
+    return
+  }
+  if (!editorForm.nickname.trim()) {
+    Message.warning(t('admin.users.nicknameRequired'))
+    return
+  }
+  editorSaving.value = true
+  try {
+    if (editingId.value == null) {
+      await adminApi.createUser(editorForm)
+      Message.success(t('admin.common.created'))
+    } else {
+      await adminApi.updateUser(editingId.value, editorForm)
+      Message.success(t('admin.common.updated'))
+    }
+    editorVisible.value = false
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    editorSaving.value = false
+  }
+}
+
+function openBan(user: AdminUser) {
+  banUser.value = user
+  banReason.value = user.bannedReason ?? ''
+  banVisible.value = true
+}
+
+async function confirmBan() {
+  if (!banUser.value) return
+  banSaving.value = true
+  try {
+    await adminApi.setUserBanned(banUser.value.id, true, banReason.value.trim())
+    Message.success(t('admin.common.updated'))
+    banVisible.value = false
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    banSaving.value = false
+  }
+}
+
+async function restoreUser(user: AdminUser) {
+  try {
+    await adminApi.setUserBanned(user.id, false)
+    Message.success(t('admin.common.updated'))
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  }
+}
+
+async function deleteUser(user: AdminUser) {
+  try {
+    await adminApi.deleteUser(user.id)
+    Message.success(t('admin.common.deleted'))
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  }
+}
+
+function isNeverLogin(value: string) {
+  return new Date(value).getTime() <= 0
+}
+
+function privacyLabel(level: string) {
+  return t(`privacy.levels.${level}`)
+}
+
+onMounted(load)
+</script>
+
+<template>
+  <div class="page-stack">
+    <PageHeader :title="t('admin.users.title')" :description="t('admin.users.description')">
+      <template #actions>
+        <a-button type="primary" @click="openCreate">
+          <template #icon><IconPlus /></template>
+          {{ t('admin.users.create') }}
+        </a-button>
+      </template>
+    </PageHeader>
+
+    <a-card class="surface-card filter-card">
+      <a-form :model="filters" layout="vertical" @submit.prevent="search">
+        <a-row :gutter="16">
+          <a-col :xs="24" :md="10">
+            <a-form-item :label="t('admin.common.keyword')">
+              <a-input
+                v-model="filters.keyword"
+                allow-clear
+                :placeholder="`ID / ${t('admin.users.email')} / ${t('admin.users.nickname')}`"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="12" :md="5">
+            <a-form-item :label="t('admin.users.role')">
+              <a-select v-model="filters.role" allow-clear>
+                <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
+                <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :xs="12" :md="5">
+            <a-form-item :label="t('admin.common.status')">
+              <a-select v-model="filters.status" allow-clear>
+                <a-option value="active">{{ t('admin.common.active') }}</a-option>
+                <a-option value="banned">{{ t('admin.common.banned') }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <div class="filter-actions">
+          <a-button @click="resetFilters">
+            <template #icon><IconRefresh /></template>
+            {{ t('common.reset') }}
+          </a-button>
+          <a-button type="primary" html-type="submit">
+            <template #icon><IconSearch /></template>
+            {{ t('admin.common.search') }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-card>
+
+    <a-card class="surface-card table-card">
+      <a-table
+        :columns="columns"
+        :data="records"
+        :loading="loading"
+        :pagination="false"
+        :scroll="{ x: 1110 }"
+        row-key="id"
+        stripe
+      >
+        <template #empty>
+          <a-empty :description="t('common.noData')" />
+        </template>
+        <template #user="{ record }">
+          <div class="user-cell">
+            <a-avatar :size="34" :image-url="record.avatarUrl">
+              <IconUser />
+            </a-avatar>
+            <div>
+              <div class="user-name-row">
+                <strong>{{ record.nickname }}</strong>
+              </div>
+              <span v-if="record.githubLogin">GitHub · {{ record.githubLogin }}</span>
+            </div>
+          </div>
+        </template>
+        <template #email="{ record }">
+          <a class="email-link" :href="`mailto:${record.email}`" :title="record.email">
+            {{ record.email }}
+          </a>
+        </template>
+        <template #access="{ record }">
+          <div class="access-cell">
+            <a-tag :color="record.role === 'admin' ? 'arcoblue' : 'gray'">
+              {{ record.role === 'admin' ? t('admin.users.adminRole') : t('admin.users.userRole') }}
+            </a-tag>
+            <span>{{ privacyLabel(record.privacyLevel) }}</span>
+            <a-tooltip v-if="record.bannedAt" :content="record.bannedReason || ''">
+              <a-tag color="red" size="small">{{ t('admin.common.banned') }}</a-tag>
+            </a-tooltip>
+            <a-tag v-else color="green" size="small">{{ t('admin.common.active') }}</a-tag>
+          </div>
+        </template>
+        <template #registerAt="{ record }">
+          <span class="nowrap">{{ formatDate(record.registerAt) }}</span>
+        </template>
+        <template #lastLoginAt="{ record }">
+          <span class="nowrap">
+            {{ isNeverLogin(record.lastLoginAt) ? t('admin.users.neverLogin') : formatDate(record.lastLoginAt) }}
+          </span>
+        </template>
+        <template #actions="{ record }">
+          <a-space>
+            <a-button type="text" size="small" @click="openEdit(record)">
+              <template #icon><IconEdit /></template>
+              {{ t('admin.common.edit') }}
+            </a-button>
+            <a-button
+              v-if="record.bannedAt"
+              type="text"
+              size="small"
+              :disabled="record.id === session.user?.id"
+              @click="restoreUser(record)"
+            >
+              <template #icon><IconUnlock /></template>
+              {{ t('admin.users.restore') }}
+            </a-button>
+            <a-button
+              v-else
+              type="text"
+              size="small"
+              :disabled="record.id === session.user?.id"
+              @click="openBan(record)"
+            >
+              <template #icon><IconLock /></template>
+              {{ t('admin.users.suspend') }}
+            </a-button>
+            <a-popconfirm :content="t('admin.users.deleteConfirm')" @ok="deleteUser(record)">
+              <a-button
+                status="danger"
+                type="text"
+                size="small"
+                :disabled="record.id === session.user?.id"
+              >
+                <template #icon><IconDelete /></template>
+              </a-button>
+            </a-popconfirm>
+          </a-space>
+        </template>
+      </a-table>
+      <TablePager
+        :current="page"
+        :page-size="pageSize"
+        :total="total"
+        :records-length="records.length"
+        @change="(value) => { page = value; load() }"
+        @page-size-change="(value) => { pageSize = value; page = 1; load() }"
+      />
+    </a-card>
+
+    <a-modal
+      v-model:visible="editorVisible"
+      :title="editingId == null ? t('admin.users.create') : t('admin.users.edit')"
+      :footer="false"
+      width="640px"
+    >
+      <a-form :model="editorForm" layout="vertical">
+        <a-alert v-if="editingId == null" type="info" class="editor-hint">
+          {{ t('admin.users.createHint') }}
+        </a-alert>
+        <a-row :gutter="16">
+          <a-col :xs="24" :md="12">
+            <a-form-item :label="t('admin.users.email')" required>
+              <a-input v-model="editorForm.email" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :md="12">
+            <a-form-item :label="t('admin.users.nickname')" required>
+              <a-input v-model="editorForm.nickname" :max-length="255" show-word-limit />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24">
+            <a-form-item :label="t('admin.users.avatar')">
+              <a-input v-model="editorForm.avatarUrl" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="12">
+            <a-form-item :label="t('admin.users.role')">
+              <a-select v-model="editorForm.role">
+                <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
+                <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :xs="12">
+            <a-form-item :label="t('admin.users.privacy')">
+              <a-select v-model="editorForm.privacyLevel">
+                <a-option value="DISABLED">{{ t('privacy.levels.DISABLED') }}</a-option>
+                <a-option value="LOW">{{ t('privacy.levels.LOW') }}</a-option>
+                <a-option value="MEDIUM">{{ t('privacy.levels.MEDIUM') }}</a-option>
+                <a-option value="HIGH">{{ t('privacy.levels.HIGH') }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <div class="modal-actions">
+          <a-button @click="editorVisible = false">{{ t('admin.common.cancel') }}</a-button>
+          <a-button type="primary" :loading="editorSaving" @click="saveUser">
+            {{ t('admin.common.save') }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="banVisible"
+      :title="t('admin.users.suspendTitle')"
+      :footer="false"
+      width="520px"
+    >
+      <a-form :model="{ banReason }" layout="vertical">
+        <a-form-item :label="t('admin.users.suspendReason')" required>
+          <a-textarea
+            v-model="banReason"
+            :placeholder="t('admin.users.suspendReasonPlaceholder')"
+            :auto-size="{ minRows: 3, maxRows: 6 }"
+          />
+        </a-form-item>
+        <div class="modal-actions">
+          <a-button @click="banVisible = false">{{ t('admin.common.cancel') }}</a-button>
+          <a-button status="danger" type="primary" :loading="banSaving" @click="confirmBan">
+            {{ t('admin.users.suspend') }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-modal>
+  </div>
+</template>
+
+<style scoped>
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-cell > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-cell span {
+  color: var(--color-text-3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name-row strong {
+  white-space: nowrap;
+}
+
+.email-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.access-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.access-cell span {
+  color: var(--color-text-3);
+  font-size: 11px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.editor-hint {
+  margin-bottom: 18px;
+}
+</style>

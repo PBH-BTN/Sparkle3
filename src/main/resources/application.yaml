@@ -7,8 +7,6 @@ spring:
   threads:
     virtual:
       enabled: true
-  thymeleaf:
-    cache: false
   datasource:
     dynamic:
       primary: master
@@ -124,10 +122,12 @@ sparkle:
       allow-login: true
       holder-uid: 16402
   client-discovery:
+    # Default value. Runtime overrides are managed from the admin console.
     enabled: false
   banhistory:
     refresh-module-name-cache-cron: "0 0 */2 * * *"
   ping:
+    # Protocol versions and IP query PoW can be hot-overridden in the admin console.
     config:
       min-protocol-version: 20
       max-protocol-version: 20
@@ -230,7 +230,11 @@ sparkle:
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
   tracker:
+    # Default value. Runtime overrides are managed from the admin console.
     endpoint: "http://localhost:6969/announce"
+  version-alert:
+    from-address: "sparkle@pbh-btn.com"
+    from-name: "SparkleBTN 系统通知"
   statistics:
     ban-count-refresh-cron: "0 10 * * * *"
     swarm-tracker-count-refresh-cron: "0 20 * * * *"

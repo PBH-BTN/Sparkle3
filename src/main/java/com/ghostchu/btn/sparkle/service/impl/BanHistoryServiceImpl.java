@@ -34,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * <p>
@@ -47,6 +48,10 @@ import java.util.Objects;
 @Slf4j
 public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHistory> implements IBanHistoryService {
     private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "populate_time", "torrent_id", "peer_ip", "peer_port", "peer_id",
+            "peer_client_name", "peer_progress", "module_name", "rule", "insert_time"
+    );
     @Autowired
     private ITorrentService torrentService;
     @Autowired
@@ -173,7 +178,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
 
         // Sorting
-        String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "populate_time";
+        String requestedSort = queryDto.getSortBy();
+        String sortBy = requestedSort != null && SORTABLE_FIELDS.contains(requestedSort)
+                ? requestedSort
+                : "populate_time";
         String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
 
         if ("asc".equals(sortOrder)) {
@@ -184,7 +192,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
         // Pagination
         int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
-        int size = (queryDto.getSize() != null && queryDto.getSize() > 0) ? queryDto.getSize() : 100;
+        int size = (queryDto.getSize() != null && queryDto.getSize() > 0)
+                ? Math.min(queryDto.getSize(), 100)
+                : 100;
 
         Page<BanHistory> pageRequest = new Page<>(page, size);
 

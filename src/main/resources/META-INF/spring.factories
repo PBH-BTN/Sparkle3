@@ -1,0 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+com.ghostchu.btn.sparkle.autoconfig.DatabaseConfigEnvironmentPostProcessor

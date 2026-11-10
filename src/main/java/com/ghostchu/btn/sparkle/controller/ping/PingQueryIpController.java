@@ -9,6 +9,7 @@ import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
 import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
@@ -36,18 +37,25 @@ import java.util.Set;
 
 @RestController
 public class PingQueryIpController extends BasePingController {
-    @Value("${sparkle.ping.query-ip.pow-captcha}")
-    private boolean powCaptcha;
     @Autowired
     private QueryIpServiceImpl queryIpService;
+    @Autowired
+    private AdminConfigService adminConfigService;
 
     @GetMapping("/ping/queryIp")
     //@Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
     public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
-        if (powCaptcha && !validatePowCaptcha()) {
+        if (adminConfigService.get().queryIpPowCaptcha() && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
         var userApps = verifyUserApplication();
+        return ResponseEntity.ok(queryIpService.queryIp(ip));
+    }
+
+    @GetMapping("/ping/queryIp/widget/data")
+    public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIpWidget(@RequestParam String ip)
+            throws AccessDeniedException, UserApplicationBannedException, UserApplicationNotFoundException {
+        verifyUserApplication();
         return ResponseEntity.ok(queryIpService.queryIp(ip));
     }
 

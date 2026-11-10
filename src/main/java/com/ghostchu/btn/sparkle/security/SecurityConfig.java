@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.MediaType;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -28,15 +29,20 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
                                 .requestMatchers("/error").permitAll()
+                                .requestMatchers("/", "/index.html", "/login").permitAll()
                                 .requestMatchers("/assets/**").permitAll()
                                 .requestMatchers("/favicon.ico").permitAll()
                                 .requestMatchers("/ping/**").permitAll()
                                 .requestMatchers("/login/**").permitAll()
+                                .requestMatchers("/oauth2/**").permitAll()
+                                .requestMatchers("/oauth/error").permitAll()
                                 .requestMatchers("/proxy/**").permitAll()
                                 .requestMatchers("/announce").permitAll()
                                 .requestMatchers("/tracker/announce").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
-                                .requestMatchers("/admin/**").hasAnyAuthority("admin")
+                                .requestMatchers("/api/ui/session").permitAll()
+                                .requestMatchers("/admin", "/admin/**").hasAnyAuthority("admin")
+                                .requestMatchers("/api/admin/**").hasAnyAuthority("admin")
                                 .requestMatchers("/debug/**").hasAnyAuthority("admin")
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
 //                                .requestMatchers("/banhistory/**").authenticated()
@@ -45,7 +51,33 @@ public class SecurityConfig {
 //                                .requestMatchers("/api/swarmtracker/**").authenticated()
 //                                .requestMatchers("/client-discovery/**").authenticated()
 //                                .requestMatchers("/api/clientdiscovery/**").authenticated()
+                                .requestMatchers("/api/**").authenticated()
                                 .anyRequest().authenticated())
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.setStatus(401);
+                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                                response.setCharacterEncoding("UTF-8");
+                                response.getWriter().write(
+                                        "{\"success\":false,\"message\":\"Authentication required\",\"data\":null}"
+                                );
+                                return;
+                            }
+                            response.sendRedirect("/login");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.setStatus(403);
+                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                                response.setCharacterEncoding("UTF-8");
+                                response.getWriter().write(
+                                        "{\"success\":false,\"message\":\"Administrator access required\",\"data\":null}"
+                                );
+                                return;
+                            }
+                            response.sendRedirect("/");
+                        }))
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                         .contentSecurityPolicy(csp -> csp

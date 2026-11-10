@@ -1,0 +1,153 @@
+package com.ghostchu.btn.sparkle.controller.ui.dto;
+
+import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
+import com.ghostchu.btn.sparkle.controller.ui.userapp.dto.UserApplicationDto;
+import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
+import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+
+public final class UiModels {
+    private UiModels() {
+    }
+
+    public record PrivacyLevelView(
+            String name,
+            int level,
+            boolean allowBlurredUsername,
+            boolean allowFullUsername,
+            boolean allowBlurredAvatar,
+            boolean allowOriginalAvatar
+    ) {
+        public static PrivacyLevelView from(UserPrivacyLevel privacyLevel) {
+            UserPrivacyLevel resolved = privacyLevel == null ? UserPrivacyLevel.MEDIUM : privacyLevel;
+            return new PrivacyLevelView(
+                    resolved.name(),
+                    resolved.getLevel(),
+                    resolved.isAllowBlurredUsername(),
+                    resolved.isAllowFullUserName(),
+                    resolved.isAllowBlurredAvatar(),
+                    resolved.isAllowOriginalAvatar()
+            );
+        }
+    }
+
+    public record UserView(
+            Long id,
+            String nickname,
+            String email,
+            String avatarUrl,
+            OffsetDateTime registerAt,
+            OffsetDateTime bannedAt,
+            String bannedReason,
+            boolean admin,
+            PrivacyLevelView privacyLevel
+    ) {
+        public static UserView from(User user) {
+            return new UserView(
+                    user.getId(),
+                    user.getNickname(),
+                    user.getEmail(),
+                    user.getAvatarUrl(),
+                    user.getRegisterAt(),
+                    user.getBannedAt(),
+                    user.getBannedReason(),
+                    "admin".equalsIgnoreCase(user.getRole()),
+                    PrivacyLevelView.from(user.getPrivacyLevel())
+            );
+        }
+    }
+
+    public record TrafficSummary(
+            long sentTrafficSelfReport,
+            long receivedTrafficSelfReport,
+            long sentTrafficOtherAck,
+            long receivedTrafficOtherAck,
+            OffsetDateTime lastUpdateAt
+    ) {
+        public static TrafficSummary from(UserSwarmStatistic statistics) {
+            if (statistics == null) {
+                return empty();
+            }
+            return new TrafficSummary(
+                    statistics.getSentTrafficSelfReport(),
+                    statistics.getReceivedTrafficSelfReport(),
+                    statistics.getSentTrafficOtherAck(),
+                    statistics.getReceivedTrafficOtherAck(),
+                    statistics.getLastUpdateAt()
+            );
+        }
+
+        public static TrafficSummary empty() {
+            return new TrafficSummary(0, 0, 0, 0, null);
+        }
+    }
+
+    public record SessionResponse(
+            boolean authenticated,
+            UserView user,
+            TrafficSummary traffic
+    ) {
+        public static SessionResponse anonymous() {
+            return new SessionResponse(false, null, null);
+        }
+    }
+
+    public record HomeStats(
+            Map<String, Long> banHistory,
+            Map<String, Long> userApps,
+            Map<String, Long> swarmTracker
+    ) {
+    }
+
+    public record UserProfileResponse(
+            UserView user,
+            UserRelDto relation,
+            String scoreBytesDisplay,
+            long scoreBytesRaw
+    ) {
+    }
+
+    public record PrivacyResponse(
+            PrivacyLevelView current,
+            List<PrivacyLevelView> levels
+    ) {
+    }
+
+    public record ApplicationCredentials(
+            UserApplicationDto application,
+            String appId,
+            String appSecret
+    ) {
+    }
+
+    public record RankingEntry(
+            long rank,
+            Long userId,
+            String displayName,
+            boolean anonymous,
+            String avatarUrl,
+            boolean avatarAvailable,
+            boolean banned,
+            long sentTrafficSelfReport,
+            long receivedTrafficSelfReport,
+            long sentTrafficOtherAck,
+            long receivedTrafficOtherAck
+    ) {
+    }
+
+    public record RankingResponse(
+            RankingEntry self,
+            List<RankingEntry> entries
+    ) {
+    }
+
+    public record TrackerResponse(
+            String announceUrl,
+            String dashboardUrl
+    ) {
+    }
+}

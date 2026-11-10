@@ -23,6 +23,8 @@ import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -110,8 +112,10 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             if (session != null) {
                 session.invalidate();
             }
-            // 重定向到错误页面或登录页面
-            // response.sendRedirect("/login?error=oauth_failed");
+            String message = e.getMessage() == null ? "GitHub OAuth login failed" : e.getMessage();
+            response.sendRedirect("/oauth/error?message="
+                    + URLEncoder.encode(message, StandardCharsets.UTF_8)
+                    + "&retryable=true");
         }
     }
 

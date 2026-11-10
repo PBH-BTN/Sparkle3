@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
@@ -45,6 +46,11 @@ import java.util.Map;
 @Service
 @Slf4j
 public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, SwarmTracker> implements ISwarmTrackerService {
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "torrent_id", "peer_ip", "peer_port", "peer_id", "peer_client_name",
+            "peer_progress", "from_peer_traffic", "to_peer_traffic",
+            "first_time_seen", "last_time_seen", "user_progress"
+    );
     @Autowired
     private ITorrentService torrentService;
 
@@ -341,7 +347,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
 
         // 添加排序
-        String sort = (sortBy != null && !sortBy.isBlank()) ? sortBy : "last_time_seen";
+        String sort = sortBy != null && SORTABLE_FIELDS.contains(sortBy) ? sortBy : "last_time_seen";
         String order = (sortOrder != null && !sortOrder.isBlank()) ? sortOrder : "desc";
         if ("desc".equalsIgnoreCase(order)) {
             wrapper.orderByDesc(sort);
