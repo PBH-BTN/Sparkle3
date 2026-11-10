@@ -10,8 +10,9 @@ public interface BittorrentTrafficMapper {
     List<DashboardTrafficRowDto> selectBanTraffic(
             @Param("startAt") OffsetDateTime startAt,
             @Param("endAt") OffsetDateTime endAt,
+            @Param("days") int days,
             @Param("limit") int limit,
-            @Param("useAggregate") boolean useAggregate
+            @Param("useSnapshot") boolean useSnapshot
     );
 
     List<DashboardTrafficRowDto> selectSwarmTraffic(
@@ -32,4 +33,16 @@ public interface BittorrentTrafficMapper {
     );
 
     int deleteExpiredSwarmTrafficSnapshot(@Param("cutoff") OffsetDateTime cutoff);
+
+    int deleteBanTrafficSnapshot();
+
+    void createBanTrafficWorkspace();
+
+    int clearBanTrafficWorkspace();
+
+    int prepareBanTrafficWorkspace(@Param("startAt") OffsetDateTime startAt);
+
+    int insertBanTrafficSnapshot();
+
+    void dropBanTrafficWorkspace();
 }

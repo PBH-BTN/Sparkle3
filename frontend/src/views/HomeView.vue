@@ -18,6 +18,7 @@ import type {
   HomeStats,
   StackedAreaChart,
   StatisticsSource,
+  TrafficCityDatum,
   TrafficDistribution,
 } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
@@ -133,6 +134,31 @@ function hasTrafficDistribution(chart: TrafficDistribution | undefined) {
   )
 }
 
+function compactTrafficCities(chart: TrafficDistribution | undefined) {
+  const items = chart?.data ?? []
+  const named = items.filter((item) => item.name !== 'Other')
+  const visible = named.slice(0, 8)
+  const visibleNames = new Set(visible.map((item) => item.name))
+  let otherBytes = 0n
+  for (const item of items) {
+    if (visibleNames.has(item.name) && item.name !== 'Other') continue
+    try {
+      otherBytes += BigInt(item.bytes)
+    } catch {
+      // Ignore malformed cache entries and keep the remaining chart usable.
+    }
+  }
+  const compact: TrafficCityDatum[] = visible.map((item) => ({ ...item }))
+  if (otherBytes > 0n) {
+    compact.push({ name: 'Other', bytes: otherBytes.toString() })
+  }
+  return compact
+}
+
+function trafficTopRows(chart: TrafficDistribution | undefined) {
+  return (chart?.data ?? []).filter((item) => item.name !== 'Other').slice(0, 30)
+}
+
 function pieOption(chart: DistributionChart | undefined): EChartsCoreOption {
   const data: ChartDatum[] = (chart?.data ?? []).map((item) => ({
     name: chartLabel(item.name),
@@ -197,7 +223,8 @@ function escapeHtml(value: string) {
 }
 
 function trafficPieOption(chart: TrafficDistribution | undefined): EChartsCoreOption {
-  const values = (chart?.data ?? []).map((item) => {
+  const compact = compactTrafficCities(chart)
+  const values = compact.map((item) => {
     try {
       return BigInt(item.bytes)
     } catch {
@@ -213,7 +240,7 @@ function trafficPieOption(chart: TrafficDistribution | undefined): EChartsCoreOp
     divisor *= 1024n
   }
 
-  const data = (chart?.data ?? []).map((item, index) => ({
+  const data = compact.map((item, index) => ({
     name: chartLabel(item.name),
     value: Number(values[index]) / Number(divisor),
     bytes: item.bytes,
@@ -255,7 +282,6 @@ function trafficPieOption(chart: TrafficDistribution | undefined): EChartsCoreOp
         type: 'pie',
         radius: ['38%', '62%'],
         center: ['50%', '43%'],
-        minAngle: 1,
         avoidLabelOverlap: true,
         itemStyle: {
           borderColor: '#FFFFFF',
@@ -573,7 +599,7 @@ onMounted(() => {
               :title="t('home.statistics.topUploadCities')"
             >
               <template #extra>
-                <a-tag color="arcoblue">{{ t('home.statistics.top30') }}</a-tag>
+                <a-tag color="arcoblue">{{ t('home.statistics.topEightPlusOther') }}</a-tag>
               </template>
               <EChart
                 v-if="hasTrafficDistribution(trafficStats?.topUploadCities)"
@@ -583,6 +609,18 @@ onMounted(() => {
                 :loading-text="t('common.loading')"
               />
               <a-empty v-else :description="t('home.statistics.noData')" />
+              <details v-if="hasTrafficDistribution(trafficStats?.topUploadCities)">
+                <summary>{{ t('home.statistics.viewTop30') }}</summary>
+                <ol class="traffic-ranking-list">
+                  <li
+                    v-for="(item, index) in trafficTopRows(trafficStats?.topUploadCities)"
+                    :key="item.name"
+                  >
+                    <span>{{ index + 1 }}. {{ chartLabel(item.name) }}</span>
+                    <strong>{{ formatBytes(item.bytes) }}</strong>
+                  </li>
+                </ol>
+              </details>
             </a-card>
           </a-col>
           <a-col :xs="24" :xl="12">
@@ -591,7 +629,7 @@ onMounted(() => {
               :title="t('home.statistics.topDownloadCities')"
             >
               <template #extra>
-                <a-tag color="green">{{ t('home.statistics.top30') }}</a-tag>
+                <a-tag color="green">{{ t('home.statistics.topEightPlusOther') }}</a-tag>
               </template>
               <EChart
                 v-if="hasTrafficDistribution(trafficStats?.topDownloadCities)"
@@ -601,6 +639,18 @@ onMounted(() => {
                 :loading-text="t('common.loading')"
               />
               <a-empty v-else :description="t('home.statistics.noData')" />
+              <details v-if="hasTrafficDistribution(trafficStats?.topDownloadCities)">
+                <summary>{{ t('home.statistics.viewTop30') }}</summary>
+                <ol class="traffic-ranking-list">
+                  <li
+                    v-for="(item, index) in trafficTopRows(trafficStats?.topDownloadCities)"
+                    :key="item.name"
+                  >
+                    <span>{{ index + 1 }}. {{ chartLabel(item.name) }}</span>
+                    <strong>{{ formatBytes(item.bytes) }}</strong>
+                  </li>
+                </ol>
+              </details>
             </a-card>
           </a-col>
         </a-row>
@@ -974,6 +1024,49 @@ onMounted(() => {
   min-height: 300px;
 }
 
+.traffic-chart-card details {
+  margin-top: 10px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.traffic-chart-card summary {
+  padding: 12px 2px 4px;
+  color: rgb(var(--primary-6));
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.traffic-ranking-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 24px;
+  max-height: 280px;
+  padding: 8px 2px 4px 22px;
+  margin: 0;
+  overflow: auto;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.traffic-ranking-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.traffic-ranking-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traffic-ranking-list strong {
+  flex: 0 0 auto;
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
 .stats-title {
   display: inline-flex;
   align-items: center;
@@ -1087,6 +1180,10 @@ onMounted(() => {
   .chart-updated {
     width: 100%;
     margin-left: 0;
+  }
+
+  .traffic-ranking-list {
+    grid-template-columns: 1fr;
   }
 }
 </style>

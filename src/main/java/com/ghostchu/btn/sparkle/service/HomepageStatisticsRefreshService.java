@@ -358,7 +358,7 @@ public class HomepageStatisticsRefreshService {
         TORRENTS("torrents", 40),
         NETWORK_CHARTS("network-charts", 5),
         COMPANION_CHARTS("companion-charts", 5),
-        BITTORRENT_TRAFFIC("bittorrent-traffic", 10);
+        BITTORRENT_TRAFFIC("bittorrent-traffic", 60);
 
         private static final Map<String, Module> BY_ID = java.util.Arrays.stream(values())
                 .collect(java.util.stream.Collectors.toMap(

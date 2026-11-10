@@ -38,7 +38,7 @@ public class BittorrentTrafficStatisticsService {
     private static final int TOP_CITIES = 30;
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
     private static final long ACCESS_CACHE_MILLIS = 60_000L;
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:bittorrent-traffic:v1:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:bittorrent-traffic:v2:";
 
     private final BittorrentTrafficMapper mapper;
     private final BittorrentTrafficSnapshotService snapshotService;
@@ -48,7 +48,7 @@ public class BittorrentTrafficStatisticsService {
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
 
-    private volatile Boolean banAggregateAccessible;
+    private volatile Boolean banSnapshotAccessible;
     private volatile Boolean swarmSnapshotAccessible;
     private volatile long accessCheckedAt;
 
@@ -143,23 +143,25 @@ public class BittorrentTrafficStatisticsService {
     }
 
     private SourceTraffic loadBanTraffic(TimeRange range) {
-        if (aggregateAccessible()) {
+        if (banSnapshotAccessible()) {
             try {
                 return loadSource(mapper.selectBanTraffic(
                         range.startAt(),
                         range.endAt(),
+                        range.days(),
                         TOP_CITIES,
                         true
                 ));
             } catch (Exception exception) {
-                markAggregatesUnavailable();
-                log.warn("BitTorrent ban traffic aggregate query failed; using raw ban history",
+                markBanSnapshotUnavailable();
+                log.warn("BitTorrent ban traffic snapshot query failed; using raw ban history",
                         exception);
             }
         }
         return loadSource(mapper.selectBanTraffic(
                 range.startAt(),
                 range.endAt(),
+                range.days(),
                 TOP_CITIES,
                 false
         ));
@@ -275,9 +277,9 @@ public class BittorrentTrafficStatisticsService {
         }
     }
 
-    private boolean aggregateAccessible() {
+    private boolean banSnapshotAccessible() {
         refreshAccessibility();
-        return Boolean.TRUE.equals(banAggregateAccessible);
+        return Boolean.TRUE.equals(banSnapshotAccessible);
     }
 
     private boolean snapshotAccessible() {
@@ -287,18 +289,18 @@ public class BittorrentTrafficStatisticsService {
 
     private void refreshAccessibility() {
         long now = System.currentTimeMillis();
-        if (banAggregateAccessible != null
+        if (banSnapshotAccessible != null
                 && swarmSnapshotAccessible != null
                 && now < accessCheckedAt + ACCESS_CACHE_MILLIS) {
             return;
         }
         synchronized (this) {
-            if (banAggregateAccessible != null
+            if (banSnapshotAccessible != null
                     && swarmSnapshotAccessible != null
                     && now < accessCheckedAt + ACCESS_CACHE_MILLIS) {
                 return;
             }
-            banAggregateAccessible = relationReadable("dashboard_ban_hourly_traffic_city");
+            banSnapshotAccessible = relationReadable("dashboard_ban_city_traffic");
             swarmSnapshotAccessible = relationReadable("dashboard_swarm_hourly_traffic");
             accessCheckedAt = now;
         }
@@ -324,8 +326,8 @@ public class BittorrentTrafficStatisticsService {
         }
     }
 
-    private void markAggregatesUnavailable() {
-        banAggregateAccessible = false;
+    private void markBanSnapshotUnavailable() {
+        banSnapshotAccessible = false;
         accessCheckedAt = 0;
     }
 
@@ -339,6 +341,7 @@ public class BittorrentTrafficStatisticsService {
                 .truncatedTo(ChronoUnit.HOURS)
                 .plusHours(1);
         return new TimeRange(
+                days,
                 days == 1 ? endAt.minusHours(24) : endAt.minusDays(days),
                 endAt
         );
@@ -389,7 +392,7 @@ public class BittorrentTrafficStatisticsService {
         }
     }
 
-    private record TimeRange(OffsetDateTime startAt, OffsetDateTime endAt) {
+    private record TimeRange(int days, OffsetDateTime startAt, OffsetDateTime endAt) {
     }
 
     private record TrafficAmounts(BigInteger upload, BigInteger download) {

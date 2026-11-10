@@ -85,7 +85,9 @@ class FlywayMigrationIntegrationTest {
             }
 
             try (var result = statement.executeQuery("""
-                    SELECT to_regclass('public.dashboard_swarm_hourly_traffic') IS NOT NULL
+                    SELECT
+                        to_regclass('public.dashboard_swarm_hourly_traffic') IS NOT NULL
+                        AND to_regclass('public.dashboard_ban_city_traffic') IS NOT NULL
                     """)) {
                 assertTrue(result.next());
                 assertTrue(result.getBoolean(1));

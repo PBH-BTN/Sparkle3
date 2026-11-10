@@ -284,7 +284,7 @@ sparkle:
         refresh-interval-minutes: 5
       bittorrent-traffic:
         enabled: true
-        refresh-interval-minutes: 10
+        refresh-interval-minutes: 60
   admin:
     user-ip-warning:
       duration: 1209600000
