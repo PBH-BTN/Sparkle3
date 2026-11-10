@@ -2,8 +2,20 @@ export default {
   app: {
     title: 'Sparkle - BTN',
     shortName: 'Sparkle BTN',
-    footer: 'Sparkle · BTN v3.0',
+    footer: 'Sparkle · BTN v3.1',
     footerBy: 'Built by the PBH-BTN Community',
+    disclaimer: {
+      operator:
+        'Sparkle BTN is a BitTorrent threat intelligence network operated and maintained by PBH-BTN.',
+      contribution:
+        'Users of BTN services voluntarily run BTN client software and contribute data to this network.',
+      purpose:
+        'The network provides essential protection data to applications such as BTN client firewalls, helping defend against malicious internet activity.',
+      notTracker:
+        'Sparkle BTN is not a BitTorrent tracker or client and therefore does not facilitate user connections.',
+      noTraffic:
+        'It does not store, transmit, or share any BitTorrent traffic, data, material, or Info Hash.',
+    },
   },
   common: {
     query: 'Search',
@@ -54,7 +66,7 @@ export default {
   home: {
     accountPaused: 'Account suspended',
     accountPausedText: 'Your BTN account has been suspended by an administrator. Reason: {reason}.',
-    heroEyebrow: 'BTN 3.0',
+    heroEyebrow: 'BTN 3.1',
     heroTitle: 'Sparkle',
     heroSubtitle: 'Connected together',
     heroText:
@@ -326,7 +338,7 @@ export default {
     missingIp: 'The request is missing the IP parameter.',
     loadFailed: 'Unable to load the IP query result.',
     btnUser: 'BTN user',
-    poweredBy: 'Powered by BTN 3.0',
+    poweredBy: 'Powered by BTN 3.1',
   },
   errors: {
     notFoundTitle: 'Page not found',

@@ -192,17 +192,26 @@ function navigate(id: string) {
     </a-layout-content>
 
     <footer class="app-footer">
-      <div>
-        <IconFire class="footer-icon" />
-        <strong>{{ t('app.footer') }}</strong>
+      <div class="footer-heading">
+        <div>
+          <IconFire class="footer-icon" />
+          <strong>{{ t('app.footer') }}</strong>
+        </div>
+        <a
+          href="https://github.com/PBH-BTN"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ t('app.footerBy') }}
+        </a>
       </div>
-      <a
-        href="https://github.com/PBH-BTN"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {{ t('app.footerBy') }}
-      </a>
+      <div class="footer-disclaimer">
+        <p>{{ t('app.disclaimer.operator') }}</p>
+        <p>{{ t('app.disclaimer.contribution') }}</p>
+        <p>{{ t('app.disclaimer.purpose') }}</p>
+        <p>{{ t('app.disclaimer.notTracker') }}</p>
+        <p>{{ t('app.disclaimer.noTraffic') }}</p>
+      </div>
     </footer>
 
     <a-drawer
@@ -421,11 +430,18 @@ function navigate(id: string) {
 
 .app-footer {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 28px 0;
+  flex-direction: column;
+  gap: 14px;
+  padding: 26px 0 30px;
   color: var(--color-text-3);
   font-size: 12px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.footer-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .app-footer a {
@@ -440,6 +456,17 @@ function navigate(id: string) {
 .footer-icon {
   margin-right: 6px;
   color: rgb(var(--primary-6));
+}
+
+.footer-disclaimer {
+  display: grid;
+  gap: 5px;
+  max-width: 1040px;
+  line-height: 1.65;
+}
+
+.footer-disclaimer p {
+  margin: 0;
 }
 
 @media (max-width: 1180px) {
@@ -475,6 +502,10 @@ function navigate(id: string) {
   }
 
   .app-footer {
+    gap: 12px;
+  }
+
+  .footer-heading {
     flex-direction: column;
   }
 }

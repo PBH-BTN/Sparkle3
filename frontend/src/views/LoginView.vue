@@ -54,7 +54,14 @@ function loginWithGitHub() {
         {{ t('auth.securityNote') }}
       </p>
     </section>
-    <footer>{{ t('app.footer') }}</footer>
+    <footer class="login-footer">
+      <strong>{{ t('app.footer') }}</strong>
+      <p>{{ t('app.disclaimer.operator') }}</p>
+      <p>{{ t('app.disclaimer.contribution') }}</p>
+      <p>{{ t('app.disclaimer.purpose') }}</p>
+      <p>{{ t('app.disclaimer.notTracker') }}</p>
+      <p>{{ t('app.disclaimer.noTraffic') }}</p>
+    </footer>
   </main>
 </template>
 
@@ -170,10 +177,24 @@ function loginWithGitHub() {
   margin-top: 2px;
 }
 
-footer {
+.login-footer {
+  display: grid;
+  gap: 4px;
+  width: min(760px, 100%);
   margin-top: 28px;
   color: var(--color-text-3);
   font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.login-footer strong {
+  margin-bottom: 4px;
+  color: var(--color-text-2);
+}
+
+.login-footer p {
+  margin: 0;
 }
 
 @media (max-width: 520px) {

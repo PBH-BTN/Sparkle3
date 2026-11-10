@@ -2,8 +2,19 @@ export default {
   app: {
     title: 'Sparkle (花火) - BTN',
     shortName: 'Sparkle BTN',
-    footer: 'Sparkle (花火) · BTN v3.0',
+    footer: 'Sparkle (花火) · BTN v3.1',
     footerBy: '由 PBH-BTN 社区构建',
+    disclaimer: {
+      operator: 'Sparkle BTN 是由 PBH-BTN 运营和维护的 BitTorrent 威胁情报网络。',
+      contribution:
+        '使用 BTN 服务的用户自愿运行 BTN 客户端软件，并为此网络贡献数据。',
+      purpose:
+        '此网络将为如 BTN 客户端防火墙软件提供重要防护数据，用于抵御互联网恶意攻击。',
+      notTracker:
+        'Sparkle BTN 并不是 BT Tracker 或 BT 客户端，因此不辅助进行用户连接。',
+      noTraffic:
+        '也不参与存储、传输、共享任何 BitTorrent 流量、数据、资料或者 Info Hash。',
+    },
   },
   common: {
     query: '查询',
@@ -52,7 +63,7 @@ export default {
   home: {
     accountPaused: '账户暂停',
     accountPausedText: '您的 BTN 账户已被管理员停用，原因：{reason}。',
-    heroEyebrow: 'BTN 3.0',
+    heroEyebrow: 'BTN 3.1',
     heroTitle: 'Sparkle',
     heroSubtitle: '互联共通，连接你我',
     heroText: '连接到 BTN 网络，共享威胁情报，获取云端规则。',
@@ -318,7 +329,7 @@ export default {
     missingIp: '请求缺少 IP 参数。',
     loadFailed: '无法加载 IP 查询结果。',
     btnUser: 'BTN 用户',
-    poweredBy: 'Powered by BTN 3.0',
+    poweredBy: 'Powered by BTN 3.1',
   },
   errors: {
     notFoundTitle: '页面不存在',
