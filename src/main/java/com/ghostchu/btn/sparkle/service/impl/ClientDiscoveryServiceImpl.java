@@ -49,25 +49,20 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
         if (!adminConfigService.get().clientDiscoveryEnabled()) return;
+        if (data == null || data.isEmpty()) return;
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
         for (Pair<String, String> pair : data) {
+            if (pair == null) continue;
             var peerIdIn = pair.getKey();
             var peerClientName = pair.getValue();
-            if (peerIdIn == null && peerClientName == null) return;
+            if (peerIdIn == null && peerClientName == null) continue;
             // 设置默认值
             String peerId = HexUtil.cutPeerId(peerIdIn);
             OffsetDateTime foundAt = OffsetDateTime.now();
             String clientType = null;
             String clientSemver = null;
 
-            if(peerId != null){
-                if(peerId.startsWith("-XL0012") && peerClientName.startsWith("-XL0012-"))
-                    continue;
-                if(peerClientName.startsWith("Gopeed") && !peerId.startsWith("-GP"))
-                    continue;
-                if(peerId.startsWith("FD6"))
-                    continue;
-            }
+            if (shouldSkipPeer(peerId, peerClientName)) continue;
             // 处理 PeerId
             if (peerIdIn != null) {
                 var parsed = PeerIdParser.parse(peerIdIn);
@@ -94,8 +89,23 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                 this.baseMapper.batchInsert(clientDiscoveryList);
             }
         } catch (Exception e) {
-            log.error("Error inserting client discovery data: {}", e.getMessage());
+            log.error("Error inserting client discovery data", e);
         }
+    }
+
+    static boolean shouldSkipPeer(@Nullable String peerId, @Nullable String peerClientName) {
+        if (peerId == null) return false;
+        if (peerId.startsWith("-XL0012")
+                && peerClientName != null
+                && peerClientName.startsWith("-XL0012-")) {
+            return true;
+        }
+        if (peerClientName != null
+                && peerClientName.startsWith("Gopeed")
+                && !peerId.startsWith("-GP")) {
+            return true;
+        }
+        return peerId.startsWith("FD6");
     }
 
     @Override
