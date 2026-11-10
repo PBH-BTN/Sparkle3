@@ -26,7 +26,7 @@ public class NavigationService {
     private static final Duration CACHE_TTL = Duration.ofSeconds(5);
     private static final Set<String> ICONS = Set.of(
             "home", "apps", "ban", "search", "swarm", "ranking",
-            "link", "file", "dashboard"
+            "rules", "link", "file", "dashboard"
     );
     private static final RowMapper<NavigationItemView> ROW_MAPPER = (resultSet, rowNum) ->
             new NavigationItemView(
@@ -260,6 +260,8 @@ public class NavigationService {
                 defaultItem("特征发现", "Client discovery", "/client-discovery", "search", 40));
         defaults.put("builtin-swarm-tracker",
                 defaultItem("种群检视", "Swarm explorer", "/swarm-tracker", "swarm", 50));
+        defaults.put("builtin-rule-preview",
+                defaultItem("规则预览", "Rule preview", "/rules/preview", "rules", 55));
         defaults.put("builtin-ranking",
                 defaultItem("排行榜", "Ranking", "/ranking/swarmStatistics", "ranking", 60));
         for (Map.Entry<String, NavigationItemInput> entry : defaults.entrySet()) {

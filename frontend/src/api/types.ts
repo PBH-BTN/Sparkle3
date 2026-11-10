@@ -35,6 +35,7 @@ export type NavigationIcon =
   | 'ban'
   | 'search'
   | 'swarm'
+  | 'rules'
   | 'ranking'
   | 'link'
   | 'file'
@@ -146,6 +147,30 @@ export interface HomeBittorrentTrafficResponse {
   totals: TrafficTotals
   topUploadCities: TrafficDistribution
   topDownloadCities: TrafficDistribution
+  generatedAt: string
+}
+
+export type RulePreviewType =
+  | 'ip_denylist'
+  | 'ip_allowlist'
+  | 'peer_id'
+  | 'client_name'
+  | 'port'
+  | 'script'
+
+export interface RulePreviewEntry {
+  source: string
+  category: string | null
+  content: string
+}
+
+export interface RulePreviewSection {
+  type: RulePreviewType
+  entries: RulePreviewEntry[]
+}
+
+export interface RulePreviewResponse {
+  sections: RulePreviewSection[]
   generatedAt: string
 }
 

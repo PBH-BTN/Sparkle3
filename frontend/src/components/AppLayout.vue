@@ -16,6 +16,7 @@ import {
   IconMenu,
   IconSearch,
   IconSettings,
+  IconCode,
   IconTrophy,
   IconUser,
 } from '@arco-design/web-vue/es/icon'
@@ -36,6 +37,7 @@ const navigationIcons: Record<string, Component> = {
   ban: IconBug,
   search: IconSearch,
   swarm: IconList,
+  rules: IconCode,
   ranking: IconTrophy,
   link: IconLink,
   file: IconFile,

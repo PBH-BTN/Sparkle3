@@ -25,6 +25,7 @@ const iconOptions: NavigationIcon[] = [
   'ban',
   'search',
   'swarm',
+  'rules',
   'ranking',
   'link',
   'file',

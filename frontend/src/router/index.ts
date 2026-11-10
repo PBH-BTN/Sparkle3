@@ -62,6 +62,11 @@ const router = createRouter({
       component: () => import('@/views/SwarmTrackerView.vue'),
     },
     {
+      path: '/rules/preview',
+      name: 'rule-preview',
+      component: () => import('@/views/RulePreviewView.vue'),
+    },
+    {
       path: '/ranking/swarmStatistics',
       name: 'ranking',
       component: () => import('@/views/RankingView.vue'),

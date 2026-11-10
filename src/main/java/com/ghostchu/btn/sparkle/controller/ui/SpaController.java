@@ -23,6 +23,7 @@ public class SpaController {
             "/banhistory",
             "/client-discovery",
             "/swarm-tracker",
+            "/rules/preview",
             "/ranking/swarmStatistics",
             "/admin",
             "/admin/dashboard",
