@@ -7,6 +7,8 @@ import type {
   ClientDiscoveryOptions,
   ClientDiscoveryQuery,
   ClientDiscoveryRecord,
+  ContactEmailRequest,
+  ContactEmailResult,
   FilterOptions,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
@@ -15,6 +17,7 @@ import type {
   PageResponse,
   PrivacyLevel,
   PrivacyResponse,
+  PublicUserProfileResponse,
   RankingResponse,
   SessionResponse,
   SwarmTrackerQuery,
@@ -41,6 +44,16 @@ export const uiApi = {
   homeCompanionStatistics: () =>
     request<HomeCompanionStatisticsResponse>('/api/ui/statistics/companion'),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
+  publicProfile: (uid: string) =>
+    request<PublicUserProfileResponse>(`/api/ui/user/profile/${encodeURIComponent(uid)}`),
+  sendContactEmail: (uid: string, body: ContactEmailRequest) =>
+    request<ContactEmailResult>(
+      `/api/ui/user/profile/${encodeURIComponent(uid)}/email`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
   privacy: () => request<PrivacyResponse>('/api/ui/user/privacy'),
   updatePrivacy: (level: PrivacyLevel['name']) =>
     request<PrivacyResponse>('/api/ui/user/privacy', {

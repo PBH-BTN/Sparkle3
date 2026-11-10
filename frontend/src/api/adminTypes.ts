@@ -171,6 +171,22 @@ export interface RuntimeConfig {
   swarmStatisticsEnabled: boolean
   swarmStatisticsRefreshMinutes: number
   swarmStatisticsWindowDays: number
+  userContactEmailSubjectTemplate: string
+  userContactEmailBodyTemplate: string
+}
+
+export interface UserContactEmailAudit {
+  id: number
+  senderId: string
+  senderNickname: string | null
+  senderEmail: string | null
+  recipientId: string
+  recipientNickname: string | null
+  recipientEmail: string | null
+  subject: string
+  senderIp: string | null
+  senderUserAgent: string | null
+  sentAt: string
 }
 
 export interface SwarmStatisticsStatus {

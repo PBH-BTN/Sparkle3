@@ -131,6 +131,27 @@ export interface UserProfileResponse {
   scoreBytesRaw: number
 }
 
+export interface PublicUserProfileResponse {
+  id: string
+  nickname: string | null
+  avatarUrl: string | null
+  privacyLevel: PrivacyLevel['name']
+  anonymous: boolean
+  banned: boolean
+  self: boolean
+  canSendEmail: boolean
+}
+
+export interface ContactEmailRequest {
+  subject: string
+  content: string
+}
+
+export interface ContactEmailResult {
+  sent: boolean
+  remainingToday: number
+}
+
 export interface PrivacyResponse {
   current: PrivacyLevel
   levels: PrivacyLevel[]

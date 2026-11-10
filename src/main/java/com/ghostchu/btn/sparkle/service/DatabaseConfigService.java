@@ -44,7 +44,9 @@ public class DatabaseConfigService {
             "sparkle.homepage-statistics-refresh.modules.network-charts.enabled",
             "sparkle.homepage-statistics-refresh.modules.network-charts.refresh-interval-minutes",
             "sparkle.homepage-statistics-refresh.modules.companion-charts.enabled",
-            "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes"
+            "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes",
+            "sparkle.user-contact-email.subject-template",
+            "sparkle.user-contact-email.content-template"
     );
     private static final String TABLE = "app_config_entries";
 

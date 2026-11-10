@@ -106,7 +106,24 @@ public final class AdminModels {
             boolean clientDiscoveryEnabled,
             boolean swarmStatisticsEnabled,
             int swarmStatisticsRefreshMinutes,
-            int swarmStatisticsWindowDays
+            int swarmStatisticsWindowDays,
+            String userContactEmailSubjectTemplate,
+            String userContactEmailBodyTemplate
+    ) {
+    }
+
+    public record UserContactEmailAuditView(
+            long id,
+            String senderId,
+            String senderNickname,
+            String senderEmail,
+            String recipientId,
+            String recipientNickname,
+            String recipientEmail,
+            String subject,
+            String senderIp,
+            String senderUserAgent,
+            OffsetDateTime sentAt
     ) {
     }
 }

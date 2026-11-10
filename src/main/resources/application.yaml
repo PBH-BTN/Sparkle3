@@ -251,6 +251,17 @@ sparkle:
   version-alert:
     from-address: "sparkle@pbh-btn.com"
     from-name: "SparkleBTN 系统通知"
+  user-contact-email:
+    from-address: "sparkle@pbh-btn.com"
+    from-name: "Sparkle BTN 用户邮件"
+    subject-template: "[Sparkle BTN] {{title}}"
+    content-template: |
+      {{senderName}}（UID {{senderId}}）通过 Sparkle BTN 向你发送了一条消息：
+
+      {{content}}
+
+      --
+      这是一封由用户发起并通过 Sparkle BTN 发送的邮件，请勿直接回复。
   homepage-statistics-refresh:
     modules:
       ban-history:

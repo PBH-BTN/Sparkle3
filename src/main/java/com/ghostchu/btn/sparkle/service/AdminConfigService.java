@@ -25,6 +25,10 @@ public class AdminConfigService {
             "sparkle.swarm-statistics-track.refresh-interval-minutes";
     private static final String SWARM_STATISTICS_WINDOW_DAYS =
             "sparkle.swarm-statistics-track.window-days";
+    private static final String USER_CONTACT_EMAIL_SUBJECT_TEMPLATE =
+            "sparkle.user-contact-email.subject-template";
+    private static final String USER_CONTACT_EMAIL_BODY_TEMPLATE =
+            "sparkle.user-contact-email.content-template";
 
     private final DatabaseConfigService databaseConfigService;
     private final RuntimeConfigView defaults;
@@ -41,7 +45,11 @@ public class AdminConfigService {
                               @Value("${sparkle.swarm-statistics-track.refresh-interval-minutes:60}")
                               int swarmStatisticsRefreshMinutes,
                               @Value("${sparkle.swarm-statistics-track.window-days:7}")
-                              int swarmStatisticsWindowDays) {
+                              int swarmStatisticsWindowDays,
+                              @Value("${sparkle.user-contact-email.subject-template}")
+                              String userContactEmailSubjectTemplate,
+                              @Value("${sparkle.user-contact-email.content-template}")
+                              String userContactEmailBodyTemplate) {
         this.databaseConfigService = databaseConfigService;
         this.defaults = new RuntimeConfigView(
                 protocolMinVersion,
@@ -50,7 +58,9 @@ public class AdminConfigService {
                 clientDiscoveryEnabled,
                 swarmStatisticsEnabled,
                 swarmStatisticsRefreshMinutes,
-                swarmStatisticsWindowDays
+                swarmStatisticsWindowDays,
+                userContactEmailSubjectTemplate,
+                userContactEmailBodyTemplate
         );
     }
 
@@ -73,19 +83,23 @@ public class AdminConfigService {
     public @NotNull RuntimeConfigView update(@NotNull RuntimeConfigView config, Long operatorId)
             throws BusinessException {
         validate(config);
+        RuntimeConfigView normalized = normalized(config);
         Map<String, String> values = new LinkedHashMap<>();
-        values.put(MIN_PROTOCOL, String.valueOf(config.protocolMinVersion()));
-        values.put(MAX_PROTOCOL, String.valueOf(config.protocolMaxVersion()));
-        values.put(QUERY_IP_POW, String.valueOf(config.queryIpPowCaptcha()));
-        values.put(CLIENT_DISCOVERY, String.valueOf(config.clientDiscoveryEnabled()));
-        values.put(SWARM_STATISTICS_ENABLED, String.valueOf(config.swarmStatisticsEnabled()));
+        values.put(MIN_PROTOCOL, String.valueOf(normalized.protocolMinVersion()));
+        values.put(MAX_PROTOCOL, String.valueOf(normalized.protocolMaxVersion()));
+        values.put(QUERY_IP_POW, String.valueOf(normalized.queryIpPowCaptcha()));
+        values.put(CLIENT_DISCOVERY, String.valueOf(normalized.clientDiscoveryEnabled()));
+        values.put(SWARM_STATISTICS_ENABLED, String.valueOf(normalized.swarmStatisticsEnabled()));
         values.put(SWARM_STATISTICS_REFRESH_MINUTES,
-                String.valueOf(config.swarmStatisticsRefreshMinutes()));
-        values.put(SWARM_STATISTICS_WINDOW_DAYS, String.valueOf(config.swarmStatisticsWindowDays()));
+                String.valueOf(normalized.swarmStatisticsRefreshMinutes()));
+        values.put(SWARM_STATISTICS_WINDOW_DAYS, String.valueOf(normalized.swarmStatisticsWindowDays()));
+        values.put(USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
+                normalized.userContactEmailSubjectTemplate());
+        values.put(USER_CONTACT_EMAIL_BODY_TEMPLATE, normalized.userContactEmailBodyTemplate());
         for (Map.Entry<String, String> entry : values.entrySet()) {
             databaseConfigService.update(entry.getKey(), entry.getValue(), operatorId);
         }
-        cached = normalized(config);
+        cached = normalized;
         cacheExpiresAt = System.currentTimeMillis() + CACHE_TTL.toMillis();
         return cached;
     }
@@ -99,7 +113,9 @@ public class AdminConfigService {
                     CLIENT_DISCOVERY,
                     SWARM_STATISTICS_ENABLED,
                     SWARM_STATISTICS_REFRESH_MINUTES,
-                    SWARM_STATISTICS_WINDOW_DAYS
+                    SWARM_STATISTICS_WINDOW_DAYS,
+                    USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
+                    USER_CONTACT_EMAIL_BODY_TEMPLATE
             ));
             if (entries == null || entries.isEmpty()) {
                 return defaults;
@@ -113,7 +129,15 @@ public class AdminConfigService {
                     parseInt(entries.get(SWARM_STATISTICS_REFRESH_MINUTES),
                             defaults.swarmStatisticsRefreshMinutes()),
                     parseInt(entries.get(SWARM_STATISTICS_WINDOW_DAYS),
-                            defaults.swarmStatisticsWindowDays())
+                            defaults.swarmStatisticsWindowDays()),
+                    entries.getOrDefault(
+                            USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
+                            defaults.userContactEmailSubjectTemplate()
+                    ),
+                    entries.getOrDefault(
+                            USER_CONTACT_EMAIL_BODY_TEMPLATE,
+                            defaults.userContactEmailBodyTemplate()
+                    )
             );
         } catch (Exception exception) {
             return cached == null ? defaults : cached;
@@ -136,6 +160,20 @@ public class AdminConfigService {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Swarm statistics window must be between 1 and 90 days");
         }
+        if (config.userContactEmailSubjectTemplate() == null
+                || config.userContactEmailSubjectTemplate().isBlank()
+                || config.userContactEmailSubjectTemplate().length() > 255
+                || !config.userContactEmailSubjectTemplate().contains("{{title}}")) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Contact email subject template must contain {{title}} and be at most 255 characters");
+        }
+        if (config.userContactEmailBodyTemplate() == null
+                || config.userContactEmailBodyTemplate().isBlank()
+                || config.userContactEmailBodyTemplate().length() > 20_000
+                || !config.userContactEmailBodyTemplate().contains("{{content}}")) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Contact email body template must contain {{content}} and be at most 20000 characters");
+        }
     }
 
     private RuntimeConfigView normalized(RuntimeConfigView config) {
@@ -146,7 +184,9 @@ public class AdminConfigService {
                 config.clientDiscoveryEnabled(),
                 config.swarmStatisticsEnabled(),
                 config.swarmStatisticsRefreshMinutes(),
-                config.swarmStatisticsWindowDays()
+                config.swarmStatisticsWindowDays(),
+                config.userContactEmailSubjectTemplate().trim(),
+                config.userContactEmailBodyTemplate().trim()
         );
     }
 

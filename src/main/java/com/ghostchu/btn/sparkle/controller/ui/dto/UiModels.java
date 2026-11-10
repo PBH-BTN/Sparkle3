@@ -119,6 +119,30 @@ public final class UiModels {
     ) {
     }
 
+    public record PublicUserProfileResponse(
+            String id,
+            String nickname,
+            String avatarUrl,
+            String privacyLevel,
+            boolean anonymous,
+            boolean banned,
+            boolean self,
+            boolean canSendEmail
+    ) {
+    }
+
+    public record ContactEmailRequest(
+            String subject,
+            String content
+    ) {
+    }
+
+    public record ContactEmailResult(
+            boolean sent,
+            int remainingToday
+    ) {
+    }
+
     public record PrivacyResponse(
             PrivacyLevelView current,
             List<PrivacyLevelView> levels

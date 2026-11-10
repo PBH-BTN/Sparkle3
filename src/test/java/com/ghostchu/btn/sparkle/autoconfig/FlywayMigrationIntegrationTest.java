@@ -104,6 +104,13 @@ class FlywayMigrationIntegrationTest {
                 assertTrue(result.next());
                 assertEquals(1, result.getInt(1));
             }
+
+            try (var result = statement.executeQuery("""
+                    SELECT to_regclass('public.user_contact_email_deliveries') IS NOT NULL
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
         }
     }
 

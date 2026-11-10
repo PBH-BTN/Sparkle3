@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
   IconCheckCircle,
+  IconEmail,
   IconLock,
   IconRefresh,
   IconSave,
@@ -23,6 +24,14 @@ const loading = ref(true)
 const saving = ref(false)
 const refreshStarting = ref(false)
 const status = ref<SwarmStatisticsStatus | null>(null)
+const subjectTemplateToken = '{{title}}'
+const contentTemplateToken = '{{content}}'
+const contactEmailVariables = [
+  '{{senderName}}',
+  '{{senderId}}',
+  '{{recipientName}}',
+  '{{recipientId}}',
+]
 const form = reactive<RuntimeConfig>({
   protocolMinVersion: 20,
   protocolMaxVersion: 20,
@@ -31,6 +40,9 @@ const form = reactive<RuntimeConfig>({
   swarmStatisticsEnabled: true,
   swarmStatisticsRefreshMinutes: 60,
   swarmStatisticsWindowDays: 7,
+  userContactEmailSubjectTemplate: '[Sparkle BTN] {{title}}',
+  userContactEmailBodyTemplate:
+    '{{senderName}}（UID {{senderId}}）通过 Sparkle BTN 向你发送了一条消息：\n\n{{content}}',
 })
 let pollTimer: number | undefined
 
@@ -75,6 +87,13 @@ async function save() {
   }
   if (form.swarmStatisticsRefreshMinutes < 1 || form.swarmStatisticsWindowDays < 1) {
     Message.warning(t('admin.settings.invalidStatistics'))
+    return
+  }
+  if (
+    !form.userContactEmailSubjectTemplate.includes('{{title}}') ||
+    !form.userContactEmailBodyTemplate.includes('{{content}}')
+  ) {
+    Message.warning(t('admin.settings.invalidEmailTemplate'))
     return
   }
   saving.value = true
@@ -271,6 +290,45 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
         </a-form>
       </a-card>
 
+      <a-card class="surface-card">
+        <template #title>
+          <span class="card-title">
+            <IconEmail />
+            {{ t('admin.settings.contactEmailTitle') }}
+          </span>
+        </template>
+        <a-form :model="form" layout="vertical" @submit="save">
+          <a-form-item :label="t('admin.settings.contactEmailSubjectTemplate')" required>
+            <a-input
+              v-model="form.userContactEmailSubjectTemplate"
+              :max-length="255"
+              show-word-limit
+            />
+            <template #extra>
+              {{ t('admin.settings.contactEmailTemplateHint') }}
+              <code>{{ subjectTemplateToken }}</code>
+            </template>
+          </a-form-item>
+          <a-form-item :label="t('admin.settings.contactEmailBodyTemplate')" required>
+            <a-textarea
+              v-model="form.userContactEmailBodyTemplate"
+              :auto-size="{ minRows: 7, maxRows: 14 }"
+              :max-length="20000"
+            />
+            <template #extra>
+              {{ t('admin.settings.contactEmailBodyHint') }}
+              <code>{{ contentTemplateToken }}</code>
+            </template>
+          </a-form-item>
+          <p class="template-variables">
+            {{ t('admin.settings.availableTemplateVariables') }}
+            <code v-for="variable in contactEmailVariables" :key="variable">
+              {{ variable }}
+            </code>
+          </p>
+        </a-form>
+      </a-card>
+
       <a-card class="surface-card security-card">
         <template #title>
           <span class="card-title">
@@ -347,6 +405,19 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   margin: 0;
   color: var(--color-text-2);
   line-height: 1.75;
+}
+
+.template-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: -4px 0 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.template-variables code {
+  color: rgb(var(--primary-6));
 }
 
 @media (max-width: 760px) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { RouterLink } from 'vue-router'
 import { Message, type TableColumnData } from '@arco-design/web-vue'
 import {
   IconTrophy,
@@ -122,9 +123,13 @@ onMounted(async () => {
                   <IconUserGroup v-if="record.anonymous" />
                   <IconUser v-else />
                 </a-avatar>
-                <span :class="{ 'anonymous-name': record.anonymous }">
+                <RouterLink
+                  :to="`/user/profile/${record.userId}`"
+                  class="user-profile-link"
+                  :class="{ 'anonymous-name': record.anonymous }"
+                >
                   {{ record.anonymous ? t('common.anonymous') : record.displayName }}
-                </span>
+                </RouterLink>
                 <a-tag v-if="record.banned" color="red" size="small">
                   {{ t('ranking.banned') }}
                 </a-tag>
@@ -253,6 +258,15 @@ onMounted(async () => {
 .anonymous-name {
   color: var(--color-text-3);
   font-style: italic;
+}
+
+.user-profile-link {
+  color: rgb(var(--primary-6));
+  text-decoration: none;
+}
+
+.user-profile-link:hover {
+  text-decoration: underline;
 }
 
 .traffic-value {

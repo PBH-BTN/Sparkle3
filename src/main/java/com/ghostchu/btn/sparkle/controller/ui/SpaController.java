@@ -15,6 +15,7 @@ public class SpaController {
             "/login",
             "/user",
             "/user/profile",
+            "/user/profile/{uid}",
             "/user/privacy-mode",
             "/userapp",
             "/userapp/create",
@@ -34,6 +35,7 @@ public class SpaController {
             "/admin/navigation",
             "/admin/storage",
             "/admin/version-alerts",
+            "/admin/user-contact-emails",
             "/admin/database-config",
             "/oauth/error",
             "/ping/queryIp/widget"

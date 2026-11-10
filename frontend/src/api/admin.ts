@@ -32,6 +32,7 @@ import type {
   StorageOverview,
   SwarmStatisticsStatus,
   TableStorage,
+  UserContactEmailAudit,
   VersionAlertDelivery,
   VersionAlertMatch,
   VersionAlertRule,
@@ -139,6 +140,10 @@ export const adminApi = {
     request<SwarmStatisticsStatus>('/api/admin/swarm-statistics/refresh', {
       method: 'POST',
     }),
+  userContactEmails: (page: number, size: number, keyword = '') =>
+    request<AdminPage<UserContactEmailAudit>>(
+      `/api/admin/user-contact-emails${queryString({ page, size, keyword })}`,
+    ),
 
   announcements: () => request<Announcement[]>('/api/admin/notices'),
   createAnnouncement: (body: AnnouncementInput) =>

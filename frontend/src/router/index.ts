@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
     },
     {
+      path: '/user/profile/:uid',
+      name: 'public-profile',
+      component: () => import('@/views/PublicProfileView.vue'),
+    },
+    {
       path: '/user/privacy-mode',
       name: 'privacy',
       component: () => import('@/views/PrivacyView.vue'),
@@ -121,6 +126,11 @@ const router = createRouter({
           path: 'version-alerts',
           name: 'admin-version-alerts',
           component: () => import('@/views/admin/AdminVersionAlertsView.vue'),
+        },
+        {
+          path: 'user-contact-emails',
+          name: 'admin-user-contact-emails',
+          component: () => import('@/views/admin/AdminUserContactEmailsView.vue'),
         },
         {
           path: 'database-config',

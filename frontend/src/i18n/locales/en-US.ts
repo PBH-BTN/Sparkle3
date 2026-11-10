@@ -155,6 +155,24 @@ export default {
     bytesHint:
       'Bytes is a unit of data and also a virtual score in Sparkle BTN. More data means more rules and fewer spoilers.',
   },
+  publicProfile: {
+    title: 'User profile',
+    accountDisabled: 'This user account is currently suspended.',
+    openOwnProfile: 'Open my full profile',
+    sendEmail: 'Send email',
+    emailUnavailable: 'This user privacy level does not allow messages from other users.',
+    send: 'Send',
+    emailHint:
+      'Emails are sent as plain text. Titles are limited to 80 characters and messages to 2,000 characters. HTML tags are removed, and you can send at most 15 emails per day.',
+    subject: 'Email title',
+    subjectPlaceholder: 'Enter a title of up to 80 characters',
+    content: 'Email message',
+    contentPlaceholder: 'Enter a plain-text message of up to 2,000 characters',
+    subjectRequired: 'Enter an email title.',
+    contentRequired: 'Enter an email message.',
+    sent: 'Email sent. You can send {remaining} more messages today.',
+    sendFailed: 'Unable to send the email.',
+  },
   privacy: {
     title: 'Privacy settings',
     description: 'Choose how much information is visible on public pages.',
@@ -167,8 +185,8 @@ export default {
     },
     levelDescriptions: {
       DISABLED: 'Show your full username and original avatar.',
-      LOW: 'Show your full username and a blurred avatar.',
-      MEDIUM: 'Show your full username without an avatar.',
+      LOW: 'Show a blurred username and a blurred avatar.',
+      MEDIUM: 'Show a blurred username without an avatar.',
       HIGH: 'Show neither your username nor avatar.',
     },
     fullUsername: 'Full username',
@@ -316,6 +334,7 @@ export default {
       settings: 'Runtime settings',
       storage: 'Storage & policies',
       versionAlerts: 'Version alerts',
+      userContactEmails: 'User email audit',
       announcements: 'Announcements',
       navigation: 'Navigation',
       databaseConfig: 'Config database',
@@ -609,6 +628,14 @@ export default {
       statisticsHelp:
         'The job uses last-seen time for the configured window and scans swarm_tracker only once per refresh. Disabling it stops scheduled and manual updates and hides both the traffic strip and ranking.',
       invalidStatistics: 'The refresh interval and statistics window must be greater than zero.',
+      invalidEmailTemplate:
+        'The subject template is missing the title variable, or the body template is missing the content variable.',
+      contactEmailTitle: 'User contact email templates',
+      contactEmailSubjectTemplate: 'Subject template',
+      contactEmailBodyTemplate: 'Body template',
+      contactEmailTemplateHint: 'Required title variable:',
+      contactEmailBodyHint: 'Required content variable:',
+      availableTemplateVariables: 'Available variables:',
       hotReloadTitle: 'Applied immediately',
       hotReloadText:
         'Relevant endpoints use the new values within seconds after saving. No restart is required.',
@@ -616,6 +643,19 @@ export default {
         'Only safe runtime settings are editable. Database, Redis, OAuth, mail, Sentry, and all tokens remain managed by application.yaml and environment variables.',
       invalidRange: 'The protocol version range is invalid.',
       securityTitle: 'Security boundary',
+    },
+    userContactEmails: {
+      title: 'User email audit',
+      description: 'Inspect emails sent by users from public profile pages.',
+      auditTitle: 'Delivery records',
+      searchPlaceholder: 'Search name, email, subject, IP, or User-Agent',
+      sentAt: 'Sent at',
+      sender: 'Sender',
+      recipient: 'Recipient',
+      subject: 'Email subject',
+      senderIp: 'Sender IP',
+      senderUserAgent: 'Sender User-Agent',
+      noData: 'No user contact emails have been sent.',
     },
     announcements: {
       title: 'Announcements',
