@@ -34,11 +34,11 @@ import java.util.concurrent.Future;
 @Service
 @Slf4j
 public class BittorrentTrafficStatisticsService {
-    private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 3, 7, 14, 30);
+    private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 3, 7);
     private static final int TOP_CITIES = 30;
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
     private static final long ACCESS_CACHE_MILLIS = 60_000L;
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:bittorrent-traffic:v2:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:bittorrent-traffic:v3:";
 
     private final BittorrentTrafficMapper mapper;
     private final BittorrentTrafficSnapshotService snapshotService;

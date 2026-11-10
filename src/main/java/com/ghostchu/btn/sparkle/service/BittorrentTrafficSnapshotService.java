@@ -18,14 +18,17 @@ public class BittorrentTrafficSnapshotService {
     private static final int RETENTION_DAYS = 35;
 
     private final BittorrentTrafficMapper mapper;
+    private final BanTrafficIncrementalService banTrafficIncrementalService;
     private final TransactionTemplate transactionTemplate;
     private final Object refreshLock = new Object();
 
     public BittorrentTrafficSnapshotService(
             BittorrentTrafficMapper mapper,
+            BanTrafficIncrementalService banTrafficIncrementalService,
             PlatformTransactionManager transactionManager
     ) {
         this.mapper = mapper;
+        this.banTrafficIncrementalService = banTrafficIncrementalService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -35,31 +38,20 @@ public class BittorrentTrafficSnapshotService {
                     .truncatedTo(ChronoUnit.HOURS)
                     .plusHours(1);
             OffsetDateTime startAt = endAt.minusDays(SNAPSHOT_DAYS);
-            OffsetDateTime banStartAt = endAt.minusDays(30);
             OffsetDateTime cutoff = endAt.minusDays(RETENTION_DAYS);
             AtomicInteger deleted = new AtomicInteger();
             AtomicInteger inserted = new AtomicInteger();
-            AtomicInteger banDeleted = new AtomicInteger();
-            AtomicInteger banInserted = new AtomicInteger();
 
+            banTrafficIncrementalService.refresh();
             transactionTemplate.executeWithoutResult(status -> {
-                banDeleted.set(mapper.deleteBanTrafficSnapshot());
-                mapper.createBanTrafficWorkspace();
-                mapper.clearBanTrafficWorkspace();
-                mapper.prepareBanTrafficWorkspace(banStartAt);
-                banInserted.set(mapper.insertBanTrafficSnapshot());
-                mapper.dropBanTrafficWorkspace();
                 deleted.set(mapper.deleteSwarmTrafficSnapshot(startAt, endAt));
                 inserted.set(mapper.insertSwarmTrafficSnapshot(startAt, endAt));
                 mapper.deleteExpiredSwarmTrafficSnapshot(cutoff);
             });
 
             log.info(
-                    "Refreshed BitTorrent traffic snapshots "
-                            + "(ban deleted={}, ban inserted={}, "
-                            + "swarm {} to {}, deleted={}, inserted={})",
-                    banDeleted.get(),
-                    banInserted.get(),
+                    "Refreshed BitTorrent swarm traffic snapshot {} to {} "
+                            + "(deleted={}, inserted={})",
                     startAt,
                     endAt,
                     deleted.get(),

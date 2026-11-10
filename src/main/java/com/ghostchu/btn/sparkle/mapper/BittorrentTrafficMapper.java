@@ -36,13 +36,21 @@ public interface BittorrentTrafficMapper {
 
     int deleteBanTrafficSnapshot();
 
-    void createBanTrafficWorkspace();
+    int upsertBanConnectionBackfill(
+            @Param("startAt") OffsetDateTime startAt,
+            @Param("endAt") OffsetDateTime endAt
+    );
 
-    int clearBanTrafficWorkspace();
+    int upsertBanConnectionsIncremental(
+            @Param("startAt") OffsetDateTime startAt,
+            @Param("endAt") OffsetDateTime endAt
+    );
 
-    int prepareBanTrafficWorkspace(@Param("startAt") OffsetDateTime startAt);
+    int deleteExpiredBanConnections(@Param("cutoff") OffsetDateTime cutoff);
 
-    int insertBanTrafficSnapshot();
+    int clearBanCityHourlyTraffic();
 
-    void dropBanTrafficWorkspace();
+    int rebuildBanCityHourlyTraffic(@Param("cutoff") OffsetDateTime cutoff);
+
+    int insertBanTrafficSnapshotFromDaily();
 }

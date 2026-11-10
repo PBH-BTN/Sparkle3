@@ -17,23 +17,10 @@ SELECT remove_compression_policy(
     if_exists => TRUE
 );
 
--- Keep the old aggregate object during this migration. An hourly refresh may
--- still be running when the application restarts; removing all policies stops
--- future work without racing an active refresh. The unused object can be
--- dropped safely in a later maintenance migration.
+-- Keep the old aggregate object to avoid racing an active refresh. Its
+-- policies are removed above and it is no longer used by the application.
 
-CREATE TABLE IF NOT EXISTS public.dashboard_ban_city_traffic (
-    range_days SMALLINT NOT NULL,
-    city TEXT NOT NULL,
-    upload_bytes NUMERIC(30, 0) NOT NULL,
-    download_bytes NUMERIC(30, 0) NOT NULL,
-    generated_at TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (range_days, city),
-    CONSTRAINT dashboard_ban_city_traffic_range_check
-        CHECK (range_days IN (1, 3, 7, 14, 30))
-);
-
-CREATE TEMP TABLE dashboard_ban_latest_connection_traffic (
+CREATE TABLE IF NOT EXISTS public.dashboard_ban_connection_traffic (
     userapps_id BIGINT NOT NULL,
     torrent_id BIGINT NOT NULL,
     peer_ip INET NOT NULL,
@@ -42,10 +29,14 @@ CREATE TEMP TABLE dashboard_ban_latest_connection_traffic (
     city TEXT NOT NULL,
     upload_bytes BIGINT NOT NULL,
     download_bytes BIGINT NOT NULL,
-    last_seen_at TIMESTAMPTZ NOT NULL
-) ON COMMIT DROP;
+    last_seen_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (userapps_id, torrent_id, peer_ip, peer_port, peer_id)
+);
 
-INSERT INTO dashboard_ban_latest_connection_traffic (
+CREATE INDEX IF NOT EXISTS dashboard_ban_connection_traffic_last_seen_idx
+    ON public.dashboard_ban_connection_traffic (last_seen_at);
+
+INSERT INTO public.dashboard_ban_connection_traffic (
     userapps_id,
     torrent_id,
     peer_ip,
@@ -73,7 +64,7 @@ SELECT
     MAX(ban_history.populate_time) AS last_seen_at
 FROM public.ban_history
 WHERE ban_history.populate_time >=
-          time_bucket(INTERVAL '1 hour', NOW()) + INTERVAL '1 hour' - INTERVAL '30 days'
+          time_bucket(INTERVAL '1 hour', NOW()) + INTERVAL '1 hour' - INTERVAL '7 days'
   AND ban_history.populate_time <
           time_bucket(INTERVAL '1 hour', NOW()) + INTERVAL '1 hour'
 GROUP BY
@@ -81,7 +72,30 @@ GROUP BY
     ban_history.torrent_id,
     ban_history.peer_ip,
     ban_history.peer_port,
-    COALESCE(ban_history.peer_id, '');
+    COALESCE(ban_history.peer_id, '')
+ON CONFLICT (
+    userapps_id,
+    torrent_id,
+    peer_ip,
+    peer_port,
+    peer_id
+) DO UPDATE
+SET city = EXCLUDED.city,
+    upload_bytes = EXCLUDED.upload_bytes,
+    download_bytes = EXCLUDED.download_bytes,
+    last_seen_at = EXCLUDED.last_seen_at
+WHERE EXCLUDED.last_seen_at >= dashboard_ban_connection_traffic.last_seen_at;
+
+CREATE TABLE IF NOT EXISTS public.dashboard_ban_city_traffic (
+    range_days SMALLINT NOT NULL,
+    city TEXT NOT NULL,
+    upload_bytes NUMERIC(30, 0) NOT NULL,
+    download_bytes NUMERIC(30, 0) NOT NULL,
+    generated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (range_days, city),
+    CONSTRAINT dashboard_ban_city_traffic_range_check
+        CHECK (range_days IN (1, 3, 7))
+);
 
 INSERT INTO public.dashboard_ban_city_traffic (
     range_days,
@@ -109,22 +123,11 @@ city_windows AS (
         COALESCE(SUM(download_bytes) FILTER (
             WHERE last_seen_at >= bounds.range_end - INTERVAL '3 days'
         ), 0)::numeric AS download_3d,
-        COALESCE(SUM(upload_bytes) FILTER (
-            WHERE last_seen_at >= bounds.range_end - INTERVAL '7 days'
-        ), 0)::numeric AS upload_7d,
-        COALESCE(SUM(download_bytes) FILTER (
-            WHERE last_seen_at >= bounds.range_end - INTERVAL '7 days'
-        ), 0)::numeric AS download_7d,
-        COALESCE(SUM(upload_bytes) FILTER (
-            WHERE last_seen_at >= bounds.range_end - INTERVAL '14 days'
-        ), 0)::numeric AS upload_14d,
-        COALESCE(SUM(download_bytes) FILTER (
-            WHERE last_seen_at >= bounds.range_end - INTERVAL '14 days'
-        ), 0)::numeric AS download_14d,
-        COALESCE(SUM(upload_bytes), 0)::numeric AS upload_30d,
-        COALESCE(SUM(download_bytes), 0)::numeric AS download_30d
-    FROM dashboard_ban_latest_connection_traffic latest
+        COALESCE(SUM(upload_bytes), 0)::numeric AS upload_7d,
+        COALESCE(SUM(download_bytes), 0)::numeric AS download_7d
+    FROM dashboard_ban_connection_traffic latest
     CROSS JOIN bounds
+    WHERE latest.last_seen_at >= bounds.range_end - INTERVAL '7 days'
     GROUP BY latest.city, bounds.range_end
 )
 SELECT
@@ -138,9 +141,7 @@ CROSS JOIN LATERAL (
     VALUES
         (1::SMALLINT, upload_1d, download_1d),
         (3::SMALLINT, upload_3d, download_3d),
-        (7::SMALLINT, upload_7d, download_7d),
-        (14::SMALLINT, upload_14d, download_14d),
-        (30::SMALLINT, upload_30d, download_30d)
+        (7::SMALLINT, upload_7d, download_7d)
 ) AS ranges(range_days, upload_bytes, download_bytes)
 WHERE ranges.upload_bytes > 0
    OR ranges.download_bytes > 0
@@ -149,7 +150,8 @@ SET upload_bytes = EXCLUDED.upload_bytes,
     download_bytes = EXCLUDED.download_bytes,
     generated_at = EXCLUDED.generated_at;
 
-DROP TABLE dashboard_ban_latest_connection_traffic;
+DELETE FROM public.dashboard_ban_city_traffic
+WHERE range_days NOT IN (1, 3, 7);
 
 UPDATE public.app_config_entries
 SET config_value = '60',

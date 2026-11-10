@@ -88,6 +88,9 @@ class FlywayMigrationIntegrationTest {
                     SELECT
                         to_regclass('public.dashboard_swarm_hourly_traffic') IS NOT NULL
                         AND to_regclass('public.dashboard_ban_city_traffic') IS NOT NULL
+                        AND to_regclass('public.dashboard_ban_connection_traffic') IS NOT NULL
+                        AND to_regclass('public.dashboard_ban_city_hourly_traffic') IS NOT NULL
+                        AND to_regclass('public.dashboard_bittorrent_traffic_refresh_state') IS NOT NULL
                     """)) {
                 assertTrue(result.next());
                 assertTrue(result.getBoolean(1));

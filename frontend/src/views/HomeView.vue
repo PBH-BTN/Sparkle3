@@ -546,8 +546,6 @@ onMounted(() => {
           <div class="chart-control">
             <span>{{ t('home.statistics.range') }}</span>
             <a-radio-group v-model="trafficDays" type="button">
-              <a-radio :value="30">{{ t('home.last30Days') }}</a-radio>
-              <a-radio :value="14">{{ t('home.last14Days') }}</a-radio>
               <a-radio :value="7">{{ t('home.last7Days') }}</a-radio>
               <a-radio :value="3">{{ t('home.statistics.last3Days') }}</a-radio>
               <a-radio :value="1">{{ t('home.last24Hours') }}</a-radio>
