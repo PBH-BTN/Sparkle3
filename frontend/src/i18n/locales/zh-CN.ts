@@ -499,6 +499,7 @@ export default {
       saveModule: '保存模块',
       restartRequired: '重启后生效',
       includeModulesHint: '多个完整模块类名使用英文逗号分隔。',
+      cronDisabledHint: '输入 - 可暂停此模块的计划任务，同时保持模块开关为启用状态。',
       configMoved: '已从通用配置表独立管理',
       units: {
         hours: '小时',

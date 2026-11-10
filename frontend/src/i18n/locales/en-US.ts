@@ -510,6 +510,7 @@ export default {
       saveModule: 'Save module',
       restartRequired: 'Restart required',
       includeModulesHint: 'Separate full module class names with commas.',
+      cronDisabledHint: 'Use - to pause this scheduled job while keeping the module enabled.',
       configMoved: 'Managed outside the generic config table',
       units: {
         hours: 'hours',

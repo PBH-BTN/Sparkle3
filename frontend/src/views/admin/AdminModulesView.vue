@@ -172,6 +172,9 @@ onMounted(load)
                 <template v-if="field.restartRequired" #extra>
                   <span class="restart-hint">{{ t('admin.modules.restartRequired') }}</span>
                 </template>
+                <template v-else-if="field.type === 'cron'" #extra>
+                  {{ t('admin.modules.cronDisabledHint') }}
+                </template>
                 <template v-else-if="field.type === 'text'" #extra>
                   {{ t('admin.modules.includeModulesHint') }}
                 </template>

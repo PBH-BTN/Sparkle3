@@ -330,7 +330,9 @@ public class AnalyseModuleConfigService {
                             .toPlainString();
                 }
                 case "cron" -> {
-                    if (value.isBlank()) throw new IllegalArgumentException();
+                    if (AnalyseModuleCron.isDisabled(value)) {
+                        yield AnalyseModuleCron.DISABLED;
+                    }
                     CronExpression.parse(value);
                     yield value;
                 }

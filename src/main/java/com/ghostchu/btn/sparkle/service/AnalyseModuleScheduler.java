@@ -53,10 +53,11 @@ public class AnalyseModuleScheduler {
             if (runner == null) continue;
             boolean enabled = configService.isEnabled(moduleId);
             String cron = configService.textValue(moduleId, "schedule", "");
-            if (!enabled || cron.isBlank()) {
+            if (!enabled || AnalyseModuleCron.isDisabled(cron)) {
                 cancel(moduleId);
                 continue;
             }
+            cron = AnalyseModuleCron.normalize(cron);
             String signature = cron;
             desired.add(moduleId);
             if (signature.equals(signatures.get(moduleId)) && futures.containsKey(moduleId)) {
