@@ -41,6 +41,7 @@ pnpm --dir frontend build
 - 手动规则：维护 `rules` 表中的 IP 黑名单、Peer ID、客户端名称、端口和脚本规则，并可预览生成的 IP 黑名单。
 - 运行设置：热更新协议版本、IP 查询 PoW、客户端发现开关，以及最近 7 日流量统计的启用状态、刷新间隔、统计窗口和手动刷新。
 - 公告管理：发布全站顶部公告，支持绿、黄、蓝、红四种 Arco 警告样式、中英文内容、定时生效、排序和用户关闭。
+- Navbar 导航管理：内置项可启停、改名、选择图标和排序；自定义项支持中英文名称、站内路径或外部链接。
 - 存储与策略：查看普通表与 TimescaleDB hypertable 占用，显示压缩/列存前后大小和 chunk 状态，管理自动压缩、列存和自动淘汰策略。
 - `ban_history` 维护：按 cutoff 预览并删除完整旧 chunks；删除需要输入确认文本，避免误操作。
 - 版本提醒：基于客户端产品名、User-Agent 和 NPM 语义化版本范围配置邮件通知，支持启停、编辑、匹配测试、真实测试邮件和发送记录。
@@ -86,6 +87,7 @@ PostgreSQL 选择 hash join，避免重复 CIDR 嵌套循环。
 
 ```bash
 psql -f src/main/resources/db_sql/v24_swarm_statistics_and_announcements.sql
+psql -f src/main/resources/db_sql/v25_navigation_items.sql
 ```
 
 TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维护窗口执行该脚本。上线前建议

@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ui.dto;
 
 import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
 import com.ghostchu.btn.sparkle.controller.ui.userapp.dto.UserApplicationDto;
+import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.PublicNavigationItem;
 import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
@@ -95,10 +96,11 @@ public final class UiModels {
     public record SessionResponse(
             boolean authenticated,
             UserView user,
-            TrafficSummary traffic
+            TrafficSummary traffic,
+            List<PublicNavigationItem> navigation
     ) {
         public static SessionResponse anonymous() {
-            return new SessionResponse(false, null, null);
+            return new SessionResponse(false, null, null, List.of());
         }
     }
 

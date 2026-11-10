@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -8,8 +8,10 @@ import {
   IconDashboard,
   IconDown,
   IconExclamationCircle,
+  IconFile,
   IconFire,
   IconHome,
+  IconLink,
   IconList,
   IconMenu,
   IconSearch,
@@ -24,36 +26,42 @@ import { useFormatters } from '@/utils/format'
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const mobileMenuOpen = ref(false)
 
-const navItems = computed(() => {
-  const items = [
-    { key: '/', label: t('nav.home'), icon: IconHome },
-    { key: '/userapp', label: t('nav.userApps'), icon: IconApps },
-    { key: '/banhistory', label: t('nav.banHistory'), icon: IconBug },
-    { key: '/client-discovery', label: t('nav.clientDiscovery'), icon: IconSearch },
-    { key: '/swarm-tracker', label: t('nav.swarmTracker'), icon: IconList },
-  ]
-  if (session.traffic) {
-    items.push({
-      key: '/ranking/swarmStatistics',
-      label: t('nav.ranking'),
-      icon: IconTrophy,
-    })
-  }
-  return items
-})
+const navigationIcons: Record<string, Component> = {
+  home: IconHome,
+  apps: IconApps,
+  ban: IconBug,
+  search: IconSearch,
+  swarm: IconList,
+  ranking: IconTrophy,
+  link: IconLink,
+  file: IconFile,
+  dashboard: IconDashboard,
+}
+
+const navItems = computed(() =>
+  session.navigation.map((item) => ({
+    id: item.id,
+    href: item.href,
+    openInNewTab: item.openInNewTab,
+    label:
+      locale.value.startsWith('en')
+        ? item.labelEn || item.labelZh
+        : item.labelZh || item.labelEn,
+    icon: navigationIcons[item.icon] ?? IconLink,
+  })),
+)
 
 const selectedKey = computed(() => {
-  if (route.path === '/') return '/'
   return (
     navItems.value.find(
       (item) =>
-        item.key !== '/' &&
-        (route.path === item.key || route.path.startsWith(`${item.key}/`)),
-    )?.key ?? ''
+        item.href.startsWith('/') &&
+        (route.path === item.href || route.path.startsWith(`${item.href}/`)),
+    )?.id ?? ''
   )
 })
 
@@ -65,9 +73,23 @@ const trafficIsStale = computed(() => {
   return Number.isNaN(timestamp) || Date.now() - timestamp > staleAfterMinutes * 60 * 1000
 })
 
-function navigate(path: string) {
+function navigate(id: string) {
   mobileMenuOpen.value = false
-  router.push(path)
+  const item = navItems.value.find((candidate) => candidate.id === id)
+  if (!item) {
+    router.push(id)
+    return
+  }
+  const internal = item.href.startsWith('/')
+  if (item.openInNewTab) {
+    window.open(item.href, '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (internal) {
+    router.push(item.href)
+  } else {
+    window.location.assign(item.href)
+  }
 }
 </script>
 
@@ -90,7 +112,7 @@ function navigate(path: string) {
             :ellipsis="true"
             @menu-item-click="navigate"
           >
-            <a-menu-item v-for="item in navItems" :key="item.key">
+            <a-menu-item v-for="item in navItems" :key="item.id">
               <template #icon><component :is="item.icon" /></template>
               {{ item.label }}
             </a-menu-item>
@@ -195,7 +217,7 @@ function navigate(path: string) {
         {{ t('app.shortName') }}
       </template>
       <a-menu mode="vertical" :selected-keys="[selectedKey]" @menu-item-click="navigate">
-        <a-menu-item v-for="item in navItems" :key="item.key">
+        <a-menu-item v-for="item in navItems" :key="item.id">
           <template #icon><component :is="item.icon" /></template>
           {{ item.label }}
         </a-menu-item>

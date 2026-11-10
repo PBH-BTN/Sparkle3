@@ -2,6 +2,7 @@ import { request } from './http'
 import type {
   Announcement,
   AnnouncementInput,
+  AdminNavigationItem,
   AdminApplication,
   AdminApplicationCredentials,
   AdminApplicationInput,
@@ -19,6 +20,7 @@ import type {
   DatabaseConfigEntry,
   DatabaseConfigSummary,
   ManualRule,
+  NavigationItemInput,
   RetentionPolicyInput,
   RuleInput,
   RuleSummary,
@@ -134,6 +136,22 @@ export const adminApi = {
     }),
   deleteAnnouncement: (id: number) =>
     request<void>(`/api/admin/announcements/${id}`, {
+      method: 'DELETE',
+    }),
+
+  navigation: () => request<AdminNavigationItem[]>('/api/admin/navigation'),
+  createNavigationItem: (body: NavigationItemInput) =>
+    request<AdminNavigationItem>('/api/admin/navigation', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateNavigationItem: (id: string, body: NavigationItemInput) =>
+    request<AdminNavigationItem>(`/api/admin/navigation/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteNavigationItem: (id: string) =>
+    request<void>(`/api/admin/navigation/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
 

@@ -8,6 +8,7 @@ import {
   IconCode,
   IconDashboard,
   IconFile,
+  IconMenu,
   IconNotification,
   IconSettings,
   IconStorage,
@@ -26,6 +27,7 @@ const items = computed(() => [
   { key: '/admin/storage', label: t('admin.nav.storage'), icon: IconStorage },
   { key: '/admin/version-alerts', label: t('admin.nav.versionAlerts'), icon: IconNotification },
   { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },
+  { key: '/admin/navigation', label: t('admin.nav.navigation'), icon: IconMenu },
   { key: '/admin/database-config', label: t('admin.nav.databaseConfig'), icon: IconFile },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },
 ])

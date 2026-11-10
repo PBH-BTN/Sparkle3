@@ -9,6 +9,7 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.NavigationService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,15 +27,18 @@ public class HomeApiController {
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
     private final IUserService userService;
     private final AdminConfigService adminConfigService;
+    private final NavigationService navigationService;
 
     public HomeApiController(@Qualifier("stringLongRedisTemplate") RedisTemplate<String, Long> redisTemplate,
                              IUserSwarmStatisticsService userSwarmStatisticsService,
                              IUserService userService,
-                             AdminConfigService adminConfigService) {
+                             AdminConfigService adminConfigService,
+                             NavigationService navigationService) {
         this.redisTemplate = redisTemplate;
         this.userSwarmStatisticsService = userSwarmStatisticsService;
         this.userService = userService;
         this.adminConfigService = adminConfigService;
+        this.navigationService = navigationService;
     }
 
     @GetMapping("/session")
@@ -47,8 +51,9 @@ public class HomeApiController {
             return SessionResponse.anonymous();
         }
         var statisticsConfig = adminConfigService.get();
+        var navigation = navigationService.listPublic();
         if (!statisticsConfig.swarmStatisticsEnabled()) {
-            return new SessionResponse(true, UserView.from(user), null);
+            return new SessionResponse(true, UserView.from(user), null, navigation);
         }
         var statistics = userSwarmStatisticsService.getById(user.getId());
         return new SessionResponse(
@@ -58,7 +63,8 @@ public class HomeApiController {
                         statistics,
                         statisticsConfig.swarmStatisticsRefreshMinutes(),
                         statisticsConfig.swarmStatisticsWindowDays()
-                )
+                ),
+                navigation
         );
     }
 

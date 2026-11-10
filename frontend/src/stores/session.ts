@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { uiApi } from '@/api'
-import type { SessionUser, TrafficSummary } from '@/api/types'
+import type { NavigationItem, SessionUser, TrafficSummary } from '@/api/types'
 
 interface SessionState {
   loading: boolean
@@ -8,6 +8,7 @@ interface SessionState {
   authenticated: boolean
   user: SessionUser | null
   traffic: TrafficSummary | null
+  navigation: NavigationItem[]
 }
 
 export const useSessionStore = defineStore('session', {
@@ -17,6 +18,7 @@ export const useSessionStore = defineStore('session', {
     authenticated: false,
     user: null,
     traffic: null,
+    navigation: [],
   }),
   actions: {
     async load() {
@@ -27,6 +29,7 @@ export const useSessionStore = defineStore('session', {
         this.authenticated = session.authenticated
         this.user = session.user
         this.traffic = session.traffic
+        this.navigation = session.navigation
       } finally {
         this.loading = false
         this.loaded = true
@@ -36,6 +39,7 @@ export const useSessionStore = defineStore('session', {
       this.authenticated = false
       this.user = null
       this.traffic = null
+      this.navigation = []
     },
   },
 })

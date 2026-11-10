@@ -30,6 +30,7 @@ public class SpaController {
             "/admin/rules",
             "/admin/settings",
             "/admin/announcements",
+            "/admin/navigation",
             "/admin/storage",
             "/admin/version-alerts",
             "/admin/database-config",

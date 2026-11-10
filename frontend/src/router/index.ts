@@ -98,6 +98,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminAnnouncementsView.vue'),
         },
         {
+          path: 'navigation',
+          name: 'admin-navigation',
+          component: () => import('@/views/admin/AdminNavigationView.vue'),
+        },
+        {
           path: 'storage',
           name: 'admin-storage',
           component: () => import('@/views/admin/AdminStorageView.vue'),

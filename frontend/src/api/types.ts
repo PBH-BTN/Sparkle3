@@ -29,10 +29,31 @@ export interface TrafficSummary {
   windowDays: number
 }
 
+export type NavigationIcon =
+  | 'home'
+  | 'apps'
+  | 'ban'
+  | 'search'
+  | 'swarm'
+  | 'ranking'
+  | 'link'
+  | 'file'
+  | 'dashboard'
+
+export interface NavigationItem {
+  id: string
+  labelZh: string
+  labelEn: string
+  href: string
+  icon: NavigationIcon
+  openInNewTab: boolean
+}
+
 export interface SessionResponse {
   authenticated: boolean
   user: SessionUser | null
   traffic: TrafficSummary | null
+  navigation: NavigationItem[]
 }
 
 export interface Announcement {

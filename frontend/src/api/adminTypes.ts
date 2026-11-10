@@ -1,4 +1,4 @@
-import type { PrivacyLevel } from './types'
+import type { NavigationIcon, PrivacyLevel } from './types'
 
 export interface AdminPage<T> {
   records: T[]
@@ -193,6 +193,31 @@ export interface AnnouncementInput {
   sortOrder: number
   startsAt: string | null
   endsAt: string | null
+}
+
+export interface AdminNavigationItem {
+  id: string
+  builtIn: boolean
+  labelZh: string
+  labelEn: string
+  href: string
+  icon: NavigationIcon
+  sortOrder: number
+  enabled: boolean
+  openInNewTab: boolean
+  createdAt: string
+  updatedAt: string
+  updatedBy: number | null
+}
+
+export interface NavigationItemInput {
+  labelZh: string
+  labelEn: string
+  href: string
+  icon: NavigationIcon
+  sortOrder: number
+  enabled: boolean
+  openInNewTab: boolean
 }
 
 export interface StoragePolicy {
