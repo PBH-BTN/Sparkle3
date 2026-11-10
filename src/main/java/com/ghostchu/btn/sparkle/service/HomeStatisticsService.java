@@ -46,7 +46,7 @@ public class HomeStatisticsService {
     private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 7, 14, 30);
     private static final Set<String> ALLOWED_SOURCES = Set.of("ban", "all");
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v2:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v3:";
     private static final Pattern CLIENT_VERSION_PATTERN = Pattern.compile(
             "([a-z][a-z0-9._ +-]{0,63})/([0-9]+(?:\\.[0-9a-z.-]+){0,3})",
             Pattern.CASE_INSENSITIVE
@@ -59,8 +59,8 @@ public class HomeStatisticsService {
             "mozilla", "applewebkit", "chrome", "safari", "gecko",
             "trident", "edg", "firefox", "windows", "macintosh", "linux", "android"
     );
-    private static final int TOP_DIMENSIONS = 10;
-    private static final int TOP_CITIES = 8;
+    private static final int TOP_DIMENSIONS = 15;
+    private static final int TOP_CITIES = 15;
 
     private final HomeStatisticsMapper mapper;
     private final JdbcTemplate jdbcTemplate;
@@ -198,7 +198,7 @@ public class HomeStatisticsService {
                     timedQuery("companion IP versions", this::companionIpVersions));
             Future<DistributionChart> companionGeoIp = executor.submit(() ->
                     timedQuery("companion GeoIP", () ->
-                            distribution(mapper.selectCompanionGeoIpDistribution())));
+                            distribution(mapper.selectCompanionGeoIpDistribution(TOP_DIMENSIONS))));
 
             HomeStatisticsResponse response = new HomeStatisticsResponse(
                     days,

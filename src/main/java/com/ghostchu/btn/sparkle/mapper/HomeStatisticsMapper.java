@@ -45,5 +45,7 @@ public interface HomeStatisticsMapper {
 
     List<DashboardDimensionCountDto> selectCompanionIpVersions();
 
-    List<DashboardDimensionCountDto> selectCompanionGeoIpDistribution();
+    List<DashboardDimensionCountDto> selectCompanionGeoIpDistribution(
+            @Param("limit") int limit
+    );
 }

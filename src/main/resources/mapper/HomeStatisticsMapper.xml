@@ -262,6 +262,6 @@
             SUM(value) OVER () AS total
         FROM grouped
         ORDER BY value DESC, name
-        LIMIT 10
+        LIMIT #{limit}
     </select>
 </mapper>

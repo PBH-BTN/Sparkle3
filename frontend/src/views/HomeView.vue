@@ -29,6 +29,12 @@ const CHART_COLORS = [
   '#FF7D00',
   '#3491FA',
   '#D91AD9',
+  '#0FC6C2',
+  '#FADC19',
+  '#CB2634',
+  '#B37FEB',
+  '#9FDB1D',
+  '#6C5CE7',
   '#86909C',
 ]
 
@@ -385,7 +391,7 @@ onMounted(() => {
           <a-col :xs="24" :xl="12">
             <a-card class="surface-card chart-card" :title="t('home.statistics.peerIds')">
               <template #extra>
-                <a-tag color="arcoblue">{{ t('home.statistics.top10') }}</a-tag>
+                <a-tag color="arcoblue">{{ t('home.statistics.topItems') }}</a-tag>
               </template>
               <EChart
                 v-if="hasDistribution(networkStats?.peerIds)"
@@ -400,7 +406,7 @@ onMounted(() => {
           <a-col :xs="24" :xl="12">
             <a-card class="surface-card chart-card" :title="t('home.statistics.clientNames')">
               <template #extra>
-                <a-tag color="green">{{ t('home.statistics.top10') }}</a-tag>
+                <a-tag color="green">{{ t('home.statistics.topItems') }}</a-tag>
               </template>
               <EChart
                 v-if="hasDistribution(networkStats?.clientNames)"
