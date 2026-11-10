@@ -104,6 +104,7 @@ const columns = computed<TableColumnData[]>(() => [
     dataIndex: 'peer_ip',
     slotName: 'peerIp',
     width: 170,
+    ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
@@ -118,6 +119,7 @@ const columns = computed<TableColumnData[]>(() => [
     dataIndex: 'peer_id',
     slotName: 'peerId',
     width: 170,
+    ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
@@ -125,6 +127,7 @@ const columns = computed<TableColumnData[]>(() => [
     dataIndex: 'peer_client_name',
     slotName: 'peerClientName',
     width: 170,
+    ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
@@ -134,26 +137,29 @@ const columns = computed<TableColumnData[]>(() => [
     width: 100,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
-  { title: t('banHistory.geoIp'), slotName: 'geoIp', width: 150 },
+  { title: t('banHistory.geoIp'), slotName: 'geoIp', width: 170, ellipsis: true },
   {
     title: t('banHistory.moduleName'),
     dataIndex: 'module_name',
     slotName: 'moduleName',
-    width: 190,
+    width: 220,
+    ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
     title: t('banHistory.rule'),
     dataIndex: 'rule',
     slotName: 'rule',
-    width: 180,
+    width: 220,
+    ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
     title: t('banHistory.descriptionField'),
     dataIndex: 'description',
     slotName: 'descriptionField',
-    width: 220,
+    width: 300,
+    ellipsis: true,
   },
   { title: '', slotName: 'details', width: 70, fixed: 'right' },
 ])
@@ -300,7 +306,7 @@ onMounted(async () => {
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1900 }"
+        :scroll="{ x: 2050 }"
         row-key="id"
         stripe
         @sorter-change="changeSort"
@@ -314,33 +320,41 @@ onMounted(async () => {
         <template #insertTime="{ record }">{{ formatDate(record.insertTime) }}</template>
         <template #torrentId="{ record }">{{ record.torrentId ?? 'N/A' }}</template>
         <template #peerIp="{ record }">
-          <code class="mono">{{ record.peerIp || 'N/A' }}</code>
+          <code class="mono table-cell-ellipsis" :title="record.peerIp || ''">
+            {{ record.peerIp || 'N/A' }}
+          </code>
         </template>
         <template #peerPort="{ record }">{{ record.peerPort ?? 'N/A' }}</template>
         <template #peerId="{ record }">
-          <span class="text-truncate mono" :title="record.peerId || ''">
+          <span class="table-cell-ellipsis mono" :title="record.peerId || ''">
             {{ record.peerId || 'N/A' }}
           </span>
         </template>
         <template #peerClientName="{ record }">
-          {{ record.peerClientName || 'N/A' }}
+          <span class="table-cell-ellipsis" :title="record.peerClientName || ''">
+            {{ record.peerClientName || 'N/A' }}
+          </span>
         </template>
         <template #progress="{ record }">{{ formatProgress(record.peerProgress) }}</template>
         <template #geoIp="{ record }">
-          <span class="geoip-text">{{ geoIp(record) }}</span>
+          <span class="geoip-text table-cell-ellipsis" :title="geoIp(record)">
+            {{ geoIp(record) }}
+          </span>
         </template>
         <template #moduleName="{ record }">
           <a-tooltip :content="record.moduleName || 'N/A'">
-            <a-tag color="arcoblue">{{ shortModuleName(record.moduleName) }}</a-tag>
+            <a-tag color="arcoblue" nowrap class="module-tag">
+              {{ shortModuleName(record.moduleName) }}
+            </a-tag>
           </a-tooltip>
         </template>
         <template #rule="{ record }">
-          <span class="text-truncate" :title="record.rule || ''">
+          <span class="table-cell-ellipsis" :title="record.rule || ''">
             {{ record.rule || 'N/A' }}
           </span>
         </template>
         <template #descriptionField="{ record }">
-          <span class="text-truncate" :title="record.description || ''">
+          <span class="table-cell-ellipsis" :title="record.description || ''">
             {{ record.description || 'N/A' }}
           </span>
         </template>
@@ -379,6 +393,27 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.table-card :deep(.arco-table-td) {
+  overflow: hidden;
+}
+
+.table-cell-ellipsis {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.module-tag {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
 .geoip-text {
   font-size: 12px;
 }
