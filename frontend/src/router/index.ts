@@ -73,6 +73,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminDashboardView.vue'),
         },
         {
+          path: 'homepage-statistics',
+          name: 'admin-homepage-statistics',
+          component: () => import('@/views/admin/AdminHomepageStatisticsView.vue'),
+        },
+        {
           path: 'users',
           name: 'admin-users',
           component: () => import('@/views/admin/AdminUsersView.vue'),

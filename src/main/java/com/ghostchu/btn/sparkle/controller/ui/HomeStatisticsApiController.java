@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.controller.ui;
 
-import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeStatisticsResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeCompanionStatisticsResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeNetworkStatisticsResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.HomeStatisticsService;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +17,15 @@ public class HomeStatisticsApiController {
     private final HomeStatisticsService statisticsService;
 
     @GetMapping("/home")
-    public HomeStatisticsResponse home(
+    public HomeNetworkStatisticsResponse home(
             @RequestParam(defaultValue = "7") int days,
             @RequestParam(defaultValue = "ban") String source
     ) throws BusinessException {
-        return statisticsService.get(days, source);
+        return statisticsService.getNetworkStatistics(days, source);
+    }
+
+    @GetMapping("/companion")
+    public HomeCompanionStatisticsResponse companion() {
+        return statisticsService.getCompanionStatistics();
     }
 }

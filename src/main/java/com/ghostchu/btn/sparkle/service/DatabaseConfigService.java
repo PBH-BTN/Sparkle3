@@ -32,7 +32,19 @@ public class DatabaseConfigService {
             "sparkle.client-discovery.enabled",
             "sparkle.swarm-statistics-track.enabled",
             "sparkle.swarm-statistics-track.refresh-interval-minutes",
-            "sparkle.swarm-statistics-track.window-days"
+            "sparkle.swarm-statistics-track.window-days",
+            "sparkle.homepage-statistics-refresh.modules.ban-history.enabled",
+            "sparkle.homepage-statistics-refresh.modules.ban-history.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.active-apps.enabled",
+            "sparkle.homepage-statistics-refresh.modules.active-apps.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.swarm-tracker.enabled",
+            "sparkle.homepage-statistics-refresh.modules.swarm-tracker.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.torrents.enabled",
+            "sparkle.homepage-statistics-refresh.modules.torrents.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.network-charts.enabled",
+            "sparkle.homepage-statistics-refresh.modules.network-charts.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.companion-charts.enabled",
+            "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes"
     );
     private static final String TABLE = "app_config_entries";
 

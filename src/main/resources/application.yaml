@@ -251,11 +251,26 @@ sparkle:
   version-alert:
     from-address: "sparkle@pbh-btn.com"
     from-name: "SparkleBTN 系统通知"
-  statistics:
-    ban-count-refresh-cron: "0 10 * * * *"
-    swarm-tracker-count-refresh-cron: "0 20 * * * *"
-    userapp-count-refresh-cron: "0 30 * * * *"
-    torrent-count-refresh-cron: "0 40 * * * *"
+  homepage-statistics-refresh:
+    modules:
+      ban-history:
+        enabled: true
+        refresh-interval-minutes: 10
+      active-apps:
+        enabled: true
+        refresh-interval-minutes: 30
+      swarm-tracker:
+        enabled: true
+        refresh-interval-minutes: 20
+      torrents:
+        enabled: true
+        refresh-interval-minutes: 40
+      network-charts:
+        enabled: true
+        refresh-interval-minutes: 5
+      companion-charts:
+        enabled: true
+        refresh-interval-minutes: 5
   admin:
     user-ip-warning:
       duration: 1209600000

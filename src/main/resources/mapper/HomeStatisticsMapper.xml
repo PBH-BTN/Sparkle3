@@ -116,6 +116,46 @@
         </choose>
     </select>
 
+    <select id="selectClientNameTrend" resultMap="dailyCountResult">
+        <choose>
+            <when test="source == 'ban' and useAggregates">
+                SELECT bucket, peer_client_name AS name, SUM(ban_count)::bigint AS value
+                FROM dashboard_ban_daily_client
+                WHERE bucket &gt;= #{startAt} AND bucket &lt; #{endAt}
+                GROUP BY bucket, peer_client_name
+                ORDER BY bucket, value DESC, peer_client_name
+            </when>
+            <when test="source == 'ban'">
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), populate_time) AS bucket,
+                    COALESCE(NULLIF(peer_client_name, ''), 'Unknown') AS name,
+                    COUNT(*)::bigint AS value
+                FROM ban_history
+                WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                GROUP BY bucket, name
+                ORDER BY bucket, value DESC, name
+            </when>
+            <otherwise>
+                WITH events AS MATERIALIZED (
+                    SELECT populate_time AS event_time, peer_client_name
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    UNION ALL
+                    SELECT last_time_seen AS event_time, peer_client_name
+                    FROM swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+                )
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), event_time) AS bucket,
+                    COALESCE(NULLIF(peer_client_name, ''), 'Unknown') AS name,
+                    COUNT(*)::bigint AS value
+                FROM events
+                GROUP BY bucket, name
+                ORDER BY bucket, value DESC, name
+            </otherwise>
+        </choose>
+    </select>
+
     <select id="selectGeoCityTrend" resultMap="dailyCountResult">
         <choose>
             <when test="source == 'ban' and useAggregates">

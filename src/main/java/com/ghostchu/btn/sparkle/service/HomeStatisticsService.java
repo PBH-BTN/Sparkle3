@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.ChartDatum;
 import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.ChartSeries;
 import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.DistributionChart;
-import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeStatisticsResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeCompanionStatisticsResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.HomeNetworkStatisticsResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.HomeStatisticsModels.StackedAreaChart;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.HomeStatisticsMapper;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -36,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,7 +45,7 @@ public class HomeStatisticsService {
     private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 7, 14, 30);
     private static final Set<String> ALLOWED_SOURCES = Set.of("ban", "all");
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v3:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v5:";
     private static final Pattern CLIENT_VERSION_PATTERN = Pattern.compile(
             "([a-z][a-z0-9._ +-]{0,63})/([0-9]+(?:\\.[0-9a-z.-]+){0,3})",
             Pattern.CASE_INSENSITIVE
@@ -68,7 +67,6 @@ public class HomeStatisticsService {
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
-    private final AtomicBoolean warming = new AtomicBoolean();
 
     public HomeStatisticsService(
             HomeStatisticsMapper mapper,
@@ -82,7 +80,10 @@ public class HomeStatisticsService {
         this.objectMapper = objectMapper;
     }
 
-    public @NotNull HomeStatisticsResponse get(int days, String requestedSource)
+    public @NotNull HomeNetworkStatisticsResponse getNetworkStatistics(
+            int days,
+            String requestedSource
+    )
             throws BusinessException {
         if (!ALLOWED_DAYS.contains(days)) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Unsupported statistics range");
@@ -94,58 +95,81 @@ public class HomeStatisticsService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Unsupported statistics source");
         }
 
-        String cacheKey = CACHE_KEY_PREFIX + days + ":" + source;
-        HomeStatisticsResponse cached = readCache(cacheKey);
+        String cacheKey = networkCacheKey(days, source);
+        return cached(cacheKey, HomeNetworkStatisticsResponse.class,
+                () -> calculateNetwork(days, source));
+    }
+
+    public @NotNull HomeCompanionStatisticsResponse getCompanionStatistics() {
+        return cached(
+                companionCacheKey(),
+                HomeCompanionStatisticsResponse.class,
+                this::calculateCompanion
+        );
+    }
+
+    public void refreshNetworkStatistics() throws BusinessException {
+        List<String> cacheKeys = new ArrayList<>();
+        for (int days : ALLOWED_DAYS) {
+            for (String source : ALLOWED_SOURCES) {
+                cacheKeys.add(networkCacheKey(days, source));
+            }
+        }
+        evictCacheKeys(cacheKeys);
+        getNetworkStatistics(7, "ban");
+    }
+
+    public void refreshCompanionStatistics() {
+        evictCacheKeys(List.of(companionCacheKey()));
+        getCompanionStatistics();
+    }
+
+    private <T> T cached(String cacheKey, Class<T> responseType,
+                         java.util.function.Supplier<T> loader) {
+        T cached = readCache(cacheKey, responseType);
         if (cached != null) {
             return cached;
         }
         Object cacheLock = cacheLocks.computeIfAbsent(cacheKey, ignored -> new Object());
         synchronized (cacheLock) {
-            cached = readCache(cacheKey);
+            cached = readCache(cacheKey, responseType);
             if (cached != null) {
                 return cached;
             }
-            HomeStatisticsResponse response = calculate(days, source);
+            T response = loader.get();
             writeCache(cacheKey, response);
             return response;
         }
     }
 
-    @Scheduled(fixedRate = 300_000, initialDelay = 20_000)
-    public void warmDefaultCache() {
-        if (!warming.compareAndSet(false, true)) {
-            return;
+    private void evictCacheKeys(List<String> cacheKeys) {
+        localCache.keySet().removeAll(cacheKeys);
+        try {
+            redisTemplate.delete(cacheKeys);
+        } catch (Exception exception) {
+            log.warn("Unable to evict home statistics cache: {}", exception.getMessage());
         }
-        Thread.startVirtualThread(() -> {
-            try {
-                get(7, "ban");
-            } catch (Exception exception) {
-                log.warn("Unable to warm home statistics cache", exception);
-            } finally {
-                warming.set(false);
-            }
-        });
     }
 
-    private HomeStatisticsResponse calculate(int days, String source) {
+    private HomeNetworkStatisticsResponse calculateNetwork(int days, String source) {
         TimeRange range = range(days);
         int bucketMinutes = days == 1 ? 60 : 1_440;
         boolean useAggregates = "ban".equals(source)
                 && days > 1
                 && dashboardAggregatesAvailable();
         try {
-            return calculateWith(days, source, range, bucketMinutes, useAggregates);
+            return calculateNetworkWith(days, source, range, bucketMinutes, useAggregates);
         } catch (Exception exception) {
             if (!useAggregates) {
                 throw exception;
             }
             log.warn("Home statistics aggregate query failed, falling back to raw tables",
                     exception);
-            return calculateWith(days, source, range, bucketMinutes, false);
+            return calculateNetworkWith(days, source, range, bucketMinutes, false);
         }
     }
 
-    private HomeStatisticsResponse calculateWith(
+    private HomeNetworkStatisticsResponse calculateNetworkWith(
             int days,
             String source,
             TimeRange range,
@@ -166,6 +190,19 @@ public class HomeStatisticsService {
                             range.startAt(), range.endAt(), TOP_DIMENSIONS, source, useAggregates
                     )
             )));
+            Future<StackedAreaChart> clientNameTrend = executor.submit(() -> stackedChart(
+                    timedQuery("client name trend", () -> mapper.selectClientNameTrend(
+                            range.startAt(),
+                            range.endAt(),
+                            bucketMinutes,
+                            source,
+                            useAggregates
+                    )),
+                    range,
+                    bucketMinutes,
+                    TOP_DIMENSIONS,
+                    List.of()
+            ));
             Future<StackedAreaChart> geoCities = executor.submit(() -> stackedChart(
                     timedQuery("GeoIP cities", () -> mapper.selectGeoCityTrend(
                             range.startAt(),
@@ -192,24 +229,14 @@ public class HomeStatisticsService {
                     0,
                     List.of("IPv4", "IPv6", "Unknown")
             ));
-            Future<DistributionChart> companionVersions = executor.submit(() ->
-                    timedQuery("companion versions", this::companionVersions));
-            Future<DistributionChart> companionIps = executor.submit(() ->
-                    timedQuery("companion IP versions", this::companionIpVersions));
-            Future<DistributionChart> companionGeoIp = executor.submit(() ->
-                    timedQuery("companion GeoIP", () ->
-                            distribution(mapper.selectCompanionGeoIpDistribution(TOP_DIMENSIONS))));
-
-            HomeStatisticsResponse response = new HomeStatisticsResponse(
+            HomeNetworkStatisticsResponse response = new HomeNetworkStatisticsResponse(
                     days,
                     source,
                     await(peerIds),
                     await(clientNames),
+                    await(clientNameTrend),
                     await(geoCities),
                     await(ipVersions),
-                    await(companionVersions),
-                    await(companionIps),
-                    await(companionGeoIp),
                     OffsetDateTime.now(ZoneOffset.UTC)
             );
             log.info("Loaded home statistics for {} days from {} in {}ms (aggregates={})",
@@ -217,6 +244,29 @@ public class HomeStatisticsService {
                     source,
                     Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
                     useAggregates);
+            return response;
+        }
+    }
+
+    private HomeCompanionStatisticsResponse calculateCompanion() {
+        long startedNanos = System.nanoTime();
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<DistributionChart> versions = executor.submit(() ->
+                    timedQuery("companion versions", this::companionVersions));
+            Future<DistributionChart> ipVersions = executor.submit(() ->
+                    timedQuery("companion IP versions", this::companionIpVersions));
+            Future<DistributionChart> geoIp = executor.submit(() ->
+                    timedQuery("companion GeoIP", () ->
+                            distribution(mapper.selectCompanionGeoIpDistribution(TOP_DIMENSIONS))));
+
+            HomeCompanionStatisticsResponse response = new HomeCompanionStatisticsResponse(
+                    await(versions),
+                    await(ipVersions),
+                    await(geoIp),
+                    OffsetDateTime.now(ZoneOffset.UTC)
+            );
+            log.info("Loaded home companion statistics in {}ms",
+                    Duration.ofNanos(System.nanoTime() - startedNanos).toMillis());
             return response;
         }
     }
@@ -423,11 +473,11 @@ public class HomeStatisticsService {
         return new TimeRange(endAt.minusDays(days), endAt);
     }
 
-    private HomeStatisticsResponse readCache(String key) {
+    private <T> T readCache(String key, Class<T> responseType) {
         LocalCacheEntry local = localCache.get(key);
         long now = System.currentTimeMillis();
         if (local != null && local.expiresAt() > now) {
-            return local.response();
+            return responseType.cast(local.response());
         }
         if (local != null) {
             localCache.remove(key, local);
@@ -437,7 +487,7 @@ public class HomeStatisticsService {
             if (value == null) {
                 return null;
             }
-            HomeStatisticsResponse response = objectMapper.readValue(value, HomeStatisticsResponse.class);
+            T response = objectMapper.readValue(value, responseType);
             localCache.put(key, new LocalCacheEntry(response, now + CACHE_TTL.toMillis()));
             return response;
         } catch (Exception exception) {
@@ -445,7 +495,7 @@ public class HomeStatisticsService {
         }
     }
 
-    private void writeCache(String key, HomeStatisticsResponse response) {
+    private void writeCache(String key, Object response) {
         localCache.put(key, new LocalCacheEntry(
                 response,
                 System.currentTimeMillis() + CACHE_TTL.toMillis()
@@ -461,9 +511,17 @@ public class HomeStatisticsService {
         }
     }
 
+    private String networkCacheKey(int days, String source) {
+        return CACHE_KEY_PREFIX + "network:" + days + ":" + source;
+    }
+
+    private String companionCacheKey() {
+        return CACHE_KEY_PREFIX + "companion";
+    }
+
     private record TimeRange(OffsetDateTime startAt, OffsetDateTime endAt) {
     }
 
-    private record LocalCacheEntry(HomeStatisticsResponse response, long expiresAt) {
+    private record LocalCacheEntry(Object response, long expiresAt) {
     }
 }

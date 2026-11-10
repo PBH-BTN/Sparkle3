@@ -84,6 +84,7 @@ export default {
       updatedAt: '统计生成于 {time}',
       peerIds: 'Peer ID 分布',
       clientNames: '客户端名称分布',
+      clientNameTrend: '客户端名称趋势',
       geoCities: 'GeoIP 城市趋势',
       ipVersions: 'IPv4 / IPv6 趋势',
       companionTitle: '同伴统计数据',
@@ -300,6 +301,7 @@ export default {
     backToSite: '返回站点',
     nav: {
       dashboard: '仪表盘',
+      homepageStatistics: '首页数据刷新',
       users: '用户管理',
       userApps: '应用管理',
       rules: '手动规则',
@@ -364,6 +366,56 @@ export default {
         bans24h: '24 小时封禁',
         activeApps24h: '24 小时活跃应用',
         swarms24h: '24 小时种群记录',
+      },
+    },
+    homepageStatistics: {
+      title: '首页数据刷新',
+      description: '管理前台首页统计数据的自动刷新周期，并支持按模块立即刷新。',
+      refreshAll: '刷新全部',
+      hotReloadTitle: '配置即时生效',
+      hotReloadText:
+        '启用状态和刷新间隔保存后立即生效，后台调度器每 30 秒检查一次到期任务。手动刷新不受自动刷新开关限制。',
+      tasks: '刷新任务',
+      runningCount: '正在刷新 {count} 项',
+      allIdle: '当前空闲',
+      enabled: '自动刷新',
+      interval: '刷新间隔',
+      minutes: '分钟',
+      running: '刷新中',
+      lastFinished: '最近完成',
+      nextRefresh: '下次刷新',
+      lastDuration: '耗时',
+      lastTrigger: '触发方式',
+      manualTrigger: '手动',
+      scheduledTrigger: '定时',
+      invalidInterval: '刷新间隔必须在 1 到 10080 分钟之间。',
+      saved: '首页刷新配置已保存。',
+      refreshStarted: '刷新任务已在后台启动。',
+      modules: {
+        'ban-history': {
+          name: '封禁记录统计',
+          description: '刷新全时、30 天、14 天、7 天和 24 小时封禁数量。',
+        },
+        'active-apps': {
+          name: '活动用户应用统计',
+          description: '刷新最近 30 天、14 天、7 天和 24 小时的活跃应用数量。',
+        },
+        'swarm-tracker': {
+          name: '种群跟踪统计',
+          description: '刷新种群记录的全时及各时间窗口数量。',
+        },
+        torrents: {
+          name: '种子统计',
+          description: '刷新种子记录的全时及各时间窗口数量。',
+        },
+        'network-charts': {
+          name: '网络统计图表',
+          description: '清理网络图表缓存，并重新生成默认的 7 天封禁数据。',
+        },
+        'companion-charts': {
+          name: '同伴统计图表',
+          description: '刷新 BTN 客户端版本、地址栈和 GeoIP 分布。',
+        },
       },
     },
     users: {

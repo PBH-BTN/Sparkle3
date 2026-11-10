@@ -21,6 +21,8 @@ import type {
   ConfigMigrationResult,
   DatabaseConfigEntry,
   DatabaseConfigSummary,
+  HomepageStatisticsAdminResponse,
+  HomepageStatisticsConfigUpdate,
   ManualRule,
   NavigationItemInput,
   RetentionPolicyInput,
@@ -49,6 +51,19 @@ function queryString(values: object) {
 
 export const adminApi = {
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
+
+  homepageStatistics: () =>
+    request<HomepageStatisticsAdminResponse>('/api/admin/homepage-statistics'),
+  updateHomepageStatisticsConfig: (body: HomepageStatisticsConfigUpdate) =>
+    request<HomepageStatisticsAdminResponse>('/api/admin/homepage-statistics/config', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  refreshHomepageStatistics: (module = 'all') =>
+    request<HomepageStatisticsAdminResponse>('/api/admin/homepage-statistics/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ module }),
+    }),
 
   users: (query: AdminUserQuery) =>
     request<AdminPage<AdminUser>>(`/api/admin/users${queryString(query)}`),

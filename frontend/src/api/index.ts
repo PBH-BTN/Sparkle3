@@ -8,8 +8,9 @@ import type {
   ClientDiscoveryQuery,
   ClientDiscoveryRecord,
   FilterOptions,
+  HomeCompanionStatisticsResponse,
+  HomeNetworkStatisticsResponse,
   HomeStats,
-  HomeStatisticsResponse,
   IpQueryResult,
   PageResponse,
   PrivacyLevel,
@@ -33,10 +34,12 @@ function postQuery<T>(url: string, body: unknown) {
 export const uiApi = {
   session: () => request<SessionResponse>('/api/ui/session'),
   home: () => request<HomeStats>('/api/ui/home'),
-  homeStatistics: (days: number, source: StatisticsSource) =>
-    request<HomeStatisticsResponse>(
+  homeNetworkStatistics: (days: number, source: StatisticsSource) =>
+    request<HomeNetworkStatisticsResponse>(
       `/api/ui/statistics/home?days=${days}&source=${encodeURIComponent(source)}`,
     ),
+  homeCompanionStatistics: () =>
+    request<HomeCompanionStatisticsResponse>('/api/ui/statistics/companion'),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   privacy: () => request<PrivacyResponse>('/api/ui/user/privacy'),
   updatePrivacy: (level: PrivacyLevel['name']) =>

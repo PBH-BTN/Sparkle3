@@ -30,13 +30,19 @@ public final class HomeStatisticsModels {
     ) {
     }
 
-    public record HomeStatisticsResponse(
+    public record HomeNetworkStatisticsResponse(
             int days,
             String source,
             DistributionChart peerIds,
             DistributionChart clientNames,
+            StackedAreaChart clientNameTrend,
             StackedAreaChart geoCities,
             StackedAreaChart ipVersions,
+            OffsetDateTime generatedAt
+    ) {
+    }
+
+    public record HomeCompanionStatisticsResponse(
             DistributionChart companionVersions,
             DistributionChart companionIpVersions,
             DistributionChart companionGeoIp,

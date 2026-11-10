@@ -33,6 +33,14 @@ public interface HomeStatisticsMapper {
             @Param("useAggregates") boolean useAggregates
     );
 
+    List<DashboardDailyCountDto> selectClientNameTrend(
+            @Param("startAt") OffsetDateTime startAt,
+            @Param("endAt") OffsetDateTime endAt,
+            @Param("bucketMinutes") int bucketMinutes,
+            @Param("source") String source,
+            @Param("useAggregates") boolean useAggregates
+    );
+
     List<DashboardDailyCountDto> selectIpVersionTrend(
             @Param("startAt") OffsetDateTime startAt,
             @Param("endAt") OffsetDateTime endAt,

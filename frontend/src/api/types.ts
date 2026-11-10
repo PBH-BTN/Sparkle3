@@ -96,13 +96,18 @@ export interface StackedAreaChart {
 
 export type StatisticsSource = 'ban' | 'all'
 
-export interface HomeStatisticsResponse {
+export interface HomeNetworkStatisticsResponse {
   days: number
   source: StatisticsSource
   peerIds: DistributionChart
   clientNames: DistributionChart
+  clientNameTrend: StackedAreaChart
   geoCities: StackedAreaChart
   ipVersions: StackedAreaChart
+  generatedAt: string
+}
+
+export interface HomeCompanionStatisticsResponse {
   companionVersions: DistributionChart
   companionIpVersions: DistributionChart
   companionGeoIp: DistributionChart

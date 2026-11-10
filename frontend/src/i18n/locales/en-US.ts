@@ -88,6 +88,7 @@ export default {
       updatedAt: 'Generated at {time}',
       peerIds: 'Peer ID distribution',
       clientNames: 'Client name distribution',
+      clientNameTrend: 'Client name trend',
       geoCities: 'GeoIP city trend',
       ipVersions: 'IPv4 / IPv6 trend',
       companionTitle: 'Companion statistics',
@@ -307,6 +308,7 @@ export default {
     backToSite: 'Back to site',
     nav: {
       dashboard: 'Dashboard',
+      homepageStatistics: 'Homepage refresh',
       users: 'Users',
       userApps: 'Applications',
       rules: 'Manual rules',
@@ -371,6 +373,57 @@ export default {
         bans24h: 'Bans · 24h',
         activeApps24h: 'Active apps · 24h',
         swarms24h: 'Swarm records · 24h',
+      },
+    },
+    homepageStatistics: {
+      title: 'Homepage data refresh',
+      description:
+        'Configure scheduled refreshes for homepage statistics and trigger individual modules immediately.',
+      refreshAll: 'Refresh all',
+      hotReloadTitle: 'Configuration applies immediately',
+      hotReloadText:
+        'Enabled states and intervals apply immediately. The scheduler checks due jobs every 30 seconds. Manual refreshes work even when automatic refresh is disabled.',
+      tasks: 'Refresh jobs',
+      runningCount: 'Refreshing {count} jobs',
+      allIdle: 'All idle',
+      enabled: 'Scheduled refresh',
+      interval: 'Refresh interval',
+      minutes: 'min',
+      running: 'Refreshing',
+      lastFinished: 'Last finished',
+      nextRefresh: 'Next refresh',
+      lastDuration: 'Duration',
+      lastTrigger: 'Trigger',
+      manualTrigger: 'Manual',
+      scheduledTrigger: 'Scheduled',
+      invalidInterval: 'Refresh intervals must be between 1 and 10,080 minutes.',
+      saved: 'Homepage refresh settings saved.',
+      refreshStarted: 'The refresh job started in the background.',
+      modules: {
+        'ban-history': {
+          name: 'Ban history statistics',
+          description: 'Refresh all-time, 30-day, 14-day, 7-day, and 24-hour ban counts.',
+        },
+        'active-apps': {
+          name: 'Active application statistics',
+          description: 'Refresh active applications for the 30-day through 24-hour windows.',
+        },
+        'swarm-tracker': {
+          name: 'Swarm tracker statistics',
+          description: 'Refresh all-time and rolling-window swarm record counts.',
+        },
+        torrents: {
+          name: 'Torrent statistics',
+          description: 'Refresh all-time and rolling-window torrent record counts.',
+        },
+        'network-charts': {
+          name: 'Network statistics charts',
+          description: 'Clear network chart caches and regenerate the default 7-day ban view.',
+        },
+        'companion-charts': {
+          name: 'Companion statistics charts',
+          description: 'Refresh BTN client versions, address stacks, and GeoIP distribution.',
+        },
       },
     },
     users: {

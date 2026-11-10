@@ -15,19 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 
 @Service
 @Slf4j
 public class StatisticsRefreshServiceImpl {
-    private static final Timestamp thirtyDaysAgo = new Timestamp(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
-    private static final Timestamp fourteenDaysAgo = new Timestamp(System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000);
-    private static final Timestamp sevenDaysAgo = new Timestamp(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000);
-    private static final Timestamp last24HoursAgo = new Timestamp(System.currentTimeMillis() - 24L * 60 * 60 * 1000);
-
     @Autowired
     @Qualifier("stringLongRedisTemplate")
     private RedisTemplate<String, Long> stringLongRedisTemplate;
@@ -40,7 +35,6 @@ public class StatisticsRefreshServiceImpl {
     @Autowired
     private TorrentMapper torrentMapper;
 
-    @Scheduled(cron = "${sparkle.statistics.ban-count-refresh-cron}")
     public void onBanCountRefresh() {
         long allTime = banHistoryMapper.estimateCountAll();
         UniversalCountDto count = banHistoryMapper.countTimeStatistics();
@@ -51,7 +45,6 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey(), count.getDays1());
     }
 
-    @Scheduled(cron = "${sparkle.statistics.swarm-tracker-count-refresh-cron}")
     public void onSwarmTracker() {
         long allTime = swarmTrackerMapper.estimateCountAll();
         UniversalCountDto count = swarmTrackerMapper.countTimeStatistics();
@@ -62,8 +55,11 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), count.getDays1());
     }
 
-    @Scheduled(cron = "${sparkle.statistics.userapp-count-refresh-cron}")
     public void onUserAppUpdate() {
+        Timestamp thirtyDaysAgo = ago(Duration.ofDays(30));
+        Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
+        Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
+        Timestamp last24HoursAgo = ago(Duration.ofDays(1));
         long last30Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", thirtyDaysAgo));
         long last14Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", fourteenDaysAgo));
         long last7Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", sevenDaysAgo));
@@ -74,8 +70,11 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_24HOURS.getKey(), last24Hours);
     }
 
-    @Scheduled(cron = "${sparkle.statistics.torrent-count-refresh-cron}")
     public void onTorrentUpdate() {
+        Timestamp thirtyDaysAgo = ago(Duration.ofDays(30));
+        Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
+        Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
+        Timestamp last24HoursAgo = ago(Duration.ofDays(1));
         long last30Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", thirtyDaysAgo));
         long last14Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", fourteenDaysAgo));
         long last7Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", sevenDaysAgo));
@@ -84,6 +83,10 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_14DAYS.getKey(), last14Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_7DAYS.getKey(), last7Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_24HOURS.getKey(), last24Hours);
+    }
+
+    private Timestamp ago(Duration duration) {
+        return new Timestamp(System.currentTimeMillis() - duration.toMillis());
     }
 
 }

@@ -11,7 +11,8 @@ import { uiApi } from '@/api'
 import type {
   ChartDatum,
   DistributionChart,
-  HomeStatisticsResponse,
+  HomeCompanionStatisticsResponse,
+  HomeNetworkStatisticsResponse,
   HomeStats,
   StackedAreaChart,
   StatisticsSource,
@@ -43,8 +44,10 @@ const session = useSessionStore()
 const { t } = useI18n()
 const stats = ref<HomeStats | null>(null)
 const loading = ref(true)
-const networkStats = ref<HomeStatisticsResponse | null>(null)
+const networkStats = ref<HomeNetworkStatisticsResponse | null>(null)
 const networkLoading = ref(false)
+const companionStats = ref<HomeCompanionStatisticsResponse | null>(null)
+const companionLoading = ref(false)
 const selectedDays = ref(7)
 const networkSource = ref<StatisticsSource>('ban')
 let statisticsRequestId = 0
@@ -69,6 +72,9 @@ const peerIdOption = computed<EChartsCoreOption>(() =>
 const clientNameOption = computed<EChartsCoreOption>(() =>
   pieOption(networkStats.value?.clientNames),
 )
+const clientNameTrendOption = computed<EChartsCoreOption>(() =>
+  stackedAreaOption(networkStats.value?.clientNameTrend),
+)
 const geoCityOption = computed<EChartsCoreOption>(() =>
   stackedAreaOption(networkStats.value?.geoCities),
 )
@@ -76,13 +82,13 @@ const ipVersionOption = computed<EChartsCoreOption>(() =>
   stackedAreaOption(networkStats.value?.ipVersions),
 )
 const companionVersionOption = computed<EChartsCoreOption>(() =>
-  pieOption(networkStats.value?.companionVersions),
+  pieOption(companionStats.value?.companionVersions),
 )
 const companionIpOption = computed<EChartsCoreOption>(() =>
-  pieOption(networkStats.value?.companionIpVersions),
+  pieOption(companionStats.value?.companionIpVersions),
 )
 const companionGeoIpOption = computed<EChartsCoreOption>(() =>
-  pieOption(networkStats.value?.companionGeoIp),
+  pieOption(companionStats.value?.companionGeoIp),
 )
 
 function chartLabel(name: string) {
@@ -240,7 +246,7 @@ async function loadNetworkStats() {
   const requestId = ++statisticsRequestId
   networkLoading.value = true
   try {
-    const result = await uiApi.homeStatistics(selectedDays.value, networkSource.value)
+    const result = await uiApi.homeNetworkStatistics(selectedDays.value, networkSource.value)
     if (requestId === statisticsRequestId) {
       networkStats.value = result
     }
@@ -255,11 +261,23 @@ async function loadNetworkStats() {
   }
 }
 
+async function loadCompanionStats() {
+  companionLoading.value = true
+  try {
+    companionStats.value = await uiApi.homeCompanionStatistics()
+  } catch (error) {
+    Message.error(errorMessage(error, t('home.statistics.loadFailed')))
+  } finally {
+    companionLoading.value = false
+  }
+}
+
 watch([selectedDays, networkSource], loadNetworkStats)
 
 onMounted(() => {
   loadHomeStats()
   loadNetworkStats()
+  loadCompanionStats()
 })
 </script>
 
@@ -419,6 +437,24 @@ onMounted(() => {
             </a-card>
           </a-col>
           <a-col :span="24">
+            <a-card
+              class="surface-card chart-card"
+              :title="t('home.statistics.clientNameTrend')"
+            >
+              <template #extra>
+                <a-tag color="green">{{ t('home.statistics.topItems') }}</a-tag>
+              </template>
+              <EChart
+                v-if="hasStackedData(networkStats?.clientNameTrend)"
+                :option="clientNameTrendOption"
+                height="360px"
+                :loading="networkLoading"
+                :loading-text="t('common.loading')"
+              />
+              <a-empty v-else :description="t('home.statistics.noData')" />
+            </a-card>
+          </a-col>
+          <a-col :span="24">
             <a-card class="surface-card chart-card" :title="t('home.statistics.geoCities')">
               <template #extra>
                 <a-tag color="purple">{{ t('home.statistics.topCities') }}</a-tag>
@@ -463,10 +499,10 @@ onMounted(() => {
         <a-col :xs="24" :xl="8">
           <a-card class="surface-card chart-card" :title="t('home.statistics.companionVersions')">
             <EChart
-              v-if="hasDistribution(networkStats?.companionVersions)"
+              v-if="hasDistribution(companionStats?.companionVersions)"
               :option="companionVersionOption"
               height="340px"
-              :loading="networkLoading"
+              :loading="companionLoading"
               :loading-text="t('common.loading')"
             />
             <a-empty v-else :description="t('home.statistics.noData')" />
@@ -475,10 +511,10 @@ onMounted(() => {
         <a-col :xs="24" :xl="8">
           <a-card class="surface-card chart-card" :title="t('home.statistics.companionIpVersions')">
             <EChart
-              v-if="hasDistribution(networkStats?.companionIpVersions)"
+              v-if="hasDistribution(companionStats?.companionIpVersions)"
               :option="companionIpOption"
               height="340px"
-              :loading="networkLoading"
+              :loading="companionLoading"
               :loading-text="t('common.loading')"
             />
             <a-empty v-else :description="t('home.statistics.noData')" />
@@ -487,10 +523,10 @@ onMounted(() => {
         <a-col :xs="24" :xl="8">
           <a-card class="surface-card chart-card" :title="t('home.statistics.companionGeoIp')">
             <EChart
-              v-if="hasDistribution(networkStats?.companionGeoIp)"
+              v-if="hasDistribution(companionStats?.companionGeoIp)"
               :option="companionGeoIpOption"
               height="340px"
-              :loading="networkLoading"
+              :loading="companionLoading"
               :loading-text="t('common.loading')"
             />
             <a-empty v-else :description="t('home.statistics.noData')" />

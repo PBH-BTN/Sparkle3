@@ -42,6 +42,32 @@ export interface AdminDashboard {
   generatedAt: string
 }
 
+export interface HomepageStatisticsModuleConfig {
+  module: string
+  enabled: boolean
+  refreshIntervalMinutes: number
+}
+
+export interface HomepageStatisticsModuleStatus extends HomepageStatisticsModuleConfig {
+  running: boolean
+  lastStartedAt: string | null
+  lastFinishedAt: string | null
+  nextRefreshAt: string | null
+  lastDurationMs: number
+  trigger: 'SCHEDULED' | 'MANUAL' | null
+  triggeredBy: number | null
+  lastError: string | null
+}
+
+export interface HomepageStatisticsAdminResponse {
+  modules: HomepageStatisticsModuleStatus[]
+  generatedAt: string
+}
+
+export interface HomepageStatisticsConfigUpdate {
+  modules: HomepageStatisticsModuleConfig[]
+}
+
 export interface AdminUser {
   id: string
   email: string
