@@ -7,6 +7,7 @@ import type { EChartsCoreOption } from 'echarts/core'
 import { Message } from '@arco-design/web-vue'
 import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
+import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
 import { uiApi } from '@/api'
 import type {
   ChartDatum,
@@ -291,6 +292,8 @@ onMounted(() => {
     >
       {{ t('home.accountPausedText', { reason: session.user.bannedReason || 'N/A' }) }}
     </a-alert>
+
+    <GlobalAnnouncements placement="HOME_HERO" variant="hero" />
 
     <a-card class="hero-card" :bordered="false">
       <div class="hero-copy">

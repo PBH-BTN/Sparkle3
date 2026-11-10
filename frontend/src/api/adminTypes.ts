@@ -190,10 +190,12 @@ export interface SwarmStatisticsStatus {
 }
 
 export type AnnouncementLevel = 'GREEN' | 'YELLOW' | 'BLUE' | 'RED'
+export type AnnouncementPlacement = 'GLOBAL_TOP' | 'HOME_HERO'
 
 export interface Announcement {
   id: number
   level: AnnouncementLevel
+  placement: AnnouncementPlacement
   titleZh: string
   titleEn: string
   contentZh: string
@@ -210,6 +212,7 @@ export interface Announcement {
 
 export interface AnnouncementInput {
   level: AnnouncementLevel
+  placement: AnnouncementPlacement
   titleZh: string
   titleEn: string
   contentZh: string

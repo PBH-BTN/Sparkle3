@@ -620,14 +620,19 @@ export default {
     announcements: {
       title: 'Announcements',
       description:
-        'Publish bilingual banners at the top of every site page with scheduled visibility and four warning levels.',
+        'Publish bilingual announcements in the global top banner or the homepage hero area with scheduled visibility and four warning levels.',
       create: 'Create announcement',
       edit: 'Edit announcement',
-      bannerHintTitle: 'Site-wide banner',
+      bannerHintTitle: 'Two announcement placements',
       bannerHint:
-        'Published announcements inside their active time range appear at the top of every page. Disabled, scheduled, and expired announcements stay hidden.',
+        'The global top area appears above every page. The homepage hero area appears immediately before the main homepage hero card. Disabled, scheduled, and expired announcements stay hidden.',
       status: 'Status',
       level: 'Level',
+      placement: 'Placement',
+      placements: {
+        GLOBAL_TOP: 'Global top banner',
+        HOME_HERO: 'Homepage hero banner',
+      },
       levels: {
         GREEN: 'Green · Success',
         YELLOW: 'Yellow · Warning',

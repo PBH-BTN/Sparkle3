@@ -16,6 +16,7 @@ import type {
   Announcement,
   AnnouncementInput,
   AnnouncementLevel,
+  AnnouncementPlacement,
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
@@ -29,6 +30,7 @@ const announcements = ref<Announcement[]>([])
 
 const emptyEditor = (): AnnouncementInput => ({
   level: 'BLUE',
+  placement: 'GLOBAL_TOP',
   titleZh: '',
   titleEn: '',
   contentZh: '',
@@ -57,6 +59,7 @@ const endsAtValue = computed<string | undefined>({
 const columns = computed(() => [
   { title: t('admin.announcements.status'), slotName: 'status', width: 100 },
   { title: t('admin.announcements.level'), slotName: 'level', width: 100 },
+  { title: t('admin.announcements.placement'), slotName: 'placement', width: 160 },
   { title: t('admin.announcements.titleField'), slotName: 'titleField', width: 240 },
   { title: t('admin.announcements.schedule'), slotName: 'schedule', width: 260 },
   { title: t('admin.announcements.sortOrder'), dataIndex: 'sortOrder', width: 90 },
@@ -87,6 +90,10 @@ function alertType(level: AnnouncementLevel) {
 
 function levelLabel(level: AnnouncementLevel) {
   return t(`admin.announcements.levels.${level}`)
+}
+
+function placementLabel(placement: AnnouncementPlacement) {
+  return t(`admin.announcements.placements.${placement}`)
 }
 
 function levelColor(level: AnnouncementLevel) {
@@ -142,6 +149,7 @@ function scheduleText(announcement: Announcement) {
 function toInput(announcement: Announcement): AnnouncementInput {
   return {
     level: announcement.level,
+    placement: announcement.placement,
     titleZh: announcement.titleZh,
     titleEn: announcement.titleEn,
     contentZh: announcement.contentZh,
@@ -275,6 +283,9 @@ onMounted(load)
         <template #level="{ record }">
           <a-tag :color="levelColor(record.level)">{{ levelLabel(record.level) }}</a-tag>
         </template>
+        <template #placement="{ record }">
+          <a-tag color="gray">{{ placementLabel(record.placement) }}</a-tag>
+        </template>
         <template #titleField="{ record }">
           <div class="title-cell">
             <strong>{{ displayTitle(record) || t('common.notAvailable') }}</strong>
@@ -343,6 +354,16 @@ onMounted(load)
               <a-option value="YELLOW">{{ t('admin.announcements.levels.YELLOW') }}</a-option>
               <a-option value="BLUE">{{ t('admin.announcements.levels.BLUE') }}</a-option>
               <a-option value="RED">{{ t('admin.announcements.levels.RED') }}</a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="t('admin.announcements.placement')" required>
+            <a-select v-model="editor.placement">
+              <a-option value="GLOBAL_TOP">
+                {{ t('admin.announcements.placements.GLOBAL_TOP') }}
+              </a-option>
+              <a-option value="HOME_HERO">
+                {{ t('admin.announcements.placements.HOME_HERO') }}
+              </a-option>
             </a-select>
           </a-form-item>
           <a-form-item :label="t('admin.announcements.sortOrder')">

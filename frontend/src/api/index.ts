@@ -62,7 +62,8 @@ export const uiApi = {
       method: 'DELETE',
     }),
   ranking: () => request<RankingResponse>('/api/ui/ranking'),
-  announcements: () => request<Announcement[]>('/api/ui/notices'),
+  announcements: (placement: Announcement['placement'] = 'GLOBAL_TOP') =>
+    request<Announcement[]>(`/api/ui/notices?placement=${encodeURIComponent(placement)}`),
   ipQueryWidget: (search: string) => request<IpQueryResult>(`/ping/queryIp/widget/data${search}`),
 }
 

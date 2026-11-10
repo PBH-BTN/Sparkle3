@@ -601,14 +601,19 @@ export default {
     },
     announcements: {
       title: '公告管理',
-      description: '维护在站点所有页面顶部展示的公告，支持中英文、定时发布和四种警告级别。',
+      description: '维护前台公告，支持全局最顶和首页 Hero 两个展示位置、中英文、定时发布和四种警告级别。',
       create: '新建公告',
       edit: '编辑公告',
-      bannerHintTitle: '全站展示',
+      bannerHintTitle: '双公告展示位置',
       bannerHint:
-        '已发布且在生效时间范围内的公告会显示在所有页面顶部。关闭或未到生效时间的公告不会展示。',
+        '全局最顶公告区显示在所有页面上方；首页 Hero 公告区显示在首页主视觉卡片之前。关闭或未到生效时间的公告不会展示。',
       status: '状态',
       level: '级别',
+      placement: '展示位置',
+      placements: {
+        GLOBAL_TOP: '全局最顶公告区',
+        HOME_HERO: '首页 Hero 公告区',
+      },
       levels: {
         GREEN: '绿色 · 正常',
         YELLOW: '黄色 · 警告',

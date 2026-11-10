@@ -56,9 +56,12 @@ export interface SessionResponse {
   navigation: NavigationItem[]
 }
 
+export type AnnouncementPlacement = 'GLOBAL_TOP' | 'HOME_HERO'
+
 export interface Announcement {
   id: number
   level: 'GREEN' | 'YELLOW' | 'BLUE' | 'RED'
+  placement: AnnouncementPlacement
   titleZh: string
   titleEn: string
   contentZh: string

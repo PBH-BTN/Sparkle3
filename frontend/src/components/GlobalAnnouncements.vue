@@ -2,9 +2,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { uiApi } from '@/api'
-import type { Announcement } from '@/api/types'
+import type { Announcement, AnnouncementPlacement } from '@/api/types'
 
 const DISMISSED_STORAGE_KEY = 'sparkle:announcement-dismissals'
+const props = withDefaults(
+  defineProps<{
+    placement?: AnnouncementPlacement
+    variant?: 'global' | 'hero'
+  }>(),
+  {
+    placement: 'GLOBAL_TOP',
+    variant: 'global',
+  },
+)
 const { locale } = useI18n()
 const announcements = ref<Announcement[]>([])
 const dismissed = ref<Record<string, number>>(readDismissals())
@@ -73,7 +83,7 @@ function readDismissals(): Record<string, number> {
 
 onMounted(async () => {
   try {
-    announcements.value = await uiApi.announcements()
+    announcements.value = await uiApi.announcements(props.placement)
   } catch {
     announcements.value = []
   }
@@ -83,7 +93,7 @@ onMounted(async () => {
 <template>
   <section
     v-if="visibleAnnouncements.length"
-    class="global-announcements"
+    :class="['global-announcements', `global-announcements--${variant}`]"
     aria-live="polite"
   >
     <div class="global-announcements-inner">
@@ -124,6 +134,16 @@ onMounted(async () => {
 
 .global-announcement {
   border-radius: 6px;
+}
+
+.global-announcements--hero {
+  padding: 0;
+  background: transparent;
+  border-bottom: 0;
+}
+
+.global-announcements--hero .global-announcements-inner {
+  width: 100%;
 }
 
 .announcement-message {

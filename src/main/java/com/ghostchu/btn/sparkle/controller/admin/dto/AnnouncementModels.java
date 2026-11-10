@@ -9,6 +9,7 @@ public final class AnnouncementModels {
     public record AnnouncementView(
             long id,
             String level,
+            String placement,
             String titleZh,
             String titleEn,
             String contentZh,
@@ -27,6 +28,7 @@ public final class AnnouncementModels {
     public record PublicAnnouncementView(
             long id,
             String level,
+            String placement,
             String titleZh,
             String titleEn,
             String contentZh,
@@ -40,6 +42,7 @@ public final class AnnouncementModels {
 
     public record AnnouncementInput(
             String level,
+            String placement,
             String titleZh,
             String titleEn,
             String contentZh,

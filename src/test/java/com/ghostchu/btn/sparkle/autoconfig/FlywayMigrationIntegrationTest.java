@@ -93,6 +93,17 @@ class FlywayMigrationIntegrationTest {
                 assertTrue(result.next());
                 assertEquals(1, result.getInt(1));
             }
+
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*)
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'announcements'
+                      AND column_name = 'placement'
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(1, result.getInt(1));
+            }
         }
     }
 

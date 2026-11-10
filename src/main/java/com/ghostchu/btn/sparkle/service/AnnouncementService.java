@@ -19,10 +19,12 @@ import java.util.Set;
 @Service
 public class AnnouncementService {
     private static final Set<String> LEVELS = Set.of("GREEN", "YELLOW", "BLUE", "RED");
+    private static final Set<String> PLACEMENTS = Set.of("GLOBAL_TOP", "HOME_HERO");
     private static final RowMapper<AnnouncementView> VIEW_MAPPER = (resultSet, rowNum) ->
             new AnnouncementView(
                     resultSet.getLong("id"),
                     resultSet.getString("level"),
+                    resultSet.getString("placement"),
                     resultSet.getString("title_zh"),
                     resultSet.getString("title_en"),
                     resultSet.getString("content_zh"),
@@ -51,18 +53,25 @@ public class AnnouncementService {
                 """, VIEW_MAPPER);
     }
 
-    public @NotNull List<PublicAnnouncementView> listActive() {
+    public @NotNull List<PublicAnnouncementView> listActive(
+            @Nullable String requestedPlacement
+    ) throws BusinessException {
+        String placement = requestedPlacement == null || requestedPlacement.isBlank()
+                ? "GLOBAL_TOP"
+                : normalizePlacement(requestedPlacement);
         return jdbcTemplate.query("""
-                SELECT id, level, title_zh, title_en, content_zh, content_en,
+                SELECT id, level, placement, title_zh, title_en, content_zh, content_en,
                        dismissible, starts_at, ends_at, updated_at
                 FROM announcements
                 WHERE enabled = TRUE
+                  AND placement = ?
                   AND (starts_at IS NULL OR starts_at <= now())
                   AND (ends_at IS NULL OR ends_at > now())
                 ORDER BY sort_order DESC, updated_at DESC, id DESC
                 """, (resultSet, rowNum) -> new PublicAnnouncementView(
                 resultSet.getLong("id"),
                 resultSet.getString("level"),
+                resultSet.getString("placement"),
                 resultSet.getString("title_zh"),
                 resultSet.getString("title_en"),
                 resultSet.getString("content_zh"),
@@ -71,7 +80,7 @@ public class AnnouncementService {
                 resultSet.getObject("starts_at", OffsetDateTime.class),
                 resultSet.getObject("ends_at", OffsetDateTime.class),
                 resultSet.getObject("updated_at", OffsetDateTime.class)
-        ));
+        ), placement);
     }
 
     public @NotNull AnnouncementView create(
@@ -81,13 +90,14 @@ public class AnnouncementService {
         AnnouncementInput normalized = validate(input);
         Long id = jdbcTemplate.queryForObject("""
                 INSERT INTO announcements (
-                    level, title_zh, title_en, content_zh, content_en,
+                    level, placement, title_zh, title_en, content_zh, content_en,
                     enabled, dismissible, sort_order, starts_at, ends_at, updated_by
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """, Long.class,
                 normalized.level(),
+                normalized.placement(),
                 normalized.titleZh(),
                 normalized.titleEn(),
                 normalized.contentZh(),
@@ -115,6 +125,7 @@ public class AnnouncementService {
         int changed = jdbcTemplate.update("""
                 UPDATE announcements
                 SET level = ?,
+                    placement = ?,
                     title_zh = ?,
                     title_en = ?,
                     content_zh = ?,
@@ -129,6 +140,7 @@ public class AnnouncementService {
                 WHERE id = ?
                 """,
                 normalized.level(),
+                normalized.placement(),
                 normalized.titleZh(),
                 normalized.titleEn(),
                 normalized.contentZh(),
@@ -196,6 +208,7 @@ public class AnnouncementService {
         }
         return new AnnouncementInput(
                 normalizeLevel(input.level()),
+                normalizePlacement(input.placement()),
                 titleZh,
                 titleEn,
                 contentZh,
@@ -211,6 +224,17 @@ public class AnnouncementService {
     private String normalizeLevel(String level) {
         String normalized = level == null ? "BLUE" : level.toUpperCase(Locale.ROOT);
         return LEVELS.contains(normalized) ? normalized : "BLUE";
+    }
+
+    private String normalizePlacement(String placement) throws BusinessException {
+        String normalized = placement == null
+                ? "GLOBAL_TOP"
+                : placement.trim().toUpperCase(Locale.ROOT);
+        if (!PLACEMENTS.contains(normalized)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Unsupported announcement placement");
+        }
+        return normalized;
     }
 
     private String normalize(String value) {
