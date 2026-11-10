@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { IconFire, IconGithub, IconLock } from '@arco-design/web-vue/es/icon'
 import { useI18n } from 'vue-i18n'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const { t } = useI18n()
+const redirecting = ref(false)
+
+function loginWithGitHub() {
+  if (redirecting.value) return
+  redirecting.value = true
+  try {
+    window.location.assign('/oauth2/authorization/github')
+  } catch {
+    redirecting.value = false
+  }
+}
 </script>
 
 <template>
@@ -24,14 +36,18 @@ const { t } = useI18n()
         <p>{{ t('auth.description') }}</p>
       </div>
 
-      <a
+      <a-button
         class="github-login"
-        href="/oauth2/authorization/github"
+        size="large"
+        long
+        :loading="redirecting"
+        :disabled="redirecting"
         aria-label="GitHub OAuth"
+        @click="loginWithGitHub"
       >
         <IconGithub />
         {{ t('auth.signIn') }}
-      </a>
+      </a-button>
 
       <p class="security-note">
         <IconLock />
@@ -116,7 +132,7 @@ const { t } = useI18n()
   line-height: 1.7;
 }
 
-.github-login {
+.github-login.arco-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,7 +140,6 @@ const { t } = useI18n()
   height: 44px;
   color: var(--color-white);
   font-weight: 600;
-  text-decoration: none;
   background: var(--color-text-1);
   border-radius: 6px;
   transition:
@@ -132,8 +147,10 @@ const { t } = useI18n()
     opacity 0.15s;
 }
 
-.github-login:hover {
+.github-login.arco-btn:hover,
+.github-login.arco-btn:not(.arco-btn-disabled):active {
   color: var(--color-white);
+  background: var(--color-text-1);
   opacity: 0.9;
   transform: translateY(-1px);
 }
