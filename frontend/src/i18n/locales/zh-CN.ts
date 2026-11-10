@@ -85,8 +85,9 @@ export default {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
       trafficTitle: 'BitTorrent 流量承载',
-      trafficDescription:
-        '按提交者视角汇总 ban_history 与 swarm_tracker：to_peer_traffic 计为上传，from_peer_traffic 计为下载；同一连接的重复累计快照只计算最新值。',
+      trafficDescription: 'BTN 网络监视的流量承载情况。',
+      trafficGeoUnknownNote:
+        'GeoIP 未知的流量仍计入总流量，但不会参与城市排行和城市饼图。',
       last3Days: '3 天',
       totalTransfer: '总传输流量',
       totalTransferHint: '上传流量与下载流量的累计总和',

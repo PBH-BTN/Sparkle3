@@ -89,8 +89,9 @@ export default {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',
       trafficTitle: 'BitTorrent traffic carried',
-      trafficDescription:
-        'Aggregated from the submitter perspective: to_peer_traffic is uploaded and from_peer_traffic is downloaded. Repeated cumulative snapshots from one connection are counted once using the latest value.',
+      trafficDescription: 'Traffic carried through the BTN monitoring network.',
+      trafficGeoUnknownNote:
+        'Traffic with unknown GeoIP still contributes to totals but is excluded from city rankings and city charts.',
       last3Days: '3 days',
       totalTransfer: 'Total transferred',
       totalTransferHint: 'Cumulative upload and download traffic',

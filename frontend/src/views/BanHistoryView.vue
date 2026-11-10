@@ -185,14 +185,17 @@ function shortModuleName(name: string | null) {
 
 function geoIp(record: BanHistoryRecord) {
   if (!record.peerGeoip) return 'N/A'
-  const parts = [
-    record.peerGeoip.city?.cnCity || record.peerGeoip.city?.name,
-    record.peerGeoip.country?.iso || record.peerGeoip.country?.name,
-    record.peerGeoip.network?.isp,
-  ]
+  const country = record.peerGeoip.country?.iso || record.peerGeoip.country?.name
+  const province = record.peerGeoip.city?.cnProvince
+  const city = record.peerGeoip.city?.cnCity || record.peerGeoip.city?.name
+  const isp = record.peerGeoip.network?.isp?.replace(
+    /^中国(?=电信|联通|移动|广电)/,
+    '',
+  )
+  const parts = [country, province, city, isp]
     .filter((value): value is string => Boolean(value))
     .filter((value, index, values) => values.indexOf(value) === index)
-  return parts.length ? parts.join(', ') : 'N/A'
+  return parts.join(', ') || 'N/A'
 }
 
 function showStructuredData(record: BanHistoryRecord) {

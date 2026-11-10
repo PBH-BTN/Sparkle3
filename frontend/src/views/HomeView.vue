@@ -125,6 +125,7 @@ function hasStackedData(chart: StackedAreaChart | undefined) {
 function hasTrafficDistribution(chart: TrafficDistribution | undefined) {
   return Boolean(
     chart?.data.some((item) => {
+      if (item.name === 'Unknown' || item.name === 'Other') return false
       try {
         return BigInt(item.bytes) > 0n
       } catch {
@@ -136,18 +137,34 @@ function hasTrafficDistribution(chart: TrafficDistribution | undefined) {
 
 function compactTrafficCities(chart: TrafficDistribution | undefined) {
   const items = chart?.data ?? []
-  const named = items.filter((item) => item.name !== 'Other')
+  const named = items.filter((item) => item.name !== 'Other' && item.name !== 'Unknown')
   const visible = named.slice(0, 8)
-  const visibleNames = new Set(visible.map((item) => item.name))
-  let otherBytes = 0n
+  let total = 0n
+  let unknown = 0n
+  try {
+    total = BigInt(chart?.totalBytes ?? '0')
+  } catch {
+    // Fall through to zero when a stale cache entry has an invalid total.
+  }
   for (const item of items) {
-    if (visibleNames.has(item.name) && item.name !== 'Other') continue
     try {
-      otherBytes += BigInt(item.bytes)
+      if (item.name === 'Unknown') {
+        unknown += BigInt(item.bytes)
+      }
     } catch {
       // Ignore malformed cache entries and keep the remaining chart usable.
     }
   }
+  const knownTotal = total - unknown
+  let shown = 0n
+  for (const item of visible) {
+    try {
+      shown += BigInt(item.bytes)
+    } catch {
+      // Ignore malformed cache entries and keep the remaining chart usable.
+    }
+  }
+  const otherBytes = knownTotal - shown
   const compact: TrafficCityDatum[] = visible.map((item) => ({ ...item }))
   if (otherBytes > 0n) {
     compact.push({ name: 'Other', bytes: otherBytes.toString() })
@@ -156,7 +173,9 @@ function compactTrafficCities(chart: TrafficDistribution | undefined) {
 }
 
 function trafficTopRows(chart: TrafficDistribution | undefined) {
-  return (chart?.data ?? []).filter((item) => item.name !== 'Other').slice(0, 30)
+  return (chart?.data ?? [])
+    .filter((item) => item.name !== 'Other' && item.name !== 'Unknown')
+    .slice(0, 30)
 }
 
 function pieOption(chart: DistributionChart | undefined): EChartsCoreOption {
@@ -538,6 +557,9 @@ onMounted(() => {
         <div>
           <h2>{{ t('home.statistics.trafficTitle') }}</h2>
           <p>{{ t('home.statistics.trafficDescription') }}</p>
+          <p class="traffic-geo-note">
+            {{ t('home.statistics.trafficGeoUnknownNote') }}
+          </p>
         </div>
       </div>
 
@@ -983,6 +1005,11 @@ onMounted(() => {
   flex-direction: column;
   min-height: 142px;
   padding: 22px;
+}
+
+.traffic-geo-note {
+  color: rgb(var(--orange-6));
+  font-size: 12px;
 }
 
 .traffic-metric-label {
