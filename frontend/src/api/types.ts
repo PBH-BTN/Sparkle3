@@ -75,6 +75,39 @@ export interface HomeStats {
   swarmTracker: Record<string, number>
 }
 
+export interface ChartDatum {
+  name: string
+  value: number
+}
+
+export interface ChartSeries {
+  name: string
+  values: number[]
+}
+
+export interface DistributionChart {
+  data: ChartDatum[]
+}
+
+export interface StackedAreaChart {
+  categories: string[]
+  series: ChartSeries[]
+}
+
+export type StatisticsSource = 'ban' | 'all'
+
+export interface HomeStatisticsResponse {
+  days: number
+  source: StatisticsSource
+  peerIds: DistributionChart
+  clientNames: DistributionChart
+  geoCities: StackedAreaChart
+  ipVersions: StackedAreaChart
+  companionVersions: DistributionChart
+  companionIpVersions: DistributionChart
+  generatedAt: string
+}
+
 export interface UserRelation {
   platformUserId: string
   platform: string
@@ -132,10 +165,18 @@ export interface BanHistoryRecord {
   peerProgress: number | null
   peerFlags: string | null
   peerGeoip: {
-    countryIso?: string
-    cityCnProvince?: string
-    cityCnCity?: string
-    isp?: string
+    city?: {
+      name?: string
+      cnProvince?: string
+      cnCity?: string
+    }
+    country?: {
+      name?: string
+      iso?: string
+    }
+    network?: {
+      isp?: string
+    }
   } | null
   reporterProgress: number | null
   toPeerTraffic: number | null

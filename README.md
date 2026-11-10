@@ -42,6 +42,7 @@ pnpm --dir frontend build
 - 运行设置：热更新协议版本、IP 查询 PoW、客户端发现开关，以及最近 7 日流量统计的启用状态、刷新间隔、统计窗口和手动刷新。
 - 公告管理：发布全站顶部公告，支持绿、黄、蓝、红四种 Arco 警告样式、中英文内容、定时生效、排序和用户关闭。
 - Navbar 导航管理：内置项可启停、改名、选择图标和排序；自定义项支持中英文名称、站内路径或外部链接。
+- 首页统计：使用 ECharts 展示 Peer ID、客户端、GeoIP 城市、IPv4/IPv6 趋势，以及 BTN 客户端版本和地址栈分布。
 - 存储与策略：查看普通表与 TimescaleDB hypertable 占用，显示压缩/列存前后大小和 chunk 状态，管理自动压缩、列存和自动淘汰策略。
 - `ban_history` 维护：按 cutoff 预览并删除完整旧 chunks；删除需要输入确认文本，避免误操作。
 - 版本提醒：基于客户端产品名、User-Agent 和 NPM 语义化版本范围配置邮件通知，支持启停、编辑、匹配测试、真实测试邮件和发送记录。
@@ -88,10 +89,16 @@ PostgreSQL 选择 hash join，避免重复 CIDR 嵌套循环。
 ```bash
 psql -f src/main/resources/db_sql/v24_swarm_statistics_and_announcements.sql
 psql -f src/main/resources/db_sql/v25_navigation_items.sql
+psql -f src/main/resources/db_sql/v26_home_statistics.sql
 ```
 
 TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维护窗口执行该脚本。上线前建议
 先在测试库使用 `EXPLAIN (ANALYZE, BUFFERS)` 检查 `refreshUserSwarmStatistics` 的执行计划与索引命中情况。
+
+首页网络统计默认查询最近 7 天的封禁数据。`v26_home_statistics.sql` 会创建 Peer ID、客户端和
+GeoIP/IP 协议栈三个 TimescaleDB continuous aggregate，并启用列存压缩与每小时的增量刷新策略；
+首页查询优先读取聚合结果，迁移尚未执行或聚合不可用时自动回退原始表。查询结果在 Redis 中缓存
+5 分钟，并支持 1、7、14、30 天以及“仅封禁”与“封禁 + 种群”数据源切换。
 
 ## 数据库配置迁移
 

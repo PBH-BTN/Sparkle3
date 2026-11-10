@@ -9,6 +9,7 @@ import type {
   ClientDiscoveryRecord,
   FilterOptions,
   HomeStats,
+  HomeStatisticsResponse,
   IpQueryResult,
   PageResponse,
   PrivacyLevel,
@@ -17,6 +18,7 @@ import type {
   SessionResponse,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
+  StatisticsSource,
   UserApplication,
   UserProfileResponse,
 } from './types'
@@ -31,6 +33,10 @@ function postQuery<T>(url: string, body: unknown) {
 export const uiApi = {
   session: () => request<SessionResponse>('/api/ui/session'),
   home: () => request<HomeStats>('/api/ui/home'),
+  homeStatistics: (days: number, source: StatisticsSource) =>
+    request<HomeStatisticsResponse>(
+      `/api/ui/statistics/home?days=${days}&source=${encodeURIComponent(source)}`,
+    ),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   privacy: () => request<PrivacyResponse>('/api/ui/user/privacy'),
   updatePrivacy: (level: PrivacyLevel['name']) =>

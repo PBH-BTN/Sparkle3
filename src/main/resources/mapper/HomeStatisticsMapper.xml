@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.HomeStatisticsMapper">
+    <resultMap id="dimensionCountResult" type="com.ghostchu.btn.sparkle.service.dto.DashboardDimensionCountDto">
+        <result column="name" property="name"/>
+        <result column="value" property="value"/>
+        <result column="total" property="total"/>
+    </resultMap>
+
+    <resultMap id="dailyCountResult" type="com.ghostchu.btn.sparkle.service.dto.DashboardDailyCountDto">
+        <result column="bucket" property="bucket"/>
+        <result column="name" property="name"/>
+        <result column="value" property="value"/>
+    </resultMap>
+
+    <resultMap id="userAgentCountResult" type="com.ghostchu.btn.sparkle.service.dto.DashboardUserAgentCountDto">
+        <result column="user_agent" property="userAgent"/>
+        <result column="value" property="value"/>
+    </resultMap>
+
+    <select id="selectTopPeerIds" resultMap="dimensionCountResult">
+        <choose>
+            <when test="source == 'ban' and useAggregates">
+                WITH grouped AS (
+                    SELECT peer_id AS name, SUM(ban_count)::bigint AS value
+                    FROM dashboard_ban_daily_peer
+                    WHERE bucket &gt;= #{startAt} AND bucket &lt; #{endAt}
+                    GROUP BY peer_id
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </when>
+            <when test="source == 'ban'">
+                WITH grouped AS (
+                    SELECT COALESCE(NULLIF(peer_id, ''), 'Unknown') AS name, COUNT(*)::bigint AS value
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    GROUP BY COALESCE(NULLIF(peer_id, ''), 'Unknown')
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </when>
+            <otherwise>
+                WITH events AS MATERIALIZED (
+                    SELECT populate_time AS event_time, peer_id
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    UNION ALL
+                    SELECT last_time_seen AS event_time, peer_id
+                    FROM swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+                ),
+                grouped AS (
+                    SELECT COALESCE(NULLIF(peer_id, ''), 'Unknown') AS name, COUNT(*)::bigint AS value
+                    FROM events
+                    GROUP BY COALESCE(NULLIF(peer_id, ''), 'Unknown')
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectTopClientNames" resultMap="dimensionCountResult">
+        <choose>
+            <when test="source == 'ban' and useAggregates">
+                WITH grouped AS (
+                    SELECT peer_client_name AS name, SUM(ban_count)::bigint AS value
+                    FROM dashboard_ban_daily_client
+                    WHERE bucket &gt;= #{startAt} AND bucket &lt; #{endAt}
+                    GROUP BY peer_client_name
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </when>
+            <when test="source == 'ban'">
+                WITH grouped AS (
+                    SELECT COALESCE(NULLIF(peer_client_name, ''), 'Unknown') AS name, COUNT(*)::bigint AS value
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    GROUP BY COALESCE(NULLIF(peer_client_name, ''), 'Unknown')
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </when>
+            <otherwise>
+                WITH events AS MATERIALIZED (
+                    SELECT populate_time AS event_time, peer_client_name
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    UNION ALL
+                    SELECT last_time_seen AS event_time, peer_client_name
+                    FROM swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+                ),
+                grouped AS (
+                    SELECT COALESCE(NULLIF(peer_client_name, ''), 'Unknown') AS name, COUNT(*)::bigint AS value
+                    FROM events
+                    GROUP BY COALESCE(NULLIF(peer_client_name, ''), 'Unknown')
+                )
+                SELECT name, value, SUM(value) OVER () AS total
+                FROM grouped
+                ORDER BY value DESC, name
+                LIMIT #{limit}
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectGeoCityTrend" resultMap="dailyCountResult">
+        <choose>
+            <when test="source == 'ban' and useAggregates">
+                SELECT bucket, city AS name, SUM(ban_count)::bigint AS value
+                FROM dashboard_ban_daily_geo
+                WHERE bucket &gt;= #{startAt} AND bucket &lt; #{endAt}
+                GROUP BY bucket, city
+                ORDER BY bucket, value DESC, city
+            </when>
+            <when test="source == 'ban'">
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), populate_time) AS bucket,
+                    COALESCE(
+                        NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                        NULLIF(peer_geoip #>> '{city,name}', ''),
+                        NULLIF(peer_geoip #>> '{country,name}', ''),
+                        'Unknown'
+                    ) AS name,
+                    COUNT(*)::bigint AS value
+                FROM ban_history
+                WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                GROUP BY bucket, name
+                ORDER BY bucket, value DESC, name
+            </when>
+            <otherwise>
+                WITH events AS MATERIALIZED (
+                    SELECT populate_time AS event_time, peer_geoip
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    UNION ALL
+                    SELECT last_time_seen AS event_time, peer_geoip
+                    FROM swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+                )
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), event_time) AS bucket,
+                    COALESCE(
+                        NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                        NULLIF(peer_geoip #>> '{city,name}', ''),
+                        NULLIF(peer_geoip #>> '{country,name}', ''),
+                        'Unknown'
+                    ) AS name,
+                    COUNT(*)::bigint AS value
+                FROM events
+                GROUP BY bucket, name
+                ORDER BY bucket, value DESC, name
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectIpVersionTrend" resultMap="dailyCountResult">
+        <choose>
+            <when test="source == 'ban' and useAggregates">
+                SELECT
+                    bucket,
+                    CASE ip_version WHEN 4 THEN 'IPv4' WHEN 6 THEN 'IPv6' ELSE 'Unknown' END AS name,
+                    SUM(ban_count)::bigint AS value
+                FROM dashboard_ban_daily_geo
+                WHERE bucket &gt;= #{startAt} AND bucket &lt; #{endAt}
+                GROUP BY bucket, ip_version
+                ORDER BY bucket, ip_version
+            </when>
+            <when test="source == 'ban'">
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), populate_time) AS bucket,
+                    CASE family(peer_ip) WHEN 4 THEN 'IPv4' WHEN 6 THEN 'IPv6' ELSE 'Unknown' END AS name,
+                    COUNT(*)::bigint AS value
+                FROM ban_history
+                WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                GROUP BY bucket, family(peer_ip)
+                ORDER BY bucket, family(peer_ip)
+            </when>
+            <otherwise>
+                WITH events AS MATERIALIZED (
+                    SELECT populate_time AS event_time, peer_ip
+                    FROM ban_history
+                    WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+                    UNION ALL
+                    SELECT last_time_seen AS event_time, peer_ip
+                    FROM swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+                )
+                SELECT
+                    time_bucket(make_interval(mins => #{bucketMinutes}), event_time) AS bucket,
+                    CASE family(peer_ip) WHEN 4 THEN 'IPv4' WHEN 6 THEN 'IPv6' ELSE 'Unknown' END AS name,
+                    COUNT(*)::bigint AS value
+                FROM events
+                GROUP BY bucket, family(peer_ip)
+                ORDER BY bucket, family(peer_ip)
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectActiveUserAgents" resultMap="userAgentCountResult">
+        SELECT last_user_agent AS user_agent, COUNT(*)::bigint AS value
+        FROM userapp
+        WHERE banned_at IS NULL
+          AND last_seen_at &gt;= NOW() - INTERVAL '30 days'
+          AND last_user_agent IS NOT NULL
+          AND last_user_agent &lt;&gt; ''
+        GROUP BY last_user_agent
+        ORDER BY value DESC
+    </select>
+
+    <select id="selectCompanionIpVersions" resultMap="dimensionCountResult">
+        WITH grouped AS (
+            SELECT
+                CASE family(uh.ip) WHEN 4 THEN 'IPv4' WHEN 6 THEN 'IPv6' ELSE 'Unknown' END AS name,
+                COUNT(*)::bigint AS value
+            FROM userapps_heartbeat uh
+            JOIN userapp ua ON ua.id = uh.userapp_id
+            WHERE uh.last_seen_at &gt;= NOW() - INTERVAL '24 hours'
+              AND ua.banned_at IS NULL
+            GROUP BY family(uh.ip)
+        )
+        SELECT
+            name,
+            value,
+            SUM(value) OVER () AS total
+        FROM grouped
+        ORDER BY name
+    </select>
+</mapper>

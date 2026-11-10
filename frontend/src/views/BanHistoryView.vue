@@ -186,11 +186,12 @@ function shortModuleName(name: string | null) {
 function geoIp(record: BanHistoryRecord) {
   if (!record.peerGeoip) return 'N/A'
   const parts = [
-    record.peerGeoip.countryIso,
-    record.peerGeoip.cityCnProvince,
-    record.peerGeoip.cityCnCity,
-    record.peerGeoip.isp,
-  ].filter(Boolean)
+    record.peerGeoip.city?.cnCity || record.peerGeoip.city?.name,
+    record.peerGeoip.country?.iso || record.peerGeoip.country?.name,
+    record.peerGeoip.network?.isp,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, values) => values.indexOf(value) === index)
   return parts.length ? parts.join(', ') : 'N/A'
 }
 

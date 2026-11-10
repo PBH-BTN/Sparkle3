@@ -13,6 +13,7 @@
   "dependencies": {
     "@arco-design/web-vue": "2.59.0",
     "dayjs": "1.11.23",
+    "echarts": "^6.1.0",
     "pinia": "3.0.4",
     "vue": "3.5.45",
     "vue-i18n": "^11.4.18",

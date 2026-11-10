@@ -56,6 +56,7 @@ declare module 'vue' {
     ATag: typeof import('@arco-design/web-vue')['Tag']
     ATextarea: typeof import('@arco-design/web-vue')['Textarea']
     ATooltip: typeof import('@arco-design/web-vue')['Tooltip']
+    EChart: typeof import('./components/EChart.vue')['default']
     EmptyState: typeof import('./components/EmptyState.vue')['default']
     GlobalAnnouncements: typeof import('./components/GlobalAnnouncements.vue')['default']
     LanguageSwitcher: typeof import('./components/LanguageSwitcher.vue')['default']
