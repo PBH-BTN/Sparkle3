@@ -303,6 +303,7 @@ export default {
       users: '用户管理',
       userApps: '应用管理',
       rules: '手动规则',
+      modules: '功能模块',
       settings: '运行设置',
       storage: '存储与策略',
       versionAlerts: '版本提醒',
@@ -434,6 +435,74 @@ export default {
         client_name: '客户端名称',
         port: '端口',
         script: '脚本',
+      },
+    },
+    modules: {
+      title: '功能模块管理',
+      description: '集中管理自动分析模块的启用状态、执行计划、统计窗口和业务阈值。',
+      hotReloadTitle: '全部配置支持热更新',
+      hotReloadText:
+        '保存后会立即重建执行计划；开关、时间窗口和阈值会从数据库动态读取。直接从配置数据库修改的值最多 1 分钟内自动同步。',
+      saved: '模块配置已更新并重新安排执行计划。',
+      saveModule: '保存模块',
+      restartRequired: '重启后生效',
+      includeModulesHint: '多个完整模块类名使用英文逗号分隔。',
+      configMoved: '已从通用配置表独立管理',
+      units: {
+        hours: '小时',
+        gib: 'GiB',
+      },
+      fields: {
+        enabled: '启用模块',
+        schedule: '执行计划（Cron）',
+        duration: '统计窗口',
+        'include-modules': '参与分析模块',
+        'ipv4-enable': '启用 IPv4',
+        'ipv4-min-userapps-vote': 'IPv4 最低投票用户数',
+        'ipv4-min-ban-count': 'IPv4 最低封禁次数',
+        'ipv6-enable': '启用 IPv6',
+        'ipv6-min-userapps-vote': 'IPv6 最低投票用户数',
+        'ipv6-min-ban-count': 'IPv6 最低封禁次数',
+        'threshold-ratio': '过量下载比率',
+        'threshold-traffic': '最低超额流量',
+        'use-materialized-view': '使用物化视图',
+        'materialized-view-refresh': '分析前刷新物化视图',
+        'threshold-concurrent': '最低并发种子数',
+        'threshold-userapps': '最低关联用户数',
+      },
+      items: {
+        'untrusted-vote': {
+          name: '不受信任投票聚合',
+          description: '汇总多个 BTN 用户应用对同一 Peer IP 的封禁投票并生成聚合规则。',
+        },
+        'overdownload-analyse': {
+          name: '过量下载分析',
+          description: '检测 Peer 从网络获取流量显著超过任务体积的过量下载行为。',
+        },
+        'concurrent-download-analyse': {
+          name: '并发下载分析',
+          description: '识别在大量种子中同时出现、且被多个用户应用共同标记的 Peer。',
+        },
+        'random-identity-analyse': {
+          name: '随机 Peer 特征识别',
+          description: '基于近期 Peer ID 与客户端名称组合识别随机身份特征。',
+        },
+        'rain000-identity-analyse': {
+          name: 'Rain 0.0.0 特征识别',
+          description: '识别使用 Rain 0.0.0 客户端特征的 Peer 地址。',
+        },
+        'gopeeddev-identity-analyse': {
+          name: 'Gopeed 家族特征识别',
+          description: '识别 Gopeed dev 及其他同家族客户端特征。',
+        },
+        'datacenter-highrisk-analyse': {
+          name: '数据中心高风险识别',
+          description: '聚合来自高风险数据中心网络环境的 Peer 地址。',
+        },
+        'btnbypass-userapps': {
+          name: 'BTN Bypass 允许列表',
+          description: '生成 BTN Bypass 用户应用的 IP 允许列表，用于客户端规则同步。',
+        },
       },
     },
     settings: {

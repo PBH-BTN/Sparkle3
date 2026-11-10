@@ -310,6 +310,7 @@ export default {
       users: 'Users',
       userApps: 'Applications',
       rules: 'Manual rules',
+      modules: 'Analysis modules',
       settings: 'Runtime settings',
       storage: 'Storage & policies',
       versionAlerts: 'Version alerts',
@@ -443,6 +444,80 @@ export default {
         client_name: 'Client name',
         port: 'Port',
         script: 'Script',
+      },
+    },
+    modules: {
+      title: 'Analysis modules',
+      description:
+        'Manage enablement, schedules, analysis windows, and thresholds for automatic analysis modules.',
+      hotReloadTitle: 'All settings are hot-reloadable',
+      hotReloadText:
+        'Saving immediately rebuilds the schedule. Switches, windows, and thresholds are read dynamically from the database. Changes made directly in the config database sync within one minute.',
+      saved: 'Module settings updated and schedules rebuilt.',
+      saveModule: 'Save module',
+      restartRequired: 'Restart required',
+      includeModulesHint: 'Separate full module class names with commas.',
+      configMoved: 'Managed outside the generic config table',
+      units: {
+        hours: 'hours',
+        gib: 'GiB',
+      },
+      fields: {
+        enabled: 'Enable module',
+        schedule: 'Schedule (Cron)',
+        duration: 'Analysis window',
+        'include-modules': 'Included modules',
+        'ipv4-enable': 'Enable IPv4',
+        'ipv4-min-userapps-vote': 'IPv4 minimum voting apps',
+        'ipv4-min-ban-count': 'IPv4 minimum bans',
+        'ipv6-enable': 'Enable IPv6',
+        'ipv6-min-userapps-vote': 'IPv6 minimum voting apps',
+        'ipv6-min-ban-count': 'IPv6 minimum bans',
+        'threshold-ratio': 'Overdownload ratio',
+        'threshold-traffic': 'Minimum excess traffic',
+        'use-materialized-view': 'Use materialized view',
+        'materialized-view-refresh': 'Refresh materialized view before analysis',
+        'threshold-concurrent': 'Minimum concurrent torrents',
+        'threshold-userapps': 'Minimum reporting apps',
+      },
+      items: {
+        'untrusted-vote': {
+          name: 'Untrusted vote aggregation',
+          description:
+            'Aggregates bans reported by multiple BTN applications for the same peer IP.',
+        },
+        'overdownload-analyse': {
+          name: 'Overdownload analysis',
+          description:
+            'Detects peers that received significantly more traffic than the torrent size.',
+        },
+        'concurrent-download-analyse': {
+          name: 'Concurrent download analysis',
+          description:
+            'Finds peers appearing in many torrents and reported by multiple user applications.',
+        },
+        'random-identity-analyse': {
+          name: 'Random peer identity',
+          description:
+            'Identifies randomized Peer ID and client-name combinations in recent data.',
+        },
+        'rain000-identity-analyse': {
+          name: 'Rain 0.0.0 identity',
+          description: 'Identifies addresses using the Rain 0.0.0 client signature.',
+        },
+        'gopeeddev-identity-analyse': {
+          name: 'Gopeed family identity',
+          description: 'Identifies Gopeed dev and related client signatures.',
+        },
+        'datacenter-highrisk-analyse': {
+          name: 'High-risk datacenter peers',
+          description: 'Aggregates peer addresses from high-risk datacenter networks.',
+        },
+        'btnbypass-userapps': {
+          name: 'BTN Bypass allowlist',
+          description:
+            'Builds the IP allowlist for BTN Bypass applications and rule synchronization.',
+        },
       },
     },
     settings: {

@@ -175,6 +175,7 @@ sparkle:
       iframe-endpoint: "{rooturl}/ping/queryIp/widget"
   analyse:
     untrusted-vote:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"
@@ -187,6 +188,7 @@ sparkle:
         min-userapps-vote: 3
         min-ban-count: 5
     overdownload-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 604800000
       threshold-ratio: 3.2
@@ -197,23 +199,29 @@ sparkle:
       # Auto-refresh materialized view before each analysis (recommended for accuracy)
       materialized-view-refresh: true
     concurrent-download-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 3600000
       threshold-concurrent: 150
       threshold-userapps: 3
     random-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     rain000-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     gopeeddev-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     datacenter-highrisk-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     btnbypass-userapps:
+      enabled: true
       schedule: "0 */20 * * * *"
   query:
     query-ip:

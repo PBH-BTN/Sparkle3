@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.impl.denylist;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
@@ -22,7 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,17 +55,41 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private AnalyseModuleConfigService moduleConfigService;
 
-    @Scheduled(cron = "${sparkle.analyse.untrusted-vote.schedule}")
     @Transactional
     public void analyseUntrusted() {
+        if (!moduleConfigService.isEnabled("untrusted-vote")) {
+            return;
+        }
+        long activeDuration = moduleConfigService.durationMillis(
+                "untrusted-vote", "duration", duration
+        );
+        String includeModules = moduleConfigService.textValue(
+                "untrusted-vote", "include-modules", untrustedVoteIncludeModules
+        );
+        boolean useV4 = moduleConfigService.booleanValue("untrusted-vote", "ipv4-enable", useIPv4);
+        int minV4UserApps = moduleConfigService.integerValue(
+                "untrusted-vote", "ipv4-min-userapps-vote", ipv4MinUserAppsVote
+        );
+        int minV4Bans = moduleConfigService.integerValue(
+                "untrusted-vote", "ipv4-min-ban-count", ipv4MinBanCountVote
+        );
+        boolean useV6 = moduleConfigService.booleanValue("untrusted-vote", "ipv6-enable", useIPv6);
+        int minV6UserApps = moduleConfigService.integerValue(
+                "untrusted-vote", "ipv6-min-userapps-vote", ipv6MinUserAppsVote
+        );
+        int minV6Bans = moduleConfigService.integerValue(
+                "untrusted-vote", "ipv6-min-ban-count", ipv6MinBanCountVote
+        );
         DualIPv4v6AssociativeTries<GeneratedRule> tries = new DualIPv4v6AssociativeTries<>();
         log.info("Performing untrusted vote analysis with duration: {} ms, includeModules: {}, useIPv4: {}, ipv4MinUserAppsVote: {}, ipv4MinBanCountVote: {}, useIPv6: {}, ipv6MinUserAppsVote: {}, ipv6MinBanCountVote: {}",
-                duration, untrustedVoteIncludeModules, useIPv4, ipv4MinUserAppsVote, ipv4MinBanCountVote, useIPv6, ipv6MinUserAppsVote, ipv6MinBanCountVote);
+                activeDuration, includeModules, useV4, minV4UserApps, minV4Bans, useV6, minV6UserApps, minV6Bans);
         // 在 try-with-resources 块内完成所有 Cursor 操作
         try (var cursor = this.baseMapper.analyseByModule(
-                OffsetDateTime.now().minus(System.currentTimeMillis() - duration, ChronoUnit.MILLIS),
-                List.of(untrustedVoteIncludeModules.split(",")))) {
+                OffsetDateTime.now().minus(activeDuration, ChronoUnit.MILLIS),
+                List.of(includeModules.split(",")))) {
             // 必须在 try 块内完成迭代，因为 Cursor 离开 try 块后会自动关闭
             for (AnalyseByModuleResult analysis : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(analysis.getPeerIpCidr());
@@ -105,11 +129,11 @@ public class AnalyseRuleUnTrustVoteServiceImpl extends AbstractAnalyseRuleServic
             boolean shouldInclude = false;
 
             if (ip.isIPv4()) {
-                if (useIPv4 && rule.getUserappsCount() >= ipv4MinUserAppsVote && rule.getBanCount() >= ipv4MinBanCountVote) {
+                if (useV4 && rule.getUserappsCount() >= minV4UserApps && rule.getBanCount() >= minV4Bans) {
                     shouldInclude = true;
                 }
             } else {
-                if (useIPv6 && rule.getUserappsCount() >= ipv6MinUserAppsVote && rule.getBanCount() >= ipv6MinBanCountVote) {
+                if (useV6 && rule.getUserappsCount() >= minV6UserApps && rule.getBanCount() >= minV6Bans) {
                     shouldInclude = true;
                 }
             }

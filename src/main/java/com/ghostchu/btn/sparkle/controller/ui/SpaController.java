@@ -28,6 +28,7 @@ public class SpaController {
             "/admin/users",
             "/admin/userapps",
             "/admin/rules",
+            "/admin/modules",
             "/admin/settings",
             "/admin/announcements",
             "/admin/navigation",

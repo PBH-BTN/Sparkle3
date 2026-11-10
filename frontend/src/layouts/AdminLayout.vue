@@ -24,6 +24,7 @@ const items = computed(() => [
   { key: '/admin/users', label: t('admin.nav.users'), icon: IconUserGroup },
   { key: '/admin/userapps', label: t('admin.nav.userApps'), icon: IconApps },
   { key: '/admin/rules', label: t('admin.nav.rules'), icon: IconCode },
+  { key: '/admin/modules', label: t('admin.nav.modules'), icon: IconCode },
   { key: '/admin/storage', label: t('admin.nav.storage'), icon: IconStorage },
   { key: '/admin/version-alerts', label: t('admin.nav.versionAlerts'), icon: IconNotification },
   { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },

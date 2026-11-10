@@ -2,6 +2,8 @@ import { request } from './http'
 import type {
   Announcement,
   AnnouncementInput,
+  AnalyseModule,
+  AnalyseModuleUpdate,
   AdminNavigationItem,
   AdminApplication,
   AdminApplicationCredentials,
@@ -153,6 +155,13 @@ export const adminApi = {
   deleteNavigationItem: (id: string) =>
     request<void>(`/api/admin/navigation/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+    }),
+
+  analyseModules: () => request<AnalyseModule[]>('/api/admin/modules'),
+  updateAnalyseModule: (id: string, body: AnalyseModuleUpdate) =>
+    request<AnalyseModule>(`/api/admin/modules/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
     }),
 
   storage: () => request<StorageOverview>('/api/admin/storage/tables'),

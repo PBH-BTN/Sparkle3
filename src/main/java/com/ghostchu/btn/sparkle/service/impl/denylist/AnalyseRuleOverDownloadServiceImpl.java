@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.impl.denylist;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.MsgUtil;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,16 +44,36 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private AnalyseModuleConfigService moduleConfigService;
 
-    @Scheduled(cron = "${sparkle.analyse.overdownload-analyse.schedule}")
     @Transactional
     public void analyseOverDownload() {
+        if (!moduleConfigService.isEnabled("overdownload-analyse")) {
+            return;
+        }
+        long activeDuration = moduleConfigService.durationMillis(
+                "overdownload-analyse", "duration", duration
+        );
+        double activeThresholdRatio = moduleConfigService.decimalValue(
+                "overdownload-analyse", "threshold-ratio", thresholdRatio
+        );
+        long activeThresholdTraffic = moduleConfigService.longValue(
+                "overdownload-analyse", "threshold-traffic", thresholdTraffic
+        );
+        boolean activeUseMaterializedView = moduleConfigService.booleanValue(
+                "overdownload-analyse", "use-materialized-view", useMaterializedView
+        );
+        boolean activeMaterializedViewRefresh = moduleConfigService.booleanValue(
+                "overdownload-analyse", "materialized-view-refresh", materializedViewRefresh
+        );
         long startTime = System.currentTimeMillis();
         log.info("[OverDownload Analysis] Starting over-download analysis for last {} days (mode: {})",
-                duration / (24 * 60 * 60 * 1000), useMaterializedView ? "Materialized View" : "Direct Query");
+                activeDuration / (24 * 60 * 60 * 1000),
+                activeUseMaterializedView ? "Materialized View" : "Direct Query");
 
         // Refresh materialized view if enabled and using materialized view
-        if (useMaterializedView && materializedViewRefresh) {
+        if (activeUseMaterializedView && activeMaterializedViewRefresh) {
             try {
                 long refreshStart = System.currentTimeMillis();
                 log.info("[OverDownload Analysis] Refreshing materialized view...");
@@ -63,16 +83,26 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             } catch (Exception e) {
                 log.error("[OverDownload Analysis] Failed to refresh materialized view, falling back to direct query", e);
                 // Fall back to direct query on refresh failure
-                analyseWithDirectQuery(startTime);
+                analyseWithDirectQuery(
+                        startTime,
+                        activeDuration,
+                        activeThresholdRatio,
+                        activeThresholdTraffic
+                );
                 return;
             }
         }
 
-        if (useMaterializedView) {
+        if (activeUseMaterializedView) {
             throw new UnsupportedOperationException("materialized view not support!");
             // analyseWithMaterializedView(startTime);
         } else {
-            analyseWithDirectQuery(startTime);
+            analyseWithDirectQuery(
+                    startTime,
+                    activeDuration,
+                    activeThresholdRatio,
+                    activeThresholdTraffic
+            );
         }
     }
 
@@ -111,13 +141,18 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
 //        processResults(aggregateMap, startTime, queryEndTime, processedRows.get());
 //    }
 
-    private void analyseWithDirectQuery(long startTime) {
+    private void analyseWithDirectQuery(
+            long startTime,
+            long activeDuration,
+            double activeThresholdRatio,
+            long activeThresholdTraffic
+    ) {
         List<AnalyseOverDownloadedResult> resultList = new LinkedList<>(); // do not use array copy because it may grow insane
         AtomicLong processedRows = new AtomicLong(0);
 
         // Use ResultHandler to process results one by one, avoiding loading all data into memory
         this.baseMapper.analyseOverDownloadedWithHandler(
-                OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS),
+                OffsetDateTime.now().minus(activeDuration, ChronoUnit.MILLIS),
                 resultContext -> {
                     processedRows.incrementAndGet();
                     var result = resultContext.getResultObject();
@@ -129,10 +164,24 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         log.info("[OverDownload Analysis] Direct query completed in {} ms, processed {} rows",
                 queryEndTime - startTime, processedRows.get());
 
-        processResults(resultList, startTime, queryEndTime, processedRows.get());
+        processResults(
+                resultList,
+                startTime,
+                queryEndTime,
+                processedRows.get(),
+                activeThresholdRatio,
+                activeThresholdTraffic
+        );
     }
 
-    private void processResults(List<AnalyseOverDownloadedResult> resultList, long startTime, long queryEndTime, long processedRows) {
+    private void processResults(
+            List<AnalyseOverDownloadedResult> resultList,
+            long startTime,
+            long queryEndTime,
+            long processedRows,
+            double activeThresholdRatio,
+            long activeThresholdTraffic
+    ) {
         StringBuilder sb = new StringBuilder();
         int violationCount = 0;
         int processedCount = 0;
@@ -146,8 +195,8 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
             processedCount++;
             var pureUploaded = entry.getTotalToPeerTraffic() - entry.getTotalFromPeerTraffic();
             var ratio = ((double) pureUploaded / entry.getTorrentSize());
-            if (ratio > thresholdRatio) {
-                if (pureUploaded > thresholdTraffic) {
+            if (ratio > activeThresholdRatio) {
+                if (pureUploaded > activeThresholdTraffic) {
                     violationCount++;
                     sb.append("# [Sparkle3 过量下载在线分析] ")
                             .append(" 过量下载比率: ").append(String.format("%.2f", ratio * 100)).append("%")
@@ -176,7 +225,8 @@ public class AnalyseRuleOverDownloadServiceImpl extends AbstractAnalyseRuleServi
         long totalTime = System.currentTimeMillis() - startTime;
         long queryTime = queryEndTime - startTime;
         log.info("[OverDownload Analysis] Completed in {} ms (query: {} ms, processing: {} ms), detected {} violations (ratio > {}, traffic > {} bytes)",
-                totalTime, queryTime, totalTime - queryTime, violationCount, thresholdRatio, thresholdTraffic);
+                totalTime, queryTime, totalTime - queryTime, violationCount,
+                activeThresholdRatio, activeThresholdTraffic);
         if (queryTime > 0) {
             log.info("[OverDownload Analysis] Performance: {} rows/sec", processedRows * 1000.0 / queryTime);
         }

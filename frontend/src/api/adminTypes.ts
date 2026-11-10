@@ -220,6 +220,24 @@ export interface NavigationItemInput {
   openInNewTab: boolean
 }
 
+export interface AnalyseModuleField {
+  field: string
+  key: string
+  type: 'boolean' | 'integer' | 'decimal' | 'duration-hours' | 'bytes-gib' | 'cron' | 'text'
+  value: string
+  restartRequired: boolean
+}
+
+export interface AnalyseModule {
+  id: string
+  enabled: boolean
+  fields: AnalyseModuleField[]
+}
+
+export interface AnalyseModuleUpdate {
+  values: Record<string, string>
+}
+
 export interface StoragePolicy {
   enabled: boolean
   after: string | null
