@@ -7,26 +7,27 @@
                                    peer_port, peer_id, peer_client_name,
                                    peer_progress, from_peer_traffic, to_peer_traffic,
                                    from_peer_traffic_offset, to_peer_traffic_offset, flags,
-                                   first_time_seen, last_time_seen)
+                                   first_time_seen, last_time_seen, peer_geoip)
         VALUES (#{userappsId}, #{userDownloader}, #{torrentId},
                 #{peerIp}, #{userProgress},
                 #{peerPort}, #{peerId}, #{peerClientName},
                 #{peerProgress}, #{fromPeerTraffic}, #{toPeerTraffic},
                 #{fromPeerTrafficOffset}, #{toPeerTrafficOffset}, #{flags},
-                #{firstTimeSeen}, #{lastTimeSeen})
+                #{firstTimeSeen}, #{lastTimeSeen},
+                #{peerGeoip,typeHandler=com.ghostchu.btn.sparkle.converter.JsonbTypeHandler})
         ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
             SET (userapps_id, user_downloader, torrent_id,
                  peer_ip, user_progress,
                  peer_port, peer_id, peer_client_name,
                  peer_progress, from_peer_traffic, to_peer_traffic,
                  from_peer_traffic_offset, to_peer_traffic_offset, flags,
-                 first_time_seen, last_time_seen) =
+                 first_time_seen, last_time_seen, peer_geoip) =
                     (EXCLUDED.userapps_id, EXCLUDED.user_downloader, EXCLUDED.torrent_id,
                      EXCLUDED.peer_ip, EXCLUDED.user_progress,
                      EXCLUDED.peer_port, EXCLUDED.peer_id, EXCLUDED.peer_client_name,
                      EXCLUDED.peer_progress, EXCLUDED.from_peer_traffic, EXCLUDED.to_peer_traffic,
                      EXCLUDED.from_peer_traffic_offset, EXCLUDED.to_peer_traffic_offset, EXCLUDED.flags,
-                     EXCLUDED.first_time_seen, EXCLUDED.last_time_seen);
+                     EXCLUDED.first_time_seen, EXCLUDED.last_time_seen, EXCLUDED.peer_geoip);
     </insert>
 
     <insert id="batchUpsert">
@@ -35,7 +36,7 @@
                                    peer_port, peer_id, peer_client_name,
                                    peer_progress, from_peer_traffic, to_peer_traffic,
                                    from_peer_traffic_offset, to_peer_traffic_offset, flags,
-                                   first_time_seen, last_time_seen)
+                                   first_time_seen, last_time_seen, peer_geoip)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.userappsId}, #{item.userDownloader}, #{item.torrentId},
@@ -43,7 +44,8 @@
             #{item.peerPort}, #{item.peerId}, #{item.peerClientName},
             #{item.peerProgress}, #{item.fromPeerTraffic}, #{item.toPeerTraffic},
             #{item.fromPeerTrafficOffset}, #{item.toPeerTrafficOffset}, #{item.flags},
-            #{item.firstTimeSeen}, #{item.lastTimeSeen})
+            #{item.firstTimeSeen}, #{item.lastTimeSeen},
+            #{item.peerGeoip,typeHandler=com.ghostchu.btn.sparkle.converter.JsonbTypeHandler})
         </foreach>
         ON CONFLICT (userapps_id, user_downloader, torrent_id, peer_ip, peer_port) DO UPDATE
             SET user_progress = EXCLUDED.user_progress,
@@ -56,7 +58,8 @@
                 to_peer_traffic_offset = EXCLUDED.to_peer_traffic_offset,
                 flags = EXCLUDED.flags,
                 first_time_seen = EXCLUDED.first_time_seen,
-                last_time_seen = EXCLUDED.last_time_seen
+                last_time_seen = EXCLUDED.last_time_seen,
+                peer_geoip = EXCLUDED.peer_geoip
     </insert>
 
     <select id="calcPeerConcurrentDownloads" resultType="long">
