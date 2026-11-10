@@ -1,8 +1,28 @@
 # Sparkle 3
 
-## PostgreSQL 扩展
+## 数据库与自动迁移
 
-需要 pg_partman, pg_cron 和 timescaledb。
+数据库使用 Flyway 管理，应用启动时会自动检查并执行 `classpath:db/migration` 中尚未应用的
+迁移。全新数据库从 `V1__initial_schema.sql` 建库；已经有数据的生产库会在
+`FlywayMigrationConfig` 中识别当前结构版本并建立基线，不会重新执行旧版建表或大表迁移。
+
+生产环境需要 PostgreSQL、TimescaleDB、`pg_trgm` 扩展，以及具备创建 schema 对象、
+索引和 TimescaleDB policy 权限的数据库账号。`timescaledb` 扩展需由数据库管理员预装，
+应用迁移只会执行 `CREATE EXTENSION IF NOT EXISTS`。
+
+升级顺序如下：
+
+1. 备份数据库，确认 `timescaledb` 扩展可用。
+2. 先部署一次新版本。Flyway 会在 PostgreSQL advisory lock 保护下自动建立/更新
+   `flyway_schema_history`，无需手工执行 SQL。
+3. 查看启动日志。已有库接管会记录 `Adopting existing Sparkle3 schema into Flyway at
+   legacy version ...`；之后的增量迁移由 Flyway 正常记录。
+4. 后续 schema 变更只需新增 `V<version>__<description>.sql`，禁止修改已经发布的迁移文件
+   checksum。
+
+如果旧库还未完成 TimescaleDB 转换（`ban_history` 不是 hypertable），应用会拒绝自动
+接管并给出提示。此时需要先使用 `db_sql/` 中保留的历史脚本完成一次
+`v20_convert_to_timescaledb.sql` 到 `v22_fuck_index.sql` 的升级，再启动新版本。
 
 ## 前端开发
 
@@ -85,21 +105,11 @@ Peer。每次刷新只扫描一次 `swarm_tracker`，先将最近窗口按用户
 再从同一快照计算自主汇报与授权确认流量。心跳 IP 是单个 host 地址，因此使用等值连接让
 PostgreSQL 选择 hash join，避免重复 CIDR 嵌套循环。
 
-生产库首次升级时请执行：
-
-```bash
-psql -f src/main/resources/db_sql/v24_swarm_statistics_and_announcements.sql
-psql -f src/main/resources/db_sql/v25_navigation_items.sql
-psql -f src/main/resources/db_sql/v26_home_statistics.sql
-psql -f src/main/resources/db_sql/v27_home_statistics_retention.sql
-psql -f src/main/resources/db_sql/v28_home_statistics_indexes.sql
-psql -f src/main/resources/db_sql/v29_heartbeat_geoip.sql
-```
-
-TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维护窗口执行该脚本。上线前建议
+相关迁移已经纳入 Flyway，启动时会自动执行，不再需要手工运行 `psql -f`。首次为大型生产库
+创建 hypertable 索引或连续聚合仍可能产生较多 I/O，建议在维护窗口部署。上线前建议
 先在测试库使用 `EXPLAIN (ANALYZE, BUFFERS)` 检查 `refreshUserSwarmStatistics` 的执行计划与索引命中情况。
 
-首页网络统计默认查询最近 7 天的封禁数据。`v26_home_statistics.sql` 会创建 Peer ID、客户端和
+首页网络统计默认查询最近 7 天的封禁数据。Flyway `V26` 会创建 Peer ID、客户端和
 GeoIP/IP 协议栈三个 TimescaleDB continuous aggregate，并启用列存压缩与每小时的增量刷新策略；
 首页查询优先读取聚合结果，迁移尚未执行或聚合不可用时自动回退原始表。查询结果在 Redis 中缓存
 5 分钟，并支持 1、7、14、30 天以及“仅封禁”与“封禁 + 种群”数据源切换。
@@ -121,14 +131,15 @@ BTN 同伴 GeoIP 分布使用 `userapps_heartbeat.geoip`，统计最近 24 小�
 3. `app_config_entries` 数据库值。
 4. YAML 配置默认值。
 
-数据源连接配置 `spring.datasource.*` 永远不会迁移到该表。敏感项会迁移，但后台 API
-只返回隐藏状态，不允许读取或修改。普通配置修改在重启后生效；当前运行设置与流量统计开关
+数据源连接配置 `spring.datasource.*` 与数据库迁移配置 `spring.flyway.*` 永远不会迁移到
+该表，避免后台配置绕过启动期结构升级。敏感项会迁移，但后台 API 只返回隐藏状态，不允许
+读取或修改。普通配置修改在重启后生效；当前运行设置与流量统计开关
 仍可在“运行设置”中立即应用。后台入口为 `/admin/database-config`，也可手动触发一次
 YAML 扫描。旧版保存在 Redis `sparkle:admin:runtime-config` 中的热更新值会在首次数据库
 迁移时自动兼容导入。
 
-自动迁移需要数据库账号具备创建表和索引的权限。如果生产账号只有 DML 权限，可先由数据库
-管理员执行 `src/main/resources/db_sql/v23_app_config_entries.sql`，之后应用会自动填充缺失配置。
+`app_config_entries` 表由 Flyway `V23` 创建。数据库账号只有 DML 权限时，需要数据库管理员
+提前授予 schema DDL 权限，否则应用会按设计拒绝启动，避免运行在结构不完整的数据库上。
 
 首次启用后台时，可由数据库管理员为已有账户授予角色：
 
