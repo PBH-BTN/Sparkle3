@@ -39,6 +39,7 @@ public final class HomeStatisticsModels {
             StackedAreaChart ipVersions,
             DistributionChart companionVersions,
             DistributionChart companionIpVersions,
+            DistributionChart companionGeoIp,
             OffsetDateTime generatedAt
     ) {
     }

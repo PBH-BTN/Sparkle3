@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatMapper, UserappsHeartbeat> implements IUserappsHeartbeatService {
     @Value("${sparkle.ping.heartbeat.cleanup-before}")
     private long deleteBefore;
+    @Autowired
+    private IPDBManager geoIPManager;
     private final AtomicLong seq = new AtomicLong();
 
     @Override
@@ -58,10 +62,12 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     @Transactional
     @Override
     public void onHeartBeat(long userAppId, @NotNull InetAddress ip) {
+        var geoIp = geoIPManager.queryIPDB(ip).geoData().get();
         var changes = this.baseMapper.upsert(new UserappsHeartbeat()
                 .setId(Hashing.sha256().hashString(userAppId + ip.getHostAddress() + System.currentTimeMillis() + seq.incrementAndGet(), StandardCharsets.UTF_8).asLong())
                 .setUserappId(userAppId)
                 .setIp(ip)
+                .setGeoip(geoIp)
                 .setFirstSeenAt(OffsetDateTime.now())
                 .setLastSeenAt(OffsetDateTime.now()));
         if (changes <= 0) {

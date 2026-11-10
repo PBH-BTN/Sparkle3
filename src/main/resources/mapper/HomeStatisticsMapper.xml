@@ -238,4 +238,30 @@
         FROM grouped
         ORDER BY name
     </select>
+
+    <select id="selectCompanionGeoIpDistribution" resultMap="dimensionCountResult">
+        WITH grouped AS (
+            SELECT
+                COALESCE(
+                    NULLIF(uh.geoip #>> '{city,cnCity}', ''),
+                    NULLIF(uh.geoip #>> '{city,name}', ''),
+                    NULLIF(uh.geoip #>> '{country,name}', ''),
+                    'Unknown'
+                ) AS name,
+                COUNT(*)::bigint AS value
+            FROM userapps_heartbeat uh
+            JOIN userapp ua ON ua.id = uh.userapp_id
+            WHERE uh.last_seen_at &gt;= NOW() - INTERVAL '24 hours'
+              AND uh.geoip IS NOT NULL
+              AND ua.banned_at IS NULL
+            GROUP BY name
+        )
+        SELECT
+            name,
+            value,
+            SUM(value) OVER () AS total
+        FROM grouped
+        ORDER BY value DESC, name
+        LIMIT 10
+    </select>
 </mapper>

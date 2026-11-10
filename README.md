@@ -91,6 +91,8 @@ psql -f src/main/resources/db_sql/v24_swarm_statistics_and_announcements.sql
 psql -f src/main/resources/db_sql/v25_navigation_items.sql
 psql -f src/main/resources/db_sql/v26_home_statistics.sql
 psql -f src/main/resources/db_sql/v27_home_statistics_retention.sql
+psql -f src/main/resources/db_sql/v28_home_statistics_indexes.sql
+psql -f src/main/resources/db_sql/v29_heartbeat_geoip.sql
 ```
 
 TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维护窗口执行该脚本。上线前建议
@@ -101,6 +103,9 @@ GeoIP/IP 协议栈三个 TimescaleDB continuous aggregate，并启用列存压�
 首页查询优先读取聚合结果，迁移尚未执行或聚合不可用时自动回退原始表。查询结果在 Redis 中缓存
 5 分钟，并支持 1、7、14、30 天以及“仅封禁”与“封禁 + 种群”数据源切换。
 三个首页聚合默认只保留最近 35 天，TimescaleDB retention policy 会自动删除更早的 chunks。
+
+BTN 同伴 GeoIP 分布使用 `userapps_heartbeat.geoip`，统计最近 24 小时地址的心跳 IP 城市归属。
+新增列完成后，历史地址会在下一次心跳上报时补全 GeoIP，活跃客户端通常会在数秒内恢复覆盖。
 
 ## 数据库配置迁移
 

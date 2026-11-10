@@ -105,6 +105,7 @@ export interface HomeStatisticsResponse {
   ipVersions: StackedAreaChart
   companionVersions: DistributionChart
   companionIpVersions: DistributionChart
+  companionGeoIp: DistributionChart
   generatedAt: string
 }
 

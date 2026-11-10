@@ -11,9 +11,9 @@ FROM public.ban_history
 GROUP BY bucket, peer_id
 WITH NO DATA;
 
-CREATE INDEX IF NOT EXISTS dashboard_ban_daily_peer_bucket_idx
-    ON public.dashboard_ban_daily_peer (bucket DESC, ban_count DESC)
-    INCLUDE (peer_id);
+CREATE INDEX IF NOT EXISTS dashboard_ban_daily_peer_bucket_dimension_idx
+    ON public.dashboard_ban_daily_peer (bucket DESC, peer_id)
+    INCLUDE (ban_count);
 
 ALTER MATERIALIZED VIEW public.dashboard_ban_daily_peer SET (
     timescaledb.compress = true,
@@ -50,9 +50,9 @@ FROM public.ban_history
 GROUP BY bucket, peer_client_name
 WITH NO DATA;
 
-CREATE INDEX IF NOT EXISTS dashboard_ban_daily_client_bucket_idx
-    ON public.dashboard_ban_daily_client (bucket DESC, ban_count DESC)
-    INCLUDE (peer_client_name);
+CREATE INDEX IF NOT EXISTS dashboard_ban_daily_client_bucket_dimension_idx
+    ON public.dashboard_ban_daily_client (bucket DESC, peer_client_name)
+    INCLUDE (ban_count);
 
 ALTER MATERIALIZED VIEW public.dashboard_ban_daily_client SET (
     timescaledb.compress = true,

@@ -90,6 +90,7 @@ export default {
       companionDescription: '查看当前 BTN 客户端版本与同伴地址栈分布。',
       companionVersions: 'BTN 客户端版本分布',
       companionIpVersions: 'BTN 同伴地址栈分布',
+      companionGeoIp: 'BTN 同伴 GeoIP 分布',
       top10: 'TOP 10',
       topCities: 'TOP 8 城市',
       addressStack: '地址栈',

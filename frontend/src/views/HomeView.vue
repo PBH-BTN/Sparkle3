@@ -75,6 +75,9 @@ const companionVersionOption = computed<EChartsCoreOption>(() =>
 const companionIpOption = computed<EChartsCoreOption>(() =>
   pieOption(networkStats.value?.companionIpVersions),
 )
+const companionGeoIpOption = computed<EChartsCoreOption>(() =>
+  pieOption(networkStats.value?.companionGeoIp),
+)
 
 function chartLabel(name: string) {
   if (name === 'Unknown') return t('home.statistics.unknown')
@@ -451,7 +454,7 @@ onMounted(() => {
         </div>
       </div>
       <a-row :gutter="[16, 16]">
-        <a-col :xs="24" :xl="12">
+        <a-col :xs="24" :xl="8">
           <a-card class="surface-card chart-card" :title="t('home.statistics.companionVersions')">
             <EChart
               v-if="hasDistribution(networkStats?.companionVersions)"
@@ -463,11 +466,23 @@ onMounted(() => {
             <a-empty v-else :description="t('home.statistics.noData')" />
           </a-card>
         </a-col>
-        <a-col :xs="24" :xl="12">
+        <a-col :xs="24" :xl="8">
           <a-card class="surface-card chart-card" :title="t('home.statistics.companionIpVersions')">
             <EChart
               v-if="hasDistribution(networkStats?.companionIpVersions)"
               :option="companionIpOption"
+              height="340px"
+              :loading="networkLoading"
+              :loading-text="t('common.loading')"
+            />
+            <a-empty v-else :description="t('home.statistics.noData')" />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :xl="8">
+          <a-card class="surface-card chart-card" :title="t('home.statistics.companionGeoIp')">
+            <EChart
+              v-if="hasDistribution(networkStats?.companionGeoIp)"
+              :option="companionGeoIpOption"
               height="340px"
               :loading="networkLoading"
               :loading-text="t('common.loading')"

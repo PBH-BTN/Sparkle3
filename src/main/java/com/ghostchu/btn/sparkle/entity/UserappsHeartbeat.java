@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ghostchu.btn.sparkle.converter.JsonbTypeHandler;
+import com.ghostchu.btn.sparkle.util.ipdb.IPGeoData;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -46,5 +48,8 @@ public class UserappsHeartbeat implements Serializable {
 
     @TableField(value = "last_seen_at")
     private OffsetDateTime lastSeenAt;
+
+    @TableField(value = "geoip", typeHandler = JsonbTypeHandler.class)
+    private IPGeoData geoip;
 
 }

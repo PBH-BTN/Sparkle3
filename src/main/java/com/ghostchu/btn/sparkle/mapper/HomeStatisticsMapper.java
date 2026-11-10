@@ -44,4 +44,6 @@ public interface HomeStatisticsMapper {
     List<DashboardUserAgentCountDto> selectActiveUserAgents();
 
     List<DashboardDimensionCountDto> selectCompanionIpVersions();
+
+    List<DashboardDimensionCountDto> selectCompanionGeoIpDistribution();
 }

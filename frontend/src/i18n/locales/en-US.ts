@@ -95,6 +95,7 @@ export default {
         'Current BTN client versions and companion address-stack distribution.',
       companionVersions: 'BTN client version distribution',
       companionIpVersions: 'BTN companion address stack',
+      companionGeoIp: 'BTN companion GeoIP distribution',
       top10: 'TOP 10',
       topCities: 'TOP 8 cities',
       addressStack: 'Address stack',

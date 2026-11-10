@@ -123,19 +123,19 @@ export const adminApi = {
       method: 'POST',
     }),
 
-  announcements: () => request<Announcement[]>('/api/admin/announcements'),
+  announcements: () => request<Announcement[]>('/api/admin/notices'),
   createAnnouncement: (body: AnnouncementInput) =>
-    request<Announcement>('/api/admin/announcements', {
+    request<Announcement>('/api/admin/notices', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   updateAnnouncement: (id: number, body: AnnouncementInput) =>
-    request<Announcement>(`/api/admin/announcements/${id}`, {
+    request<Announcement>(`/api/admin/notices/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
   deleteAnnouncement: (id: number) =>
-    request<void>(`/api/admin/announcements/${id}`, {
+    request<void>(`/api/admin/notices/${id}`, {
       method: 'DELETE',
     }),
 

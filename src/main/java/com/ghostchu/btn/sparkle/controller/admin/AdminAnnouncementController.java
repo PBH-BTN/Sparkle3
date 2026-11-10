@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/announcements")
+@RequestMapping("/api/admin/notices")
 @RequiredArgsConstructor
 public class AdminAnnouncementController {
     private final AnnouncementService announcementService;

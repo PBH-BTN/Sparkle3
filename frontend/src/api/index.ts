@@ -59,7 +59,7 @@ export const uiApi = {
       method: 'DELETE',
     }),
   ranking: () => request<RankingResponse>('/api/ui/ranking'),
-  announcements: () => request<Announcement[]>('/api/ui/announcements'),
+  announcements: () => request<Announcement[]>('/api/ui/notices'),
   ipQueryWidget: (search: string) => request<IpQueryResult>(`/ping/queryIp/widget/data${search}`),
 }
 

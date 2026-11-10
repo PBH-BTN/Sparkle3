@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/ui/announcements")
+@RequestMapping("/api/ui/notices")
 @RequiredArgsConstructor
 public class AnnouncementApiController {
     private final AnnouncementService announcementService;
