@@ -13,10 +13,12 @@ import {
 import PageHeader from '@/components/PageHeader.vue'
 import { adminApi } from '@/api/admin'
 import type { RuntimeConfig, SwarmStatisticsStatus } from '@/api/adminTypes'
+import { useSessionStore } from '@/stores/session'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
 const { formatDate, formatDuration, formatNumber } = useFormatters()
+const session = useSessionStore()
 const loading = ref(true)
 const saving = ref(false)
 const refreshStarting = ref(false)
@@ -79,6 +81,10 @@ async function save() {
   try {
     Object.assign(form, await adminApi.updateConfig(form))
     await loadStatus()
+    if (!form.swarmStatisticsEnabled) {
+      session.traffic = null
+    }
+    await session.load().catch(() => undefined)
     Message.success(t('admin.common.updated'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -141,7 +147,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
         <template #extra>
           <a-button
             :loading="refreshStarting || status?.running"
-            :disabled="status?.running"
+            :disabled="status?.running || !status?.enabled"
             @click="refreshStatistics"
           >
             <template #icon><IconRefresh /></template>

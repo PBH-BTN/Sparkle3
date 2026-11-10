@@ -46,8 +46,11 @@ public class HomeApiController {
         if (user == null) {
             return SessionResponse.anonymous();
         }
-        var statistics = userSwarmStatisticsService.getById(user.getId());
         var statisticsConfig = adminConfigService.get();
+        if (!statisticsConfig.swarmStatisticsEnabled()) {
+            return new SessionResponse(true, UserView.from(user), null);
+        }
+        var statistics = userSwarmStatisticsService.getById(user.getId());
         return new SessionResponse(
                 true,
                 UserView.from(user),

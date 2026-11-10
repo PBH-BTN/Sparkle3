@@ -89,10 +89,14 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
 
     @Override
     public boolean requestManualRefresh(@Nullable Long operatorId) {
+        var config = adminConfigService.get();
+        if (!config.swarmStatisticsEnabled()) {
+            return false;
+        }
         return startRefresh(
                 "MANUAL",
                 operatorId,
-                adminConfigService.get().swarmStatisticsWindowDays()
+                config.swarmStatisticsWindowDays()
         );
     }
 
@@ -106,8 +110,9 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             dataUpdatedAt = lastFinishedAt;
         }
         long staleAfterMinutes = Math.max(30L, config.swarmStatisticsRefreshMinutes() * 2L);
-        boolean stale = dataUpdatedAt == null
-                || dataUpdatedAt.plus(Duration.ofMinutes(staleAfterMinutes)).isBefore(OffsetDateTime.now());
+        boolean stale = config.swarmStatisticsEnabled()
+                && (dataUpdatedAt == null
+                || dataUpdatedAt.plus(Duration.ofMinutes(staleAfterMinutes)).isBefore(OffsetDateTime.now()));
         return new SwarmStatisticsStatusDto(
                 config.swarmStatisticsEnabled(),
                 refreshing.get(),

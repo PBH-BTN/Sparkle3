@@ -28,14 +28,23 @@ const { t } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const mobileMenuOpen = ref(false)
 
-const navItems = computed(() => [
-  { key: '/', label: t('nav.home'), icon: IconHome },
-  { key: '/userapp', label: t('nav.userApps'), icon: IconApps },
-  { key: '/banhistory', label: t('nav.banHistory'), icon: IconBug },
-  { key: '/client-discovery', label: t('nav.clientDiscovery'), icon: IconSearch },
-  { key: '/swarm-tracker', label: t('nav.swarmTracker'), icon: IconList },
-  { key: '/ranking/swarmStatistics', label: t('nav.ranking'), icon: IconTrophy },
-])
+const navItems = computed(() => {
+  const items = [
+    { key: '/', label: t('nav.home'), icon: IconHome },
+    { key: '/userapp', label: t('nav.userApps'), icon: IconApps },
+    { key: '/banhistory', label: t('nav.banHistory'), icon: IconBug },
+    { key: '/client-discovery', label: t('nav.clientDiscovery'), icon: IconSearch },
+    { key: '/swarm-tracker', label: t('nav.swarmTracker'), icon: IconList },
+  ]
+  if (session.traffic) {
+    items.push({
+      key: '/ranking/swarmStatistics',
+      label: t('nav.ranking'),
+      icon: IconTrophy,
+    })
+  }
+  return items
+})
 
 const selectedKey = computed(() => {
   if (route.path === '/') return '/'

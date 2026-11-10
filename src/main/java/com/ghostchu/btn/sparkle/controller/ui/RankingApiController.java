@@ -2,11 +2,14 @@ package com.ghostchu.btn.sparkle.controller.ui;
 
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.RankingEntry;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.RankingResponse;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,9 +26,14 @@ import java.util.Map;
 public class RankingApiController {
     private final IUserService userService;
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
+    private final AdminConfigService adminConfigService;
 
     @GetMapping
-    public RankingResponse ranking(@AuthenticationPrincipal SparkleUserDetails userDetails) {
+    public RankingResponse ranking(@AuthenticationPrincipal SparkleUserDetails userDetails)
+            throws BusinessException {
+        if (!adminConfigService.get().swarmStatisticsEnabled()) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "Swarm statistics are disabled");
+        }
         var ranking = userSwarmStatisticsService.getUsersRanking().stream().limit(500).toList();
         var userIds = ranking.stream()
                 .map(UserSwarmStatisticTrackRankingDto::getUserId)

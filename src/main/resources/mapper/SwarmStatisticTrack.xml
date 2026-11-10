@@ -11,16 +11,26 @@
     </resultMap>
 
     <insert id="refreshUserSwarmStatistics">
-        WITH self_report_stats AS (
+        <!-- heartbeat.ip is a host address, so equality keeps this snapshot join hashable. -->
+        WITH recent_tracker AS MATERIALIZED (
             SELECT
-                usrapp.owner,
-                COALESCE(SUM(st.to_peer_traffic), 0) as sent_self,
-                COALESCE(SUM(st.from_peer_traffic), 0) as recv_self
-            FROM userapp usrapp
-            JOIN swarm_tracker st ON st.userapps_id = usrapp.id
+                ua.owner,
+                st.peer_ip,
+                SUM(st.to_peer_traffic)::bigint AS sent_self,
+                SUM(st.from_peer_traffic)::bigint AS recv_self
+            FROM swarm_tracker st
+            JOIN userapp ua ON ua.id = st.userapps_id
             WHERE st.last_time_seen &gt;= #{startAt}
               AND st.last_time_seen &lt; #{endAt}
-            GROUP BY usrapp.owner
+            GROUP BY ua.owner, st.peer_ip
+        ),
+        self_report_stats AS (
+            SELECT
+                owner,
+                SUM(sent_self)::bigint AS sent_self,
+                SUM(recv_self)::bigint AS recv_self
+            FROM recent_tracker
+            GROUP BY owner
         ),
         distinct_ips AS (
             SELECT DISTINCT ua.owner, uah.ip
@@ -32,12 +42,10 @@
         other_ack_stats AS (
             SELECT
                 di.owner,
-                COALESCE(SUM(st.from_peer_traffic), 0) as sent_other,
-                COALESCE(SUM(st.to_peer_traffic), 0) as recv_other
+                SUM(rt.recv_self)::bigint AS sent_other,
+                SUM(rt.sent_self)::bigint AS recv_other
             FROM distinct_ips di
-            JOIN swarm_tracker st ON st.peer_ip &lt;&lt;= di.ip::inet
-            WHERE st.last_time_seen &gt;= #{startAt}
-              AND st.last_time_seen &lt; #{endAt}
+            JOIN recent_tracker rt ON rt.peer_ip = di.ip
             GROUP BY di.owner
         )
         INSERT INTO user_swarm_statistic (user_id, sent_traffic_other_ack, received_traffic_other_ack, sent_traffic_self_report, received_traffic_self_report, last_update_at)

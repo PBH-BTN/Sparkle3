@@ -422,7 +422,7 @@ export default {
       queryIpPow: 'Require PoW for IP queries',
       clientDiscovery: 'Enable client discovery',
       statisticsTitle: 'Seven-day traffic statistics',
-      statisticsEnabled: 'Enable automatic statistics refresh',
+      statisticsEnabled: 'Enable seven-day traffic statistics',
       refreshInterval: 'Refresh interval',
       windowDays: 'Statistics window',
       minutes: 'minutes',
@@ -433,8 +433,8 @@ export default {
       refreshBusy: 'A statistics refresh is already running. Check the status again shortly.',
       refreshState: 'Job status',
       stateRunning: 'Refreshing',
-      stateEnabled: 'Automatic updates enabled',
-      stateDisabled: 'Automatic updates disabled',
+      stateEnabled: 'Statistics enabled',
+      stateDisabled: 'Statistics disabled',
       dataUpdatedAt: 'Data last refreshed',
       lastDuration: 'Last duration',
       updatedUsers: 'Users updated',
@@ -445,7 +445,7 @@ export default {
       refreshError: 'The latest refresh failed',
       dataStale: 'Statistics are stale. Check the job setting and run a manual refresh.',
       statisticsHelp:
-        'The job now uses last-seen time and refreshes all users in one set-based aggregation instead of repeatedly scanning in user batches.',
+        'The job uses last-seen time for the configured window and scans swarm_tracker only once per refresh. Disabling it stops scheduled and manual updates and hides both the traffic strip and ranking.',
       invalidStatistics: 'The refresh interval and statistics window must be greater than zero.',
       hotReloadTitle: 'Applied immediately',
       hotReloadText:

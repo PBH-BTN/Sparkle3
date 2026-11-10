@@ -31,6 +31,9 @@ const showLogin = computed(
     session.loaded &&
     !session.authenticated,
 )
+const canRenderRoute = computed(
+  () => route.name !== 'ranking' || Boolean(session.traffic),
+)
 
 function handleUnauthorized() {
   session.clear()
@@ -38,12 +41,23 @@ function handleUnauthorized() {
 }
 
 watch(
-  () => [session.authenticated, session.user?.admin, route.name, route.meta.admin] as const,
-  ([authenticated, admin, routeName, requiresAdmin]) => {
+  () =>
+    [
+      session.authenticated,
+      session.user?.admin,
+      route.name,
+      route.meta.admin,
+      session.loaded,
+      Boolean(session.traffic),
+    ] as const,
+  ([authenticated, admin, routeName, requiresAdmin, loaded, statisticsEnabled]) => {
     if (authenticated && routeName === 'login') {
       router.replace('/')
     }
     if (authenticated && requiresAdmin && !admin) {
+      router.replace('/')
+    }
+    if (authenticated && loaded && routeName === 'ranking' && !statisticsEnabled) {
       router.replace('/')
     }
   },
@@ -81,7 +95,7 @@ onBeforeUnmount(() => {
     <LoginView v-else-if="showLogin" />
 
     <AppLayout v-else-if="session.authenticated">
-      <router-view />
+      <router-view v-if="canRenderRoute" />
     </AppLayout>
 
     <LoginView v-else />
