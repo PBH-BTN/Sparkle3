@@ -25,6 +25,8 @@ import java.util.Set;
 public class AdminMetricsService {
     private static final String HISTORY_KEY = "sparkle:admin:metrics:host:history";
     private static final Duration RETENTION = Duration.ofDays(8);
+    private static final long MAX_SAMPLES = RETENTION.toMinutes();
+    private static final Duration KEY_TTL = RETENTION.plusDays(1);
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -84,6 +86,7 @@ public class AdminMetricsService {
                 samples.add(objectMapper.readValue(value, SystemSample.class));
             } catch (Exception exception) {
                 log.debug("Skipping malformed host metric sample: {}", exception.getMessage());
+                redisTemplate.opsForZSet().remove(HISTORY_KEY, value);
             }
         }
         return downsample(samples);
@@ -93,7 +96,27 @@ public class AdminMetricsService {
         long now = sample.timestamp();
         ZSetOperations<String, String> zSet = redisTemplate.opsForZSet();
         zSet.add(HISTORY_KEY, objectMapper.writeValueAsString(sample), now);
-        zSet.removeRangeByScore(HISTORY_KEY, 0, now - RETENTION.toMillis());
+        trimHistory(now);
+        redisTemplate.expire(HISTORY_KEY, KEY_TTL);
+    }
+
+    @Scheduled(cron = "0 15 * * * *")
+    public void cleanupHistory() {
+        try {
+            Long removed = trimHistory(Instant.now().toEpochMilli());
+            if (removed != null && removed > 0) {
+                log.info("Removed {} expired admin host metric samples", removed);
+            }
+        } catch (Exception exception) {
+            log.warn("Unable to clean admin host metric history: {}", exception.getMessage());
+        }
+    }
+
+    private Long trimHistory(long now) {
+        ZSetOperations<String, String> zSet = redisTemplate.opsForZSet();
+        Long expired = zSet.removeRangeByScore(HISTORY_KEY, 0, now - RETENTION.toMillis());
+        Long overflow = zSet.removeRange(HISTORY_KEY, 0, -(MAX_SAMPLES + 1));
+        return (expired == null ? 0 : expired) + (overflow == null ? 0 : overflow);
     }
 
     private List<SystemSample> downsample(List<SystemSample> samples) {
