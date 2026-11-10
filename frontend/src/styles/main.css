@@ -88,6 +88,25 @@ a {
   vertical-align: middle;
 }
 
+.arco-table-th,
+.arco-table-td,
+.arco-table-cell,
+.arco-table-td-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.table-cell-ellipsis {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .table-pagination {
   display: flex;
   justify-content: flex-end;
@@ -113,8 +132,8 @@ a {
 }
 
 .text-truncate {
-  display: inline-block;
-  max-width: 210px;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

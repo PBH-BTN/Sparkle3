@@ -393,21 +393,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.table-card :deep(.arco-table-td) {
-  overflow: hidden;
-}
-
-.table-cell-ellipsis {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
 .module-tag {
   display: inline-flex;
   max-width: 100%;

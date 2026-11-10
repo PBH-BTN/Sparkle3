@@ -46,8 +46,8 @@ const generatedContent = ref('')
 const columns = computed<TableColumnData[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 90 },
   { title: t('admin.rules.type'), slotName: 'type', width: 150 },
-  { title: t('admin.rules.category'), slotName: 'category', width: 220 },
-  { title: t('admin.rules.content'), slotName: 'content', width: 520 },
+  { title: t('admin.rules.category'), slotName: 'category', width: 240, ellipsis: true },
+  { title: t('admin.rules.content'), slotName: 'content', width: 560, ellipsis: true },
   { title: t('admin.common.actions'), slotName: 'actions', width: 190, fixed: 'right' },
 ])
 
@@ -234,7 +234,7 @@ onMounted(load)
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1050 }"
+        :scroll="{ x: 1220 }"
         row-key="id"
         stripe
       >
@@ -243,11 +243,15 @@ onMounted(load)
           <a-tag color="arcoblue">{{ typeLabel(record.type) }}</a-tag>
         </template>
         <template #category="{ record }">
-          <span class="truncate" :title="record.category">{{ record.category }}</span>
+          <span class="table-cell-ellipsis" :title="record.category">
+            {{ record.category }}
+          </span>
         </template>
         <template #content="{ record }">
           <a-tooltip :content="record.content">
-            <code class="content-preview">{{ record.content }}</code>
+            <code class="content-preview table-cell-ellipsis">
+              {{ record.content }}
+            </code>
           </a-tooltip>
         </template>
         <template #actions="{ record }">
@@ -378,18 +382,7 @@ onMounted(load)
   border-radius: 6px;
 }
 
-.truncate,
 .content-preview {
-  display: inline-block;
-  max-width: 470px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.content-preview {
-  max-width: 480px;
   color: var(--color-text-2);
   font-size: 12px;
 }
