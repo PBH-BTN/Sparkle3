@@ -76,6 +76,20 @@ export default {
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',
+      trafficTitle: 'BitTorrent traffic carried',
+      trafficDescription:
+        'Combines every observed traffic record in ban_history and swarm_tracker, including bans.',
+      last3Days: '3 days',
+      totalTransfer: 'Total transferred',
+      totalTransferHint: 'Cumulative upload and download traffic',
+      totalDownload: 'Total downloaded',
+      totalDownloadHint: 'Traffic downloaded as a leecher',
+      totalUpload: 'Total uploaded',
+      totalUploadHint:
+        'Traffic uploaded as a seeder, or uploaded while downloading as a leecher',
+      topUploadCities: 'Top 30 upload GeoIP cities',
+      topDownloadCities: 'Top 30 download GeoIP cities',
+      top30: 'TOP 30',
       networkTitle: 'Network statistics',
       networkDescription:
         'Inspect recent Peer ID, client, GeoIP city, and address-stack distributions.',
@@ -443,6 +457,11 @@ export default {
         'companion-charts': {
           name: 'Companion statistics charts',
           description: 'Refresh BTN client versions, address stacks, and GeoIP distribution.',
+        },
+        'bittorrent-traffic': {
+          name: 'BitTorrent traffic statistics',
+          description:
+            'Refresh hourly swarm snapshots, ban traffic aggregates, and Top 30 GeoIP cities.',
         },
       },
     },

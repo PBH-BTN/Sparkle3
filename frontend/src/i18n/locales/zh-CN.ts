@@ -73,6 +73,19 @@ export default {
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
+      trafficTitle: 'BitTorrent 流量承载',
+      trafficDescription:
+        '汇总 ban_history 与 swarm_tracker 中包括封禁记录在内的所有已观测流量。',
+      last3Days: '3 天',
+      totalTransfer: '总传输流量',
+      totalTransferHint: '上传流量与下载流量的累计总和',
+      totalDownload: '总下载流量',
+      totalDownloadHint: '作为 Leecher 下载的流量',
+      totalUpload: '总上传流量',
+      totalUploadHint: '作为 Seeder 上传，或 Leecher 下载过程中上传的流量',
+      topUploadCities: 'Top 30 上传流量 GeoIP 城市',
+      topDownloadCities: 'Top 30 下载流量 GeoIP 城市',
+      top30: 'TOP 30',
       networkTitle: '网络统计数据',
       networkDescription: '查看 Peer ID、客户端、GeoIP 城市和地址栈的近期分布。',
       range: '统计区间',
@@ -435,6 +448,10 @@ export default {
         'companion-charts': {
           name: '同伴统计图表',
           description: '刷新 BTN 客户端版本、地址栈和 GeoIP 分布。',
+        },
+        'bittorrent-traffic': {
+          name: 'BitTorrent 流量统计',
+          description: '刷新种群流量小时快照、封禁流量聚合缓存与 Top 30 GeoIP 城市。',
         },
       },
     },

@@ -33,6 +33,7 @@ public class HomepageStatisticsRefreshService {
 
     private final StatisticsRefreshServiceImpl statisticsRefreshService;
     private final HomeStatisticsService homeStatisticsService;
+    private final BittorrentTrafficStatisticsService bittorrentTrafficStatisticsService;
     private final DatabaseConfigService databaseConfigService;
     private final ConcurrentMap<String, AtomicBoolean> running = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ModuleRunState> runStates = new ConcurrentHashMap<>();
@@ -43,10 +44,12 @@ public class HomepageStatisticsRefreshService {
     public HomepageStatisticsRefreshService(
             StatisticsRefreshServiceImpl statisticsRefreshService,
             HomeStatisticsService homeStatisticsService,
+            BittorrentTrafficStatisticsService bittorrentTrafficStatisticsService,
             DatabaseConfigService databaseConfigService
     ) {
         this.statisticsRefreshService = statisticsRefreshService;
         this.homeStatisticsService = homeStatisticsService;
+        this.bittorrentTrafficStatisticsService = bittorrentTrafficStatisticsService;
         this.databaseConfigService = databaseConfigService;
         long dueAt = System.currentTimeMillis();
         for (Module module : Module.values()) {
@@ -237,6 +240,7 @@ public class HomepageStatisticsRefreshService {
             case TORRENTS -> statisticsRefreshService.onTorrentUpdate();
             case NETWORK_CHARTS -> homeStatisticsService.refreshNetworkStatistics();
             case COMPANION_CHARTS -> homeStatisticsService.refreshCompanionStatistics();
+            case BITTORRENT_TRAFFIC -> bittorrentTrafficStatisticsService.refresh();
         }
     }
 
@@ -353,7 +357,8 @@ public class HomepageStatisticsRefreshService {
         SWARM_TRACKER("swarm-tracker", 20),
         TORRENTS("torrents", 40),
         NETWORK_CHARTS("network-charts", 5),
-        COMPANION_CHARTS("companion-charts", 5);
+        COMPANION_CHARTS("companion-charts", 5),
+        BITTORRENT_TRAFFIC("bittorrent-traffic", 10);
 
         private static final Map<String, Module> BY_ID = java.util.Arrays.stream(values())
                 .collect(java.util.stream.Collectors.toMap(

@@ -125,6 +125,30 @@ export interface HomeCompanionStatisticsResponse {
   generatedAt: string
 }
 
+export interface TrafficTotals {
+  uploadBytes: string
+  downloadBytes: string
+  transferBytes: string
+}
+
+export interface TrafficCityDatum {
+  name: string
+  bytes: string
+}
+
+export interface TrafficDistribution {
+  data: TrafficCityDatum[]
+  totalBytes: string
+}
+
+export interface HomeBittorrentTrafficResponse {
+  days: number
+  totals: TrafficTotals
+  topUploadCities: TrafficDistribution
+  topDownloadCities: TrafficDistribution
+  generatedAt: string
+}
+
 export interface UserRelation {
   platformUserId: string
   platform: string

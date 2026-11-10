@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.BittorrentTrafficMapper">
+    <resultMap id="trafficRowResult" type="com.ghostchu.btn.sparkle.service.dto.DashboardTrafficRowDto">
+        <result column="city" property="city"/>
+        <result column="upload_bytes" property="uploadBytes"/>
+        <result column="download_bytes" property="downloadBytes"/>
+    </resultMap>
+
+    <select id="selectBanTraffic" resultMap="trafficRowResult">
+        WITH city_totals AS MATERIALIZED (
+            <choose>
+                <when test="useAggregate">
+                    SELECT
+                        city,
+                        SUM(upload_bytes)::numeric AS upload,
+                        SUM(download_bytes)::numeric AS download
+                    FROM public.dashboard_ban_hourly_traffic_city
+                    WHERE bucket &gt;= #{startAt}
+                      AND bucket &lt; #{endAt}
+                    GROUP BY city
+                </when>
+                <otherwise>
+                    SELECT
+                        COALESCE(
+                            NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                            NULLIF(peer_geoip #>> '{city,name}', ''),
+                            NULLIF(peer_geoip #>> '{country,name}', ''),
+                            'Unknown'
+                        ) AS city,
+                        SUM(GREATEST(to_peer_traffic, 0))::numeric AS upload,
+                        SUM(GREATEST(from_peer_traffic, 0))::numeric AS download
+                    FROM public.ban_history
+                    WHERE populate_time &gt;= #{startAt}
+                      AND populate_time &lt; #{endAt}
+                    GROUP BY city
+                </otherwise>
+            </choose>
+        ),
+        top_cities AS (
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY upload DESC, city
+                LIMIT #{limit}
+            )
+            UNION ALL
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY download DESC, city
+                LIMIT #{limit}
+            )
+        ),
+        totals AS (
+            SELECT SUM(upload)::numeric AS upload, SUM(download)::numeric AS download
+            FROM city_totals
+        )
+        SELECT NULL::text AS city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM totals
+        UNION ALL
+        SELECT city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM (
+            SELECT DISTINCT city, upload, download
+            FROM top_cities
+        ) selected
+    </select>
+
+    <select id="selectSwarmTraffic" resultMap="trafficRowResult">
+        WITH city_totals AS MATERIALIZED (
+            <choose>
+                <when test="useSnapshot">
+                    SELECT
+                        city,
+                        SUM(upload_bytes)::numeric AS upload,
+                        SUM(download_bytes)::numeric AS download
+                    FROM public.dashboard_swarm_hourly_traffic
+                    WHERE bucket &gt;= #{startAt}
+                      AND bucket &lt; #{endAt}
+                    GROUP BY city
+                </when>
+                <otherwise>
+                    SELECT
+                        COALESCE(
+                            NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                            NULLIF(peer_geoip #>> '{city,name}', ''),
+                            NULLIF(peer_geoip #>> '{country,name}', ''),
+                            'Unknown'
+                        ) AS city,
+                        SUM(GREATEST(to_peer_traffic, 0))::numeric AS upload,
+                        SUM(GREATEST(from_peer_traffic, 0))::numeric AS download
+                    FROM public.swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt}
+                      AND last_time_seen &lt; #{endAt}
+                    GROUP BY city
+                </otherwise>
+            </choose>
+        ),
+        top_cities AS (
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY upload DESC, city
+                LIMIT #{limit}
+            )
+            UNION ALL
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY download DESC, city
+                LIMIT #{limit}
+            )
+        ),
+        totals AS (
+            SELECT SUM(upload)::numeric AS upload, SUM(download)::numeric AS download
+            FROM city_totals
+        )
+        SELECT NULL::text AS city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM totals
+        UNION ALL
+        SELECT city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM (
+            SELECT DISTINCT city, upload, download
+            FROM top_cities
+        ) selected
+    </select>
+
+    <delete id="deleteSwarmTrafficSnapshot">
+        DELETE FROM public.dashboard_swarm_hourly_traffic
+        WHERE bucket &gt;= #{startAt}
+          AND bucket &lt; #{endAt}
+    </delete>
+
+    <insert id="insertSwarmTrafficSnapshot">
+        INSERT INTO public.dashboard_swarm_hourly_traffic (
+            bucket,
+            city,
+            upload_bytes,
+            download_bytes,
+            refreshed_at
+        )
+        SELECT
+            time_bucket(INTERVAL '1 hour', last_time_seen) AS bucket,
+            COALESCE(
+                NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                NULLIF(peer_geoip #>> '{city,name}', ''),
+                NULLIF(peer_geoip #>> '{country,name}', ''),
+                'Unknown'
+            ) AS city,
+            SUM(GREATEST(to_peer_traffic, 0))::numeric AS upload_bytes,
+            SUM(GREATEST(from_peer_traffic, 0))::numeric AS download_bytes,
+            NOW()
+        FROM public.swarm_tracker
+        WHERE last_time_seen &gt;= #{startAt}
+          AND last_time_seen &lt; #{endAt}
+        GROUP BY bucket, city
+        ON CONFLICT (bucket, city) DO UPDATE
+        SET upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes,
+            refreshed_at = EXCLUDED.refreshed_at
+    </insert>
+
+    <delete id="deleteExpiredSwarmTrafficSnapshot">
+        DELETE FROM public.dashboard_swarm_hourly_traffic
+        WHERE bucket &lt; #{cutoff}
+    </delete>
+</mapper>

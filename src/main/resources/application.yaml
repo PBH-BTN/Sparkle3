@@ -282,6 +282,9 @@ sparkle:
       companion-charts:
         enabled: true
         refresh-interval-minutes: 5
+      bittorrent-traffic:
+        enabled: true
+        refresh-interval-minutes: 10
   admin:
     user-ip-warning:
       duration: 1209600000

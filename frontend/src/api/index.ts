@@ -10,6 +10,7 @@ import type {
   ContactEmailRequest,
   ContactEmailResult,
   FilterOptions,
+  HomeBittorrentTrafficResponse,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
   HomeStats,
@@ -43,6 +44,10 @@ export const uiApi = {
     ),
   homeCompanionStatistics: () =>
     request<HomeCompanionStatisticsResponse>('/api/ui/statistics/companion'),
+  homeBittorrentTrafficStatistics: (days: number) =>
+    request<HomeBittorrentTrafficResponse>(
+      `/api/ui/statistics/bittorrent-traffic?days=${days}`,
+    ),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   publicProfile: (uid: string) =>
     request<PublicUserProfileResponse>(`/api/ui/user/profile/${encodeURIComponent(uid)}`),

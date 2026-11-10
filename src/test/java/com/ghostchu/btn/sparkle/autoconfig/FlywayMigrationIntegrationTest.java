@@ -76,11 +76,19 @@ class FlywayMigrationIntegrationTest {
                           'analyse_ban_history_daily_base',
                           'dashboard_ban_daily_peer',
                           'dashboard_ban_daily_client',
-                          'dashboard_ban_daily_geo'
+                          'dashboard_ban_daily_geo',
+                          'dashboard_ban_hourly_traffic_city'
                       )
                     """)) {
                 assertTrue(result.next());
-                assertEquals(5, result.getInt(1));
+                assertEquals(6, result.getInt(1));
+            }
+
+            try (var result = statement.executeQuery("""
+                    SELECT to_regclass('public.dashboard_swarm_hourly_traffic') IS NOT NULL
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
             }
 
             try (var result = statement.executeQuery("""

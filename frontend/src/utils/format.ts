@@ -20,15 +20,39 @@ export function useFormatters() {
     }).format(date)
   }
 
-  const formatBytes = (value: number | null | undefined) => {
-    if (value == null || Number.isNaN(value)) return 'N/A'
-    if (value === 0) return `0 ${t('units.bytes')}`
+  const formatBytes = (value: number | string | bigint | null | undefined) => {
+    if (value == null) return 'N/A'
+    let bytes: bigint
+    try {
+      if (typeof value === 'bigint') {
+        bytes = value
+      } else if (typeof value === 'string') {
+        bytes = BigInt(value)
+      } else {
+        if (!Number.isFinite(value)) return 'N/A'
+        bytes = BigInt(Math.trunc(value))
+      }
+    } catch {
+      return 'N/A'
+    }
+
+    const negative = bytes < 0n
+    const absolute = negative ? -bytes : bytes
+    if (absolute === 0n) return `0 ${t('units.bytes')}`
     const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
-    const index = Math.min(Math.floor(Math.log(Math.abs(value)) / Math.log(1024)), units.length - 1)
-    const result = value / 1024 ** index
-    return `${new Intl.NumberFormat(locale.value, {
+    let index = 0
+    let divisor = 1n
+    while (index < units.length - 1 && absolute / divisor >= 1024n) {
+      divisor *= 1024n
+      index++
+    }
+    const whole = absolute / divisor
+    const fraction = absolute % divisor
+    const scaled = Number(whole) + Number(fraction) / Number(divisor)
+    const formatted = new Intl.NumberFormat(locale.value, {
       maximumFractionDigits: index === 0 ? 0 : 2,
-    }).format(result)} ${units[index]}`
+    }).format(negative ? -scaled : scaled)
+    return `${formatted} ${index === 0 ? t('units.bytes') : units[index]}`
   }
 
   const formatProgress = (value: number | null | undefined) =>
