@@ -14,17 +14,10 @@ import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 
 @Service
@@ -46,11 +39,6 @@ public class StatisticsRefreshServiceImpl {
     private UserappMapper userappMapper;
     @Autowired
     private TorrentMapper torrentMapper;
-
-    @Value("${sparkle.statistics.tracker-dashboard-image-retrieve}")
-    private String trackerDashboardImageRetrieveUrl;
-    @Value("${sparkle.statistics.tracker-dashboard-image-auth-token}")
-    private String trackerDashboardImageAuthToken;
 
     @Scheduled(cron = "${sparkle.statistics.ban-count-refresh-cron}")
     public void onBanCountRefresh() {
@@ -98,24 +86,4 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_24HOURS.getKey(), last24Hours);
     }
 
-    @Scheduled(cron = "${sparkle.statistics.tracker-dashboard-refresh-cron}")
-    public void onTrackerDashboardRefresh() {
-        // download the tracker dashboard image from trackerDashboardImageRetrieveUrl
-        // and save to /tmp/sparkle_tracker_dashboard.png
-        // use Java 11+ HttpClient
-        try (var httpClient = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create(trackerDashboardImageRetrieveUrl))
-                    .header("Authorization", "Bearer " + trackerDashboardImageAuthToken)
-                    .build();
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            if (response.statusCode() == 200) {
-                Files.write(Paths.get("data/sparkle_tracker_dashboard.png"), response.body());
-            } else {
-                log.error("Failed to download tracker dashboard image, status code: {}", response.statusCode());
-            }
-        } catch (Exception e) {
-            log.error("Failed to download tracker dashboard image", e);
-        }
-    }
 }

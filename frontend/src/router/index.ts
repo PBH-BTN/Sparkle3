@@ -57,11 +57,6 @@ const router = createRouter({
       component: () => import('@/views/SwarmTrackerView.vue'),
     },
     {
-      path: '/tracker',
-      name: 'tracker',
-      component: () => import('@/views/TrackerView.vue'),
-    },
-    {
       path: '/ranking/swarmStatistics',
       name: 'ranking',
       component: () => import('@/views/RankingView.vue'),
@@ -96,6 +91,11 @@ const router = createRouter({
           path: 'settings',
           name: 'admin-settings',
           component: () => import('@/views/admin/AdminSettingsView.vue'),
+        },
+        {
+          path: 'announcements',
+          name: 'admin-announcements',
+          component: () => import('@/views/admin/AdminAnnouncementsView.vue'),
         },
         {
           path: 'storage',

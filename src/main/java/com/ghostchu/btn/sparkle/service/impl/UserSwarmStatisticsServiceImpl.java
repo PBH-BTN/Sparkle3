@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
+import com.ghostchu.btn.sparkle.service.dto.SwarmStatisticsStatusDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,22 +17,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Service
 public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatisticMapper, UserSwarmStatistic> implements IUserSwarmStatisticsService {
-    @Value("${sparkle.swarm-statistics-track.enabled}")
-    private boolean enabled;
-    @Value("${sparkle.swarm-statistics-track.duration}")
-    private long duration;
     @Autowired
     private IUserService userService;
     @Autowired
@@ -40,6 +36,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
+    @Autowired
+    private AdminConfigService adminConfigService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -49,36 +47,121 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-self-report}")
     private double rankingReceivedTrafficSelfReportWeight;
 
-    private final ReentrantLock cronLock = new ReentrantLock();
+    private final AtomicBoolean refreshing = new AtomicBoolean();
+    private volatile OffsetDateTime lastStartedAt;
+    private volatile OffsetDateTime lastFinishedAt;
+    private volatile long lastDurationMs;
+    private volatile int updatedUsers;
+    private volatile String lastTrigger;
+    private volatile Long lastTriggeredBy;
+    private volatile String lastError;
 
-    @Scheduled(cron = "${sparkle.swarm-statistics-track.cron}")
-    public void cronUserSwarmStatisticsUpdate() {
-        if (!enabled) return;
-        try {
-            if(!cronLock.tryLock()) return;
-            OffsetDateTime startAt = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
-            OffsetDateTime endAt = OffsetDateTime.now();
-            List<Long> uids = userService.fetchAllUserIds();
-            log.info("Starting user swarm statistics update for {} users", uids.size());
-
-            long start = System.currentTimeMillis();
-            int batchSize = 15; // Process 5 users at a time to keep queries light
-            int processed = 0;
-
-            for (int i = 0; i < uids.size(); i += batchSize) {
-                List<Long> batch = uids.subList(i, Math.min(i + batchSize, uids.size()));
-                try {
-                    int updated = baseMapper.updateUserSwarmStatistics(startAt, endAt, batch);
-                    processed += updated;
-                    log.info("Processed batch {}/{}: {} records updated", (i / batchSize) + 1, (uids.size() + batchSize - 1) / batchSize, updated);
-                } catch (Exception e) {
-                    log.error("Error updating swarm statistics for batch starting at index {}", i, e);
-                }
-            }
-            log.info("Processed {} user swarm statistics updates in {}ms", processed, System.currentTimeMillis() - start);
-        }finally {
-            cronLock.unlock();
+    @Scheduled(cron = "0 * * * * *")
+    public void scheduledUserSwarmStatisticsUpdate() {
+        var config = adminConfigService.get();
+        if (!config.swarmStatisticsEnabled() || refreshing.get()) {
+            return;
         }
+        try {
+            OffsetDateTime latest = latestCompletion();
+            OffsetDateTime dueAt = latest == null
+                    ? OffsetDateTime.now()
+                    : latest.plusMinutes(config.swarmStatisticsRefreshMinutes());
+            if (OffsetDateTime.now().isBefore(dueAt)) {
+                return;
+            }
+            startRefresh("SCHEDULED", null, config.swarmStatisticsWindowDays());
+        } catch (Exception exception) {
+            lastError = exception.getMessage();
+            log.warn("Unable to check swarm statistics refresh schedule", exception);
+        }
+    }
+
+    private OffsetDateTime latestCompletion() {
+        OffsetDateTime databaseUpdate = baseMapper.selectLatestUpdateAt();
+        if (lastFinishedAt == null) {
+            return databaseUpdate;
+        }
+        return databaseUpdate == null || lastFinishedAt.isAfter(databaseUpdate)
+                ? lastFinishedAt
+                : databaseUpdate;
+    }
+
+    @Override
+    public boolean requestManualRefresh(@Nullable Long operatorId) {
+        return startRefresh(
+                "MANUAL",
+                operatorId,
+                adminConfigService.get().swarmStatisticsWindowDays()
+        );
+    }
+
+    @Override
+    public @NotNull SwarmStatisticsStatusDto getRefreshStatus() {
+        var config = adminConfigService.get();
+        OffsetDateTime dataUpdatedAt;
+        try {
+            dataUpdatedAt = latestCompletion();
+        } catch (Exception exception) {
+            dataUpdatedAt = lastFinishedAt;
+        }
+        long staleAfterMinutes = Math.max(30L, config.swarmStatisticsRefreshMinutes() * 2L);
+        boolean stale = dataUpdatedAt == null
+                || dataUpdatedAt.plus(Duration.ofMinutes(staleAfterMinutes)).isBefore(OffsetDateTime.now());
+        return new SwarmStatisticsStatusDto(
+                config.swarmStatisticsEnabled(),
+                refreshing.get(),
+                config.swarmStatisticsRefreshMinutes(),
+                config.swarmStatisticsWindowDays(),
+                lastStartedAt,
+                lastFinishedAt,
+                lastDurationMs,
+                updatedUsers,
+                lastTrigger,
+                lastTriggeredBy,
+                dataUpdatedAt,
+                stale,
+                lastError
+        );
+    }
+
+    private boolean startRefresh(String trigger, @Nullable Long operatorId, int windowDays) {
+        if (!refreshing.compareAndSet(false, true)) {
+            return false;
+        }
+        OffsetDateTime endAt = OffsetDateTime.now();
+        OffsetDateTime startAt = endAt.minusDays(windowDays);
+        lastStartedAt = endAt;
+        lastFinishedAt = null;
+        lastDurationMs = 0;
+        updatedUsers = 0;
+        lastTrigger = trigger;
+        lastTriggeredBy = operatorId;
+        lastError = null;
+
+        log.info("Starting swarm statistics refresh ({}, {} day window, operator {})",
+                trigger, windowDays, operatorId);
+        Thread.startVirtualThread(() -> {
+            long startedNanos = System.nanoTime();
+            try {
+                int updated = baseMapper.refreshUserSwarmStatistics(startAt, endAt);
+                updatedUsers = updated;
+                lastFinishedAt = OffsetDateTime.now();
+                lastDurationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
+                log.info("Refreshed {} user swarm statistics in {}ms",
+                        updated, lastDurationMs);
+            } catch (Exception exception) {
+                lastFinishedAt = OffsetDateTime.now();
+                lastDurationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
+                lastError = exception.getMessage() == null
+                        ? exception.getClass().getSimpleName()
+                        : exception.getMessage();
+                log.error("Unable to refresh user swarm statistics", exception);
+            } finally {
+                refreshing.set(false);
+            }
+        });
+        return true;
     }
 
     @Override

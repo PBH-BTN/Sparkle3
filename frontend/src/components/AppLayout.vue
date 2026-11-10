@@ -5,9 +5,9 @@ import { useI18n } from 'vue-i18n'
 import {
   IconApps,
   IconBug,
-  IconCloud,
   IconDashboard,
   IconDown,
+  IconExclamationCircle,
   IconFire,
   IconHome,
   IconList,
@@ -25,7 +25,7 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const { t } = useI18n()
-const { formatBytes } = useFormatters()
+const { formatBytes, formatDate } = useFormatters()
 const mobileMenuOpen = ref(false)
 
 const navItems = computed(() => [
@@ -34,13 +34,26 @@ const navItems = computed(() => [
   { key: '/banhistory', label: t('nav.banHistory'), icon: IconBug },
   { key: '/client-discovery', label: t('nav.clientDiscovery'), icon: IconSearch },
   { key: '/swarm-tracker', label: t('nav.swarmTracker'), icon: IconList },
-  { key: '/tracker', label: t('nav.tracker'), icon: IconCloud },
   { key: '/ranking/swarmStatistics', label: t('nav.ranking'), icon: IconTrophy },
 ])
 
 const selectedKey = computed(() => {
   if (route.path === '/') return '/'
-  return navItems.value.find((item) => route.path.startsWith(item.key))?.key ?? ''
+  return (
+    navItems.value.find(
+      (item) =>
+        item.key !== '/' &&
+        (route.path === item.key || route.path.startsWith(`${item.key}/`)),
+    )?.key ?? ''
+  )
+})
+
+const trafficIsStale = computed(() => {
+  const updatedAt = session.traffic?.lastUpdateAt
+  if (!updatedAt) return true
+  const timestamp = new Date(updatedAt).getTime()
+  const staleAfterMinutes = Math.max(120, (session.traffic?.refreshIntervalMinutes ?? 60) * 2)
+  return Number.isNaN(timestamp) || Date.now() - timestamp > staleAfterMinutes * 60 * 1000
 })
 
 function navigate(path: string) {
@@ -109,7 +122,9 @@ function navigate(path: string) {
 
     <div v-if="session.traffic" class="traffic-strip">
       <div class="traffic-strip-inner">
-        <span class="traffic-strip-title">{{ t('home.last7Days') }}</span>
+        <span class="traffic-strip-title">
+          {{ t('home.trafficWindow', { days: session.traffic.windowDays }) }}
+        </span>
         <span class="traffic-item">
           <span class="traffic-label">{{ t('ranking.sentSelf') }}</span>
           <strong>{{ formatBytes(session.traffic.sentTrafficSelfReport) }}</strong>
@@ -125,6 +140,16 @@ function navigate(path: string) {
         <span class="traffic-item">
           <span class="traffic-label">{{ t('ranking.receivedAck') }}</span>
           <strong>{{ formatBytes(session.traffic.receivedTrafficOtherAck) }}</strong>
+        </span>
+        <span class="traffic-updated" :class="{ 'traffic-updated--stale': trafficIsStale }">
+          <a-tooltip v-if="trafficIsStale" :content="t('home.trafficStale')">
+            <IconExclamationCircle />
+          </a-tooltip>
+          {{
+            session.traffic.lastUpdateAt
+              ? t('home.trafficUpdatedAt', { time: formatDate(session.traffic.lastUpdateAt) })
+              : t('home.trafficNeverUpdated')
+          }}
         </span>
       </div>
     </div>
@@ -340,6 +365,18 @@ function navigate(path: string) {
 
 .traffic-label {
   color: var(--color-text-3);
+}
+
+.traffic-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--color-text-3);
+}
+
+.traffic-updated--stale {
+  color: rgb(var(--orange-6));
 }
 
 .app-content {

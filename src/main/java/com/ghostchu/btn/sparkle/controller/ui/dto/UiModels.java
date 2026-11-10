@@ -66,23 +66,29 @@ public final class UiModels {
             long receivedTrafficSelfReport,
             long sentTrafficOtherAck,
             long receivedTrafficOtherAck,
-            OffsetDateTime lastUpdateAt
+            OffsetDateTime lastUpdateAt,
+            int refreshIntervalMinutes,
+            int windowDays
     ) {
-        public static TrafficSummary from(UserSwarmStatistic statistics) {
+        public static TrafficSummary from(UserSwarmStatistic statistics,
+                                          int refreshIntervalMinutes,
+                                          int windowDays) {
             if (statistics == null) {
-                return empty();
+                return empty(refreshIntervalMinutes, windowDays);
             }
             return new TrafficSummary(
                     statistics.getSentTrafficSelfReport(),
                     statistics.getReceivedTrafficSelfReport(),
                     statistics.getSentTrafficOtherAck(),
                     statistics.getReceivedTrafficOtherAck(),
-                    statistics.getLastUpdateAt()
+                    statistics.getLastUpdateAt(),
+                    refreshIntervalMinutes,
+                    windowDays
             );
         }
 
-        public static TrafficSummary empty() {
-            return new TrafficSummary(0, 0, 0, 0, null);
+        public static TrafficSummary empty(int refreshIntervalMinutes, int windowDays) {
+            return new TrafficSummary(0, 0, 0, 0, null, refreshIntervalMinutes, windowDays);
         }
     }
 
@@ -145,9 +151,4 @@ public final class UiModels {
     ) {
     }
 
-    public record TrackerResponse(
-            String announceUrl,
-            String dashboardUrl
-    ) {
-    }
 }

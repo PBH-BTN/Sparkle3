@@ -25,12 +25,27 @@ export interface TrafficSummary {
   sentTrafficOtherAck: number
   receivedTrafficOtherAck: number
   lastUpdateAt: string | null
+  refreshIntervalMinutes: number
+  windowDays: number
 }
 
 export interface SessionResponse {
   authenticated: boolean
   user: SessionUser | null
   traffic: TrafficSummary | null
+}
+
+export interface Announcement {
+  id: number
+  level: 'GREEN' | 'YELLOW' | 'BLUE' | 'RED'
+  titleZh: string
+  titleEn: string
+  contentZh: string
+  contentEn: string
+  dismissible: boolean
+  startsAt: string | null
+  endsAt: string | null
+  updatedAt: string
 }
 
 export interface HomeStats {
@@ -206,11 +221,6 @@ export interface RankingEntry {
 export interface RankingResponse {
   self: RankingEntry | null
   entries: RankingEntry[]
-}
-
-export interface TrackerResponse {
-  announceUrl: string
-  dashboardUrl: string
 }
 
 export interface IpQueryRecord {

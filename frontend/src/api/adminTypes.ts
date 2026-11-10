@@ -142,7 +142,57 @@ export interface RuntimeConfig {
   protocolMaxVersion: number
   queryIpPowCaptcha: boolean
   clientDiscoveryEnabled: boolean
-  trackerEndpoint: string
+  swarmStatisticsEnabled: boolean
+  swarmStatisticsRefreshMinutes: number
+  swarmStatisticsWindowDays: number
+}
+
+export interface SwarmStatisticsStatus {
+  enabled: boolean
+  running: boolean
+  refreshIntervalMinutes: number
+  windowDays: number
+  lastStartedAt: string | null
+  lastFinishedAt: string | null
+  lastDurationMs: number
+  updatedUsers: number
+  trigger: 'SCHEDULED' | 'MANUAL' | null
+  triggeredBy: number | null
+  dataUpdatedAt: string | null
+  stale: boolean
+  lastError: string | null
+}
+
+export type AnnouncementLevel = 'GREEN' | 'YELLOW' | 'BLUE' | 'RED'
+
+export interface Announcement {
+  id: number
+  level: AnnouncementLevel
+  titleZh: string
+  titleEn: string
+  contentZh: string
+  contentEn: string
+  enabled: boolean
+  dismissible: boolean
+  sortOrder: number
+  startsAt: string | null
+  endsAt: string | null
+  createdAt: string
+  updatedAt: string
+  updatedBy: number | null
+}
+
+export interface AnnouncementInput {
+  level: AnnouncementLevel
+  titleZh: string
+  titleEn: string
+  contentZh: string
+  contentEn: string
+  enabled: boolean
+  dismissible: boolean
+  sortOrder: number
+  startsAt: string | null
+  endsAt: string | null
 }
 
 export interface StoragePolicy {

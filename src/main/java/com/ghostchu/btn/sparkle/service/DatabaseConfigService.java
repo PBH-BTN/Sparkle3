@@ -30,7 +30,9 @@ public class DatabaseConfigService {
             "sparkle.ping.config.max-protocol-version",
             "sparkle.ping.query-ip.pow-captcha",
             "sparkle.client-discovery.enabled",
-            "sparkle.tracker.endpoint"
+            "sparkle.swarm-statistics-track.enabled",
+            "sparkle.swarm-statistics-track.refresh-interval-minutes",
+            "sparkle.swarm-statistics-track.window-days"
     );
     private static final String TABLE = "app_config_entries";
 

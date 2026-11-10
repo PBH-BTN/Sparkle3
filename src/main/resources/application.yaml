@@ -229,9 +229,6 @@ sparkle:
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
-  tracker:
-    # Default value. Runtime overrides are managed from the admin console.
-    endpoint: "http://localhost:6969/announce"
   version-alert:
     from-address: "sparkle@pbh-btn.com"
     from-name: "SparkleBTN 系统通知"
@@ -240,9 +237,6 @@ sparkle:
     swarm-tracker-count-refresh-cron: "0 20 * * * *"
     userapp-count-refresh-cron: "0 30 * * * *"
     torrent-count-refresh-cron: "0 40 * * * *"
-    tracker-dashboard-refresh-cron: "0 */10 * * * *"
-    tracker-dashboard-image-retrieve: "https://grafana.ghostchu-services.top/render/public-dashboards/ed6c1383ac134a4e99b1efde6f377ebc"
-    tracker-dashboard-image-auth-token: xxyyzz
   admin:
     user-ip-warning:
       duration: 1209600000
@@ -258,8 +252,8 @@ sparkle:
       ipv6: 48
   swarm-statistics-track:
     enabled: true
-    cron: "0 0 * * * *"
-    duration: 604800000
+    refresh-interval-minutes: 60
+    window-days: 7
   ranking:
       weight:
         user-swarm-statistics:

@@ -41,6 +41,7 @@ public class SecurityConfig {
                                 .requestMatchers("/tracker/announce").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/api/ui/session").permitAll()
+                                .requestMatchers("/api/ui/announcements").permitAll()
                                 .requestMatchers("/admin", "/admin/**").hasAnyAuthority("admin")
                                 .requestMatchers("/api/admin/**").hasAnyAuthority("admin")
                                 .requestMatchers("/debug/**").hasAnyAuthority("admin")

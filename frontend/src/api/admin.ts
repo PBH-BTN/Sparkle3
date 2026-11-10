@@ -1,5 +1,7 @@
 import { request } from './http'
 import type {
+  Announcement,
+  AnnouncementInput,
   AdminApplication,
   AdminApplicationCredentials,
   AdminApplicationInput,
@@ -22,6 +24,7 @@ import type {
   RuleSummary,
   RuntimeConfig,
   StorageOverview,
+  SwarmStatisticsStatus,
   TableStorage,
   VersionAlertDelivery,
   VersionAlertMatch,
@@ -110,6 +113,28 @@ export const adminApi = {
     request<RuntimeConfig>('/api/admin/config', {
       method: 'PUT',
       body: JSON.stringify(body),
+    }),
+  swarmStatisticsStatus: () =>
+    request<SwarmStatisticsStatus>('/api/admin/swarm-statistics/status'),
+  refreshSwarmStatistics: () =>
+    request<SwarmStatisticsStatus>('/api/admin/swarm-statistics/refresh', {
+      method: 'POST',
+    }),
+
+  announcements: () => request<Announcement[]>('/api/admin/announcements'),
+  createAnnouncement: (body: AnnouncementInput) =>
+    request<Announcement>('/api/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateAnnouncement: (id: number, body: AnnouncementInput) =>
+    request<Announcement>(`/api/admin/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteAnnouncement: (id: number) =>
+    request<void>(`/api/admin/announcements/${id}`, {
+      method: 'DELETE',
     }),
 
   storage: () => request<StorageOverview>('/api/admin/storage/tables'),

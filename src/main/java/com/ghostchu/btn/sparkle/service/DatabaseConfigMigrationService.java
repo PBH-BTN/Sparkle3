@@ -84,8 +84,7 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
                 "protocolMinVersion", "sparkle.ping.config.min-protocol-version",
                 "protocolMaxVersion", "sparkle.ping.config.max-protocol-version",
                 "queryIpPowCaptcha", "sparkle.ping.query-ip.pow-captcha",
-                "clientDiscoveryEnabled", "sparkle.client-discovery.enabled",
-                "trackerEndpoint", "sparkle.tracker.endpoint"
+                "clientDiscoveryEnabled", "sparkle.client-discovery.enabled"
         );
         try {
             Map<Object, Object> legacy = redisTemplate.opsForHash()

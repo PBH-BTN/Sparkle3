@@ -104,7 +104,9 @@ public final class AdminModels {
             int protocolMaxVersion,
             boolean queryIpPowCaptcha,
             boolean clientDiscoveryEnabled,
-            String trackerEndpoint
+            boolean swarmStatisticsEnabled,
+            int swarmStatisticsRefreshMinutes,
+            int swarmStatisticsWindowDays
     ) {
     }
 }

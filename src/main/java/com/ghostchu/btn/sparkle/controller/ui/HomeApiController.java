@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.SessionResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.TrafficSummary;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.UserView;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,13 +25,16 @@ public class HomeApiController {
     private final RedisTemplate<String, Long> redisTemplate;
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
     private final IUserService userService;
+    private final AdminConfigService adminConfigService;
 
     public HomeApiController(@Qualifier("stringLongRedisTemplate") RedisTemplate<String, Long> redisTemplate,
                              IUserSwarmStatisticsService userSwarmStatisticsService,
-                             IUserService userService) {
+                             IUserService userService,
+                             AdminConfigService adminConfigService) {
         this.redisTemplate = redisTemplate;
         this.userSwarmStatisticsService = userSwarmStatisticsService;
         this.userService = userService;
+        this.adminConfigService = adminConfigService;
     }
 
     @GetMapping("/session")
@@ -43,7 +47,16 @@ public class HomeApiController {
             return SessionResponse.anonymous();
         }
         var statistics = userSwarmStatisticsService.getById(user.getId());
-        return new SessionResponse(true, UserView.from(user), TrafficSummary.from(statistics));
+        var statisticsConfig = adminConfigService.get();
+        return new SessionResponse(
+                true,
+                UserView.from(user),
+                TrafficSummary.from(
+                        statistics,
+                        statisticsConfig.swarmStatisticsRefreshMinutes(),
+                        statisticsConfig.swarmStatisticsWindowDays()
+                )
+        );
     }
 
     @GetMapping("/home")

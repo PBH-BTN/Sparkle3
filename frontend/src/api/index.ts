@@ -1,5 +1,6 @@
 import { request } from './http'
 import type {
+  Announcement,
   ApplicationCredentials,
   BanHistoryQuery,
   BanHistoryRecord,
@@ -16,7 +17,6 @@ import type {
   SessionResponse,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
-  TrackerResponse,
   UserApplication,
   UserProfileResponse,
 } from './types'
@@ -53,7 +53,7 @@ export const uiApi = {
       method: 'DELETE',
     }),
   ranking: () => request<RankingResponse>('/api/ui/ranking'),
-  tracker: () => request<TrackerResponse>('/api/ui/tracker'),
+  announcements: () => request<Announcement[]>('/api/ui/announcements'),
   ipQueryWidget: (search: string) => request<IpQueryResult>(`/ping/queryIp/widget/data${search}`),
 }
 

@@ -98,8 +98,8 @@
         FROM swarm_tracker
         WHERE
             peer_ip &lt;&lt;= #{peerIp}::inet
-            AND first_time_seen &gt;= #{startAt}
-            AND last_time_seen &lt;= #{endAt}
+            AND last_time_seen &gt;= #{startAt}
+            AND last_time_seen &lt; #{endAt}
     </select>
 
     <resultMap id="userSwarmStatisticByUserAppResult" type="com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult">
@@ -114,8 +114,8 @@
         FROM swarm_tracker
         WHERE
             userapps_id = #{userAppId}
-            AND first_time_seen &gt;= #{startAt}
-            AND last_time_seen &lt;= #{endAt}
+            AND last_time_seen &gt;= #{startAt}
+            AND last_time_seen &lt; #{endAt}
     </select>
 
     <select id="selectExpiredSwarmTracker" resultType="com.ghostchu.btn.sparkle.entity.SwarmTracker">

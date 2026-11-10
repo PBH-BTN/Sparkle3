@@ -25,6 +25,7 @@ const items = computed(() => [
   { key: '/admin/rules', label: t('admin.nav.rules'), icon: IconCode },
   { key: '/admin/storage', label: t('admin.nav.storage'), icon: IconStorage },
   { key: '/admin/version-alerts', label: t('admin.nav.versionAlerts'), icon: IconNotification },
+  { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },
   { key: '/admin/database-config', label: t('admin.nav.databaseConfig'), icon: IconFile },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },
 ])
