@@ -52,12 +52,6 @@ export default {
       'Authentication is handled securely by GitHub OAuth. Sparkle never receives your GitHub password.',
   },
   home: {
-    welcomeTitle: 'Welcome to BTN 3.0',
-    welcomeText:
-      'BTN 3.0 launched on December 10, 2025. Existing BTN 2.0 accounts were migrated. If an account was inactive for too long, create a new user application.',
-    protocolTitle: 'BTN protocol upgraded',
-    protocolText:
-      'The protocol is now version 20 and is incompatible with older PeerBanHelper versions. Please upgrade to the latest release.',
     accountPaused: 'Account suspended',
     accountPausedText: 'Your BTN account has been suspended by an administrator. Reason: {reason}.',
     heroEyebrow: 'BTN 3.0',

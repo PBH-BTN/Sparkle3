@@ -50,12 +50,6 @@ export default {
     securityNote: '登录授权由 GitHub OAuth 安全处理，Sparkle 不会接触您的 GitHub 密码。',
   },
   home: {
-    welcomeTitle: '欢迎来到 BTN 3.0',
-    welcomeText:
-      'BTN 3.0 已于 2025/12/10 上线，原 BTN 2.0 用户数据已迁移。若长期未登录导致数据未迁移，请重新创建用户应用程序。',
-    protocolTitle: 'BTN 协议版本已升级',
-    protocolText:
-      '协议版本已升级至 20，旧版 PeerBanHelper 不再兼容。请升级到最新版 PeerBanHelper 后继续使用。',
     accountPaused: '账户暂停',
     accountPausedText: '您的 BTN 账户已被管理员停用，原因：{reason}。',
     heroEyebrow: 'BTN 3.0',

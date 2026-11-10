@@ -42,16 +42,6 @@ onMounted(async () => {
 
 <template>
   <div class="page-stack">
-    <a-alert type="success" show-icon>
-      <template #title>{{ t('home.welcomeTitle') }}</template>
-      {{ t('home.welcomeText') }}
-    </a-alert>
-
-    <a-alert type="info" show-icon>
-      <template #title>{{ t('home.protocolTitle') }}</template>
-      {{ t('home.protocolText') }}
-    </a-alert>
-
     <a-alert
       v-if="session.user?.bannedAt"
       type="error"
