@@ -72,10 +72,18 @@ export interface Announcement {
   updatedAt: string
 }
 
+export interface HomeStatWindows {
+  allTime: number
+  last30Days: number
+  last14Days: number
+  last7Days: number
+  last24Hours: number
+}
+
 export interface HomeStats {
-  banHistory: Record<string, number>
-  userApps: Record<string, number>
-  swarmTracker: Record<string, number>
+  banHistory: HomeStatWindows
+  userApps: HomeStatWindows
+  swarmTracker: HomeStatWindows
 }
 
 export interface ChartDatum {

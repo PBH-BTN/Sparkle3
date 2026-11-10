@@ -34,6 +34,7 @@ public enum RedisKeyConstant {
     STATS_SWARMTRACKER_14DAYS("sparkle:stats:swarmtracker:14days"),
     STATS_SWARMTRACKER_7DAYS("sparkle:stats:swarmtracker:7days"),
     STATS_SWARMTRACKER_24HOURS("sparkle:stats:swarmtracker:24hours"),
+    STATS_USERAPP_ALLTIME("sparkle:stats:userapp:alltime"),
     STATS_USERAPP_30DAYS("sparkle:stats:userapp:30days"),
     STATS_USERAPP_14DAYS("sparkle:stats:userapp:14days"),
     STATS_USERAPP_7DAYS("sparkle:stats:userapp:7days"),

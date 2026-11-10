@@ -40,7 +40,7 @@ public class StatisticsRefreshServiceImpl {
         UniversalCountDto count = banHistoryMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_30DAYS.getKey(), count.getDays30());
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), count.getDays14());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_7DAYS.getKey(), count.getDays7());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey(), count.getDays1());
     }
@@ -50,7 +50,7 @@ public class StatisticsRefreshServiceImpl {
         UniversalCountDto count = swarmTrackerMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), count.getDays30());
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), count.getDays14());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey(), count.getDays7());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), count.getDays1());
     }
@@ -60,10 +60,12 @@ public class StatisticsRefreshServiceImpl {
         Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
         Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
         Timestamp last24HoursAgo = ago(Duration.ofDays(1));
+        long allTime = userappMapper.selectCount(null);
         long last30Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", thirtyDaysAgo));
         long last14Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", fourteenDaysAgo));
         long last7Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", sevenDaysAgo));
         long last24Hours = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", last24HoursAgo));
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_30DAYS.getKey(), last30Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_14DAYS.getKey(), last14Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_7DAYS.getKey(), last7Days);
