@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.ghostchu.btn.sparkle.service.dto.DashboardDailyCountDto;
 import com.ghostchu.btn.sparkle.service.dto.DashboardDimensionCountDto;
+import com.ghostchu.btn.sparkle.service.dto.DashboardGeoIpDailyCountDto;
 import com.ghostchu.btn.sparkle.service.dto.DashboardUserAgentCountDto;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,18 +18,11 @@ public interface HomeStatisticsMapper {
             @Param("useAggregates") boolean useAggregates
     );
 
-    List<DashboardDimensionCountDto> selectTopClientNames(
-            @Param("startAt") OffsetDateTime startAt,
-            @Param("endAt") OffsetDateTime endAt,
-            @Param("limit") int limit,
-            @Param("source") String source,
-            @Param("useAggregates") boolean useAggregates
-    );
-
-    List<DashboardDailyCountDto> selectGeoCityTrend(
+    List<DashboardGeoIpDailyCountDto> selectGeoIpTrend(
             @Param("startAt") OffsetDateTime startAt,
             @Param("endAt") OffsetDateTime endAt,
             @Param("bucketMinutes") int bucketMinutes,
+            @Param("limit") int limit,
             @Param("source") String source,
             @Param("useAggregates") boolean useAggregates
     );
@@ -37,14 +31,7 @@ public interface HomeStatisticsMapper {
             @Param("startAt") OffsetDateTime startAt,
             @Param("endAt") OffsetDateTime endAt,
             @Param("bucketMinutes") int bucketMinutes,
-            @Param("source") String source,
-            @Param("useAggregates") boolean useAggregates
-    );
-
-    List<DashboardDailyCountDto> selectIpVersionTrend(
-            @Param("startAt") OffsetDateTime startAt,
-            @Param("endAt") OffsetDateTime endAt,
-            @Param("bucketMinutes") int bucketMinutes,
+            @Param("limit") int limit,
             @Param("source") String source,
             @Param("useAggregates") boolean useAggregates
     );

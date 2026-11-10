@@ -11,6 +11,7 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.HomeStatisticsMapper;
 import com.ghostchu.btn.sparkle.service.dto.DashboardDailyCountDto;
 import com.ghostchu.btn.sparkle.service.dto.DashboardDimensionCountDto;
+import com.ghostchu.btn.sparkle.service.dto.DashboardGeoIpDailyCountDto;
 import com.ghostchu.btn.sparkle.service.dto.DashboardUserAgentCountDto;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -45,7 +46,7 @@ public class HomeStatisticsService {
     private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 7, 14, 30);
     private static final Set<String> ALLOWED_SOURCES = Set.of("ban", "all");
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v5:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v6:";
     private static final Pattern CLIENT_VERSION_PATTERN = Pattern.compile(
             "([a-z][a-z0-9._ +-]{0,63})/([0-9]+(?:\\.[0-9a-z.-]+){0,3})",
             Pattern.CASE_INSENSITIVE
@@ -60,6 +61,7 @@ public class HomeStatisticsService {
     );
     private static final int TOP_DIMENSIONS = 15;
     private static final int TOP_CITIES = 15;
+    private static final long AGGREGATE_ACCESS_CACHE_MILLIS = 60_000L;
 
     private final HomeStatisticsMapper mapper;
     private final JdbcTemplate jdbcTemplate;
@@ -67,6 +69,8 @@ public class HomeStatisticsService {
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
+    private volatile Boolean aggregateAccessible;
+    private volatile long aggregateAccessCheckedAt;
 
     public HomeStatisticsService(
             HomeStatisticsMapper mapper,
@@ -109,19 +113,29 @@ public class HomeStatisticsService {
     }
 
     public void refreshNetworkStatistics() throws BusinessException {
+        String defaultKey = networkCacheKey(7, "ban");
+        HomeNetworkStatisticsResponse response;
+        synchronized (cacheLocks.computeIfAbsent(defaultKey, ignored -> new Object())) {
+            response = calculateNetwork(7, "ban");
+            writeCache(defaultKey, response);
+        }
         List<String> cacheKeys = new ArrayList<>();
         for (int days : ALLOWED_DAYS) {
             for (String source : ALLOWED_SOURCES) {
-                cacheKeys.add(networkCacheKey(days, source));
+                String cacheKey = networkCacheKey(days, source);
+                if (!defaultKey.equals(cacheKey)) {
+                    cacheKeys.add(cacheKey);
+                }
             }
         }
         evictCacheKeys(cacheKeys);
-        getNetworkStatistics(7, "ban");
     }
 
     public void refreshCompanionStatistics() {
-        evictCacheKeys(List.of(companionCacheKey()));
-        getCompanionStatistics();
+        String cacheKey = companionCacheKey();
+        synchronized (cacheLocks.computeIfAbsent(cacheKey, ignored -> new Object())) {
+            writeCache(cacheKey, calculateCompanion());
+        }
     }
 
     private <T> T cached(String cacheKey, Class<T> responseType,
@@ -184,59 +198,51 @@ public class HomeStatisticsService {
                             range.startAt(), range.endAt(), TOP_DIMENSIONS, source, useAggregates
                     )
             )));
-            Future<DistributionChart> clientNames = executor.submit(() -> distribution(timedQuery(
-                    "client names",
-                    () -> mapper.selectTopClientNames(
-                            range.startAt(), range.endAt(), TOP_DIMENSIONS, source, useAggregates
-                    )
-            )));
-            Future<StackedAreaChart> clientNameTrend = executor.submit(() -> stackedChart(
-                    timedQuery("client name trend", () -> mapper.selectClientNameTrend(
+            Future<ClientNameStatistics> clientStatistics = executor.submit(() -> {
+                List<DashboardDailyCountDto> rows = timedQuery(
+                        "client names and trend",
+                        () -> mapper.selectClientNameTrend(
                             range.startAt(),
                             range.endAt(),
                             bucketMinutes,
+                            TOP_DIMENSIONS,
+                            source,
+                            useAggregates
+                        )
+                );
+                return new ClientNameStatistics(
+                        distributionFromRows(rows, Integer.MAX_VALUE),
+                        stackedChart(
+                                rows,
+                                range,
+                                bucketMinutes,
+                                Integer.MAX_VALUE,
+                                List.of()
+                        )
+                );
+            });
+            Future<GeoIpStatistics> geoIpStatistics = executor.submit(() -> geoIpStatistics(
+                    timedQuery("GeoIP cities and IP versions", () -> mapper.selectGeoIpTrend(
+                            range.startAt(),
+                            range.endAt(),
+                            bucketMinutes,
+                            TOP_CITIES,
                             source,
                             useAggregates
                     )),
                     range,
-                    bucketMinutes,
-                    TOP_DIMENSIONS,
-                    List.of()
+                    bucketMinutes
             ));
-            Future<StackedAreaChart> geoCities = executor.submit(() -> stackedChart(
-                    timedQuery("GeoIP cities", () -> mapper.selectGeoCityTrend(
-                            range.startAt(),
-                            range.endAt(),
-                            bucketMinutes,
-                            source,
-                            useAggregates
-                    )),
-                    range,
-                    bucketMinutes,
-                    TOP_CITIES,
-                    List.of()
-            ));
-            Future<StackedAreaChart> ipVersions = executor.submit(() -> stackedChart(
-                    timedQuery("IP versions", () -> mapper.selectIpVersionTrend(
-                            range.startAt(),
-                            range.endAt(),
-                            bucketMinutes,
-                            source,
-                            useAggregates
-                    )),
-                    range,
-                    bucketMinutes,
-                    0,
-                    List.of("IPv4", "IPv6", "Unknown")
-            ));
+            ClientNameStatistics clientNameStatistics = await(clientStatistics);
+            GeoIpStatistics geoIp = await(geoIpStatistics);
             HomeNetworkStatisticsResponse response = new HomeNetworkStatisticsResponse(
                     days,
                     source,
                     await(peerIds),
-                    await(clientNames),
-                    await(clientNameTrend),
-                    await(geoCities),
-                    await(ipVersions),
+                    clientNameStatistics.distribution(),
+                    clientNameStatistics.trend(),
+                    geoIp.cities(),
+                    geoIp.ipVersions(),
                     OffsetDateTime.now(ZoneOffset.UTC)
             );
             log.info("Loaded home statistics for {} days from {} in {}ms (aggregates={})",
@@ -322,6 +328,53 @@ public class HomeStatisticsService {
             data.add(new ChartDatum("Other", total - shown));
         }
         return new DistributionChart(data);
+    }
+
+    private DistributionChart distributionFromRows(
+            List<DashboardDailyCountDto> rows,
+            int limit
+    ) {
+        Map<String, Long> totals = new HashMap<>();
+        for (DashboardDailyCountDto row : rows) {
+            totals.merge(row.getName(), row.getValue(), Long::sum);
+        }
+        return distributionFromMap(totals, limit);
+    }
+
+    private GeoIpStatistics geoIpStatistics(
+            List<DashboardGeoIpDailyCountDto> rows,
+            TimeRange range,
+            int bucketMinutes
+    ) {
+        List<DashboardDailyCountDto> cities = new ArrayList<>(rows.size());
+        List<DashboardDailyCountDto> ipVersions = new ArrayList<>(rows.size());
+        for (DashboardGeoIpDailyCountDto row : rows) {
+            DashboardDailyCountDto city = new DashboardDailyCountDto();
+            city.setBucket(row.getBucket());
+            city.setName(row.getCity());
+            city.setValue(row.getValue());
+            cities.add(city);
+
+            DashboardDailyCountDto ipVersion = new DashboardDailyCountDto();
+            ipVersion.setBucket(row.getBucket());
+            ipVersion.setName(switch (row.getIpVersion()) {
+                case 4 -> "IPv4";
+                case 6 -> "IPv6";
+                default -> "Unknown";
+            });
+            ipVersion.setValue(row.getValue());
+            ipVersions.add(ipVersion);
+        }
+        return new GeoIpStatistics(
+                stackedChart(cities, range, bucketMinutes, Integer.MAX_VALUE, List.of()),
+                stackedChart(
+                        ipVersions,
+                        range,
+                        bucketMinutes,
+                        0,
+                        List.of("IPv4", "IPv6", "Unknown")
+                )
+        );
     }
 
     private DistributionChart distributionFromMap(Map<String, Long> grouped, int limit) {
@@ -444,15 +497,40 @@ public class HomeStatisticsService {
     }
 
     private boolean dashboardAggregatesAvailable() {
+        long now = System.currentTimeMillis();
+        Boolean cached = aggregateAccessible;
+        if (cached != null && now < aggregateAccessCheckedAt + AGGREGATE_ACCESS_CACHE_MILLIS) {
+            return cached;
+        }
+        synchronized (this) {
+            if (aggregateAccessible != null
+                    && now < aggregateAccessCheckedAt + AGGREGATE_ACCESS_CACHE_MILLIS) {
+                return aggregateAccessible;
+            }
+            aggregateAccessible = loadAggregateAccessibility();
+            aggregateAccessCheckedAt = now;
+            return aggregateAccessible;
+        }
+    }
+
+    private boolean loadAggregateAccessibility() {
         try {
             Boolean available = jdbcTemplate.queryForObject("""
-                    SELECT to_regclass('public.dashboard_ban_daily_peer') IS NOT NULL
-                       AND to_regclass('public.dashboard_ban_daily_client') IS NOT NULL
-                       AND to_regclass('public.dashboard_ban_daily_geo') IS NOT NULL
+                    SELECT COUNT(*) = 3
+                    FROM pg_catalog.pg_class relation
+                    JOIN pg_catalog.pg_namespace namespace ON namespace.oid = relation.relnamespace
+                    WHERE namespace.nspname = 'public'
+                      AND relation.relname IN (
+                          'dashboard_ban_daily_peer',
+                          'dashboard_ban_daily_client',
+                          'dashboard_ban_daily_geo'
+                      )
+                      AND has_table_privilege(relation.oid, 'SELECT')
                     """, Boolean.class);
             boolean enabled = Boolean.TRUE.equals(available);
             if (!enabled) {
-                log.warn("Home statistics aggregates are unavailable; using raw tables");
+                log.warn("Home statistics aggregates are missing or not readable by the current "
+                        + "database user; using raw tables");
             }
             return enabled;
         } catch (Exception exception) {
@@ -523,5 +601,17 @@ public class HomeStatisticsService {
     }
 
     private record LocalCacheEntry(Object response, long expiresAt) {
+    }
+
+    private record ClientNameStatistics(
+            DistributionChart distribution,
+            StackedAreaChart trend
+    ) {
+    }
+
+    private record GeoIpStatistics(
+            StackedAreaChart cities,
+            StackedAreaChart ipVersions
+    ) {
     }
 }

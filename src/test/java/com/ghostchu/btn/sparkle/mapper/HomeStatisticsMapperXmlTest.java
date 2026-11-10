@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class HomeStatisticsMapperXmlTest {
 
     @Test
-    void clientNameTrendStatementParses() throws Exception {
+    void trendStatementsParse() throws Exception {
         String resource = "mapper/HomeStatisticsMapper.xml";
         Configuration configuration = new Configuration();
 
@@ -22,6 +22,9 @@ class HomeStatisticsMapperXmlTest {
 
         assertNotNull(configuration.getMappedStatement(
                 "com.ghostchu.btn.sparkle.mapper.HomeStatisticsMapper.selectClientNameTrend"
+        ));
+        assertNotNull(configuration.getMappedStatement(
+                "com.ghostchu.btn.sparkle.mapper.HomeStatisticsMapper.selectGeoIpTrend"
         ));
     }
 }
