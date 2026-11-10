@@ -90,6 +90,7 @@ PostgreSQL 选择 hash join，避免重复 CIDR 嵌套循环。
 psql -f src/main/resources/db_sql/v24_swarm_statistics_and_announcements.sql
 psql -f src/main/resources/db_sql/v25_navigation_items.sql
 psql -f src/main/resources/db_sql/v26_home_statistics.sql
+psql -f src/main/resources/db_sql/v27_home_statistics_retention.sql
 ```
 
 TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维护窗口执行该脚本。上线前建议
@@ -99,6 +100,7 @@ TimescaleDB hypertable 不支持 `CREATE INDEX CONCURRENTLY`，因此请在维�
 GeoIP/IP 协议栈三个 TimescaleDB continuous aggregate，并启用列存压缩与每小时的增量刷新策略；
 首页查询优先读取聚合结果，迁移尚未执行或聚合不可用时自动回退原始表。查询结果在 Redis 中缓存
 5 分钟，并支持 1、7、14、30 天以及“仅封禁”与“封禁 + 种群”数据源切换。
+三个首页聚合默认只保留最近 35 天，TimescaleDB retention policy 会自动删除更早的 chunks。
 
 ## 数据库配置迁移
 

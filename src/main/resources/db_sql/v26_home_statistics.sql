@@ -34,6 +34,12 @@ SELECT add_continuous_aggregate_policy(
     if_not_exists => TRUE
 );
 
+SELECT add_retention_policy(
+    'public.dashboard_ban_daily_peer',
+    INTERVAL '35 days',
+    if_not_exists => TRUE
+);
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS public.dashboard_ban_daily_client
 WITH (timescaledb.continuous) AS
 SELECT
@@ -64,6 +70,12 @@ SELECT add_continuous_aggregate_policy(
     start_offset => INTERVAL '3 days',
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour',
+    if_not_exists => TRUE
+);
+
+SELECT add_retention_policy(
+    'public.dashboard_ban_daily_client',
+    INTERVAL '35 days',
     if_not_exists => TRUE
 );
 
@@ -104,6 +116,12 @@ SELECT add_continuous_aggregate_policy(
     start_offset => INTERVAL '3 days',
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour',
+    if_not_exists => TRUE
+);
+
+SELECT add_retention_policy(
+    'public.dashboard_ban_daily_geo',
+    INTERVAL '35 days',
     if_not_exists => TRUE
 );
 
