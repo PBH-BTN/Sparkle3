@@ -128,7 +128,15 @@ public class GlobalExceptionHandler {
             depth++;
         }
 
-        log.error("Unexpected exception. Tracing Id: {}", sentryId, e);
+        log.error(
+                "Unexpected exception. Tracing Id: "
+                        + sentryId
+                        + ", method: "
+                        + request.getMethod()
+                        + ", uri: "
+                        + request.getRequestURI(),
+                e
+        );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new StdResp<>(false, "很抱歉，由于服务器内部错误，您的请求未能完成。此错误我们已收悉，错误跟踪ID：" + sentryId, null));
 
