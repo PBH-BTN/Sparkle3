@@ -391,6 +391,7 @@ export default {
       invalidInterval: '刷新间隔必须在 1 到 10080 分钟之间。',
       saved: '首页刷新配置已保存。',
       refreshStarted: '刷新任务已在后台启动。',
+      refreshNow: '立即刷新',
       modules: {
         'ban-history': {
           name: '封禁记录统计',

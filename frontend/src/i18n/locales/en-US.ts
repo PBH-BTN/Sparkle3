@@ -399,6 +399,7 @@ export default {
       invalidInterval: 'Refresh intervals must be between 1 and 10,080 minutes.',
       saved: 'Homepage refresh settings saved.',
       refreshStarted: 'The refresh job started in the background.',
+      refreshNow: 'Refresh now',
       modules: {
         'ban-history': {
           name: 'Ban history statistics',
