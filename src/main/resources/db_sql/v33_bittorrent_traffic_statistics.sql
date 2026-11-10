@@ -26,6 +26,9 @@ ALTER MATERIALIZED VIEW public.dashboard_ban_hourly_traffic_city SET (
     timescaledb.compress_orderby = 'bucket DESC'
 );
 
+ALTER MATERIALIZED VIEW public.dashboard_ban_hourly_traffic_city
+    SET (timescaledb.materialized_only = false);
+
 SELECT add_compression_policy(
     'public.dashboard_ban_hourly_traffic_city',
     INTERVAL '14 days',
@@ -81,9 +84,3 @@ ON CONFLICT (bucket, city) DO UPDATE
 SET upload_bytes = EXCLUDED.upload_bytes,
     download_bytes = EXCLUDED.download_bytes,
     refreshed_at = EXCLUDED.refreshed_at;
-
-CALL refresh_continuous_aggregate(
-    'public.dashboard_ban_hourly_traffic_city',
-    NOW() - INTERVAL '35 days',
-    NOW()
-);
