@@ -53,7 +53,6 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
     }
 
     public synchronized @NotNull MigrationResult migrateNow() {
-        configService.ensureSchema();
         Map<String, String> values = loadYamlValues();
         int inserted = 0;
         int skipped = 0;

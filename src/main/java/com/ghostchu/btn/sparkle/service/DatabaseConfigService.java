@@ -38,48 +38,13 @@ public class DatabaseConfigService {
 
     private final JdbcTemplate jdbcTemplate;
     private final Environment environment;
-    private volatile boolean schemaReady;
 
     public DatabaseConfigService(JdbcTemplate jdbcTemplate, Environment environment) {
         this.jdbcTemplate = jdbcTemplate;
         this.environment = environment;
     }
 
-    public void ensureSchema() {
-        if (schemaReady) {
-            return;
-        }
-        synchronized (this) {
-            if (schemaReady) {
-                return;
-            }
-            createSchema();
-            schemaReady = true;
-        }
-    }
-
-    private void createSchema() {
-        jdbcTemplate.execute("""
-                CREATE TABLE IF NOT EXISTS app_config_entries (
-                    config_key VARCHAR(512) PRIMARY KEY,
-                    config_value TEXT NOT NULL,
-                    value_type VARCHAR(32) NOT NULL DEFAULT 'string',
-                    config_group VARCHAR(128) NOT NULL DEFAULT 'other',
-                    source VARCHAR(32) NOT NULL DEFAULT 'yaml',
-                    sensitive BOOLEAN NOT NULL DEFAULT FALSE,
-                    hot_reload BOOLEAN NOT NULL DEFAULT FALSE,
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                    updated_by BIGINT
-                )
-                """);
-        jdbcTemplate.execute("""
-                CREATE INDEX IF NOT EXISTS app_config_entries_group_idx
-                ON app_config_entries (config_group)
-                """);
-    }
-
     public @NotNull List<ConfigEntry> list(String keyword, String group) {
-        ensureSchema();
         String term = keyword == null ? "" : keyword.trim();
         String selectedGroup = group == null ? "" : group.trim();
         return jdbcTemplate.query("""
@@ -103,7 +68,6 @@ public class DatabaseConfigService {
     }
 
     public @NotNull ConfigSummary summary() {
-        ensureSchema();
         Map<String, Object> row = jdbcTemplate.queryForMap("""
                 SELECT COUNT(*) AS total,
                        COUNT(*) FILTER (WHERE source = 'yaml') AS yaml_entries,
@@ -137,9 +101,9 @@ public class DatabaseConfigService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Config value is required");
         }
         if (isExcludedKey(key)) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "Datasource configuration cannot be changed here");
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Datasource and schema migration configuration cannot be changed here");
         }
-        ensureSchema();
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT config_value, value_type, sensitive, config_group, source,
                        hot_reload, updated_at, updated_by
@@ -178,7 +142,6 @@ public class DatabaseConfigService {
 
     public @NotNull Map<String, String> getRawValues(@NotNull List<String> keys) {
         if (keys.isEmpty()) return Map.of();
-        ensureSchema();
         String placeholders = String.join(",", java.util.Collections.nCopies(keys.size(), "?"));
         Map<String, String> values = new LinkedHashMap<>();
         jdbcTemplate.query(
@@ -238,7 +201,8 @@ public class DatabaseConfigService {
     }
 
     public boolean isExcludedKey(String key) {
-        return key.startsWith("spring.datasource.");
+        return key.startsWith("spring.datasource.")
+                || key.startsWith("spring.flyway.");
     }
 
     public boolean isSensitiveKey(String key) {
@@ -273,7 +237,6 @@ public class DatabaseConfigService {
     }
 
     public int insertIfMissing(String key, String value, String source) {
-        ensureSchema();
         return jdbcTemplate.update("""
                 INSERT INTO app_config_entries
                     (config_key, config_value, value_type, config_group, source, sensitive, hot_reload)
@@ -291,7 +254,6 @@ public class DatabaseConfigService {
     }
 
     public boolean exists(String key) {
-        ensureSchema();
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM app_config_entries WHERE config_key = ?",
                 Long.class,
@@ -301,7 +263,6 @@ public class DatabaseConfigService {
     }
 
     public int overrideYamlValue(String key, String value) {
-        ensureSchema();
         return jdbcTemplate.update("""
                 UPDATE app_config_entries
                 SET config_value = ?,

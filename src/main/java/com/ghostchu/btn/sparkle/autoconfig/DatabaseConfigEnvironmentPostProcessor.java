@@ -47,7 +47,8 @@ public class DatabaseConfigEnvironmentPostProcessor implements EnvironmentPostPr
              )) {
             while (resultSet.next()) {
                 String key = resultSet.getString("config_key");
-                if (!key.startsWith("spring.datasource.")) {
+                if (!key.startsWith("spring.datasource.")
+                        && !key.startsWith("spring.flyway.")) {
                     properties.put(key, resultSet.getString("config_value"));
                 }
             }

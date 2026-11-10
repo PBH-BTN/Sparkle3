@@ -38,14 +38,12 @@ public class AnnouncementService {
             );
 
     private final JdbcTemplate jdbcTemplate;
-    private volatile boolean schemaReady;
 
     public AnnouncementService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     public @NotNull List<AnnouncementView> listAll() {
-        ensureSchema();
         return jdbcTemplate.query("""
                 SELECT *
                 FROM announcements
@@ -54,7 +52,6 @@ public class AnnouncementService {
     }
 
     public @NotNull List<PublicAnnouncementView> listActive() {
-        ensureSchema();
         return jdbcTemplate.query("""
                 SELECT id, level, title_zh, title_en, content_zh, content_en,
                        dismissible, starts_at, ends_at, updated_at
@@ -82,7 +79,6 @@ public class AnnouncementService {
             @Nullable Long operatorId
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
-        ensureSchema();
         Long id = jdbcTemplate.queryForObject("""
                 INSERT INTO announcements (
                     level, title_zh, title_en, content_zh, content_en,
@@ -116,7 +112,6 @@ public class AnnouncementService {
             @Nullable Long operatorId
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
-        ensureSchema();
         int changed = jdbcTemplate.update("""
                 UPDATE announcements
                 SET level = ?,
@@ -153,7 +148,6 @@ public class AnnouncementService {
     }
 
     public void delete(long id) throws BusinessException {
-        ensureSchema();
         int changed = jdbcTemplate.update("DELETE FROM announcements WHERE id = ?", id);
         if (changed == 0) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
@@ -223,37 +217,4 @@ public class AnnouncementService {
         return value == null ? "" : value.trim();
     }
 
-    private void ensureSchema() {
-        if (schemaReady) {
-            return;
-        }
-        synchronized (this) {
-            if (schemaReady) {
-                return;
-            }
-            jdbcTemplate.execute("""
-                    CREATE TABLE IF NOT EXISTS announcements (
-                        id BIGSERIAL PRIMARY KEY,
-                        level VARCHAR(16) NOT NULL DEFAULT 'BLUE',
-                        title_zh TEXT NOT NULL DEFAULT '',
-                        title_en TEXT NOT NULL DEFAULT '',
-                        content_zh TEXT NOT NULL DEFAULT '',
-                        content_en TEXT NOT NULL DEFAULT '',
-                        enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                        dismissible BOOLEAN NOT NULL DEFAULT TRUE,
-                        sort_order INTEGER NOT NULL DEFAULT 0,
-                        starts_at TIMESTAMPTZ,
-                        ends_at TIMESTAMPTZ,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_by BIGINT
-                    )
-                    """);
-            jdbcTemplate.execute("""
-                    CREATE INDEX IF NOT EXISTS announcements_active_idx
-                    ON announcements (enabled, starts_at, ends_at, sort_order DESC)
-                    """);
-            schemaReady = true;
-        }
-    }
 }

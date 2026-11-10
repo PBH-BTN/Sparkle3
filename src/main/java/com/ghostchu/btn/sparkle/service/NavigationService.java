@@ -48,7 +48,7 @@ public class NavigationService {
     private final AdminConfigService adminConfigService;
     private volatile List<NavigationItemView> cached;
     private volatile long cacheExpiresAt;
-    private volatile boolean schemaReady;
+    private volatile boolean defaultsReady;
 
     public NavigationService(JdbcTemplate jdbcTemplate, AdminConfigService adminConfigService) {
         this.jdbcTemplate = jdbcTemplate;
@@ -80,7 +80,7 @@ public class NavigationService {
             @Nullable Long operatorId
     ) throws BusinessException {
         NavigationItemInput normalized = validate(input);
-        ensureSchema();
+        ensureDefaults();
         String id = "custom-" + UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO navigation_items (
@@ -160,7 +160,7 @@ public class NavigationService {
             if (cached != null && now < cacheExpiresAt) {
                 return cached;
             }
-            ensureSchema();
+            ensureDefaults();
             cached = jdbcTemplate.query("""
                     SELECT *
                     FROM navigation_items
@@ -172,7 +172,7 @@ public class NavigationService {
     }
 
     private NavigationItemView require(String id) throws BusinessException {
-        ensureSchema();
+        ensureDefaults();
         List<NavigationItemView> items = jdbcTemplate.query(
                 "SELECT * FROM navigation_items WHERE id = ?",
                 ROW_MAPPER,
@@ -238,36 +238,16 @@ public class NavigationService {
         return value == null ? "" : value.trim();
     }
 
-    private void ensureSchema() {
-        if (schemaReady) {
+    private void ensureDefaults() {
+        if (defaultsReady) {
             return;
         }
         synchronized (this) {
-            if (schemaReady) {
+            if (defaultsReady) {
                 return;
             }
-            jdbcTemplate.execute("""
-                    CREATE TABLE IF NOT EXISTS navigation_items (
-                        id VARCHAR(128) PRIMARY KEY,
-                        built_in BOOLEAN NOT NULL DEFAULT FALSE,
-                        label_zh VARCHAR(100) NOT NULL,
-                        label_en VARCHAR(100) NOT NULL,
-                        href VARCHAR(2048) NOT NULL,
-                        icon VARCHAR(32) NOT NULL DEFAULT 'link',
-                        sort_order INTEGER NOT NULL DEFAULT 0,
-                        enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                        open_in_new_tab BOOLEAN NOT NULL DEFAULT FALSE,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_by BIGINT
-                    )
-                    """);
-            jdbcTemplate.execute("""
-                    CREATE INDEX IF NOT EXISTS navigation_items_order_idx
-                    ON navigation_items (enabled, sort_order)
-                    """);
             insertDefaults();
-            schemaReady = true;
+            defaultsReady = true;
         }
     }
 
