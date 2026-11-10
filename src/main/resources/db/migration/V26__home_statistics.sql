@@ -1,3 +1,5 @@
+-- Run this migration outside a transaction (see the adjacent .sql.conf file):
+-- refresh_continuous_aggregate() cannot execute inside a transaction block.
 -- Home dashboard network statistics.
 -- Continuous aggregates keep common 7/14/30 day queries off the raw ban_history table.
 

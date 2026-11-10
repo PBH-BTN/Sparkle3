@@ -4,6 +4,17 @@ spring:
   web:
     resources:
       static-locations: "classpath:/static/,file:./static/"
+  flyway:
+    enabled: true
+    locations: "classpath:db/migration"
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    validate-migration-naming: true
+    fail-on-missing-locations: true
+    clean-disabled: true
+    connect-retries: 30
+    connect-retries-interval: 2
+    lock-retry-count: 120
   threads:
     virtual:
       enabled: true
