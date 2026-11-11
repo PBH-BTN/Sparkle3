@@ -72,6 +72,7 @@ public final class PointsModels {
             String fixedPointsRaw,
             String oneTimePointsRaw,
             String dynamicPointsRaw,
+            String manualPointsRaw,
             Map<String, Object> details
     ) {
     }

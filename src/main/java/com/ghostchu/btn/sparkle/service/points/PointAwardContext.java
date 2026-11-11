@@ -13,6 +13,7 @@ import java.util.Collection;
 public class PointAwardContext {
     private final ThreadLocal<PointAwardBucket> current = new ThreadLocal<>();
     private final PointToggleService pointToggleService;
+    private final PointRulesService pointRulesService;
 
     public void begin(String eventType) {
         current.remove();
@@ -54,6 +55,28 @@ public class PointAwardContext {
 
     public void recordSimple(long userId, PointCategory category, long points) {
         record(userId, category, points, 1, 0);
+    }
+
+    public void recordConfigured(
+            long userId,
+            PointCategory category,
+            long itemCount,
+            long rawValue
+    ) {
+        if (itemCount <= 0) {
+            return;
+        }
+        long pointsPerItem = pointRulesService.points(category);
+        long points = pointsPerItem > Long.MAX_VALUE / itemCount
+                ? Long.MAX_VALUE
+                : pointsPerItem * itemCount;
+        record(
+                userId,
+                category,
+                points,
+                itemCount,
+                rawValue
+        );
     }
 
     public void claim(

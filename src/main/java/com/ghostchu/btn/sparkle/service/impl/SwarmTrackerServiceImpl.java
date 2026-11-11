@@ -238,10 +238,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
-            pointAwardContext.record(
+            pointAwardContext.recordConfigured(
                     userId,
                     PointCategory.SWARM_TRACKER,
-                    swarmMap.size() * 3L,
                     swarmMap.size(),
                     0
             );
@@ -251,10 +250,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .filter(TorrentRegistration::created)
                 .count();
         if (newTorrents > 0) {
-            pointAwardContext.record(
+            pointAwardContext.recordConfigured(
                     userId,
                     PointCategory.NEW_TORRENT,
-                    newTorrents * 500L,
                     newTorrents,
                     0
             );

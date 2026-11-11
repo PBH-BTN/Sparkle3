@@ -244,6 +244,65 @@ sparkle:
     btnbypass-userapps:
       enabled: true
       schedule: "0 */20 * * * *"
+    points-dynamic:
+      enabled: true
+      schedule: "0 5 * * * *"
+    swarm-peer-distribution:
+      enabled: true
+      schedule: "0 10 * * * *"
+    ban-peer-distribution:
+      enabled: true
+      schedule: "0 20 2 * * *"
+    points-settings:
+      login-enabled: true
+      active-app-enabled: true
+      app-online-enabled: true
+      ban-history-enabled: true
+      swarm-tracker-enabled: true
+      rules-fetch-enabled: true
+      keepalive-enabled: true
+      rule-hit-ip-enabled: true
+      new-ip-enabled: true
+      wasted-upload-enabled: true
+      new-torrent-enabled: true
+      client-discovery-enabled: true
+      dynamic-seed-upload-enabled: true
+      dynamic-download-enabled: true
+      dynamic-hot-peer-enabled: true
+    points-fixed-rules:
+      login-points: 1000
+      login-daily-cap: 1000
+      active-app-points: 5000
+      app-online-points: 500
+      app-online-gap-minutes: 15
+      ban-history-points: 3
+      ban-history-daily-cap: 2000
+      swarm-tracker-points: 3
+      swarm-tracker-daily-cap: 2000
+      rules-fetch-points: 2
+      rules-fetch-daily-cap: 2000
+      keepalive-points: 1
+      keepalive-daily-cap: 2000
+      rule-hit-ip-points: 10
+      rule-hit-ip-daily-cap: 2000
+      new-ip-points: 20
+      new-ip-daily-cap: 2000
+      wasted-upload-points-per-mib: 10
+      wasted-upload-mib: 1
+      wasted-upload-daily-cap: 3000
+    points-once-rules:
+      new-torrent-points: 500
+      client-discovery-points: 4
+    points-dynamic-rules:
+      dynamic-seed-upload-points: 180
+      dynamic-seed-upload-mib: 200
+      dynamic-download-points: 50
+      dynamic-download-mib: 512
+      dynamic-hot-peer-points: 100
+      dynamic-hot-peer-top: 50
+      dynamic-torrent-size-gib: 1
+  points:
+    time-zone: "Asia/Shanghai"
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"

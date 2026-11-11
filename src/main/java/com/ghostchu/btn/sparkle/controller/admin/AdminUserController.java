@@ -13,6 +13,8 @@ import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.points.PointsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,6 +46,7 @@ public class AdminUserController {
     private final IUserService userService;
     private final IUserappService userappService;
     private final UserRelMapper userRelMapper;
+    private final PointsService pointsService;
 
     @GetMapping
     public PageResult<AdminUserView> list(
@@ -157,6 +160,36 @@ public class AdminUserController {
         return toView(user, relation == null ? null : relation.getPlatformUserLogin());
     }
 
+    @PostMapping("/{id}/points")
+    public AdminUserView adjustPoints(
+            @PathVariable long id,
+            @RequestBody AdjustPointsRequest request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        requireUser(id);
+        long delta;
+        try {
+            delta = Long.parseLong(request.amount() == null ? "" : request.amount().trim());
+        } catch (NumberFormatException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A valid signed point amount is required"
+            );
+        }
+        pointsService.adjustByAdmin(
+                id,
+                principal.getUserId(),
+                delta,
+                request.reason()
+        );
+        User updated = requireUser(id);
+        UserRel relation = userService.getUserRelByBindUserId(id);
+        return toView(updated, relation == null ? null : relation.getPlatformUserLogin());
+    }
+
     @DeleteMapping("/{id}")
     @Transactional
     public void delete(@PathVariable long id, @AuthenticationPrincipal SparkleUserDetails principal) {
@@ -211,7 +244,8 @@ public class AdminUserController {
                 user.getLastLoginAt(),
                 user.getBannedAt(),
                 user.getBannedReason(),
-                githubLogin
+                githubLogin,
+                Long.toString(user.getScoreBytes() == null ? 0 : user.getScoreBytes())
         );
     }
 
@@ -265,5 +299,8 @@ public class AdminUserController {
     }
 
     public record BanUserRequest(boolean banned, String reason) {
+    }
+
+    public record AdjustPointsRequest(String amount, String reason) {
     }
 }

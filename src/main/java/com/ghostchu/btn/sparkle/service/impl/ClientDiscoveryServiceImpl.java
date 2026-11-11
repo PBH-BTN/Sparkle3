@@ -92,10 +92,9 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             if (!clientDiscoveryList.isEmpty()) {
                 List<Long> inserted = this.baseMapper.batchInsertReturning(clientDiscoveryList);
                 if (!inserted.isEmpty()) {
-                    pointAwardContext.record(
+                            pointAwardContext.recordConfigured(
                             userId,
                             PointCategory.CLIENT_DISCOVERY,
-                            inserted.size() * 4L,
                             inserted.size(),
                             0
                     );

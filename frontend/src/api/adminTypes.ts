@@ -120,6 +120,7 @@ export interface AdminUser {
   bannedAt: string | null
   bannedReason: string | null
   githubLogin: string | null
+  scoreBytes: string
 }
 
 export interface AdminUserQuery {
@@ -346,6 +347,7 @@ export interface AnalyseModuleField {
   type:
     | 'boolean'
     | 'integer'
+    | 'long'
     | 'decimal'
     | 'duration-hours'
     | 'bytes-gib'

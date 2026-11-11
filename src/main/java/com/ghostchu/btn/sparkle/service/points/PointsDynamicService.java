@@ -27,6 +27,7 @@ public class PointsDynamicService {
     private final PointsService pointsService;
     private final AnalyseModuleConfigService moduleConfigService;
     private final PointToggleService pointToggleService;
+    private final PointRulesService pointRulesService;
 
     public void refresh() {
         if (!moduleConfigService.isEnabled(MODULE_ID)) {
@@ -107,6 +108,7 @@ public class PointsDynamicService {
         if (!uploadEnabled && !downloadEnabled) {
             return;
         }
+        long torrentSizeGib = pointRulesService.dynamicTorrentSizeGib();
         jdbcTemplate.query(
                 """
                 WITH traffic AS (
@@ -126,16 +128,22 @@ public class PointsDynamicService {
                         bucket,
                         user_id,
                         SUM(FLOOR(
-                            180::numeric
+                            ?::numeric
                             * upload_bytes
                             * torrent_size
-                            / (200::numeric * 1024 * 1024 * 1024 * 1024 * 1024)
+                            / (
+                                ?::numeric * 1024 * 1024
+                                * ?::numeric * 1024 * 1024 * 1024
+                            )
                         ))::bigint AS upload_points,
                         SUM(FLOOR(
-                            50::numeric
+                            ?::numeric
                             * download_bytes
                             * torrent_size
-                            / (512::numeric * 1024 * 1024 * 1024 * 1024 * 1024)
+                            / (
+                                ?::numeric * 1024 * 1024
+                                * ?::numeric * 1024 * 1024 * 1024
+                            )
                         ))::bigint AS download_points
                     FROM traffic
                     GROUP BY bucket, user_id
@@ -166,7 +174,13 @@ public class PointsDynamicService {
                     return null;
                 },
                 startAt,
-                endAt
+                endAt,
+                pointRulesService.points(PointCategory.DYNAMIC_SEED_UPLOAD),
+                pointRulesService.dynamicSeedUploadMib(),
+                torrentSizeGib,
+                pointRulesService.points(PointCategory.DYNAMIC_DOWNLOAD),
+                pointRulesService.dynamicDownloadMib(),
+                torrentSizeGib
         );
     }
 
@@ -178,6 +192,8 @@ public class PointsDynamicService {
         if (!pointToggleService.isEnabled(PointCategory.DYNAMIC_HOT_PEER)) {
             return;
         }
+        int hotPeerTop = pointRulesService.dynamicHotPeerTop();
+        long hotPeerPoints = pointRulesService.points(PointCategory.DYNAMIC_HOT_PEER);
         jdbcTemplate.query(
                 """
                 WITH active AS (
@@ -214,7 +230,7 @@ public class PointsDynamicService {
                             ) AS rank
                         FROM torrent_counts
                     ) ranked
-                    WHERE rank <= 50
+                    WHERE rank <= ?
                 ),
                 user_peers AS (
                     SELECT
@@ -231,13 +247,13 @@ public class PointsDynamicService {
                 SELECT
                     user_peers.bucket,
                     user_peers.user_id,
-                    SUM(user_peers.peer_count * 100)::bigint AS points
+                    SUM(user_peers.peer_count * ?::bigint)::bigint AS points
                 FROM user_peers
                 INNER JOIN top_torrents
                     ON top_torrents.bucket = user_peers.bucket
                    AND top_torrents.torrent_id = user_peers.torrent_id
                 GROUP BY user_peers.bucket, user_peers.user_id
-                HAVING SUM(user_peers.peer_count * 100) > 0
+                HAVING SUM(user_peers.peer_count * ?::bigint) > 0
                 """,
                 resultSet -> {
                     while (resultSet.next()) {
@@ -257,7 +273,10 @@ public class PointsDynamicService {
                     return null;
                 },
                 startAt,
-                endAt
+                endAt,
+                hotPeerTop,
+                hotPeerPoints,
+                hotPeerPoints
         );
     }
 

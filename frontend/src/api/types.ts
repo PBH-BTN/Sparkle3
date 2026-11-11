@@ -250,6 +250,11 @@ export interface PointsBreakdownEntry {
 export interface PointsLogDetails {
   breakdown?: PointsBreakdownEntry[]
   requestedTotal?: number
+  reason?: string
+  operatorId?: number
+  deltaPoints?: number
+  balanceBefore?: number
+  balanceAfter?: number
 }
 
 export interface PointsLogEntry {
@@ -260,6 +265,7 @@ export interface PointsLogEntry {
   fixedPointsRaw: string
   oneTimePointsRaw: string
   dynamicPointsRaw: string
+  manualPointsRaw: string
   details: PointsLogDetails
 }
 

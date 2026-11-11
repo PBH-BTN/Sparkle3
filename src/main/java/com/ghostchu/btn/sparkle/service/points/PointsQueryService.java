@@ -51,6 +51,7 @@ public class PointsQueryService {
     private final IUserService userService;
     private final AnalyseModuleConfigService moduleConfigService;
     private final PointToggleService pointToggleService;
+    private final PointRulesService pointRulesService;
     private final ObjectMapper objectMapper;
 
     @Value("${sparkle.points.time-zone:Asia/Shanghai}")
@@ -107,13 +108,14 @@ public class PointsQueryService {
                 .map(category -> new CategoryPoints(
                         category.name(),
                         Long.toString(categories.getOrDefault(category, 0L)),
-                        category.getDailyCap() == null
+                        pointRulesService.dailyCap(category) == null
                                 ? null
-                                : Long.toString(category.getDailyCap()),
+                                : pointRulesService.dailyCap(category).toString(),
                         pointToggleService.isEnabled(category)
                 ))
                 .toList();
-        long cappedPoints = categories.getOrDefault(PointCategory.BAN_HISTORY, 0L)
+        long cappedPoints = categories.getOrDefault(PointCategory.LOGIN, 0L)
+                + categories.getOrDefault(PointCategory.BAN_HISTORY, 0L)
                 + categories.getOrDefault(PointCategory.SWARM_TRACKER, 0L)
                 + categories.getOrDefault(PointCategory.RULES_FETCH, 0L)
                 + categories.getOrDefault(PointCategory.KEEPALIVE, 0L)
@@ -121,12 +123,16 @@ public class PointsQueryService {
                 + categories.getOrDefault(PointCategory.NEW_IP, 0L)
                 + categories.getOrDefault(PointCategory.WASTED_UPLOAD, 0L);
         long fixedDailyCap = FIXED_CATEGORIES.stream()
-                .map(PointCategory::getDailyCap)
+                .map(pointRulesService::dailyCap)
                 .filter(java.util.Objects::nonNull)
                 .mapToLong(Long::longValue)
                 .sum();
-        long newTorrents = categories.getOrDefault(PointCategory.NEW_TORRENT, 0L) / 500L;
-        long discoveries = categories.getOrDefault(PointCategory.CLIENT_DISCOVERY, 0L) / 4L;
+        long newTorrentPoints = pointRulesService.points(PointCategory.NEW_TORRENT);
+        long discoveryPoints = pointRulesService.points(PointCategory.CLIENT_DISCOVERY);
+        long newTorrents = categories.getOrDefault(PointCategory.NEW_TORRENT, 0L)
+                / newTorrentPoints;
+        long discoveries = categories.getOrDefault(PointCategory.CLIENT_DISCOVERY, 0L)
+                / discoveryPoints;
 
         var fixed = new FixedPointsSummary(
                 Long.toString(aggregate.fixedToday()),
@@ -185,7 +191,8 @@ public class PointsQueryService {
         List<PointsLogEntry> entries = jdbcTemplate.query(
                 """
                 SELECT id, occurred_at, event_type, points, fixed_points,
-                       one_time_points, dynamic_points, details::text AS details
+                       one_time_points, dynamic_points, manual_points,
+                       details::text AS details
                 FROM public.points_ledger
                 WHERE user_id = ?
                 ORDER BY occurred_at DESC, id DESC
@@ -199,6 +206,7 @@ public class PointsQueryService {
                         Long.toString(resultSet.getLong("fixed_points")),
                         Long.toString(resultSet.getLong("one_time_points")),
                         Long.toString(resultSet.getLong("dynamic_points")),
+                        Long.toString(resultSet.getLong("manual_points")),
                         readDetails(resultSet.getString("details"))
                 ),
                 userId,

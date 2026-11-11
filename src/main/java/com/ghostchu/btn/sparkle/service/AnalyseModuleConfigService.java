@@ -108,6 +108,41 @@ public class AnalyseModuleConfigService {
                     bool("dynamic-seed-upload-enabled", "dynamic-seed-upload-enabled", true),
                     bool("dynamic-download-enabled", "dynamic-download-enabled", true),
                     bool("dynamic-hot-peer-enabled", "dynamic-hot-peer-enabled", true)
+            ),
+            module("points-fixed-rules", "points-fixed-rules",
+                    longField("login-points", "login-points", 1000L),
+                    longField("login-daily-cap", "login-daily-cap", 1000L),
+                    longField("active-app-points", "active-app-points", 5000L),
+                    longField("app-online-points", "app-online-points", 500L),
+                    integer("app-online-gap-minutes", "app-online-gap-minutes", 15),
+                    longField("ban-history-points", "ban-history-points", 3L),
+                    longField("ban-history-daily-cap", "ban-history-daily-cap", 2000L),
+                    longField("swarm-tracker-points", "swarm-tracker-points", 3L),
+                    longField("swarm-tracker-daily-cap", "swarm-tracker-daily-cap", 2000L),
+                    longField("rules-fetch-points", "rules-fetch-points", 2L),
+                    longField("rules-fetch-daily-cap", "rules-fetch-daily-cap", 2000L),
+                    longField("keepalive-points", "keepalive-points", 1L),
+                    longField("keepalive-daily-cap", "keepalive-daily-cap", 2000L),
+                    longField("rule-hit-ip-points", "rule-hit-ip-points", 10L),
+                    longField("rule-hit-ip-daily-cap", "rule-hit-ip-daily-cap", 2000L),
+                    longField("new-ip-points", "new-ip-points", 20L),
+                    longField("new-ip-daily-cap", "new-ip-daily-cap", 2000L),
+                    longField("wasted-upload-points-per-mib", "wasted-upload-points-per-mib", 10L),
+                    longField("wasted-upload-mib", "wasted-upload-mib", 1L),
+                    longField("wasted-upload-daily-cap", "wasted-upload-daily-cap", 3000L)
+            ),
+            module("points-once-rules", "points-once-rules",
+                    longField("new-torrent-points", "new-torrent-points", 500L),
+                    longField("client-discovery-points", "client-discovery-points", 4L)
+            ),
+            module("points-dynamic-rules", "points-dynamic-rules",
+                    longField("dynamic-seed-upload-points", "dynamic-seed-upload-points", 180L),
+                    longField("dynamic-seed-upload-mib", "dynamic-seed-upload-mib", 200L),
+                    longField("dynamic-download-points", "dynamic-download-points", 50L),
+                    longField("dynamic-download-mib", "dynamic-download-mib", 512L),
+                    longField("dynamic-hot-peer-points", "dynamic-hot-peer-points", 100L),
+                    integer("dynamic-hot-peer-top", "dynamic-hot-peer-top", 50),
+                    longField("dynamic-torrent-size-gib", "dynamic-torrent-size-gib", 1L)
             )
     );
     private static final Map<String, ModuleDefinition> MODULE_INDEX = MODULES.stream()
@@ -172,7 +207,8 @@ public class AnalyseModuleConfigService {
         Map<String, String> values = rawValues();
         return MODULES.stream().map(module -> new ModuleView(
                 module.id(),
-                booleanValue(module, "enabled", true, values),
+                !hasField(module, "enabled")
+                        || booleanValue(module, "enabled", true, values),
                 module.fields().stream().map(field -> new ModuleFieldView(
                         field.field(),
                         field.key(),
@@ -318,6 +354,11 @@ public class AnalyseModuleConfigService {
         return value;
     }
 
+    private boolean hasField(ModuleDefinition module, String field) {
+        return module.fields().stream()
+                .anyMatch(candidate -> candidate.field().equals(field));
+    }
+
     private Map<String, String> rawValues() {
         long now = System.currentTimeMillis();
         if (cachedValues != null && now < cacheExpiresAt) {
@@ -371,6 +412,11 @@ public class AnalyseModuleConfigService {
                     int parsed = Integer.parseInt(value);
                     if (parsed < 0) throw new IllegalArgumentException();
                     yield Integer.toString(parsed);
+                }
+                case "long" -> {
+                    long parsed = Long.parseLong(value);
+                    if (parsed < 0) throw new IllegalArgumentException();
+                    yield Long.toString(parsed);
                 }
                 case "decimal" -> {
                     BigDecimal parsed = new BigDecimal(value);
@@ -470,6 +516,14 @@ public class AnalyseModuleConfigService {
 
     private static ModuleFieldDefinition integer(String field, String path, int defaultValue) {
         return field(field, path, "integer", Integer.toString(defaultValue));
+    }
+
+    private static ModuleFieldDefinition longField(
+            String field,
+            String path,
+            long defaultValue
+    ) {
+        return field(field, path, "long", Long.toString(defaultValue));
     }
 
     private static ModuleFieldDefinition decimal(String field, String path, String defaultValue) {

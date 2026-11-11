@@ -44,10 +44,9 @@ public class PingRulePeerIdentityController extends BasePingController {
         }
         var userapp = authenticateForRulesPoints();
         if (userapp != null) {
-            pointAwardContext.record(
+            pointAwardContext.recordConfigured(
                     userapp.getOwner(),
                     PointCategory.RULES_FETCH,
-                    2,
                     1,
                     0
             );

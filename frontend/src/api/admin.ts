@@ -89,6 +89,11 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ banned, reason }),
     }),
+  adjustUserPoints: (id: string, amount: string, reason: string) =>
+    request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/points`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, reason }),
+    }),
   deleteUser: (id: string) =>
     request<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: 'DELETE',

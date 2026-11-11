@@ -157,6 +157,61 @@ class FlywayMigrationIntegrationTest {
                 assertTrue(result.next());
                 assertEquals(4, result.getInt(1));
             }
+
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*)
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'points_ledger'
+                      AND column_name = 'manual_points'
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(1, result.getInt(1));
+            }
+
+            long testUserId;
+            try (var result = statement.executeQuery("""
+                    INSERT INTO public."user" (
+                        avatar, email, nickname, register_at, last_login_at,
+                        role, privacy_level
+                    )
+                    VALUES (
+                        '/img/anonymous-user.png',
+                        'points-migration-test@example.invalid',
+                        'points-migration-test',
+                        NOW(), NOW(), 'user', 2
+                    )
+                    RETURNING id
+                    """)) {
+                assertTrue(result.next());
+                testUserId = result.getLong(1);
+            }
+            try (var result = statement.executeQuery("""
+                    SELECT result_category AS awarded_category, result_points AS awarded
+                    FROM public.sparkle_apply_point_categories(
+                        %d,
+                        CURRENT_DATE,
+                        '[{"category":"LOGIN","points":1000,"cap":1000}]'::jsonb
+                    )
+                    """.formatted(testUserId))) {
+                assertTrue(result.next());
+                assertEquals("LOGIN", result.getString("awarded_category"));
+                assertEquals(1000, result.getLong("awarded"));
+            }
+            statement.executeUpdate(
+                    "DELETE FROM public.\"user\" WHERE id = " + testUserId
+            );
+
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*)
+                    FROM pg_proc
+                    WHERE pronamespace = 'public'::regnamespace
+                      AND proname = 'sparkle_touch_point_app_activity'
+                      AND pronargs = 4
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(1, result.getInt(1));
+            }
         }
     }
 

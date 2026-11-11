@@ -72,6 +72,14 @@ function eventLabel(eventType: string) {
   return translated === key ? eventType : translated
 }
 
+function pointsDeltaClass(pointsRaw: string) {
+  try {
+    return BigInt(pointsRaw) < 0n ? 'negative' : 'positive'
+  } catch {
+    return ''
+  }
+}
+
 function categoryPercent(category: PointCategoryPoints) {
   if (!category.dailyCapRaw) return null
   const points = Number(category.pointsRaw)
@@ -307,13 +315,21 @@ onMounted(refresh)
               <a-tag color="arcoblue">{{ eventLabel(record.eventType) }}</a-tag>
             </template>
             <template #points="{ record }">
-              <div class="points-delta">
+              <div class="points-delta" :class="pointsDeltaClass(record.pointsRaw)">
                 <strong>{{ formatPointBytes(record.pointsRaw) }}</strong>
                 <span>{{ record.pointsRaw }} Bytes</span>
               </div>
             </template>
             <template #details="{ record }">
               <div class="breakdown-tags">
+                <a-tag
+                  v-if="record.eventType === 'ADMIN_ADJUSTMENT'"
+                  color="purple"
+                  size="small"
+                >
+                  {{ t('points.categories.ADMIN_ADJUSTMENT') }}
+                  · {{ formatPointBytes(record.manualPointsRaw) }}
+                </a-tag>
                 <a-tag
                   v-for="entry in record.details?.breakdown ?? []"
                   :key="entry.category"
@@ -328,7 +344,7 @@ onMounted(refresh)
                   · {{ formatPointBytes(entry.awardedPoints) }}
                 </a-tag>
                 <span v-if="!(record.details?.breakdown?.length)" class="muted">
-                  {{ t('common.noData') }}
+                  {{ record.details?.reason || t('common.noData') }}
                 </span>
               </div>
             </template>
@@ -621,6 +637,10 @@ onMounted(refresh)
 
 .points-delta strong {
   color: rgb(var(--green-6));
+}
+
+.points-delta.negative strong {
+  color: rgb(var(--red-6));
 }
 
 .points-delta span {

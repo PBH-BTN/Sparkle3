@@ -9,6 +9,7 @@ import {
   IconPlus,
   IconRefresh,
   IconSearch,
+  IconTrophy,
   IconUnlock,
   IconUser,
 } from '@arco-design/web-vue/es/icon'
@@ -20,7 +21,7 @@ import { useSessionStore } from '@/stores/session'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
-const { formatDate } = useFormatters()
+const { formatDate, formatPointBytes } = useFormatters()
 const session = useSessionStore()
 const records = ref<AdminUser[]>([])
 const loading = ref(false)
@@ -49,14 +50,22 @@ const banSaving = ref(false)
 const banUser = ref<AdminUser | null>(null)
 const banReason = ref('')
 
+const pointsVisible = ref(false)
+const pointsSaving = ref(false)
+const pointsUser = ref<AdminUser | null>(null)
+const pointsMode = ref<'add' | 'deduct'>('add')
+const pointsAmount = ref<number | undefined>(undefined)
+const pointsReason = ref('')
+
 const columns = computed<TableColumnData[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 70 },
   { title: t('admin.users.nickname'), slotName: 'user', width: 190 },
   { title: t('admin.users.email'), dataIndex: 'email', slotName: 'email', width: 210 },
   { title: t('admin.users.access'), slotName: 'access', width: 120 },
+  { title: t('admin.users.points'), slotName: 'points', width: 140 },
   { title: t('admin.users.registerAt'), slotName: 'registerAt', width: 150 },
   { title: t('admin.users.lastLoginAt'), slotName: 'lastLoginAt', width: 150 },
-  { title: t('admin.common.actions'), slotName: 'actions', width: 210 },
+  { title: t('admin.common.actions'), slotName: 'actions', width: 280 },
 ])
 
 async function load() {
@@ -174,6 +183,40 @@ async function restoreUser(user: AdminUser) {
   }
 }
 
+function openPoints(user: AdminUser) {
+  pointsUser.value = user
+  pointsMode.value = 'add'
+  pointsAmount.value = undefined
+  pointsReason.value = ''
+  pointsVisible.value = true
+}
+
+async function submitPointsAdjustment() {
+  if (!pointsUser.value) return
+  const amount = Math.trunc(pointsAmount.value ?? 0)
+  const reason = pointsReason.value.trim()
+  if (amount <= 0) {
+    Message.warning(t('admin.users.pointsAmountRequired'))
+    return
+  }
+  if (!reason) {
+    Message.warning(t('admin.users.pointsReasonRequired'))
+    return
+  }
+  pointsSaving.value = true
+  try {
+    const signedAmount = pointsMode.value === 'deduct' ? `-${amount}` : String(amount)
+    await adminApi.adjustUserPoints(pointsUser.value.id, signedAmount, reason)
+    Message.success(t('admin.users.pointsAdjusted'))
+    pointsVisible.value = false
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    pointsSaving.value = false
+  }
+}
+
 async function deleteUser(user: AdminUser) {
   try {
     await adminApi.deleteUser(user.id)
@@ -254,7 +297,7 @@ onMounted(load)
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1110 }"
+        :scroll="{ x: 1320 }"
         row-key="id"
         stripe
       >
@@ -291,6 +334,12 @@ onMounted(load)
             <a-tag v-else color="green" size="small">{{ t('admin.common.active') }}</a-tag>
           </div>
         </template>
+        <template #points="{ record }">
+          <div class="points-cell">
+            <strong>{{ formatPointBytes(record.scoreBytes) }}</strong>
+            <span>{{ record.scoreBytes }} Bytes</span>
+          </div>
+        </template>
         <template #registerAt="{ record }">
           <span class="nowrap">{{ formatDate(record.registerAt) }}</span>
         </template>
@@ -301,6 +350,10 @@ onMounted(load)
         </template>
         <template #actions="{ record }">
           <a-space>
+            <a-button type="text" size="small" @click="openPoints(record)">
+              <template #icon><IconTrophy /></template>
+              {{ t('admin.users.adjustPoints') }}
+            </a-button>
             <a-button type="text" size="small" @click="openEdit(record)">
               <template #icon><IconEdit /></template>
               {{ t('admin.common.edit') }}
@@ -424,6 +477,67 @@ onMounted(load)
         </div>
       </a-form>
     </a-modal>
+
+    <a-modal
+      v-model:visible="pointsVisible"
+      :title="t('admin.users.pointsTitle')"
+      :footer="false"
+      width="540px"
+    >
+      <div v-if="pointsUser" class="points-adjust-current">
+        <div>
+          <strong>{{ pointsUser.nickname }}</strong>
+          <span>UID {{ pointsUser.id }}</span>
+        </div>
+        <div>
+          <strong>{{ formatPointBytes(pointsUser.scoreBytes) }}</strong>
+          <span>{{ pointsUser.scoreBytes }} Bytes</span>
+        </div>
+      </div>
+      <a-form :model="{ pointsAmount, pointsReason }" layout="vertical">
+        <a-form-item :label="t('admin.users.pointsOperation')">
+          <a-radio-group v-model="pointsMode" type="button">
+            <a-radio value="add">{{ t('admin.users.addPoints') }}</a-radio>
+            <a-radio value="deduct">{{ t('admin.users.deductPoints') }}</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item :label="t('admin.users.pointsAmount')" required>
+          <a-input-number
+            v-model="pointsAmount"
+            :min="1"
+            :precision="0"
+            :max="Number.MAX_SAFE_INTEGER"
+            hide-button
+            style="width: 100%"
+          >
+            <template #suffix>Bytes</template>
+          </a-input-number>
+        </a-form-item>
+        <a-form-item :label="t('admin.users.pointsReason')" required>
+          <a-textarea
+            v-model="pointsReason"
+            :max-length="500"
+            show-word-limit
+            :placeholder="t('admin.users.pointsReasonPlaceholder')"
+            :auto-size="{ minRows: 3, maxRows: 6 }"
+          />
+        </a-form-item>
+        <a-alert type="warning" show-icon>
+          {{ t('admin.users.pointsHint') }}
+        </a-alert>
+        <div class="modal-actions">
+          <a-button @click="pointsVisible = false">{{ t('admin.common.cancel') }}</a-button>
+          <a-button
+            :status="pointsMode === 'deduct' ? 'danger' : 'normal'"
+            type="primary"
+            :loading="pointsSaving"
+            @click="submitPointsAdjustment"
+          >
+            {{ t('common.confirm') }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -473,6 +587,48 @@ onMounted(load)
 }
 
 .access-cell span {
+  color: var(--color-text-3);
+  font-size: 11px;
+}
+
+.points-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.points-cell strong {
+  color: rgb(var(--primary-6));
+}
+
+.points-cell span {
+  color: var(--color-text-3);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
+.points-adjust-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--color-fill-1);
+  border-radius: 8px;
+}
+
+.points-adjust-current > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.points-adjust-current > div:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.points-adjust-current span {
   color: var(--color-text-3);
   font-size: 11px;
 }

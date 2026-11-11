@@ -41,7 +41,7 @@ function isBoolean(field: AnalyseModuleField) {
 }
 
 function isNumeric(field: AnalyseModuleField) {
-  return ['integer', 'decimal', 'duration-hours', 'bytes-gib', 'bytes-gb'].includes(
+  return ['integer', 'long', 'decimal', 'duration-hours', 'bytes-gib', 'bytes-gb'].includes(
     field.type,
   )
 }
@@ -172,7 +172,7 @@ onMounted(load)
                 <a-input-number
                   v-else-if="isNumeric(field)"
                   :model-value="numericValue(module.id, field)"
-                  :precision="field.type === 'integer' ? 0 : 2"
+                  :precision="field.type === 'integer' || field.type === 'long' ? 0 : 2"
                   :min="0"
                   @change="(value) => setFieldValue(module.id, field, value)"
                 >

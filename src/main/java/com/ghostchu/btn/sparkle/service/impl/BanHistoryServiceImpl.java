@@ -17,6 +17,7 @@ import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
+import com.ghostchu.btn.sparkle.service.points.PointRulesService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
@@ -74,6 +75,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private RedisTemplate<String, String> stringStringRedisTemplate;
     @Autowired
     private PointAwardContext pointAwardContext;
+    @Autowired
+    private PointRulesService pointRulesService;
 
 
     @Transactional
@@ -147,10 +150,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
-        pointAwardContext.record(
+        pointAwardContext.recordConfigured(
                 userId,
                 PointCategory.BAN_HISTORY,
-                list.size() * 3L,
                 list.size(),
                 0
         );
@@ -159,10 +161,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 .filter(TorrentRegistration::created)
                 .count();
         if (newTorrents > 0) {
-            pointAwardContext.record(
+            pointAwardContext.recordConfigured(
                     userId,
                     PointCategory.NEW_TORRENT,
-                    newTorrents * 500L,
                     newTorrents,
                     0
             );
@@ -178,8 +179,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             }
         }
         long wastedPoints = BigInteger.valueOf(wastedUploadBytes)
-                .multiply(BigInteger.TEN)
-                .divide(BigInteger.valueOf(1_048_576L))
+                .multiply(BigInteger.valueOf(
+                        pointRulesService.points(PointCategory.WASTED_UPLOAD)
+                ))
+                .divide(BigInteger.valueOf(1_048_576L)
+                        .multiply(BigInteger.valueOf(
+                                pointRulesService.wastedUploadMib()
+                        )))
                 .min(BigInteger.valueOf(Long.MAX_VALUE))
                 .longValue();
         if (wastedPoints > 0) {

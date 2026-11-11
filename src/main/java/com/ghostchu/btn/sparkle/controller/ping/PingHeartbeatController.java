@@ -42,10 +42,9 @@ public class PingHeartbeatController extends BasePingController {
             validatePowCaptcha();
         }
         Userapp userapp = verifyUserApplication();
-        pointAwardContext.record(
+        pointAwardContext.recordConfigured(
                 userapp.getOwner(),
                 PointCategory.KEEPALIVE,
-                1,
                 1,
                 0
         );
