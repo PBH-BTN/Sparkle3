@@ -8,6 +8,8 @@ import com.ghostchu.btn.sparkle.entity.ClientDiscovery;
 import com.ghostchu.btn.sparkle.mapper.ClientDiscoveryMapper;
 import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import com.ghostchu.btn.sparkle.util.PeerIdParser;
 import com.google.common.hash.Hashing;
@@ -44,10 +46,12 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
 
     @Autowired
     private AdminConfigService adminConfigService;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
     @Transactional
     @Override
-    public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
+    public void handleClientDiscovery(long userAppId, long userId, List<Pair<String, String>> data) {
         if (!adminConfigService.get().clientDiscoveryEnabled()) return;
         if (data == null || data.isEmpty()) return;
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
@@ -86,7 +90,16 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
         }
         try {
             if (!clientDiscoveryList.isEmpty()) {
-                this.baseMapper.batchInsert(clientDiscoveryList);
+                List<Long> inserted = this.baseMapper.batchInsertReturning(clientDiscoveryList);
+                if (!inserted.isEmpty()) {
+                    pointAwardContext.record(
+                            userId,
+                            PointCategory.CLIENT_DISCOVERY,
+                            inserted.size() * 4L,
+                            inserted.size(),
+                            0
+                    );
+                }
             }
         } catch (Exception e) {
             log.error("Error inserting client discovery data", e);

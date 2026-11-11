@@ -56,8 +56,17 @@ public class PingSubmitBansController extends BasePingController {
             ban.setStructuredData(sanitizeU0(ban.getStructuredData()));
             ban.setDescription(sanitizeU0(ban.getDescription()));
         }
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList());
-        banHistoryService.syncBanHistory(request.getRemoteAddr(), userapp.getId(), bans);
+        clientDiscoveryService.handleClientDiscovery(
+                userapp.getId(),
+                userapp.getOwner(),
+                bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList()
+        );
+        banHistoryService.syncBanHistory(
+                request.getRemoteAddr(),
+                userapp.getId(),
+                userapp.getOwner(),
+                bans
+        );
         return ResponseEntity.status(200).build();
     }
 

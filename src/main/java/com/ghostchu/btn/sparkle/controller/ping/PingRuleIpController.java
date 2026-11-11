@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.service.btnability.IPAllowListRuleProvider;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
@@ -47,11 +49,23 @@ public class PingRuleIpController extends BasePingController {
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
     @GetMapping("/ping/ruleIpDenylist")
     public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) throws NoSuchAlgorithmException {
         if (denyListPowCaptcha) {
             validatePowCaptcha();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.record(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    2,
+                    1,
+                    0
+            );
         }
         MessageDigest versionDigest = MessageDigest.getInstance("SHA-256");
         for (IPDenyListRuleProvider ipDenyListRuleProvider : ipDenyListRuleProviders) {
@@ -79,6 +93,16 @@ public class PingRuleIpController extends BasePingController {
     public ResponseEntity<@NotNull String> ipAllowList(@RequestParam("rev") String version) throws NoSuchAlgorithmException {
         if (allowListPowCaptcha) {
             validatePowCaptcha();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.record(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    2,
+                    1,
+                    0
+            );
         }
         MessageDigest versionDigest = MessageDigest.getInstance("SHA-256");
         for (IPAllowListRuleProvider ipAllowListRuleProvider : ipAllowListRuleProviders) {

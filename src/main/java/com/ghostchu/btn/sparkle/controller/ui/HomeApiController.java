@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.NavigationService;
+import com.ghostchu.btn.sparkle.service.points.PointsService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,17 +29,20 @@ public class HomeApiController {
     private final IUserService userService;
     private final AdminConfigService adminConfigService;
     private final NavigationService navigationService;
+    private final PointsService pointsService;
 
     public HomeApiController(@Qualifier("stringLongRedisTemplate") RedisTemplate<String, Long> redisTemplate,
                              IUserSwarmStatisticsService userSwarmStatisticsService,
                              IUserService userService,
                              AdminConfigService adminConfigService,
-                             NavigationService navigationService) {
+                             NavigationService navigationService,
+                             PointsService pointsService) {
         this.redisTemplate = redisTemplate;
         this.userSwarmStatisticsService = userSwarmStatisticsService;
         this.userService = userService;
         this.adminConfigService = adminConfigService;
         this.navigationService = navigationService;
+        this.pointsService = pointsService;
     }
 
     @GetMapping("/session")
@@ -49,6 +53,11 @@ public class HomeApiController {
         var user = userService.getById(userDetails.getUserId());
         if (user == null) {
             return SessionResponse.anonymous();
+        }
+        try {
+            pointsService.awardDailyLogin(user.getId());
+        } catch (Exception ignored) {
+            // A points failure must not prevent the session from loading.
         }
         var statisticsConfig = adminConfigService.get();
         var navigation = navigationService.listPublic();

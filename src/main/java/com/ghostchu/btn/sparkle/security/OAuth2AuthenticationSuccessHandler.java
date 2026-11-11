@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.security;
 
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.points.PointsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -39,6 +40,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final IUserService userService;
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final PointsService pointsService;
     private final RestClient restClient = RestClient.create();
 
     @Override
@@ -76,6 +78,12 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             log.info("GitHub OAuth 鉴权成功: login={}, githubId={}, email={}", login, githubId, email);
             User user = userService.userGithubOAuthLogin(authentication, InetAddress.ofLiteral(request.getRemoteAddr()), githubId.longValue(), login, avatarUrl, name, email);
             log.info("GitHub OAuth 登录成功: login={}, githubId={}, email={}", login, githubId, email);
+            try {
+                pointsService.awardDailyLogin(user.getId());
+            } catch (Exception exception) {
+                log.warn("Unable to award daily login points to user {}: {}",
+                        user.getId(), exception.getMessage());
+            }
 
             // 创建 SparkleUserDetails 包装我们的 User 实体
             SparkleUserDetails userDetails = new SparkleUserDetails(user, oAuth2User);

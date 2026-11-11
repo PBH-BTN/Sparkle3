@@ -55,6 +55,44 @@ export function useFormatters() {
     return `${formatted} ${index === 0 ? t('units.bytes') : units[index]}`
   }
 
+  const formatPointBytes = (
+    value: number | string | bigint | null | undefined,
+  ) => {
+    if (value == null) return 'N/A'
+    let points: bigint
+    try {
+      if (typeof value === 'bigint') {
+        points = value
+      } else if (typeof value === 'string') {
+        points = BigInt(value)
+      } else {
+        if (!Number.isFinite(value)) return 'N/A'
+        points = BigInt(Math.trunc(value))
+      }
+    } catch {
+      return 'N/A'
+    }
+
+    const negative = points < 0n
+    const absolute = negative ? -points : points
+    if (absolute === 0n) return '0 KiB'
+    const units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
+    let index = 0
+    let divisor = 1024n
+    while (index < units.length - 1 && absolute / divisor >= 1024n) {
+      divisor *= 1024n
+      index++
+    }
+    const whole = absolute / divisor
+    const fraction = absolute % divisor
+    const scaled = Number(whole) + Number(fraction) / Number(divisor)
+    const formatted = new Intl.NumberFormat(locale.value, {
+      minimumFractionDigits: index === 0 ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(negative ? -scaled : scaled)
+    return `${formatted} ${units[index]}`
+  }
+
   const formatProgress = (value: number | null | undefined) =>
     value == null
       ? 'N/A'
@@ -95,6 +133,7 @@ export function useFormatters() {
     formatNumber,
     formatDate,
     formatBytes,
+    formatPointBytes,
     formatProgress,
     formatDuration,
     formatRatio,

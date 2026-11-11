@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
     },
     {
+      path: '/user/points',
+      name: 'points',
+      component: () => import('@/views/PointsView.vue'),
+    },
+    {
       path: '/user/profile/:uid',
       name: 'public-profile',
       component: () => import('@/views/PublicProfileView.vue'),

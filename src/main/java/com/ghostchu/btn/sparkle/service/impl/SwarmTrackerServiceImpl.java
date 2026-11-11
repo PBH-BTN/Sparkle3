@@ -7,10 +7,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarm;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.entity.SwarmTrafficDelta;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
+import com.ghostchu.btn.sparkle.mapper.SwarmTrafficDeltaMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
@@ -62,6 +67,10 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private PlatformTransactionManager platformTransactionManager;
     @Autowired
     private IPDBManager geoIPManager;
+    @Autowired
+    private PointAwardContext pointAwardContext;
+    @Autowired
+    private SwarmTrafficDeltaMapper swarmTrafficDeltaMapper;
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
@@ -153,19 +162,37 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
     @Transactional
     @Override
-    public void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms) {
+    public void syncSwarm(long userAppId, long userId, @NotNull List<BtnSwarm> swarms) {
         var nowTime = OffsetDateTime.now();
         // 使用 Map 进行内存去重，key 为 userapps_id, user_downloader, torrent_id, peer_ip, peer_port
         Map<SwarmKey, SwarmTracker> swarmMap = new HashMap<>();
+        Map<Long, TorrentRegistration> torrents = new HashMap<>();
 
         for (BtnSwarm swarm : swarms) {
-            long torrentId = torrentService.getOrCreateTorrentId(
+            var lastSeenTime = swarm.getLastTimeSeen()
+                    .toLocalDateTime()
+                    .atOffset(ZoneOffset.UTC);
+            if (lastSeenTime.isAfter(nowTime.plusHours(1))
+                    || lastSeenTime.isBefore(nowTime.minusDays(7))) {
+                log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}",
+                        lastSeenTime);
+                continue;
+            }
+            if (swarm.getFromPeerTraffic() <= 0
+                    && swarm.getToPeerTraffic() <= 0
+                    && swarm.getFromPeerTrafficOffset() <= 0
+                    && swarm.getToPeerTrafficOffset() <= 0) {
+                continue;
+            }
+            TorrentRegistration registration = torrentService.getOrCreateTorrent(
                     swarm.getTorrentIdentifier(),
                     swarm.getTorrentSize(),
                     swarm.getTorrentIsPrivate(),
                     null,
                     null
             );
+            long torrentId = registration.id();
+            torrents.put(torrentId, registration);
             InetAddress peerIp = InetAddress.ofLiteral(swarm.getPeerIp());
 
             SwarmKey key = new SwarmKey(
@@ -175,16 +202,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     peerIp,
                     swarm.getPort()
             );
-            var lastSeenTime = swarm.getLastTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC);
-            // 相差不能超过 7 天
-            if (lastSeenTime.isAfter(nowTime.plusHours(1)) || lastSeenTime.isBefore(nowTime.minusDays(7))) {
-                log.debug("Ignoring swarm entry with out-of-range lastSeenTime: {}", lastSeenTime);
-                continue;
-            }
-            if (swarm.getFromPeerTraffic() <= 0 && swarm.getToPeerTraffic() <= 0
-                    && swarm.getFromPeerTrafficOffset() <= 0 && swarm.getToPeerTrafficOffset() <= 0) {
-                continue;
-            }
             var inet = InetAddress.ofLiteral(swarm.getPeerIp());
             SwarmTracker tracker = new SwarmTracker()
                     .setUserappsId(userAppId)
@@ -212,6 +229,58 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
+            pointAwardContext.record(
+                    userId,
+                    PointCategory.SWARM_TRACKER,
+                    swarmMap.size() * 3L,
+                    swarmMap.size(),
+                    0
+            );
+        }
+
+        long newTorrents = torrents.values().stream()
+                .filter(TorrentRegistration::created)
+                .count();
+        if (newTorrents > 0) {
+            pointAwardContext.record(
+                    userId,
+                    PointCategory.NEW_TORRENT,
+                    newTorrents * 500L,
+                    newTorrents,
+                    0
+            );
+        }
+
+        Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
+        for (SwarmTracker tracker : swarmMap.values()) {
+            TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
+                    tracker.getTorrentId(),
+                    ignored -> new TrafficDeltaAccumulator(
+                            torrents.getOrDefault(
+                                    tracker.getTorrentId(),
+                                    new TorrentRegistration(tracker.getTorrentId(), 0, false)
+                            ).size()
+                    )
+            );
+            accumulator.add(
+                    Math.max(0, tracker.getToPeerTrafficOffset()),
+                    Math.max(0, tracker.getFromPeerTrafficOffset())
+            );
+        }
+        List<SwarmTrafficDelta> deltas = trafficByTorrent.entrySet().stream()
+                .filter(entry -> entry.getValue().uploadBytes > 0
+                        || entry.getValue().downloadBytes > 0)
+                .map(entry -> new SwarmTrafficDelta()
+                        .setOccurredAt(nowTime)
+                        .setUserId(userId)
+                        .setUserappId(userAppId)
+                        .setTorrentId(entry.getKey())
+                        .setTorrentSize(entry.getValue().torrentSize)
+                        .setUploadBytes(entry.getValue().uploadBytes)
+                        .setDownloadBytes(entry.getValue().downloadBytes))
+                .toList();
+        if (!deltas.isEmpty()) {
+            swarmTrafficDeltaMapper.batchInsert(deltas);
         }
     }
 
@@ -225,6 +294,25 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             InetAddress peerIp,
             int peerPort
     ) {
+    }
+
+    private static final class TrafficDeltaAccumulator {
+        private final long torrentSize;
+        private long uploadBytes;
+        private long downloadBytes;
+
+        private TrafficDeltaAccumulator(long torrentSize) {
+            this.torrentSize = torrentSize;
+        }
+
+        private void add(long upload, long download) {
+            uploadBytes = safeAdd(uploadBytes, upload);
+            downloadBytes = safeAdd(downloadBytes, download);
+        }
+
+        private static long safeAdd(long first, long second) {
+            return first > Long.MAX_VALUE - second ? Long.MAX_VALUE : first + second;
+        }
     }
 
 

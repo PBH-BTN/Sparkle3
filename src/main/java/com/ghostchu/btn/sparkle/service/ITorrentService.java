@@ -18,5 +18,11 @@ public interface ITorrentService extends IService<Torrent> {
 
     @Nullable Torrent getTorrentByTorrentIdentifier(@NotNull String torrentIdentifier);
 
-    long getOrCreateTorrentId(@NotNull String identifier, @Nullable Long size, @Nullable Boolean isPrivate, @Nullable String infoHash, @Nullable String torrentName);
+    @NotNull TorrentRegistration getOrCreateTorrent(
+            @NotNull String identifier,
+            @Nullable Long size,
+            @Nullable Boolean isPrivate,
+            @Nullable String infoHash,
+            @Nullable String torrentName
+    );
 }

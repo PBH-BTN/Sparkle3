@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.security.ClientAuthenticationCredential;
 import com.ghostchu.btn.sparkle.service.IPowCaptchaService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.service.points.PointsService;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +25,8 @@ public class BasePingController {
     private IUserappService userappService;
     @Autowired
     private IPowCaptchaService pingCaptchaService;
+    @Autowired
+    private PointsService pointsService;
 
     public boolean validatePowCaptcha() {
         String powId = request.getHeader("X-BTN-PowID");
@@ -55,6 +58,7 @@ public class BasePingController {
         if (userApp.getBannedAt() != null) {
             throw new UserApplicationBannedException(userApp.getBannedReason());
         }
+        pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
         return userApp;
     }
 
@@ -62,7 +66,21 @@ public class BasePingController {
     public Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        return userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
+        Userapp userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
+        if (userApp != null && userApp.getBannedAt() == null) {
+            pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
+        }
+        return userApp;
+    }
+
+    @Nullable
+    protected Userapp authenticateForRulesPoints() {
+        try {
+            Userapp userapp = verifyUserApplicationFailSafe();
+            return userapp == null || userapp.getBannedAt() != null ? null : userapp;
+        } catch (AccessDeniedException exception) {
+            return null;
+        }
     }
 
     public String cutPeerId(String in) {

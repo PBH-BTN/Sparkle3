@@ -25,7 +25,12 @@ import java.util.List;
  */
 public interface IBanHistoryService extends IService<BanHistory> {
 
-    void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans);
+    void syncBanHistory(
+            @NotNull String submitterIp,
+            long userAppId,
+            long userId,
+            @NotNull List<BtnBan> bans
+    );
 
     @NotNull IPage<BanHistory> fetchBanHistory(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @Nullable List<String> moduleNames, @NotNull Page<BanHistory> page);
 

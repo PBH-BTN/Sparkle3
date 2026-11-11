@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserContactEmailService;
 import com.ghostchu.btn.sparkle.service.UserPublicProfileService;
+import com.ghostchu.btn.sparkle.util.UnitConverter;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,11 +42,12 @@ public class UserApiController {
     public UserProfileResponse profile(@AuthenticationPrincipal SparkleUserDetails userDetails) {
         var user = requireCurrentUser(userDetails);
         var relation = userService.getUserRelByBindUserId(user.getId());
+        long scoreBytes = user.getScoreBytes() == null ? 0 : user.getScoreBytes();
         return new UserProfileResponse(
                 UserView.from(user),
                 relation == null ? null : new UserRelDto(relation),
-                "N/A",
-                -1
+                UnitConverter.autoUnit(scoreBytes),
+                Long.toString(scoreBytes)
         );
     }
 

@@ -137,6 +137,10 @@ function navigate(id: string) {
                 <template #icon><IconUser /></template>
                 {{ t('nav.profile') }}
               </a-doption>
+              <a-doption @click="navigate('/user/points')">
+                <template #icon><IconFire /></template>
+                {{ t('nav.points') }}
+              </a-doption>
               <a-doption v-if="session.user?.admin" @click="navigate('/admin/dashboard')">
                 <template #icon><IconDashboard /></template>
                 {{ t('admin.title') }}
@@ -215,6 +219,10 @@ function navigate(id: string) {
         <a-menu-item key="/user/profile">
           <template #icon><IconUser /></template>
           {{ t('nav.profile') }}
+        </a-menu-item>
+        <a-menu-item key="/user/points">
+          <template #icon><IconFire /></template>
+          {{ t('nav.points') }}
         </a-menu-item>
       </a-menu>
     </a-drawer>

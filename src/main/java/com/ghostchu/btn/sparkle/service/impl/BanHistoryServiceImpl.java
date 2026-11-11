@@ -12,6 +12,9 @@ import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
@@ -28,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -35,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * <p>
@@ -64,12 +70,22 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> stringStringRedisTemplate;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
 
     @Transactional
     @Override
-    public void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans) {
+    public void syncBanHistory(
+            @NotNull String submitterIp,
+            long userAppId,
+            long userId,
+            @NotNull List<BtnBan> bans
+    ) {
         var nowTime = OffsetDateTime.now();
+        List<TorrentRegistration> registrations = new ArrayList<>();
+        Set<String> ruleMatchedIps = new HashSet<>();
+        Set<String> allSubmittedIps = new HashSet<>();
         var list = bans.stream().map(btnBan -> {
             Map<String, Object> structuredDataMap = Map.of();
             if (btnBan.getStructuredData() != null && !btnBan.getStructuredData().isBlank()) {
@@ -95,11 +111,23 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 return null;
             }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
+            TorrentRegistration registration = torrentService.getOrCreateTorrent(
+                    btnBan.getTorrentIdentifier(),
+                    btnBan.getTorrentSize(),
+                    btnBan.isTorrentIsPrivate(),
+                    null,
+                    null
+            );
+            registrations.add(registration);
+            if (btnBan.getRule() != null && !btnBan.getRule().isBlank()) {
+                ruleMatchedIps.add(btnBan.getPeerIp());
+            }
+            allSubmittedIps.add(btnBan.getPeerIp());
             return new BanHistory()
                     .setInsertTime(nowTime)
                     .setPopulateTime(banAtTime)
                     .setUserappsId(userAppId)
-                    .setTorrentId(torrentService.getOrCreateTorrentId(btnBan.getTorrentIdentifier(), btnBan.getTorrentSize(), btnBan.isTorrentIsPrivate(), null, null))
+                    .setTorrentId(registration.id())
                     .setPeerIp(inet)
                     .setPeerPort(btnBan.getPeerPort())
                     .setPeerId(btnBan.getPeerId())
@@ -117,6 +145,52 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
+        pointAwardContext.record(
+                userId,
+                PointCategory.BAN_HISTORY,
+                list.size() * 3L,
+                list.size(),
+                0
+        );
+
+        long newTorrents = registrations.stream()
+                .filter(TorrentRegistration::created)
+                .count();
+        if (newTorrents > 0) {
+            pointAwardContext.record(
+                    userId,
+                    PointCategory.NEW_TORRENT,
+                    newTorrents * 500L,
+                    newTorrents,
+                    0
+            );
+        }
+
+        long wastedUploadBytes = 0;
+        for (BanHistory ban : list) {
+            long traffic = ban.getToPeerTraffic();
+            if (traffic > 0) {
+                wastedUploadBytes = wastedUploadBytes > Long.MAX_VALUE - traffic
+                        ? Long.MAX_VALUE
+                        : wastedUploadBytes + traffic;
+            }
+        }
+        long wastedPoints = BigInteger.valueOf(wastedUploadBytes)
+                .multiply(BigInteger.TEN)
+                .divide(BigInteger.valueOf(1_048_576L))
+                .min(BigInteger.valueOf(Long.MAX_VALUE))
+                .longValue();
+        if (wastedPoints > 0) {
+            pointAwardContext.record(
+                    userId,
+                    PointCategory.WASTED_UPLOAD,
+                    wastedPoints,
+                    list.size(),
+                    wastedUploadBytes
+            );
+        }
+        pointAwardContext.submitRuleMatchedIps(userId, ruleMatchedIps);
+        pointAwardContext.submitIps(userId, allSubmittedIps);
     }
 
     @Override

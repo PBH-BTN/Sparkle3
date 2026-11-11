@@ -52,8 +52,12 @@ public class PingSwarmController extends BasePingController {
             swarm.setClientName(sanitizeU0(swarm.getClientName()));
             swarm.setPeerLastFlags(sanitizeU0(swarm.getPeerLastFlags()));
         }
-        swarmTrackerService.syncSwarm(userapp.getId(), swarms);
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList());
+        swarmTrackerService.syncSwarm(userapp.getId(), userapp.getOwner(), swarms);
+        clientDiscoveryService.handleClientDiscovery(
+                userapp.getId(),
+                userapp.getOwner(),
+                swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList()
+        );
         return ResponseEntity.status(200).build();
     }
 

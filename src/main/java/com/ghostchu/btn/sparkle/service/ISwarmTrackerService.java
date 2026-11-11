@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 public interface ISwarmTrackerService extends IService<SwarmTracker> {
 
-    void syncSwarm(long userAppId, @NotNull List<BtnSwarm> swarms);
+    void syncSwarm(long userAppId, long userId, @NotNull List<BtnSwarm> swarms);
 
     @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page);
 

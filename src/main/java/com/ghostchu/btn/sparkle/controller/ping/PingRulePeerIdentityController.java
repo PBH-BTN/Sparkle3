@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnRuleset;
 import com.ghostchu.btn.sparkle.service.IRuleService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -32,11 +34,23 @@ public class PingRulePeerIdentityController extends BasePingController {
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
     @GetMapping("/ping/rulePeerIdentity")
     public ResponseEntity<@NotNull Object> rulePeerIdentity(@RequestParam("rev") String version) {
         if(powCaptcha){
             validatePowCaptcha();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.record(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    2,
+                    1,
+                    0
+            );
         }
         var peerId = ruleService.getRulesByType("peer_id");
         var clientName = ruleService.getRulesByType("client_name");

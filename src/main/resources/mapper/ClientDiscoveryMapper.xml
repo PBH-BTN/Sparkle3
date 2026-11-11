@@ -11,4 +11,16 @@
         </foreach>
         ON CONFLICT (hash) DO NOTHING
     </insert>
+
+    <select id="batchInsertReturning" resultType="long">
+        INSERT INTO client_discovery (hash, peer_id, peer_client_name, found_at, found_userapps_id, client_type,
+        client_semver)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.hash},
+            #{item.peerId},#{item.peerClientName},#{item.foundAt},#{item.foundUserappsId},#{item.clientType},#{item.clientSemver})
+        </foreach>
+        ON CONFLICT (hash) DO NOTHING
+        RETURNING found_userapps_id
+    </select>
 </mapper>

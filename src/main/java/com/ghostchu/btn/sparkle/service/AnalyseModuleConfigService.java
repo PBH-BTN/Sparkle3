@@ -79,6 +79,35 @@ public class AnalyseModuleConfigService {
             module("btnbypass-userapps", "btnbypass-userapps",
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 */20 * * * *")
+            ),
+            module("points-dynamic", "points-dynamic",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 5 * * * *")
+            ),
+            module("swarm-peer-distribution", "swarm-peer-distribution",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 10 * * * *")
+            ),
+            module("ban-peer-distribution", "ban-peer-distribution",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 20 2 * * *")
+            ),
+            module("points-settings", "points-settings",
+                    bool("login-enabled", "login-enabled", true),
+                    bool("active-app-enabled", "active-app-enabled", true),
+                    bool("app-online-enabled", "app-online-enabled", true),
+                    bool("ban-history-enabled", "ban-history-enabled", true),
+                    bool("swarm-tracker-enabled", "swarm-tracker-enabled", true),
+                    bool("rules-fetch-enabled", "rules-fetch-enabled", true),
+                    bool("keepalive-enabled", "keepalive-enabled", true),
+                    bool("rule-hit-ip-enabled", "rule-hit-ip-enabled", true),
+                    bool("new-ip-enabled", "new-ip-enabled", true),
+                    bool("wasted-upload-enabled", "wasted-upload-enabled", true),
+                    bool("new-torrent-enabled", "new-torrent-enabled", true),
+                    bool("client-discovery-enabled", "client-discovery-enabled", true),
+                    bool("dynamic-seed-upload-enabled", "dynamic-seed-upload-enabled", true),
+                    bool("dynamic-download-enabled", "dynamic-download-enabled", true),
+                    bool("dynamic-hot-peer-enabled", "dynamic-hot-peer-enabled", true)
             )
     );
     private static final Map<String, ModuleDefinition> MODULE_INDEX = MODULES.stream()
@@ -200,7 +229,15 @@ public class AnalyseModuleConfigService {
 
     public boolean isEnabled(String moduleId) {
         ModuleDefinition module = requireModule(moduleId);
-        return booleanValue(module, "enabled", true, rawValues());
+        Map<String, String> values = rawValues();
+        boolean enabled = booleanValue(module, "enabled", true, values);
+        if (!enabled || !"points-dynamic".equals(moduleId)) {
+            return enabled;
+        }
+        ModuleDefinition settings = requireModule("points-settings");
+        return booleanValue(settings, "dynamic-seed-upload-enabled", true, values)
+                || booleanValue(settings, "dynamic-download-enabled", true, values)
+                || booleanValue(settings, "dynamic-hot-peer-enabled", true, values);
     }
 
     public long durationMillis(String moduleId, String field, long fallback) {
@@ -274,7 +311,11 @@ public class AnalyseModuleConfigService {
                 .filter(candidate -> candidate.field().equals(field))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown module field: " + field));
-        return values.getOrDefault(definition.key(), fallback);
+        String value = values.get(definition.key());
+        if (value == null || (value.isBlank() && fallback.isBlank())) {
+            return definition.defaultValue();
+        }
+        return value;
     }
 
     private Map<String, String> rawValues() {

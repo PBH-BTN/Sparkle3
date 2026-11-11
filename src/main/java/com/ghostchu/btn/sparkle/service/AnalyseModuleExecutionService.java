@@ -10,6 +10,8 @@ import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleConcurrentDownl
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleOverDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleUnTrustVoteServiceImpl;
 import com.ghostchu.btn.sparkle.service.GeoIpCityBlacklistService;
+import com.ghostchu.btn.sparkle.service.PeerInsightsService;
+import com.ghostchu.btn.sparkle.service.points.PointsDynamicService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,9 @@ public class AnalyseModuleExecutionService {
             AnalyseGopeedDevIdentityServiceImpl gopeedDevIdentity,
             AnalyseDatacenterHighRiskServiceImpl datacenterHighRisk,
             GeoIpCityBlacklistService geoIpCityBlacklist,
-            AnalyseBtnBypassServiceImpl btnBypass
+            AnalyseBtnBypassServiceImpl btnBypass,
+            PointsDynamicService pointsDynamic,
+            PeerInsightsService peerInsights
     ) {
         runners.put("untrusted-vote", untrustedVote::analyseUntrusted);
         runners.put("overdownload-analyse", overDownload::analyseOverDownload);
@@ -44,6 +48,9 @@ public class AnalyseModuleExecutionService {
         runners.put("datacenter-highrisk-analyse", datacenterHighRisk::analyseDatacenterHighRisk);
         runners.put("geoip-city-blacklist", geoIpCityBlacklist::generateScheduled);
         runners.put("btnbypass-userapps", btnBypass::analyseBtnBypass);
+        runners.put("points-dynamic", pointsDynamic::refresh);
+        runners.put("swarm-peer-distribution", peerInsights::refreshSwarm);
+        runners.put("ban-peer-distribution", peerInsights::refreshBan);
     }
 
     public @NotNull Set<String> moduleIds() {

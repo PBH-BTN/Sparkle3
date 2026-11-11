@@ -124,6 +124,39 @@ class FlywayMigrationIntegrationTest {
                 assertTrue(result.next());
                 assertTrue(result.getBoolean(1));
             }
+
+            try (var result = statement.executeQuery("""
+                    SELECT
+                        to_regclass('public.points_ledger') IS NOT NULL
+                        AND to_regclass('public.swarm_traffic_delta') IS NOT NULL
+                        AND to_regclass('public.swarm_hot_torrent_snapshot') IS NOT NULL
+                        AND to_regclass('public.peer_version_snapshot') IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_schema = 'public'
+                              AND table_name = 'user'
+                              AND column_name = 'score_bytes'
+                        )
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*)
+                    FROM timescaledb_information.hypertables
+                    WHERE hypertable_schema = 'public'
+                      AND hypertable_name IN (
+                          'points_ledger',
+                          'swarm_traffic_delta',
+                          'swarm_hot_torrent_snapshot',
+                          'peer_version_snapshot'
+                      )
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(4, result.getInt(1));
+            }
         }
     }
 

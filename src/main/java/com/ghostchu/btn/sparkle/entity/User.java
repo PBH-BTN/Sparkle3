@@ -63,6 +63,9 @@ public class User implements Serializable {
     @TableField("privacy_level")
     private UserPrivacyLevel privacyLevel;
 
+    @TableField("score_bytes")
+    private Long scoreBytes;
+
     @NotNull
     public String getAvatarUrl(){
         return "/user/avatar/" + this.id;

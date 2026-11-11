@@ -185,7 +185,116 @@ export interface UserProfileResponse {
   user: SessionUser
   relation: UserRelation | null
   scoreBytesDisplay: string
-  scoreBytesRaw: number
+  scoreBytesRaw: string
+}
+
+export interface PointCategoryPoints {
+  category: string
+  pointsRaw: string
+  dailyCapRaw: string | null
+  enabled: boolean
+}
+
+export interface FixedPointsSummary {
+  pointsTodayRaw: string
+  cappedPointsTodayRaw: string
+  dailyCapRaw: string
+  averagePerHourRaw: number
+  categories: PointCategoryPoints[]
+}
+
+export interface OneTimePointsSummary {
+  pointsTodayRaw: string
+  averagePerHourRaw: number
+  newTorrentsToday: number
+  clientDiscoveriesToday: number
+  newTorrentEnabled: boolean
+  clientDiscoveryEnabled: boolean
+}
+
+export interface DynamicPointsSummary {
+  pointsTodayRaw: string
+  averagePerHourRaw: number
+  seedUploadPointsTodayRaw: string
+  downloadPointsTodayRaw: string
+  hotPeerPointsTodayRaw: string
+  seedUploadEnabled: boolean
+  downloadEnabled: boolean
+  hotPeerEnabled: boolean
+}
+
+export interface PointFeatureFlags {
+  dynamicPoints: boolean
+  swarmPeerInsights: boolean
+  banPeerInsights: boolean
+}
+
+export interface PointsOverview {
+  balanceRaw: string
+  fixed: FixedPointsSummary
+  oneTime: OneTimePointsSummary
+  dynamic: DynamicPointsSummary | null
+  features: PointFeatureFlags
+  generatedAt: string
+}
+
+export interface PointsBreakdownEntry {
+  category: string
+  component: 'FIXED' | 'ONE_TIME' | 'DYNAMIC'
+  requestedPoints: number
+  awardedPoints: number
+  itemCount: number
+  rawValue: number
+}
+
+export interface PointsLogDetails {
+  breakdown?: PointsBreakdownEntry[]
+  requestedTotal?: number
+}
+
+export interface PointsLogEntry {
+  id: number
+  occurredAt: string
+  eventType: string
+  pointsRaw: string
+  fixedPointsRaw: string
+  oneTimePointsRaw: string
+  dynamicPointsRaw: string
+  details: PointsLogDetails
+}
+
+export interface PointsLogPage {
+  records: PointsLogEntry[]
+  current: number
+  size: number
+  total: number
+  pages: number
+}
+
+export interface PeerVersionCount {
+  name: string
+  peers: number
+}
+
+export interface PeerTorrentSeries {
+  torrentId: string
+  values: number[]
+}
+
+export interface SwarmPeerInsightsResponse {
+  enabled: boolean
+  days: number
+  ipVersions: PeerVersionCount[]
+  categories: string[]
+  series: PeerTorrentSeries[]
+  generatedAt: string
+}
+
+export interface BanPeerInsightsResponse {
+  enabled: boolean
+  days: number
+  ipVersions: PeerVersionCount[]
+  generatedAt: string
 }
 
 export interface PublicUserProfileResponse {

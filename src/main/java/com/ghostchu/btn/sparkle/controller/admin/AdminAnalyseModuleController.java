@@ -8,6 +8,8 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleScheduler;
 import com.ghostchu.btn.sparkle.service.GeoIpCityBlacklistService;
+import com.ghostchu.btn.sparkle.service.points.PointToggleService;
+import com.ghostchu.btn.sparkle.service.points.PointsDynamicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +29,7 @@ public class AdminAnalyseModuleController {
     private final AnalyseModuleConfigService moduleConfigService;
     private final AnalyseModuleScheduler moduleScheduler;
     private final GeoIpCityBlacklistService geoIpCityBlacklistService;
+    private final PointsDynamicService pointsDynamicService;
 
     @GetMapping
     public List<ModuleView> list() {
@@ -45,6 +48,13 @@ public class AdminAnalyseModuleController {
                 principal == null ? null : principal.getUserId()
         );
         moduleScheduler.refreshSchedules();
+        boolean dynamicToggleChanged = PointToggleService.SETTINGS_MODULE_ID.equals(id)
+                && request.values() != null
+                && request.values().keySet().stream()
+                .anyMatch(field -> field.startsWith("dynamic-"));
+        if (PointsDynamicService.MODULE_ID.equals(id) || dynamicToggleChanged) {
+            pointsDynamicService.resetCursor();
+        }
         if (GeoIpCityBlacklistService.MODULE_ID.equals(id) && updated.enabled()) {
             geoIpCityBlacklistService.requestRefresh(
                     principal == null ? null : principal.getUserId()

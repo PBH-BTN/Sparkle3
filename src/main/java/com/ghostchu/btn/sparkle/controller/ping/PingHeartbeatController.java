@@ -6,6 +6,8 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,6 +33,8 @@ public class PingHeartbeatController extends BasePingController {
 
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
     @PostMapping("/ping/heartbeat")
     public ResponseEntity<@NotNull ServerResponse> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
@@ -38,6 +42,13 @@ public class PingHeartbeatController extends BasePingController {
             validatePowCaptcha();
         }
         Userapp userapp = verifyUserApplication();
+        pointAwardContext.record(
+                userapp.getOwner(),
+                PointCategory.KEEPALIVE,
+                1,
+                1,
+                0
+        );
         heartbeatService.onHeartBeat(userapp.getId(), InetAddress.ofLiteral(request.getRemoteAddr()));
         return ResponseEntity.ok(new ServerResponse(request.getRemoteAddr()));
     }

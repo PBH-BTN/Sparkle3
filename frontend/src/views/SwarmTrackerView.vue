@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { EChartsCoreOption } from 'echarts/core'
 import type { TableColumnData } from '@arco-design/web-vue'
 import { IconRefresh, IconSearch } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import EChart from '@/components/EChart.vue'
 import TablePager from '@/components/TablePager.vue'
 import { historyApi } from '@/api'
-import type { SwarmTrackerQuery, SwarmTrackerRecord } from '@/api/types'
+import type {
+  SwarmPeerInsightsResponse,
+  SwarmTrackerQuery,
+  SwarmTrackerRecord,
+} from '@/api/types'
 import { usePagedQuery } from '@/composables/usePagedQuery'
 import { useFormatters } from '@/utils/format'
 
@@ -17,6 +23,9 @@ const {
   formatNumber,
   formatProgress,
 } = useFormatters()
+const insights = ref<SwarmPeerInsightsResponse | null>(null)
+const insightsLoading = ref(false)
+const insightDays = ref(7)
 const form = reactive({
   infoHash: '',
   peerIp: '',
@@ -138,6 +147,84 @@ const columns = computed<TableColumnData[]>(() => [
   },
 ])
 
+const peerPieOption = computed<EChartsCoreOption>(() => ({
+  tooltip: { trigger: 'item' },
+  color: ['#0e7490', '#f59e0b'],
+  series: [
+    {
+      name: t('swarmTracker.ipVersionsTitle'),
+      type: 'pie',
+      radius: ['48%', '74%'],
+      center: ['50%', '48%'],
+      avoidLabelOverlap: true,
+      itemStyle: {
+        borderRadius: 5,
+        borderColor: 'var(--color-bg-2)',
+        borderWidth: 2,
+      },
+      label: {
+        formatter: '{b}\n{d}%',
+      },
+      data: (insights.value?.ipVersions ?? []).map((item) => ({
+        name: item.name,
+        value: item.peers,
+      })),
+    },
+  ],
+}))
+
+const peerDistributionOption = computed<EChartsCoreOption>(() => {
+  const categories = (insights.value?.categories ?? []).map((value) =>
+    formatDate(value),
+  )
+  return {
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+    },
+    legend: {
+      type: 'scroll',
+      top: 0,
+      textStyle: { fontSize: 10 },
+    },
+    grid: {
+      left: 54,
+      right: 20,
+      top: 54,
+      bottom: 54,
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: categories,
+      axisLabel: {
+        hideOverlap: true,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      name: t('swarmTracker.peerCount'),
+    },
+    dataZoom: [
+      { type: 'inside', start: 0, end: 100 },
+      { type: 'slider', height: 16, bottom: 8 },
+    ],
+    series: (insights.value?.series ?? []).map((item) => ({
+      name: item.torrentId,
+      type: 'line',
+      stack: 'peer-count',
+      smooth: 0.2,
+      showSymbol: false,
+      emphasis: { focus: 'series' },
+      areaStyle: { opacity: 0.18 },
+      lineStyle: { width: 1.2 },
+      data: item.values,
+    })),
+  }
+})
+
 function reset() {
   form.infoHash = ''
   form.peerIp = ''
@@ -152,7 +239,21 @@ function reset() {
   search()
 }
 
-onMounted(search)
+async function loadInsights() {
+  insightsLoading.value = true
+  try {
+    insights.value = await historyApi.swarmPeerInsights(insightDays.value)
+  } catch {
+    insights.value = null
+  } finally {
+    insightsLoading.value = false
+  }
+}
+
+onMounted(() => {
+  search()
+  loadInsights()
+})
 </script>
 
 <template>
@@ -161,6 +262,68 @@ onMounted(search)
       :title="t('swarmTracker.title')"
       :description="t('swarmTracker.description')"
     />
+
+    <a-card
+      v-if="insights?.enabled"
+      class="surface-card insights-card"
+    >
+      <template #title>
+        <div class="insights-title">
+          <span>{{ t('swarmTracker.insightsTitle') }}</span>
+          <small>{{ t('swarmTracker.insightsDescription') }}</small>
+        </div>
+      </template>
+      <template #extra>
+        <a-radio-group
+          v-model="insightDays"
+          type="button"
+          size="small"
+          @change="loadInsights"
+        >
+          <a-radio :value="1">{{ t('swarmTracker.range1') }}</a-radio>
+          <a-radio :value="3">{{ t('swarmTracker.range3') }}</a-radio>
+          <a-radio :value="7">{{ t('swarmTracker.range7') }}</a-radio>
+        </a-radio-group>
+      </template>
+      <a-spin :loading="insightsLoading">
+        <div class="insights-grid">
+          <section class="pie-panel">
+            <div class="chart-heading">
+              <strong>{{ t('swarmTracker.ipVersionsTitle') }}</strong>
+              <span v-if="insights?.generatedAt">
+                {{ formatDate(insights.generatedAt) }}
+              </span>
+            </div>
+            <EChart
+              v-if="insights?.ipVersions?.some((item) => item.peers > 0)"
+              :option="peerPieOption"
+              height="290px"
+            />
+            <EmptyState
+              v-else
+              :title="t('common.noData')"
+              :description="t('swarmTracker.noInsights')"
+            />
+          </section>
+          <section class="distribution-panel">
+            <div class="chart-heading">
+              <strong>{{ t('swarmTracker.insightsTitle') }}</strong>
+              <span>{{ t('swarmTracker.top50Hint') }}</span>
+            </div>
+            <EChart
+              v-if="insights?.series?.length"
+              :option="peerDistributionOption"
+              height="340px"
+            />
+            <EmptyState
+              v-else
+              :title="t('common.noData')"
+              :description="t('swarmTracker.noInsights')"
+            />
+          </section>
+        </div>
+      </a-spin>
+    </a-card>
 
     <a-card class="surface-card filter-card">
       <a-form :model="form" layout="vertical" @submit="search">
@@ -326,3 +489,59 @@ onMounted(search)
     </a-card>
   </div>
 </template>
+
+<style scoped>
+.insights-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.insights-title small {
+  color: var(--color-text-3);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.8fr);
+  gap: 20px;
+}
+
+.pie-panel {
+  min-width: 0;
+  padding-right: 20px;
+  border-right: 1px solid var(--color-border-2);
+}
+
+.distribution-panel {
+  min-width: 0;
+}
+
+.chart-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.chart-heading span {
+  color: var(--color-text-3);
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pie-panel {
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-2);
+  }
+}
+</style>

@@ -16,6 +16,8 @@ import type {
   HomeStats,
   IpQueryResult,
   PageResponse,
+  PointsLogPage,
+  PointsOverview,
   PrivacyLevel,
   PrivacyResponse,
   PublicUserProfileResponse,
@@ -24,6 +26,8 @@ import type {
   SessionResponse,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
+  SwarmPeerInsightsResponse,
+  BanPeerInsightsResponse,
   StatisticsSource,
   UserApplication,
   UserProfileResponse,
@@ -51,6 +55,9 @@ export const uiApi = {
     ),
   rulePreview: () => request<RulePreviewResponse>('/api/ui/rules/preview'),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
+  pointsOverview: () => request<PointsOverview>('/api/ui/points/overview'),
+  pointsLogs: (page: number, size: number) =>
+    request<PointsLogPage>(`/api/ui/points/logs?page=${page}&size=${size}`),
   publicProfile: (uid: string) =>
     request<PublicUserProfileResponse>(`/api/ui/user/profile/${encodeURIComponent(uid)}`),
   sendContactEmail: (uid: string, body: ContactEmailRequest) =>
@@ -96,4 +103,8 @@ export const historyApi = {
   clientDiscoveryOptions: () => request<ClientDiscoveryOptions>('/api/clientdiscovery/options'),
   querySwarmTracker: (body: SwarmTrackerQuery) =>
     postQuery<SwarmTrackerRecord>('/api/swarmtracker/query', body),
+  swarmPeerInsights: (days: number) =>
+    request<SwarmPeerInsightsResponse>(`/api/ui/peer-insights/swarm?days=${days}`),
+  banPeerInsights: (days: number) =>
+    request<BanPeerInsightsResponse>(`/api/ui/peer-insights/ban?days=${days}`),
 }

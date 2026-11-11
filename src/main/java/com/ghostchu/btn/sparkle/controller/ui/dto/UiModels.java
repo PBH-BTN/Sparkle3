@@ -115,7 +115,7 @@ public final class UiModels {
             UserView user,
             UserRelDto relation,
             String scoreBytesDisplay,
-            long scoreBytesRaw
+            String scoreBytesRaw
     ) {
     }
 

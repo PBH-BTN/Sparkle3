@@ -15,6 +15,7 @@
         <result property="privateTorrent" column="private_torrent"/>
         <result property="infoHash" column="info_hash"/>
         <result property="torrentName" column="torrent_name"/>
+        <result property="created" column="created"/>
     </resultMap>
 
     <select id="upsert" parameterType="com.ghostchu.btn.sparkle.entity.Torrent" resultMap="torrentResultMap">
@@ -26,6 +27,7 @@
                 info_hash       = COALESCE(torrent.info_hash, EXCLUDED.info_hash),
                 torrent_name    = COALESCE(torrent.torrent_name, EXCLUDED.torrent_name),
                 last_seen_at    = NOW()
-        RETURNING *
+        RETURNING *,
+                  (xmax = 0) AS created
     </select>
 </mapper>

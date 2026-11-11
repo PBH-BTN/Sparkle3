@@ -16,7 +16,7 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 const router = useRouter()
 const { t } = useI18n()
-const { formatDate } = useFormatters()
+const { formatDate, formatPointBytes } = useFormatters()
 const profile = ref<UserProfileResponse | null>(null)
 const loading = ref(true)
 
@@ -72,11 +72,22 @@ onMounted(async () => {
           </div>
 
           <div class="score-block">
-            <strong>{{ profile.scoreBytesDisplay }}</strong>
-            <span>{{ profile.scoreBytesRaw }} bytes</span>
-            <a-tooltip :content="t('profile.bytesHint')">
-              <span class="score-label">{{ t('profile.bytesScore') }}</span>
-            </a-tooltip>
+            <div class="score-topline">
+              <a-tooltip :content="t('profile.bytesHint')">
+                <span class="score-label">{{ t('profile.bytesScore') }}</span>
+              </a-tooltip>
+              <span class="score-unit">{{ t('points.unit') }}</span>
+            </div>
+            <strong>{{ formatPointBytes(profile.scoreBytesRaw) }}</strong>
+            <span class="score-raw">{{ profile.scoreBytesRaw }} Bytes</span>
+            <a-button
+              type="primary"
+              long
+              class="score-action"
+              @click="router.push('/user/points')"
+            >
+              {{ t('profile.openPoints') }}
+            </a-button>
           </div>
         </a-card>
 
@@ -168,26 +179,62 @@ onMounted(async () => {
 .score-block {
   display: flex;
   flex-direction: column;
-  min-width: 170px;
-  padding: 16px 20px;
-  text-align: right;
-  background: var(--color-primary-light-1);
-  border-radius: 8px;
+  min-width: 250px;
+  padding: 20px;
+  color: #fff;
+  text-align: left;
+  background:
+    radial-gradient(circle at 88% 12%, rgb(255 255 255 / 22%), transparent 34%),
+    linear-gradient(135deg, #0e7490, #155e75 60%, #164e63);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgb(14 116 144 / 18%);
+}
+
+.score-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .score-block strong {
-  color: rgb(var(--primary-6));
-  font-size: 26px;
+  color: #fff;
+  font-size: 30px;
+  letter-spacing: -0.03em;
 }
 
-.score-block span {
-  color: var(--color-text-3);
+.score-raw {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 60%);
+  font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
 }
 
 .score-label {
-  margin-top: 8px;
+  color: rgb(255 255 255 / 76%);
+  font-size: 12px;
   cursor: help;
+}
+
+.score-unit {
+  padding: 2px 7px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 10px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+}
+
+.score-action {
+  margin-top: 16px;
+  color: #155e75;
+  background: rgb(255 255 255 / 92%);
+  border-color: transparent;
+}
+
+.score-action:hover {
+  color: #155e75;
+  background: #fff;
 }
 
 .details-card {
