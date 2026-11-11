@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -8,6 +8,7 @@ import {
   IconExclamationCircle,
   IconLoading,
   IconRefresh,
+  IconSave,
   IconSchedule,
   IconThunderbolt,
 } from '@arco-design/web-vue/es/icon'
@@ -21,45 +22,47 @@ import type {
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
-type GroupFilter = 'ALL' | TaskGroup
+type TaskTypeFilter = 'ALL' | 'SCHEDULED' | 'EVENT' | 'STARTUP'
 
 const { t } = useI18n()
 const { formatDate, formatDuration, formatNumber } = useFormatters()
 const data = ref<BackgroundTaskStatusResponse | null>(null)
 const loading = ref(true)
 const refreshing = ref(false)
-const groupFilter = ref<GroupFilter>('ALL')
+const typeFilter = ref<TaskTypeFilter>('ALL')
 const now = ref(Date.now())
+const cronDrafts = reactive<Record<string, string>>({})
+const cronDirty = reactive<Record<string, boolean>>({})
+const savingCronId = ref<string | null>(null)
+const togglingModuleId = ref<string | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
 let pollInFlight = false
 
-const groupOrder: TaskGroup[] = [
-  'ANALYSIS',
-  'STATISTICS',
-  'MAINTENANCE',
-  'SYNC',
-  'STARTUP',
-]
+function taskCategory(task: BackgroundTaskStatus): Exclude<TaskTypeFilter, 'ALL'> {
+  if (task.scheduleType === 'STARTUP') return 'STARTUP'
+  if (task.scheduleType === 'EVENT') return 'EVENT'
+  return 'SCHEDULED'
+}
 
-const groupFilters = computed(() => [
+const taskFilters = computed(() => [
   {
     value: 'ALL' as const,
-    label: t('admin.tasks.groups.ALL'),
+    label: t('admin.tasks.filters.all'),
     count: data.value?.tasks.length ?? 0,
   },
-  ...groupOrder.map((group) => ({
-    value: group,
-    label: t(`admin.tasks.groups.${group}`),
-    count: data.value?.tasks.filter((task) => task.group === group).length ?? 0,
+  ...(['SCHEDULED', 'EVENT', 'STARTUP'] as const).map((type) => ({
+    value: type,
+    label: t(`admin.tasks.filters.${type}`),
+    count: data.value?.tasks.filter((task) => taskCategory(task) === type).length ?? 0,
   })),
 ])
 
 const visibleTasks = computed(() => {
   const tasks = data.value?.tasks ?? []
-  return groupFilter.value === 'ALL'
+  return typeFilter.value === 'ALL'
     ? tasks
-    : tasks.filter((task) => task.group === groupFilter.value)
+    : tasks.filter((task) => taskCategory(task) === typeFilter.value)
 })
 
 const summary = computed(() => {
@@ -82,7 +85,7 @@ const summary = computed(() => {
     {
       key: 'scheduled',
       label: t('admin.tasks.summary.scheduled'),
-      value: tasks.filter((task) => task.kind === 'SCHEDULED').length,
+      value: tasks.filter((task) => taskCategory(task) === 'SCHEDULED').length,
       icon: IconClockCircle,
       tone: 'purple',
     },
@@ -103,6 +106,16 @@ const summary = computed(() => {
 
 function groupLabel(group: TaskGroup) {
   return t(`admin.tasks.groups.${group}`)
+}
+
+function taskTypeLabel(task: BackgroundTaskStatus) {
+  return t(`admin.tasks.filters.${taskCategory(task)}`)
+}
+
+function taskTypeColor(task: BackgroundTaskStatus) {
+  if (taskCategory(task) === 'STARTUP') return 'green'
+  if (taskCategory(task) === 'EVENT') return 'arcoblue'
+  return 'purple'
 }
 
 function resultLabel(result: BackgroundTaskRun['result'] | null) {
@@ -153,6 +166,61 @@ function triggerLabel(trigger: string | null) {
   return t(`admin.tasks.triggers.${trigger}`)
 }
 
+function canEditCron(task: BackgroundTaskStatus) {
+  return task.moduleId != null && task.scheduleType === 'CRON'
+}
+
+function cronDraft(task: BackgroundTaskStatus) {
+  if (cronDrafts[task.id] == null) {
+    cronDrafts[task.id] = task.schedule.replace(/^CRON\s+/, '')
+  }
+  return cronDrafts[task.id]
+}
+
+function markCronDirty(task: BackgroundTaskStatus) {
+  cronDirty[task.id] = true
+}
+
+async function saveCron(task: BackgroundTaskStatus) {
+  if (!task.moduleId) return
+  const cron = cronDraft(task).trim()
+  if (!cron) {
+    Message.warning(t('admin.tasks.cronRequired'))
+    return
+  }
+  savingCronId.value = task.id
+  try {
+    await adminApi.updateAnalyseModule(task.moduleId, {
+      values: { schedule: cron },
+    })
+    cronDirty[task.id] = false
+    Message.success(t('admin.tasks.cronSaved'))
+    await load(true)
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    savingCronId.value = null
+  }
+}
+
+async function toggleModule(task: BackgroundTaskStatus, enabled: boolean) {
+  if (!task.moduleId) return
+  togglingModuleId.value = task.moduleId
+  try {
+    await adminApi.updateAnalyseModule(task.moduleId, {
+      values: { enabled: String(enabled) },
+    })
+    Message.success(
+      t(enabled ? 'admin.tasks.moduleEnabledSaved' : 'admin.tasks.moduleDisabledSaved'),
+    )
+    await load(true)
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    togglingModuleId.value = null
+  }
+}
+
 async function load(silent = false) {
   if (pollInFlight) return
   pollInFlight = true
@@ -160,6 +228,11 @@ async function load(silent = false) {
   else refreshing.value = true
   try {
     data.value = await adminApi.taskStatus()
+    for (const task of data.value.tasks) {
+      if (canEditCron(task) && !cronDirty[task.id]) {
+        cronDrafts[task.id] = task.schedule.replace(/^CRON\s+/, '')
+      }
+    }
   } catch (error) {
     if (!silent) Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
@@ -225,8 +298,8 @@ onBeforeUnmount(() => {
       </template>
 
       <div class="task-toolbar">
-        <a-radio-group v-model="groupFilter" type="button" size="small">
-          <a-radio v-for="filter in groupFilters" :key="filter.value" :value="filter.value">
+        <a-radio-group v-model="typeFilter" type="button" size="small">
+          <a-radio v-for="filter in taskFilters" :key="filter.value" :value="filter.value">
             {{ filter.label }}
             <span class="filter-count">{{ filter.count }}</span>
           </a-radio>
@@ -245,12 +318,8 @@ onBeforeUnmount(() => {
                 <div class="task-title-line">
                   <strong>{{ t(task.nameKey) }}</strong>
                   <a-tag size="small" color="gray">{{ groupLabel(task.group) }}</a-tag>
-                  <a-tag size="small" :color="task.kind === 'SCHEDULED' ? 'purple' : 'cyan'">
-                    {{
-                      task.kind === 'SCHEDULED'
-                        ? t('admin.tasks.kinds.scheduled')
-                        : t('admin.tasks.kinds.async')
-                    }}
+                  <a-tag size="small" :color="taskTypeColor(task)">
+                    {{ taskTypeLabel(task) }}
                   </a-tag>
                   <a-tag v-if="!task.enabled" size="small" color="gray">
                     {{ t('admin.common.disabled') }}
@@ -258,6 +327,38 @@ onBeforeUnmount(() => {
                 </div>
                 <p>{{ t(task.descriptionKey) }}</p>
                 <code>{{ task.schedule }}</code>
+                <div v-if="task.moduleId" class="module-editor">
+                  <div class="module-toggle-row">
+                    <span>{{ t('admin.tasks.moduleEnabled') }}</span>
+                    <a-switch
+                      :model-value="task.moduleEnabled ?? task.enabled"
+                      :loading="togglingModuleId === task.moduleId"
+                      :disabled="savingCronId === task.id"
+                      @change="(value) => toggleModule(task, Boolean(value))"
+                    />
+                  </div>
+                  <div v-if="canEditCron(task)" class="cron-editor">
+                    <span>{{ t('admin.tasks.cronExpression') }}</span>
+                    <div class="cron-editor-row">
+                      <a-input
+                        v-model="cronDrafts[task.id]"
+                        size="small"
+                        :placeholder="t('admin.tasks.cronPlaceholder')"
+                        @input="markCronDirty(task)"
+                      />
+                      <a-button
+                        size="small"
+                        type="primary"
+                        :loading="savingCronId === task.id"
+                        :disabled="togglingModuleId === task.moduleId"
+                        @click="saveCron(task)"
+                      >
+                        <template #icon><IconSave /></template>
+                        {{ t('admin.common.save') }}
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <a-tag :color="taskState(task).color">{{ taskState(task).label }}</a-tag>
             </header>
@@ -530,6 +631,43 @@ onBeforeUnmount(() => {
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.module-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 620px;
+  margin-top: 10px;
+}
+
+.module-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-3);
+  font-size: 11px;
+}
+
+.cron-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cron-editor > span {
+  color: var(--color-text-3);
+  font-size: 10px;
+}
+
+.cron-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cron-editor-row :deep(.arco-input-wrapper) {
+  font-family: "SFMono-Regular", Consolas, monospace;
 }
 
 .task-metrics {

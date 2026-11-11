@@ -44,6 +44,13 @@ export interface AdminDashboard {
 
 export type TaskGroup = 'ANALYSIS' | 'STATISTICS' | 'MAINTENANCE' | 'SYNC' | 'STARTUP'
 export type TaskKind = 'SCHEDULED' | 'ASYNC'
+export type TaskScheduleType =
+  | 'CRON'
+  | 'FIXED_RATE'
+  | 'FIXED_DELAY'
+  | 'INTERVAL'
+  | 'EVENT'
+  | 'STARTUP'
 export type TaskRunResult = 'SUCCESS' | 'FAILED' | 'SKIPPED'
 
 export interface BackgroundTaskRun {
@@ -59,6 +66,9 @@ export interface BackgroundTaskStatus {
   id: string
   group: TaskGroup
   kind: TaskKind
+  scheduleType: TaskScheduleType
+  moduleId: string | null
+  moduleEnabled: boolean | null
   nameKey: string
   descriptionKey: string
   schedule: string

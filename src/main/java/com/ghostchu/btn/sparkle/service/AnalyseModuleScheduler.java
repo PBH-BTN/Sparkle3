@@ -89,6 +89,11 @@ public class AnalyseModuleScheduler {
                     scheduleEnabled ? AnalyseModuleCron.normalize(cron) : cron,
                     scheduleEnabled
             ));
+            taskStatusService.setModuleConfiguration(
+                    analysisTaskId(moduleId),
+                    moduleId,
+                    configService.booleanValue(moduleId, "enabled", true)
+            );
             if (!enabled || AnalyseModuleCron.isDisabled(cron)) {
                 cancel(moduleId);
                 continue;

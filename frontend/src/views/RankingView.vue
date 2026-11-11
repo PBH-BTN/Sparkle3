@@ -85,7 +85,8 @@ async function loadPointsRanking() {
 
 function pointRawVisible(entry: PointsRankingEntry) {
   try {
-    return BigInt(entry.scoreBytes) >= 1024n
+    const points = BigInt(entry.scoreBytes)
+    return (points < 0n ? -points : points) >= 1024n
   } catch {
     return false
   }

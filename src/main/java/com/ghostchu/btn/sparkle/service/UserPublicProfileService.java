@@ -4,6 +4,7 @@ import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PublicUserProfileResponse;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.util.UnitConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,11 +35,18 @@ public class UserPublicProfileService {
             avatarUrl = target.getAvatarUrl();
         }
 
+        Long scoreBytes = null;
+        if (self || privacy.isAllowPublicPoints()) {
+            scoreBytes = target.getScoreBytes() == null ? 0L : target.getScoreBytes();
+        }
+
         return new PublicUserProfileResponse(
                 String.valueOf(target.getId()),
                 nickname,
                 avatarUrl,
                 privacy.name(),
+                scoreBytes == null ? null : UnitConverter.autoUnit(scoreBytes),
+                scoreBytes == null ? null : Long.toString(scoreBytes),
                 nickname == null,
                 target.getBannedAt() != null,
                 self,

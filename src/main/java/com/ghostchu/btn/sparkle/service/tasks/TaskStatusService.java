@@ -131,6 +131,14 @@ public class TaskStatusService {
         }
     }
 
+    public void setModuleConfiguration(String taskId, String moduleId, boolean enabled) {
+        TaskDescriptor descriptor = descriptors.get(taskId);
+        if (descriptor != null) {
+            descriptor.moduleId = moduleId;
+            descriptor.moduleEnabled = enabled;
+        }
+    }
+
     public void configurationError(String taskId, String message) {
         TaskDescriptor descriptor = descriptors.get(taskId);
         if (descriptor != null) {
@@ -200,6 +208,9 @@ public class TaskStatusService {
                 descriptor.id,
                 descriptor.group.name(),
                 descriptor.kind.name(),
+                descriptor.scheduleType.name(),
+                descriptor.moduleId,
+                descriptor.moduleEnabled,
                 descriptor.nameKey,
                 descriptor.descriptionKey,
                 scheduleLabel(descriptor),
@@ -448,6 +459,8 @@ public class TaskStatusService {
         private volatile String nameKey = "";
         private volatile String descriptionKey = "";
         private volatile TaskScheduleType scheduleType = TaskScheduleType.EVENT;
+        private volatile String moduleId;
+        private volatile Boolean moduleEnabled;
         private volatile String scheduleExpression;
         private volatile long intervalMillis;
         private volatile long initialDelayMillis;

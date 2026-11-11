@@ -20,4 +20,8 @@ public enum UserPrivacyLevel {
     private final boolean allowOriginalAvatar;
     private final boolean allowContactEmail;
 
+    public boolean isAllowPublicPoints() {
+        return level <= MEDIUM.level;
+    }
+
 }

@@ -13,4 +13,12 @@ class UserPrivacyLevelTest {
         assertFalse(UserPrivacyLevel.MEDIUM.isAllowContactEmail());
         assertFalse(UserPrivacyLevel.HIGH.isAllowContactEmail());
     }
+
+    @Test
+    void mediumAndLowerPrivacyLevelsExposePoints() {
+        assertTrue(UserPrivacyLevel.DISABLED.isAllowPublicPoints());
+        assertTrue(UserPrivacyLevel.LOW.isAllowPublicPoints());
+        assertTrue(UserPrivacyLevel.MEDIUM.isAllowPublicPoints());
+        assertFalse(UserPrivacyLevel.HIGH.isAllowPublicPoints());
+    }
 }

@@ -29,11 +29,15 @@ const pointsModuleIds = new Set([
   'points-dynamic-rules',
   'points-dynamic',
 ])
+const taskManagedModuleIds = new Set([
+  'swarm-peer-distribution',
+  'ban-peer-distribution',
+])
 const isPointsScope = computed(() => route.name === 'admin-points-modules')
 const visibleModules = computed(() => modules.value.filter((module) =>
   isPointsScope.value
     ? pointsModuleIds.has(module.id)
-    : !pointsModuleIds.has(module.id),
+    : !pointsModuleIds.has(module.id) && !taskManagedModuleIds.has(module.id),
 ))
 
 function moduleLabel(id: string, suffix: 'name' | 'description') {

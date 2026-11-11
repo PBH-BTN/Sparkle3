@@ -57,6 +57,16 @@ const pointsMode = ref<'add' | 'deduct'>('add')
 const pointsAmount = ref<number | undefined>(undefined)
 const pointsReason = ref('')
 
+function showPointRaw(value: string | number | null | undefined) {
+  if (value == null) return false
+  try {
+    const points = BigInt(String(value))
+    return (points < 0n ? -points : points) >= 1024n
+  } catch {
+    return false
+  }
+}
+
 const columns = computed<TableColumnData[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 70 },
   { title: t('admin.users.nickname'), slotName: 'user', width: 190 },
@@ -337,7 +347,7 @@ onMounted(load)
         <template #points="{ record }">
           <div class="points-cell">
             <strong>{{ formatPointBytes(record.scoreBytes) }}</strong>
-            <span>{{ record.scoreBytes }} Bytes</span>
+            <span v-if="showPointRaw(record.scoreBytes)">{{ record.scoreBytes }} Bytes</span>
           </div>
         </template>
         <template #registerAt="{ record }">
@@ -491,7 +501,7 @@ onMounted(load)
         </div>
         <div>
           <strong>{{ formatPointBytes(pointsUser.scoreBytes) }}</strong>
-          <span>{{ pointsUser.scoreBytes }} Bytes</span>
+          <span v-if="showPointRaw(pointsUser.scoreBytes)">{{ pointsUser.scoreBytes }} Bytes</span>
         </div>
       </div>
       <a-form :model="{ pointsAmount, pointsReason }" layout="vertical">

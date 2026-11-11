@@ -36,6 +36,16 @@ const privacyColor = computed(() => {
         : 'red'
 })
 
+function showPointRaw(value: string | null | undefined) {
+  if (!value) return false
+  try {
+    const points = BigInt(value)
+    return (points < 0n ? -points : points) >= 1024n
+  } catch {
+    return false
+  }
+}
+
 onMounted(async () => {
   try {
     profile.value = await uiApi.profile()
@@ -79,7 +89,9 @@ onMounted(async () => {
               <span class="score-unit">{{ t('points.unit') }}</span>
             </div>
             <strong>{{ formatPointBytes(profile.scoreBytesRaw) }}</strong>
-            <span class="score-raw">{{ profile.scoreBytesRaw }} Bytes</span>
+            <span v-if="showPointRaw(profile.scoreBytesRaw)" class="score-raw">
+              {{ profile.scoreBytesRaw }} Bytes
+            </span>
             <a-button
               type="primary"
               long

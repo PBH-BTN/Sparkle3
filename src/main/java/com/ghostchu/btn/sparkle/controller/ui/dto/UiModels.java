@@ -124,6 +124,8 @@ public final class UiModels {
             String nickname,
             String avatarUrl,
             String privacyLevel,
+            String scoreBytesDisplay,
+            String scoreBytesRaw,
             boolean anonymous,
             boolean banned,
             boolean self,

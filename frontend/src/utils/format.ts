@@ -75,7 +75,12 @@ export function useFormatters() {
 
     const negative = points < 0n
     const absolute = negative ? -points : points
-    if (absolute === 0n) return '0 KiB'
+    if (absolute < 1024n) {
+      const formatted = new Intl.NumberFormat(locale.value, {
+        maximumFractionDigits: 0,
+      }).format(Number(points))
+      return `${formatted} Bytes`
+    }
     const units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
     let index = 0
     let divisor = 1024n

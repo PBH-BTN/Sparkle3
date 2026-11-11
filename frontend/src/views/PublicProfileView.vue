@@ -13,11 +13,12 @@ import {
 import PageHeader from '@/components/PageHeader.vue'
 import { uiApi } from '@/api'
 import type { ContactEmailRequest, PublicUserProfileResponse } from '@/api/types'
-import { errorMessage } from '@/utils/format'
+import { errorMessage, useFormatters } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const { formatPointBytes } = useFormatters()
 const profile = ref<PublicUserProfileResponse | null>(null)
 const loading = ref(true)
 const sending = ref(false)
@@ -48,6 +49,16 @@ const privacyColor = computed(() => {
         ? 'orange'
         : 'red'
 })
+
+function showPointRaw(value: string | null | undefined) {
+  if (!value) return false
+  try {
+    const points = BigInt(value)
+    return (points < 0n ? -points : points) >= 1024n
+  } catch {
+    return false
+  }
+}
 
 async function load() {
   loading.value = true
@@ -134,18 +145,31 @@ onMounted(load)
             </div>
           </div>
 
-          <div class="profile-actions">
-            <a-button v-if="profile.self" type="primary" @click="router.push('/user/profile')">
-              {{ t('publicProfile.openOwnProfile') }}
-            </a-button>
-            <a-button
-              v-else-if="profile.canSendEmail"
-              type="primary"
-              @click="openEmail"
-            >
-              <template #icon><IconEmail /></template>
-              {{ t('publicProfile.sendEmail') }}
-            </a-button>
+          <div class="profile-side">
+            <div v-if="profile.scoreBytesRaw" class="score-block">
+              <div class="score-topline">
+                <span>{{ t('profile.bytesScore') }}</span>
+                <span>{{ t('points.unit') }}</span>
+              </div>
+              <strong>{{ formatPointBytes(profile.scoreBytesRaw) }}</strong>
+              <span v-if="showPointRaw(profile.scoreBytesRaw)" class="score-raw">
+                {{ profile.scoreBytesRaw }} Bytes
+              </span>
+            </div>
+
+            <div class="profile-actions">
+              <a-button v-if="profile.self" type="primary" @click="router.push('/user/profile')">
+                {{ t('publicProfile.openOwnProfile') }}
+              </a-button>
+              <a-button
+                v-else-if="profile.canSendEmail"
+                type="primary"
+                @click="openEmail"
+              >
+                <template #icon><IconEmail /></template>
+                {{ t('publicProfile.sendEmail') }}
+              </a-button>
+            </div>
           </div>
         </a-card>
 
@@ -221,6 +245,50 @@ onMounted(load)
   min-width: 0;
 }
 
+.profile-side {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.score-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 250px;
+  padding: 18px 20px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 12%, rgb(255 255 255 / 22%), transparent 34%),
+    linear-gradient(135deg, #0e7490, #155e75 60%, #164e63);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgb(14 116 144 / 18%);
+}
+
+.score-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 11px;
+}
+
+.score-block strong {
+  color: #fff;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.score-raw {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 60%);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+}
+
 .profile-copy h2 {
   margin: 0 0 4px;
   overflow-wrap: anywhere;
@@ -244,9 +312,15 @@ onMounted(load)
 
 @media (max-width: 620px) {
   .profile-card :deep(.arco-card-body),
-  .profile-main {
+  .profile-main,
+  .profile-side {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .score-block {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

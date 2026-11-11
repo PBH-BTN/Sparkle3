@@ -308,6 +308,8 @@ export interface PublicUserProfileResponse {
   nickname: string | null
   avatarUrl: string | null
   privacyLevel: PrivacyLevel['name']
+  scoreBytesDisplay: string | null
+  scoreBytesRaw: string | null
   anonymous: boolean
   banned: boolean
   self: boolean
