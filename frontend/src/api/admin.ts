@@ -100,6 +100,11 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  banApplication: (id: number, reason: string) =>
+    request<AdminApplication>(`/api/admin/userapps/${id}/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
   resetApplicationSecret: (id: number) =>
     request<AdminApplicationCredentials>(`/api/admin/userapps/${id}/reset-secret`, {
       method: 'POST',

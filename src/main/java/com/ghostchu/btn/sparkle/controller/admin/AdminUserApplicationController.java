@@ -151,6 +151,27 @@ public class AdminUserApplicationController {
         );
     }
 
+    @PostMapping("/{id}/ban")
+    public AdminApplicationView ban(
+            @PathVariable long id,
+            @RequestBody BanApplicationRequest request
+    ) {
+        Userapp application = requireApplication(id);
+        if (request == null || request.reason() == null || request.reason().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A suspension reason is required");
+        }
+        String reason = request.reason().trim();
+        if (reason.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The suspension reason must not exceed 500 characters");
+        }
+        application.setBannedAt(OffsetDateTime.now());
+        application.setBannedReason(reason);
+        userappService.updateById(application);
+        return toView(application, userService.getById(application.getOwner()));
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable long id) {
         requireApplication(id);
@@ -229,6 +250,11 @@ public class AdminUserApplicationController {
             Boolean banned,
             String bannedReason,
             Boolean btnBypass
+    ) {
+    }
+
+    public record BanApplicationRequest(
+            String reason
     ) {
     }
 }

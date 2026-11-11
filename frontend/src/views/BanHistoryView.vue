@@ -2,17 +2,25 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import type { TableColumnData } from '@arco-design/web-vue'
-import { IconCode, IconRefresh, IconSearch } from '@arco-design/web-vue/es/icon'
+import { Message, type TableColumnData } from '@arco-design/web-vue'
+import {
+  IconCode,
+  IconLock,
+  IconRefresh,
+  IconSearch,
+} from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TablePager from '@/components/TablePager.vue'
 import { historyApi } from '@/api'
+import { adminApi } from '@/api/admin'
 import type { BanHistoryQuery, BanHistoryRecord } from '@/api/types'
 import { usePagedQuery } from '@/composables/usePagedQuery'
-import { useFormatters } from '@/utils/format'
+import { useSessionStore } from '@/stores/session'
+import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
+const session = useSessionStore()
 const {
   formatDate,
   formatNumber,
@@ -21,6 +29,10 @@ const {
 const moduleNames = ref<string[]>([])
 const structuredRecord = ref<BanHistoryRecord | null>(null)
 const structuredVisible = ref(false)
+const quickBanVisible = ref(false)
+const quickBanSaving = ref(false)
+const quickBanUserappId = ref<number | null>(null)
+const quickBanReason = ref('')
 
 const form = reactive<{
   timeRange: Array<number | string | Date> | undefined
@@ -84,85 +96,95 @@ const {
   { pageSize: 50, sortBy: 'populate_time' },
 )
 
-const columns = computed<TableColumnData[]>(() => [
-  {
+const columns = computed<TableColumnData[]>(() => {
+  const result: TableColumnData[] = [
+    {
     title: t('banHistory.populateTime'),
     dataIndex: 'populate_time',
     slotName: 'insertTime',
     width: 180,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.torrentId'),
     dataIndex: 'torrent_id',
     slotName: 'torrentId',
     width: 120,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.peerIp'),
     dataIndex: 'peer_ip',
     slotName: 'peerIp',
     width: 170,
     ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.peerPort'),
     dataIndex: 'peer_port',
     slotName: 'peerPort',
     width: 100,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.peerId'),
     dataIndex: 'peer_id',
     slotName: 'peerId',
     width: 170,
     ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.peerClientName'),
     dataIndex: 'peer_client_name',
     slotName: 'peerClientName',
     width: 170,
     ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.progress'),
     dataIndex: 'peer_progress',
     slotName: 'progress',
     width: 100,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  { title: t('banHistory.geoIp'), slotName: 'geoIp', width: 170, ellipsis: true },
-  {
+    },
+    { title: t('banHistory.geoIp'), slotName: 'geoIp', width: 170, ellipsis: true },
+    {
     title: t('banHistory.moduleName'),
     dataIndex: 'module_name',
     slotName: 'moduleName',
     width: 220,
     ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.rule'),
     dataIndex: 'rule',
     slotName: 'rule',
     width: 220,
     ellipsis: true,
     sortable: { sortDirections: ['ascend', 'descend'] },
-  },
-  {
+    },
+    {
     title: t('banHistory.descriptionField'),
     dataIndex: 'description',
     slotName: 'descriptionField',
     width: 300,
     ellipsis: true,
-  },
-  { title: '', slotName: 'details', width: 70, fixed: 'right' },
-])
+    },
+    { title: '', slotName: 'details', width: 70, fixed: 'right' },
+  ]
+  if (session.user?.admin) {
+    result.splice(1, 0, {
+      title: t('banHistory.userAppId'),
+      slotName: 'userAppId',
+      width: 230,
+    })
+  }
+  return result
+})
 
 function reset() {
   form.timeRange = undefined
@@ -201,6 +223,32 @@ function geoIp(record: BanHistoryRecord) {
 function showStructuredData(record: BanHistoryRecord) {
   structuredRecord.value = record
   structuredVisible.value = true
+}
+
+function openQuickBan(record: BanHistoryRecord) {
+  if (!record.userappId) return
+  quickBanUserappId.value = record.userappId
+  quickBanReason.value = ''
+  quickBanVisible.value = true
+}
+
+async function submitQuickBan() {
+  if (!quickBanUserappId.value) return
+  const reason = quickBanReason.value.trim()
+  if (!reason) {
+    Message.warning(t('banHistory.disableReasonRequired'))
+    return
+  }
+  quickBanSaving.value = true
+  try {
+    await adminApi.banApplication(quickBanUserappId.value, reason)
+    Message.success(t('banHistory.disabledSuccess'))
+    quickBanVisible.value = false
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    quickBanSaving.value = false
+  }
 }
 
 onMounted(async () => {
@@ -310,7 +358,7 @@ onMounted(async () => {
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 2050 }"
+        :scroll="{ x: session.user?.admin ? 2280 : 2050 }"
         row-key="id"
         stripe
         @sorter-change="changeSort"
@@ -322,6 +370,20 @@ onMounted(async () => {
           />
         </template>
         <template #insertTime="{ record }">{{ formatDate(record.insertTime) }}</template>
+        <template #userAppId="{ record }">
+          <div class="userapp-actions">
+            <code>{{ record.userappId ?? 'N/A' }}</code>
+            <a-button
+              v-if="record.userappId"
+              size="mini"
+              status="danger"
+              @click="openQuickBan(record)"
+            >
+              <template #icon><IconLock /></template>
+              {{ t('banHistory.quickDisable') }}
+            </a-button>
+          </div>
+        </template>
         <template #torrentId="{ record }">{{ record.torrentId ?? 'N/A' }}</template>
         <template #peerIp="{ record }">
           <code class="mono table-cell-ellipsis" :title="record.peerIp || ''">
@@ -386,6 +448,34 @@ onMounted(async () => {
     </a-card>
 
     <a-modal
+      v-model:visible="quickBanVisible"
+      :title="t('banHistory.quickDisableTitle', { id: quickBanUserappId ?? 'N/A' })"
+      :footer="false"
+      width="560px"
+    >
+      <a-alert type="warning" show-icon>
+        {{ t('banHistory.quickDisableHint') }}
+      </a-alert>
+      <a-form :model="{ reason: quickBanReason }" layout="vertical" class="quick-ban-form">
+        <a-form-item :label="t('banHistory.disableReason')" required>
+          <a-textarea
+            v-model="quickBanReason"
+            :max-length="500"
+            show-word-limit
+            :auto-size="{ minRows: 4, maxRows: 8 }"
+            :placeholder="t('banHistory.disableReasonPlaceholder')"
+          />
+        </a-form-item>
+      </a-form>
+      <div class="modal-actions">
+        <a-button @click="quickBanVisible = false">{{ t('common.cancel') }}</a-button>
+        <a-button status="danger" :loading="quickBanSaving" @click="submitQuickBan">
+          {{ t('banHistory.quickDisable') }}
+        </a-button>
+      </div>
+    </a-modal>
+
+    <a-modal
       v-model:visible="structuredVisible"
       :title="t('banHistory.structuredData')"
       :footer="false"
@@ -405,6 +495,28 @@ onMounted(async () => {
 
 .geoip-text {
   font-size: 12px;
+}
+
+.userapp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userapp-actions code {
+  min-width: 62px;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.quick-ban-form {
+  margin-top: 18px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .structured-data {
