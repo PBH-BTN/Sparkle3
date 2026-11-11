@@ -72,10 +72,11 @@ class GeoIpCityBlacklistServiceTest {
 
         assertEquals(
                 """
-                # [Sparkle3 GeoIP 城市黑名单] CN 海南省 / 海口市
+                #---START--- Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
                 192.0.2.0/31
                 192.0.2.2/31
-                2001:db8::/56""",
+                2001:db8::/56
+                #---END--- Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市""",
                 content
         );
     }

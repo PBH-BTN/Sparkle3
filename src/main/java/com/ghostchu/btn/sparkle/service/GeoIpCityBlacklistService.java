@@ -400,16 +400,21 @@ public class GeoIpCityBlacklistService
             List<IPAddress> ipv6
     ) {
         StringBuilder content = new StringBuilder();
-        content.append("# [Sparkle3 GeoIP 城市黑名单] ")
-                .append(entry.getCountryCode())
-                .append(" ")
-                .append(entry.getProvince())
-                .append(" / ")
-                .append(entry.getCity())
-                .append('\n');
+        String description = rangeDescription(entry);
+        content.append("#---START--- ").append(description).append('\n');
         ipv4.forEach(network -> content.append(network.toCompressedString()).append('\n'));
         ipv6.forEach(network -> content.append(network.toCompressedString()).append('\n'));
+        content.append("#---END--- ").append(description);
         return content.toString().stripTrailing();
+    }
+
+    private String rangeDescription(GeoIpCityBlacklistEntry entry) {
+        return "Sparkle3 GeoIP 城市黑名单 | "
+                + entry.getCountryCode()
+                + " "
+                + entry.getProvince()
+                + " / "
+                + entry.getCity();
     }
 
     private void writeCombinedOutput(String content) {
