@@ -62,7 +62,7 @@ class GeoIpCityBlacklistServiceTest {
     }
 
     @Test
-    void keepsLocationCommentImmediatelyBeforeItsRules() {
+    void attachesLocationCommentToEveryRule() {
         GeoIpCityBlacklistEntry entry = new GeoIpCityBlacklistEntry()
                 .setCountryCode("CN")
                 .setProvince("海南省")
@@ -79,11 +79,9 @@ class GeoIpCityBlacklistServiceTest {
 
         assertEquals(
                 """
-                #---START--- Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
-                192.0.2.0/31
-                192.0.2.2/31
-                2001:db8::/56
-                #---END--- Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市""",
+                192.0.2.0/31 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
+                192.0.2.2/31 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
+                2001:db8::/56 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市""",
                 content
         );
     }

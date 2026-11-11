@@ -419,11 +419,15 @@ public class GeoIpCityBlacklistService
             List<IPAddress> ipv6
     ) {
         StringBuilder content = new StringBuilder();
-        String description = rangeDescription(entry);
-        content.append("#---START--- ").append(description).append('\n');
-        ipv4.forEach(network -> content.append(network.toCompressedString()).append('\n'));
-        ipv6.forEach(network -> content.append(network.toCompressedString()).append('\n'));
-        content.append("#---END--- ").append(description);
+        String comment = " # " + rangeDescription(entry);
+        ipv4.forEach(network -> content
+                .append(network.toCompressedString())
+                .append(comment)
+                .append('\n'));
+        ipv6.forEach(network -> content
+                .append(network.toCompressedString())
+                .append(comment)
+                .append('\n'));
         return content.toString().stripTrailing();
     }
 
