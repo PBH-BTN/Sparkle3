@@ -691,7 +691,7 @@ export default {
         'mass-download-monitor': {
           name: '大量下载监测模块',
           description:
-            '按报告者最新记录去重，将指定窗口内累计下载量超过阈值的 CIDR 聚合为 IP 黑名单。',
+            '按报告者最新记录去重，将指定窗口内 to_peer_traffic（对方从报告者下载）超过阈值的 CIDR 聚合为 IP 黑名单。',
         },
         'random-identity-analyse': {
           name: '随机 Peer 特征识别',

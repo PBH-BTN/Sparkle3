@@ -189,12 +189,12 @@
                 swarm.torrent_id,
                 swarm.peer_ip,
                 swarm.peer_port,
-                GREATEST(swarm.from_peer_traffic, 0)::numeric AS download_bytes,
+                GREATEST(swarm.to_peer_traffic, 0)::numeric AS download_bytes,
                 swarm.last_time_seen
             FROM public.swarm_tracker swarm
             WHERE swarm.last_time_seen &gt;= #{afterTimestamp}
               AND swarm.last_time_seen &lt; NOW()
-              AND swarm.from_peer_traffic &gt; 0
+              AND swarm.to_peer_traffic &gt; 0
             ORDER BY
                 swarm.userapps_id,
                 swarm.user_downloader,

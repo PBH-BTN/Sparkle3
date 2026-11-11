@@ -129,7 +129,8 @@ public class AnalyseMassDownloadServiceImpl
                     .append(", 报告者: ").append(rule.getReporterCount())
                     .append(", 连接记录: ").append(rule.getConnectionCount())
                     .append(", 种子: ").append(rule.getTorrentCount())
-                    .append(", 累计下载: ").append(formatBytes(rule.getDownloadBytes()))
+                    .append(", 对方从报告者下载(to_peer_traffic): ")
+                    .append(formatBytes(rule.getDownloadBytes()))
                     .append(", 最近观测: ")
                     .append(rule.getLatestSeenAt() == null
                             ? "N/A"

@@ -29,7 +29,7 @@ class AnalyseMassDownloadMapperXmlTest {
 
             String mapper = new String(xml, StandardCharsets.UTF_8);
             assertTrue(mapper.contains("swarm.last_time_seen DESC"));
-            assertTrue(mapper.contains("GREATEST(swarm.from_peer_traffic, 0)"));
+            assertTrue(mapper.contains("GREATEST(swarm.to_peer_traffic, 0)"));
             assertTrue(mapper.contains("WHEN #{ipv4Prefix} = 32 THEN host(latest.peer_ip)"));
             assertTrue(mapper.contains("WHERE grouped.download_bytes &gt; #{thresholdDownload}"));
         }

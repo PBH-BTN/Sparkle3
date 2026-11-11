@@ -709,7 +709,7 @@ export default {
         'mass-download-monitor': {
           name: 'Mass download monitoring',
           description:
-            'Deduplicates by each reporter’s latest row and turns CIDRs above the cumulative download threshold into an IP denylist.',
+            'Deduplicates by each reporter’s latest row and turns CIDRs above the to_peer_traffic threshold (data downloaded from the reporter by the remote peer) into an IP denylist.',
         },
         'random-identity-analyse': {
           name: 'Random peer identity',
