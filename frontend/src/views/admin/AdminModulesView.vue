@@ -31,6 +31,7 @@ function fieldLabel(field: AnalyseModuleField) {
 function fieldUnit(field: AnalyseModuleField) {
   if (field.type === 'duration-hours') return t('admin.modules.units.hours')
   if (field.type === 'bytes-gib') return t('admin.modules.units.gib')
+  if (field.type === 'bytes-tib') return t('admin.modules.units.tib')
   return ''
 }
 
@@ -39,7 +40,9 @@ function isBoolean(field: AnalyseModuleField) {
 }
 
 function isNumeric(field: AnalyseModuleField) {
-  return ['integer', 'decimal', 'duration-hours', 'bytes-gib'].includes(field.type)
+  return ['integer', 'decimal', 'duration-hours', 'bytes-gib', 'bytes-tib'].includes(
+    field.type,
+  )
 }
 
 function numericValue(moduleId: string, field: AnalyseModuleField) {

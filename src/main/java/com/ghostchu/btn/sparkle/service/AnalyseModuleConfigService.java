@@ -30,6 +30,7 @@ public class AnalyseModuleConfigService {
     private static final Duration CACHE_TTL = Duration.ofSeconds(5);
     private static final long HOUR_MILLIS = 3_600_000L;
     private static final long GIB_BYTES = 1_073_741_824L;
+    private static final long TIB_BYTES = 1_099_511_627_776L;
     private static final List<ModuleDefinition> MODULES = List.of(
             module("untrusted-vote", "untrusted-vote",
                     bool("enabled", "enabled", true),
@@ -60,6 +61,14 @@ public class AnalyseModuleConfigService {
                     decimal("threshold-concurrent", "threshold-concurrent", "150"),
                     decimal("threshold-userapps", "threshold-userapps", "3")
             ),
+            module("mass-download-monitor", "mass-download-monitor",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 0 * * * *"),
+                    durationHours("duration", "duration", 86_400_000L),
+                    integer("ipv4-prefix", "ipv4-prefix", 32),
+                    integer("ipv6-prefix", "ipv6-prefix", 56),
+                    bytesTib("threshold-download", "threshold-download", 3)
+            ),
             simpleIdentityModule("random-identity-analyse"),
             simpleIdentityModule("rain000-identity-analyse"),
             simpleIdentityModule("gopeeddev-identity-analyse"),
@@ -87,6 +96,10 @@ public class AnalyseModuleConfigService {
             "concurrent-download-analyse", List.of(
                     RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VALUE,
                     RedisKeyConstant.ANALYSE_CONCURRENT_DOWNLOAD_VERSION
+            ),
+            "mass-download-monitor", List.of(
+                    RedisKeyConstant.ANALYSE_MASS_DOWNLOAD_VALUE,
+                    RedisKeyConstant.ANALYSE_MASS_DOWNLOAD_VERSION
             ),
             "random-identity-analyse", List.of(
                     RedisKeyConstant.ANALYSE_RANDOM_IDENTITY_VALUE,
@@ -295,6 +308,7 @@ public class AnalyseModuleConfigService {
             return switch (field.type()) {
                 case "duration-hours" -> decimal(Long.parseLong(rawValue), HOUR_MILLIS, 2);
                 case "bytes-gib" -> decimal(Long.parseLong(rawValue), GIB_BYTES, 2);
+                case "bytes-tib" -> decimal(Long.parseLong(rawValue), TIB_BYTES, 2);
                 default -> rawValue;
             };
         } catch (NumberFormatException exception) {
@@ -334,6 +348,13 @@ public class AnalyseModuleConfigService {
                     BigDecimal parsed = new BigDecimal(value);
                     if (parsed.signum() < 0) throw new IllegalArgumentException();
                     yield parsed.multiply(BigDecimal.valueOf(GIB_BYTES))
+                            .setScale(0, RoundingMode.HALF_UP)
+                            .toPlainString();
+                }
+                case "bytes-tib" -> {
+                    BigDecimal parsed = new BigDecimal(value);
+                    if (parsed.signum() < 0) throw new IllegalArgumentException();
+                    yield parsed.multiply(BigDecimal.valueOf(TIB_BYTES))
                             .setScale(0, RoundingMode.HALF_UP)
                             .toPlainString();
                 }
@@ -421,6 +442,11 @@ public class AnalyseModuleConfigService {
 
     private static ModuleFieldDefinition bytesGib(String field, String path, long defaultValue) {
         return field(field, path, "bytes-gib", Long.toString(defaultValue));
+    }
+
+    private static ModuleFieldDefinition bytesTib(String field, String path, long defaultValue) {
+        return field(field, path, "bytes-tib",
+                Long.toString(Math.multiplyExact(defaultValue, TIB_BYTES)));
     }
 
     private static ModuleFieldDefinition cron(String field, String path, String defaultValue) {

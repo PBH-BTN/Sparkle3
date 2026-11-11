@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { EChartsCoreOption } from 'echarts/core'
-import { Message, type TableColumnData } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
@@ -18,8 +18,6 @@ import type {
   HomeStats,
   StackedAreaChart,
   StatisticsSource,
-  SwarmDownloadCidrResponse,
-  SwarmIpVersionFilter,
   TrafficCityDatum,
   TrafficDistribution,
 } from '@/api/types'
@@ -48,19 +46,12 @@ const CHART_COLORS = [
 const router = useRouter()
 const session = useSessionStore()
 const { t } = useI18n()
-const { formatBytes, formatDate, formatNumber } = useFormatters()
+const { formatBytes } = useFormatters()
 const stats = ref<HomeStats | null>(null)
 const loading = ref(true)
 const trafficStats = ref<HomeBittorrentTrafficResponse | null>(null)
 const trafficLoading = ref(false)
 const trafficDays = ref(7)
-const swarmDownloadStats = ref<SwarmDownloadCidrResponse | null>(null)
-const swarmDownloadLoading = ref(false)
-const swarmDownloadHours = ref(24)
-const swarmDownloadIpVersion = ref<SwarmIpVersionFilter>('all')
-const swarmDownloadIpv4Prefix = ref(32)
-const swarmDownloadIpv6Prefix = ref(56)
-const swarmDownloadThresholdTb = ref(3)
 const networkStats = ref<HomeNetworkStatisticsResponse | null>(null)
 const networkLoading = ref(false)
 const companionStats = ref<HomeCompanionStatisticsResponse | null>(null)
@@ -69,8 +60,6 @@ const selectedDays = ref(7)
 const networkSource = ref<StatisticsSource>('ban')
 let statisticsRequestId = 0
 let trafficRequestId = 0
-let swarmDownloadRequestId = 0
-let swarmDownloadWatchTimer: number | undefined
 
 const banStats = computed(() => [
   { label: t('home.allTime'), value: stats.value?.banHistory.allTime ?? 0 },
@@ -116,44 +105,6 @@ const trafficUploadCitiesOption = computed<EChartsCoreOption>(() =>
 const trafficDownloadCitiesOption = computed<EChartsCoreOption>(() =>
   trafficPieOption(trafficStats.value?.topDownloadCities),
 )
-const swarmDownloadColumns = computed<TableColumnData[]>(() => [
-  {
-    title: t('home.statistics.swarmDownload.columns.cidr'),
-    dataIndex: 'cidr',
-    slotName: 'cidr',
-    width: 220,
-  },
-  {
-    title: t('home.statistics.swarmDownload.columns.download'),
-    dataIndex: 'downloadBytes',
-    slotName: 'download',
-    width: 180,
-  },
-  {
-    title: t('home.statistics.swarmDownload.columns.reporters'),
-    dataIndex: 'reporterCount',
-    slotName: 'reporters',
-    width: 150,
-  },
-  {
-    title: t('home.statistics.swarmDownload.columns.connections'),
-    dataIndex: 'connectionCount',
-    slotName: 'connections',
-    width: 140,
-  },
-  {
-    title: t('home.statistics.swarmDownload.columns.torrents'),
-    dataIndex: 'torrentCount',
-    slotName: 'torrents',
-    width: 140,
-  },
-  {
-    title: t('home.statistics.swarmDownload.columns.latestSeen'),
-    dataIndex: 'latestSeenAt',
-    slotName: 'latestSeen',
-    width: 190,
-  },
-])
 
 function chartLabel(name: string) {
   if (name === 'Unknown') return t('home.statistics.unknown')
@@ -490,59 +441,6 @@ async function loadTrafficStats() {
   }
 }
 
-async function loadSwarmDownloadStats() {
-  const requestId = ++swarmDownloadRequestId
-  const hours = Number(swarmDownloadHours.value)
-  const ipv4Prefix = Number(swarmDownloadIpv4Prefix.value)
-  const ipv6Prefix = Number(swarmDownloadIpv6Prefix.value)
-  const thresholdTb = Number(swarmDownloadThresholdTb.value)
-  if (
-    !Number.isFinite(hours) ||
-    !Number.isFinite(ipv4Prefix) ||
-    !Number.isFinite(ipv6Prefix) ||
-    !Number.isFinite(thresholdTb) ||
-    thresholdTb <= 0
-  ) {
-    swarmDownloadLoading.value = false
-    return
-  }
-
-  swarmDownloadLoading.value = true
-  try {
-    const result = await uiApi.homeSwarmDownloadCidrStatistics({
-      hours,
-      ipv4Prefix,
-      ipv6Prefix,
-      ipVersion: swarmDownloadIpVersion.value,
-      thresholdTb,
-    })
-    if (requestId === swarmDownloadRequestId) {
-      swarmDownloadStats.value = result
-    }
-  } catch (error) {
-    if (requestId === swarmDownloadRequestId) {
-      Message.error(errorMessage(error, t('home.statistics.loadFailed')))
-    }
-  } finally {
-    if (requestId === swarmDownloadRequestId) {
-      swarmDownloadLoading.value = false
-    }
-  }
-}
-
-function resetSwarmDownloadFilters() {
-  swarmDownloadHours.value = 24
-  swarmDownloadIpVersion.value = 'all'
-  swarmDownloadIpv4Prefix.value = 32
-  swarmDownloadIpv6Prefix.value = 56
-  swarmDownloadThresholdTb.value = 3
-}
-
-function scheduleSwarmDownloadStats() {
-  window.clearTimeout(swarmDownloadWatchTimer)
-  swarmDownloadWatchTimer = window.setTimeout(loadSwarmDownloadStats, 350)
-}
-
 async function loadCompanionStats() {
   companionLoading.value = true
   try {
@@ -556,26 +454,13 @@ async function loadCompanionStats() {
 
 watch([selectedDays, networkSource], loadNetworkStats)
 watch(trafficDays, loadTrafficStats)
-watch(
-  [
-    swarmDownloadHours,
-    swarmDownloadIpVersion,
-    swarmDownloadIpv4Prefix,
-    swarmDownloadIpv6Prefix,
-    swarmDownloadThresholdTb,
-  ],
-  scheduleSwarmDownloadStats,
-)
 
 onMounted(() => {
   loadHomeStats()
   loadTrafficStats()
-  loadSwarmDownloadStats()
   loadNetworkStats()
   loadCompanionStats()
 })
-
-onBeforeUnmount(() => window.clearTimeout(swarmDownloadWatchTimer))
 </script>
 
 <template>
@@ -665,160 +550,6 @@ onBeforeUnmount(() => window.clearTimeout(swarmDownloadWatchTimer))
           </a-col>
         </a-row>
       </a-spin>
-    </section>
-
-    <section class="stats-section swarm-download-section">
-      <div class="section-heading">
-        <div>
-          <h2>{{ t('home.statistics.swarmDownload.title') }}</h2>
-          <p>{{ t('home.statistics.swarmDownload.description') }}</p>
-          <p class="swarm-download-note">
-            {{ t('home.statistics.swarmDownload.deduplicationNote') }}
-          </p>
-        </div>
-      </div>
-
-      <a-card class="surface-card chart-controls">
-        <div class="chart-control-row swarm-download-controls">
-          <div class="chart-control">
-            <span>{{ t('home.statistics.range') }}</span>
-            <a-radio-group v-model="swarmDownloadHours" type="button">
-              <a-radio :value="24">{{ t('home.last24Hours') }}</a-radio>
-              <a-radio :value="72">{{ t('home.statistics.last3Days') }}</a-radio>
-              <a-radio :value="168">{{ t('home.last7Days') }}</a-radio>
-            </a-radio-group>
-          </div>
-          <div class="chart-control">
-            <span>{{ t('home.statistics.swarmDownload.ipVersion') }}</span>
-            <a-radio-group v-model="swarmDownloadIpVersion" type="button">
-              <a-radio value="all">{{ t('home.statistics.swarmDownload.all') }}</a-radio>
-              <a-radio value="4">IPv4</a-radio>
-              <a-radio value="6">IPv6</a-radio>
-            </a-radio-group>
-          </div>
-          <label class="chart-control compact-control">
-            <span>{{ t('home.statistics.swarmDownload.ipv4Prefix') }}</span>
-            <a-input-number
-              v-model="swarmDownloadIpv4Prefix"
-              :min="8"
-              :max="32"
-              :precision="0"
-            >
-              <template #prefix>/</template>
-            </a-input-number>
-          </label>
-          <label class="chart-control compact-control">
-            <span>{{ t('home.statistics.swarmDownload.ipv6Prefix') }}</span>
-            <a-input-number
-              v-model="swarmDownloadIpv6Prefix"
-              :min="16"
-              :max="128"
-              :precision="0"
-            >
-              <template #prefix>/</template>
-            </a-input-number>
-          </label>
-          <label class="chart-control compact-control">
-            <span>{{ t('home.statistics.swarmDownload.threshold') }}</span>
-            <a-input-number
-              v-model="swarmDownloadThresholdTb"
-              :min="0.01"
-              :max="1000000"
-              :step="0.5"
-              :precision="2"
-            >
-              <template #suffix>TB</template>
-            </a-input-number>
-          </label>
-          <a-button class="swarm-download-reset" @click="resetSwarmDownloadFilters">
-            {{ t('home.statistics.swarmDownload.reset') }}
-          </a-button>
-          <span v-if="swarmDownloadStats" class="chart-updated">
-            {{
-              t('home.statistics.updatedAt', {
-                time: dayjs(swarmDownloadStats.generatedAt).format('HH:mm:ss'),
-              })
-            }}
-          </span>
-        </div>
-      </a-card>
-
-      <a-card class="surface-card swarm-download-card">
-        <template #title>
-          {{ t('home.statistics.swarmDownload.results') }}
-        </template>
-        <template #extra>
-          <a-space wrap>
-            <a-tag color="arcoblue">
-              {{
-                t('home.statistics.swarmDownload.matched', {
-                  count: formatNumber(swarmDownloadStats?.matchingGroups ?? 0),
-                })
-              }}
-            </a-tag>
-            <a-tag color="orange">
-              {{
-                t('home.statistics.swarmDownload.windowSummary', {
-                  hours: swarmDownloadStats?.hours ?? swarmDownloadHours,
-                  threshold: swarmDownloadStats?.thresholdTb ?? swarmDownloadThresholdTb,
-                })
-              }}
-            </a-tag>
-          </a-space>
-        </template>
-
-        <a-alert type="info" class="swarm-download-alert">
-          {{ t('home.statistics.swarmDownload.windowNote') }}
-        </a-alert>
-        <a-alert
-          v-if="swarmDownloadStats?.truncated"
-          type="warning"
-          class="swarm-download-alert"
-        >
-          {{
-            t('home.statistics.swarmDownload.truncated', {
-              count: formatNumber(swarmDownloadStats.matchingGroups),
-            })
-          }}
-        </a-alert>
-
-        <a-table
-          :columns="swarmDownloadColumns"
-          :data="swarmDownloadStats?.entries ?? []"
-          :loading="swarmDownloadLoading"
-          :pagination="{ pageSize: 20, showTotal: true, showJumper: true }"
-          :scroll="{ x: 1020 }"
-          row-key="cidr"
-          size="small"
-          stripe
-        >
-          <template #cidr="{ record }">
-            <div class="swarm-cidr-cell">
-              <code>{{ record.cidr }}</code>
-              <a-tag :color="record.ipVersion === 4 ? 'arcoblue' : 'purple'">
-                IPv{{ record.ipVersion }}
-              </a-tag>
-            </div>
-          </template>
-          <template #download="{ record }">
-            <strong class="swarm-download-value">
-              {{ formatBytes(record.downloadBytes) }}
-            </strong>
-          </template>
-          <template #reporters="{ record }">
-            {{ formatNumber(record.reporterCount) }}
-          </template>
-          <template #connections="{ record }">
-            {{ formatNumber(record.connectionCount) }}
-          </template>
-          <template #torrents="{ record }">
-            {{ formatNumber(record.torrentCount) }}
-          </template>
-          <template #latestSeen="{ record }">
-            {{ formatDate(record.latestSeenAt) }}
-          </template>
-        </a-table>
-      </a-card>
     </section>
 
     <section class="stats-section">
@@ -1281,54 +1012,6 @@ onBeforeUnmount(() => window.clearTimeout(swarmDownloadWatchTimer))
   font-size: 12px;
 }
 
-.swarm-download-note {
-  color: rgb(var(--orange-6));
-  font-size: 12px;
-}
-
-.swarm-download-controls {
-  align-items: flex-end;
-}
-
-.swarm-download-controls .compact-control {
-  align-items: flex-start;
-}
-
-.swarm-download-controls :deep(.arco-input-number) {
-  width: 118px;
-}
-
-.swarm-download-reset {
-  margin-bottom: 1px;
-}
-
-.swarm-download-card :deep(.arco-card-body) {
-  padding-top: 12px;
-}
-
-.swarm-download-alert {
-  margin-bottom: 12px;
-}
-
-.swarm-cidr-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.swarm-cidr-cell code {
-  color: var(--color-text-1);
-  font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.swarm-download-value {
-  color: rgb(var(--primary-6));
-  font-variant-numeric: tabular-nums;
-}
-
 .traffic-metric-label {
   color: var(--color-text-3);
   font-size: 13px;
@@ -1528,13 +1211,5 @@ onBeforeUnmount(() => window.clearTimeout(swarmDownloadWatchTimer))
     grid-template-columns: 1fr;
   }
 
-  .swarm-download-controls .compact-control {
-    align-items: stretch;
-  }
-
-  .swarm-download-controls :deep(.arco-input-number),
-  .swarm-download-reset {
-    width: 100%;
-  }
 }
 </style>

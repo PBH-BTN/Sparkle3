@@ -303,7 +303,15 @@ export interface NavigationItemInput {
 export interface AnalyseModuleField {
   field: string
   key: string
-  type: 'boolean' | 'integer' | 'decimal' | 'duration-hours' | 'bytes-gib' | 'cron' | 'text'
+  type:
+    | 'boolean'
+    | 'integer'
+    | 'decimal'
+    | 'duration-hours'
+    | 'bytes-gib'
+    | 'bytes-tib'
+    | 'cron'
+    | 'text'
   value: string
   restartRequired: boolean
 }

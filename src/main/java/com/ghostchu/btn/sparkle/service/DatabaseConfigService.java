@@ -47,10 +47,14 @@ public class DatabaseConfigService {
             "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes",
             "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled",
             "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.refresh-interval-minutes",
-            "sparkle.homepage-statistics-refresh.modules.swarm-download-cidr.enabled",
-            "sparkle.homepage-statistics-refresh.modules.swarm-download-cidr.refresh-interval-minutes",
             "sparkle.analyse.geoip-city-blacklist.enabled",
             "sparkle.analyse.geoip-city-blacklist.schedule",
+            "sparkle.analyse.mass-download-monitor.enabled",
+            "sparkle.analyse.mass-download-monitor.schedule",
+            "sparkle.analyse.mass-download-monitor.duration",
+            "sparkle.analyse.mass-download-monitor.ipv4-prefix",
+            "sparkle.analyse.mass-download-monitor.ipv6-prefix",
+            "sparkle.analyse.mass-download-monitor.threshold-download",
             "sparkle.user-contact-email.subject-template",
             "sparkle.user-contact-email.content-template"
     );

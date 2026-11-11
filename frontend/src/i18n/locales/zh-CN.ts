@@ -127,33 +127,6 @@ export default {
       loadFailed: '统计数据加载失败。',
       unknown: '未知',
       other: '其他',
-      swarmDownload: {
-        title: '大量下载监测模块',
-        description:
-          '聚合不同报告者的最新观测，按可调 CIDR 计算 swarm_tracker 中 from_peer_traffic 的累计下载量。',
-        deduplicationNote:
-          '同一报告者、下载器、种子、Peer IP 和端口的记录只保留 last_time_seen 最新的一条，再按 CIDR 汇总不同报告者的最新值。',
-        ipVersion: '地址族',
-        all: '全部',
-        ipv4Prefix: 'IPv4 CIDR',
-        ipv6Prefix: 'IPv6 CIDR',
-        threshold: '最低下载量',
-        reset: '恢复默认',
-        results: '超过阈值的 CIDR',
-        matched: '共 {count} 个网络',
-        windowSummary: '最近 {hours} 小时 · > {threshold} TB',
-        windowNote:
-          '时间窗口按 last_time_seen 筛选。from_peer_traffic 是连接的累计计数器，不是窗口内产生的差分流量。结果最多返回前 200 个网络。',
-        truncated: '符合条件的网络超过 200 个，当前仅显示下载量最高的 200 个（共 {count} 个）。',
-        columns: {
-          cidr: 'CIDR',
-          download: '累计下载量',
-          reporters: '报告者数',
-          connections: '连接记录',
-          torrents: '种子数',
-          latestSeen: '最近观测时间',
-        },
-      },
     },
     moreSoon: '更多功能正在建设中',
   },
@@ -348,6 +321,7 @@ export default {
       'gopeeddev-identity': 'Gopeed dev 身份分析',
       'datacenter-high-risk': '高风险数据中心分析',
       'geoip-city-blacklist': 'GeoIP 城市黑名单',
+      'mass-download-monitor': '大量下载监测模块',
       'btn-bypass': 'BTN Bypass 用户应用',
     },
   },
@@ -549,11 +523,6 @@ export default {
           description:
             '按连接去重刷新封禁流量、种群流量小时快照与 Top 30 GeoIP 城市。',
         },
-        'swarm-download-cidr': {
-          name: '大量下载监测模块',
-          description:
-            '按报告者最新记录去重，预计算 24 小时内下载超过 3 TB 的默认 CIDR 排行榜。',
-        },
       },
     },
     users: {
@@ -680,6 +649,7 @@ export default {
       units: {
         hours: '小时',
         gib: 'GiB',
+        tib: 'TiB',
       },
       fields: {
         enabled: '启用模块',
@@ -698,6 +668,9 @@ export default {
         'materialized-view-refresh': '分析前刷新物化视图',
         'threshold-concurrent': '最低并发种子数',
         'threshold-userapps': '最低关联用户数',
+        'ipv4-prefix': 'IPv4 CIDR 长度',
+        'ipv6-prefix': 'IPv6 CIDR 长度',
+        'threshold-download': '最低累计下载量',
       },
       items: {
         'untrusted-vote': {
@@ -711,6 +684,11 @@ export default {
         'concurrent-download-analyse': {
           name: '并发下载分析',
           description: '识别在大量种子中同时出现、且被多个用户应用共同标记的 Peer。',
+        },
+        'mass-download-monitor': {
+          name: '大量下载监测模块',
+          description:
+            '按报告者最新记录去重，将指定窗口内累计下载量超过阈值的 CIDR 聚合为 IP 黑名单。',
         },
         'random-identity-analyse': {
           name: '随机 Peer 特征识别',

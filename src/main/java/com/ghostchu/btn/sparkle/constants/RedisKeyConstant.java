@@ -14,6 +14,8 @@ public enum RedisKeyConstant {
     ANALYSE_OVER_DOWNLOAD_VOTE_VALUE("sparkle:analyse:over_download:value"),
     ANALYSE_CONCURRENT_DOWNLOAD_VERSION("sparkle:analyse:concurrent_download:version"),
     ANALYSE_CONCURRENT_DOWNLOAD_VALUE("sparkle:analyse:concurrent_download:value"),
+    ANALYSE_MASS_DOWNLOAD_VERSION("sparkle:analyse:mass_download:version"),
+    ANALYSE_MASS_DOWNLOAD_VALUE("sparkle:analyse:mass_download:value"),
     ANALYSE_RANDOM_IDENTITY_VERSION("sparkle:analyse:random_identity:version"),
     ANALYSE_RANDOM_IDENTITY_VALUE("sparkle:analyse:random_identity:value"),
     ANALYSE_RAIN000_IDENTITY_VERSION("sparkle:analyse:rain000_identity:version"),

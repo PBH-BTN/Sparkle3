@@ -11,10 +11,10 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class SwarmDownloadStatisticsMapperXmlTest {
+class AnalyseMassDownloadMapperXmlTest {
     @Test
-    void statementsParse() throws Exception {
-        String resource = "mapper/SwarmDownloadStatisticsMapper.xml";
+    void massDownloadStatementDeduplicatesAndFiltersLatestDownloads() throws Exception {
+        String resource = "mapper/AnalyseRuleMapper.xml";
         Configuration configuration = new Configuration();
 
         try (InputStream input = getClass().getClassLoader().getResourceAsStream(resource)) {
@@ -27,15 +27,15 @@ class SwarmDownloadStatisticsMapperXmlTest {
                     configuration.getSqlFragments()
             ).parse();
 
-            String sql = new String(xml, StandardCharsets.UTF_8);
-            assertTrue(sql.contains("DISTINCT ON"));
-            assertTrue(sql.contains("swarm.last_time_seen DESC"));
-            assertTrue(sql.contains("GREATEST(swarm.from_peer_traffic, 0)"));
-            assertTrue(sql.contains("WHEN #{ipv4Prefix} = 32 THEN host(latest.peer_ip)"));
+            String mapper = new String(xml, StandardCharsets.UTF_8);
+            assertTrue(mapper.contains("swarm.last_time_seen DESC"));
+            assertTrue(mapper.contains("GREATEST(swarm.from_peer_traffic, 0)"));
+            assertTrue(mapper.contains("WHEN #{ipv4Prefix} = 32 THEN host(latest.peer_ip)"));
+            assertTrue(mapper.contains("WHERE grouped.download_bytes &gt; #{thresholdDownload}"));
         }
 
         assertNotNull(configuration.getMappedStatement(
-                "com.ghostchu.btn.sparkle.mapper.SwarmDownloadStatisticsMapper.selectCidrDownloads"
+                "com.ghostchu.btn.sparkle.mapper.AnalyseRuleMapper.analyseMassDownload"
         ));
     }
 }

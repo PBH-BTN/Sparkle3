@@ -215,6 +215,13 @@ sparkle:
       duration: 3600000
       threshold-concurrent: 150
       threshold-userapps: 3
+    mass-download-monitor:
+      enabled: true
+      schedule: "0 0 * * * *"
+      duration: 86400000
+      ipv4-prefix: 32
+      ipv6-prefix: 56
+      threshold-download: 3298534883328
     random-identity-analyse:
       enabled: true
       schedule: "0 0 * * * *"
@@ -288,9 +295,6 @@ sparkle:
       bittorrent-traffic:
         enabled: true
         refresh-interval-minutes: 60
-      swarm-download-cidr:
-        enabled: true
-        refresh-interval-minutes: 30
   admin:
     user-ip-warning:
       duration: 1209600000

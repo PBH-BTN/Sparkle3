@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.service.impl.allowlist.AnalyseBtnBypassServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseDatacenterHighRiskServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseGopeedDevIdentityServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseMassDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRain000IdentityServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRandomIdentityServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleConcurrentDownloadServiceImpl;
@@ -25,6 +26,7 @@ public class AnalyseModuleExecutionService {
             AnalyseRuleUnTrustVoteServiceImpl untrustedVote,
             AnalyseRuleOverDownloadServiceImpl overDownload,
             AnalyseRuleConcurrentDownloadServiceImpl concurrentDownload,
+            AnalyseMassDownloadServiceImpl massDownload,
             AnalyseRandomIdentityServiceImpl randomIdentity,
             AnalyseRain000IdentityServiceImpl rain000Identity,
             AnalyseGopeedDevIdentityServiceImpl gopeedDevIdentity,
@@ -35,6 +37,7 @@ public class AnalyseModuleExecutionService {
         runners.put("untrusted-vote", untrustedVote::analyseUntrusted);
         runners.put("overdownload-analyse", overDownload::analyseOverDownload);
         runners.put("concurrent-download-analyse", concurrentDownload::analyseConcurrentDownload);
+        runners.put("mass-download-monitor", massDownload::analyseMassDownload);
         runners.put("random-identity-analyse", randomIdentity::analyseRandomIdentity);
         runners.put("rain000-identity-analyse", rain000Identity::analyseRain000Identity);
         runners.put("gopeeddev-identity-analyse", gopeedDevIdentity::analyseGopeedDevIdentity);

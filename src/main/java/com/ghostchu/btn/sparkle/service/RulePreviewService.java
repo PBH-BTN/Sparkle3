@@ -103,6 +103,7 @@ public class RulePreviewService {
             case "AnalyseRuleOverDownloadServiceImpl" -> "overdownload";
             case "AnalyseRuleUnTrustVoteServiceImpl" -> "untrusted-vote";
             case "AnalyseRuleConcurrentDownloadServiceImpl" -> "concurrent-download";
+            case "AnalyseMassDownloadServiceImpl" -> "mass-download-monitor";
             case "AnalyseRandomIdentityServiceImpl" -> "random-identity";
             case "AnalyseRain000IdentityServiceImpl" -> "rain000-identity";
             case "AnalyseGopeedDevIdentityServiceImpl" -> "gopeeddev-identity";
