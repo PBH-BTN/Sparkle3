@@ -49,6 +49,21 @@ public class BasePingController {
 
     @NotNull
     public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+        return verifyUserApplication(true);
+    }
+
+    @NotNull
+    protected Userapp verifyUserApplicationForBatchedPoints()
+            throws UserApplicationNotFoundException,
+            UserApplicationBannedException,
+            AccessDeniedException {
+        return verifyUserApplication(false);
+    }
+
+    private Userapp verifyUserApplication(boolean recordPoints)
+            throws UserApplicationNotFoundException,
+            UserApplicationBannedException,
+            AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
         var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
@@ -58,7 +73,9 @@ public class BasePingController {
         if (userApp.getBannedAt() != null) {
             throw new UserApplicationBannedException(userApp.getBannedReason());
         }
-        pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
+        if (recordPoints) {
+            pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
+        }
         return userApp;
     }
 

@@ -27,5 +27,5 @@ public interface IUserappsHeartbeatService extends IService<UserappsHeartbeat> {
     @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(String ip, OffsetDateTime after);
 
     @Transactional
-    void onHeartBeat(long userAppId, @NotNull InetAddress ip);
+    void onHeartBeat(long userAppId, long userId, @NotNull InetAddress ip);
 }

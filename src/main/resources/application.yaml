@@ -180,6 +180,11 @@ sparkle:
       multi-if: true
       cleanup-before: 604800000
       cleanup-cron: "0 0 0 * * *"
+      queue:
+        flush-interval-ms: 1000
+        initial-delay-ms: 1000
+        batch-size: 2000
+        max-size: 100000
     query-ip:
       pow-captcha: true
       endpoint: "{rooturl}/ping/queryIp"

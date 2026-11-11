@@ -408,7 +408,7 @@ export default {
     },
     logs: {
       title: 'Point acquisition log',
-      retention: 'Event logs are retained for 90 days in compressed TimescaleDB storage',
+      retention: 'Event logs are retained for 90 days',
       time: 'Time',
       event: 'Request / event',
       change: 'Point change',
@@ -671,6 +671,10 @@ export default {
         'heartbeat-cleanup': {
           name: 'Application heartbeat cleanup',
           description: 'Deletes expired user application heartbeat records in batches.',
+        },
+        'heartbeat-queue-flush': {
+          name: 'Keepalive queue flush',
+          description: 'Drains queued Keepalive requests from Redis and batch-writes deduplicated heartbeat and point data.',
         },
         'user-ip-warning': {
           name: 'User IP risk warnings',

@@ -6,6 +6,8 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.VersionAlertService;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,6 +20,7 @@ import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -38,6 +41,10 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     private long autoAccountHolderUid;
     @Autowired
     private VersionAlertService versionAlertService;
+    private final Cache<Long, Boolean> lastSeenUpdateThrottle = CacheBuilder.newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(30, TimeUnit.SECONDS)
+            .build();
 
     @Nullable
     @Transactional
@@ -71,7 +78,10 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
             userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
         }
         if (userApp != null) {
-            this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
+            if (lastSeenUpdateThrottle.getIfPresent(userApp.getId()) == null) {
+                lastSeenUpdateThrottle.put(userApp.getId(), Boolean.TRUE);
+                this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
+            }
         }
         if (userApp != null) {
             try {

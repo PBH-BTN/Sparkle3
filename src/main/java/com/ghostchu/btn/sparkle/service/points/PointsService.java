@@ -75,6 +75,17 @@ public class PointsService {
 
     @Transactional
     public void commit(PointAwardBucket bucket) {
+        commitInternal(bucket);
+    }
+
+    @Transactional
+    public void commitAll(List<PointAwardBucket> buckets) {
+        for (PointAwardBucket bucket : buckets) {
+            commitInternal(bucket);
+        }
+    }
+
+    private void commitInternal(PointAwardBucket bucket) {
         if (bucket == null || !bucket.hasWork()) {
             return;
         }

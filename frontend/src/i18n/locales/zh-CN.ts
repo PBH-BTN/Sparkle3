@@ -395,7 +395,7 @@ export default {
     },
     logs: {
       title: '积分获取记录',
-      retention: '事件日志保留 90 天，使用 TimescaleDB 压缩存储',
+      retention: '事件日志保留 90 天',
       time: '时间',
       event: '请求 / 事件',
       change: '积分变化',
@@ -658,6 +658,10 @@ export default {
         'heartbeat-cleanup': {
           name: '用户应用心跳清理',
           description: '分批删除超过保留期限的用户应用心跳记录。',
+        },
+        'heartbeat-queue-flush': {
+          name: 'Keepalive 队列写入',
+          description: '从 Redis 队列批量取出 Keepalive 请求，去重后写入心跳和积分数据。',
         },
         'user-ip-warning': {
           name: '用户 IP 风险提示',

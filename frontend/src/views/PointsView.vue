@@ -477,18 +477,24 @@ onMounted(refresh)
   width: 100%;
 }
 
+.balance-card {
+  overflow: hidden;
+  background: #155e75;
+  border: 0;
+  border-radius: 16px;
+}
+
 .balance-card :deep(.arco-card-body) {
   position: relative;
   display: flex;
   align-items: center;
   min-height: 190px;
   padding: 32px 36px;
-  overflow: hidden;
   color: #fff;
   background:
     radial-gradient(circle at 90% 20%, rgb(255 255 255 / 24%), transparent 28%),
     linear-gradient(135deg, #0e7490, #155e75 52%, #164e63);
-  border-radius: 16px;
+  border-radius: 0;
 }
 
 .balance-copy {
