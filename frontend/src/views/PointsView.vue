@@ -128,10 +128,12 @@ function categoryLabel(category: string) {
 }
 
 function eventLabel(eventType: string) {
-  const key = `points.events.${eventType}`
+  const normalizedEventType =
+    eventType.trim() === 'KEEPALIVE_BATCH' ? 'KEEPALIVE' : eventType.trim()
+  const key = `points.events.${normalizedEventType}`
   const translated = t(key)
   return translated === key
-    ? eventType.replaceAll('_', ' ').toLowerCase()
+    ? normalizedEventType.replaceAll('_', ' ').toLowerCase()
     : translated
 }
 

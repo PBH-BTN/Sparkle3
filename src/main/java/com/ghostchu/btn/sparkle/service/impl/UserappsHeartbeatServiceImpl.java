@@ -283,7 +283,7 @@ public class UserappsHeartbeatServiceImpl
         for (Map.Entry<Long, List<HeartbeatEvent>> entry : byUser.entrySet()) {
             PointAwardBucket bucket = new PointAwardBucket(
                     entry.getKey(),
-                    "KEEPALIVE_BATCH",
+                    "KEEPALIVE",
                     OffsetDateTime.now()
             );
             long keepalivePoints = 0;

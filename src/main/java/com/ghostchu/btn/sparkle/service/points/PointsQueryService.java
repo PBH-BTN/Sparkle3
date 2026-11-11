@@ -190,7 +190,12 @@ public class PointsQueryService {
         );
         List<PointsLogEntry> entries = jdbcTemplate.query(
                 """
-                SELECT id, occurred_at, event_type, points, fixed_points,
+                SELECT id, occurred_at,
+                       CASE event_type
+                           WHEN 'KEEPALIVE_BATCH' THEN 'KEEPALIVE'
+                           ELSE event_type
+                       END AS event_type,
+                       points, fixed_points,
                        one_time_points, dynamic_points, manual_points,
                        details::text AS details
                 FROM public.points_ledger
