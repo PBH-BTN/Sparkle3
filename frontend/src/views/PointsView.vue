@@ -130,7 +130,9 @@ function categoryLabel(category: string) {
 function eventLabel(eventType: string) {
   const key = `points.events.${eventType}`
   const translated = t(key)
-  return translated === key ? eventType : translated
+  return translated === key
+    ? eventType.replaceAll('_', ' ').toLowerCase()
+    : translated
 }
 
 function pointsDeltaClass(pointsRaw: string) {

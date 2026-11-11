@@ -439,6 +439,7 @@ export default {
       BAN_HISTORY_SYNC: 'BanHistory sync',
       SWARM_SYNC: 'Swarm sync',
       KEEPALIVE: 'Keepalive heartbeat',
+      KEEPALIVE_BATCH: 'Keepalive heartbeat batch',
       RULES_FETCH: 'Rule fetch',
       IP_QUERY: 'IP query',
       CONFIG_FETCH: 'Client configuration fetch',
@@ -446,6 +447,7 @@ export default {
       DYNAMIC_POINT_SETTLEMENT: 'Hourly dynamic settlement',
       PLANNED_TASK: 'Scheduled task',
       ADMIN_ADJUSTMENT: 'Administrator point adjustment',
+      UNKNOWN_EVENT: 'Other event',
     },
   },
   oauth: {

@@ -426,6 +426,7 @@ export default {
       BAN_HISTORY_SYNC: 'BanHistory 同步',
       SWARM_SYNC: 'Swarm 同步',
       KEEPALIVE: 'Keepalive 心跳',
+      KEEPALIVE_BATCH: 'Keepalive 心跳批量',
       RULES_FETCH: '规则获取',
       IP_QUERY: 'IP 查询',
       CONFIG_FETCH: '客户端配置获取',
@@ -433,6 +434,7 @@ export default {
       DYNAMIC_POINT_SETTLEMENT: '动态积分小时结算',
       PLANNED_TASK: '计划任务',
       ADMIN_ADJUSTMENT: '管理员积分调整',
+      UNKNOWN_EVENT: '其他事件',
     },
   },
   oauth: {
