@@ -47,6 +47,8 @@ public class DatabaseConfigService {
             "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes",
             "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled",
             "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.swarm-download-cidr.enabled",
+            "sparkle.homepage-statistics-refresh.modules.swarm-download-cidr.refresh-interval-minutes",
             "sparkle.user-contact-email.subject-template",
             "sparkle.user-contact-email.content-template"
     );

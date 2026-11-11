@@ -22,6 +22,8 @@ import type {
   RankingResponse,
   RulePreviewResponse,
   SessionResponse,
+  SwarmDownloadCidrQuery,
+  SwarmDownloadCidrResponse,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
   StatisticsSource,
@@ -49,6 +51,18 @@ export const uiApi = {
     request<HomeBittorrentTrafficResponse>(
       `/api/ui/statistics/bittorrent-traffic?days=${days}`,
     ),
+  homeSwarmDownloadCidrStatistics: (query: SwarmDownloadCidrQuery) => {
+    const search = new URLSearchParams({
+      hours: String(query.hours),
+      ipv4Prefix: String(query.ipv4Prefix),
+      ipv6Prefix: String(query.ipv6Prefix),
+      ipVersion: query.ipVersion,
+      thresholdTb: String(query.thresholdTb),
+    })
+    return request<SwarmDownloadCidrResponse>(
+      `/api/ui/statistics/swarm-download-cidr?${search.toString()}`,
+    )
+  },
   rulePreview: () => request<RulePreviewResponse>('/api/ui/rules/preview'),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   publicProfile: (uid: string) =>

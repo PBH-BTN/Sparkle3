@@ -127,6 +127,33 @@ export default {
       loadFailed: '统计数据加载失败。',
       unknown: '未知',
       other: '其他',
+      swarmDownload: {
+        title: '大量下载监测模块',
+        description:
+          '聚合不同报告者的最新观测，按可调 CIDR 计算 swarm_tracker 中 from_peer_traffic 的累计下载量。',
+        deduplicationNote:
+          '同一报告者、下载器、种子、Peer IP 和端口的记录只保留 last_time_seen 最新的一条，再按 CIDR 汇总不同报告者的最新值。',
+        ipVersion: '地址族',
+        all: '全部',
+        ipv4Prefix: 'IPv4 CIDR',
+        ipv6Prefix: 'IPv6 CIDR',
+        threshold: '最低下载量',
+        reset: '恢复默认',
+        results: '超过阈值的 CIDR',
+        matched: '共 {count} 个网络',
+        windowSummary: '最近 {hours} 小时 · > {threshold} TB',
+        windowNote:
+          '时间窗口按 last_time_seen 筛选。from_peer_traffic 是连接的累计计数器，不是窗口内产生的差分流量。结果最多返回前 200 个网络。',
+        truncated: '符合条件的网络超过 200 个，当前仅显示下载量最高的 200 个（共 {count} 个）。',
+        columns: {
+          cidr: 'CIDR',
+          download: '累计下载量',
+          reporters: '报告者数',
+          connections: '连接记录',
+          torrents: '种子数',
+          latestSeen: '最近观测时间',
+        },
+      },
     },
     moreSoon: '更多功能正在建设中',
   },
@@ -519,6 +546,11 @@ export default {
           name: 'BitTorrent 流量统计',
           description:
             '按连接去重刷新封禁流量、种群流量小时快照与 Top 30 GeoIP 城市。',
+        },
+        'swarm-download-cidr': {
+          name: '大量下载监测模块',
+          description:
+            '按报告者最新记录去重，预计算 24 小时内下载超过 3 TB 的默认 CIDR 排行榜。',
         },
       },
     },

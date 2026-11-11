@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.SwarmDownloadStatisticsMapper">
+    <resultMap id="cidrDownloadResult" type="com.ghostchu.btn.sparkle.service.dto.SwarmDownloadCidrRowDto">
+        <result column="cidr" property="cidr"/>
+        <result column="ip_version" property="ipVersion"/>
+        <result column="download_bytes" property="downloadBytes"/>
+        <result column="reporter_count" property="reporterCount"/>
+        <result column="connection_count" property="connectionCount"/>
+        <result column="torrent_count" property="torrentCount"/>
+        <result column="latest_seen_at" property="latestSeenAt"/>
+        <result column="matching_groups" property="matchingGroups"/>
+    </resultMap>
+
+    <select id="selectCidrDownloads" resultMap="cidrDownloadResult">
+        WITH latest_reports AS MATERIALIZED (
+            SELECT DISTINCT ON (
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port
+            )
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port,
+                GREATEST(swarm.from_peer_traffic, 0)::numeric AS download_bytes,
+                swarm.last_time_seen
+            FROM public.swarm_tracker swarm
+            WHERE swarm.last_time_seen &gt;= #{startAt}
+              AND swarm.last_time_seen &lt; #{endAt}
+              AND swarm.from_peer_traffic &gt; 0
+              <if test="ipVersion != null">
+                  AND family(swarm.peer_ip) = #{ipVersion}
+              </if>
+            ORDER BY
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port,
+                swarm.last_time_seen DESC,
+                swarm.id DESC
+        ),
+        grouped AS (
+            SELECT
+                CASE family(latest.peer_ip)
+                    WHEN 4 THEN
+                        CASE
+                            WHEN #{ipv4Prefix} = 32 THEN host(latest.peer_ip)
+                            ELSE network(set_masklen(latest.peer_ip, #{ipv4Prefix}))::text
+                        END
+                    WHEN 6 THEN network(set_masklen(latest.peer_ip, #{ipv6Prefix}))::text
+                END AS cidr,
+                family(latest.peer_ip) AS ip_version,
+                SUM(latest.download_bytes)::numeric AS download_bytes,
+                COUNT(DISTINCT latest.userapps_id)::bigint AS reporter_count,
+                COUNT(*)::bigint AS connection_count,
+                COUNT(DISTINCT latest.torrent_id)::bigint AS torrent_count,
+                MAX(latest.last_time_seen) AS latest_seen_at
+            FROM latest_reports latest
+            GROUP BY cidr, ip_version
+        )
+        SELECT
+            grouped.cidr::text AS cidr,
+            grouped.ip_version,
+            grouped.download_bytes::text AS download_bytes,
+            grouped.reporter_count,
+            grouped.connection_count,
+            grouped.torrent_count,
+            grouped.latest_seen_at,
+            COUNT(*) OVER ()::bigint AS matching_groups
+        FROM grouped
+        WHERE grouped.download_bytes &gt; #{thresholdBytes}
+        ORDER BY grouped.download_bytes DESC, grouped.cidr
+        LIMIT #{limit}
+    </select>
+</mapper>

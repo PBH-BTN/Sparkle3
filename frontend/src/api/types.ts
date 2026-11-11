@@ -150,6 +150,41 @@ export interface HomeBittorrentTrafficResponse {
   generatedAt: string
 }
 
+export type SwarmIpVersionFilter = 'all' | '4' | '6'
+
+export interface SwarmDownloadCidrQuery {
+  hours: number
+  ipv4Prefix: number
+  ipv6Prefix: number
+  ipVersion: SwarmIpVersionFilter
+  thresholdTb: number
+}
+
+export interface SwarmDownloadCidrEntry {
+  cidr: string
+  ipVersion: number
+  downloadBytes: string
+  reporterCount: number
+  connectionCount: number
+  torrentCount: number
+  latestSeenAt: string
+}
+
+export interface SwarmDownloadCidrResponse {
+  hours: number
+  ipv4Prefix: number
+  ipv6Prefix: number
+  ipVersion: SwarmIpVersionFilter
+  thresholdTb: string
+  thresholdBytes: string
+  entries: SwarmDownloadCidrEntry[]
+  matchingGroups: number
+  truncated: boolean
+  windowStart: string
+  windowEnd: string
+  generatedAt: string
+}
+
 export type RulePreviewType =
   | 'ip_denylist'
   | 'ip_allowlist'

@@ -133,6 +133,34 @@ export default {
       loadFailed: 'Unable to load statistics.',
       unknown: 'Unknown',
       other: 'Other',
+      swarmDownload: {
+        title: 'Mass Download Monitoring Module',
+        description:
+          'Aggregate the latest observation from each reporter and calculate cumulative from_peer_traffic downloads in swarm_tracker by configurable CIDR.',
+        deduplicationNote:
+          'For each reporter, downloader, torrent, peer IP, and port, only the row with the latest last_time_seen is retained. Latest values from different reporters are then aggregated by CIDR.',
+        ipVersion: 'Address family',
+        all: 'All',
+        ipv4Prefix: 'IPv4 CIDR',
+        ipv6Prefix: 'IPv6 CIDR',
+        threshold: 'Minimum download',
+        reset: 'Restore defaults',
+        results: 'CIDRs above the threshold',
+        matched: '{count} networks',
+        windowSummary: 'Last {hours} hours · > {threshold} TB',
+        windowNote:
+          'The time window filters last_time_seen. from_peer_traffic is a cumulative per-connection counter, not the incremental traffic generated during the selected window. At most 200 networks are returned.',
+        truncated:
+          'More than 200 networks match. Only the top 200 by download volume are shown ({count} total).',
+        columns: {
+          cidr: 'CIDR',
+          download: 'Cumulative downloads',
+          reporters: 'Reporters',
+          connections: 'Connections',
+          torrents: 'Torrents',
+          latestSeen: 'Last observed',
+        },
+      },
     },
     moreSoon: 'More capabilities are on the way',
   },
@@ -528,6 +556,11 @@ export default {
           name: 'BitTorrent traffic statistics',
           description:
             'Refresh connection-deduplicated ban traffic, hourly swarm snapshots, and Top 30 GeoIP cities.',
+        },
+        'swarm-download-cidr': {
+          name: 'Mass Download Monitoring Module',
+          description:
+            'Deduplicate by the latest reporter row and precompute the default 24-hour CIDR ranking above 3 TB downloaded.',
         },
       },
     },
