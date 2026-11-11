@@ -487,6 +487,22 @@ export interface RankingResponse {
   entries: RankingEntry[]
 }
 
+export interface PointsRankingEntry {
+  rank: number
+  userId: number
+  displayName: string | null
+  anonymous: boolean
+  avatarUrl: string | null
+  avatarAvailable: boolean
+  banned: boolean
+  scoreBytes: string
+}
+
+export interface PointsRankingResponse {
+  self: PointsRankingEntry | null
+  entries: PointsRankingEntry[]
+}
+
 export interface IpQueryRecord {
   id: number
   populate_time: number

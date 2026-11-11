@@ -357,8 +357,15 @@ export default {
   },
   ranking: {
     title: 'Contribution ranking',
-    description: 'Ranking is calculated from acknowledged and self-reported swarm traffic.',
+    description: 'Compare data traffic contributions and Bytes point rankings.',
+    tabs: {
+      traffic: 'Data traffic contribution ranking',
+      points: 'Bytes point ranking',
+    },
     myRanking: 'My ranking',
+    myPointsRanking: 'My point ranking',
+    pointsBalance: 'Bytes points',
+    pointsTop500: 'Bytes points TOP 500',
     noSelf:
       'You do not have ranking data yet. New accounts and applications may take time to generate statistics.',
     top500: 'TOP 500',
@@ -684,10 +691,6 @@ export default {
         'ban-history-statistics-refresh': {
           name: 'Ban history statistics refresh',
           description: 'Rebuilds related statistics asynchronously after ban history deletion.',
-        },
-        'ban-traffic-startup-refresh': {
-          name: 'BitTorrent traffic startup backfill',
-          description: 'Initializes incremental ban traffic state and refreshes connection snapshots after startup.',
         },
       },
     },

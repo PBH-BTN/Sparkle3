@@ -18,6 +18,7 @@ import type {
   PageResponse,
   PointsLogPage,
   PointsOverview,
+  PointsRankingResponse,
   PrivacyLevel,
   PrivacyResponse,
   PublicUserProfileResponse,
@@ -89,6 +90,7 @@ export const uiApi = {
       method: 'DELETE',
     }),
   ranking: () => request<RankingResponse>('/api/ui/ranking'),
+  pointsRanking: () => request<PointsRankingResponse>('/api/ui/ranking/points'),
   announcements: (placement: Announcement['placement'] = 'GLOBAL_TOP') =>
     request<Announcement[]>(`/api/ui/notices?placement=${encodeURIComponent(placement)}`),
   ipQueryWidget: (search: string) => request<IpQueryResult>(`/ping/queryIp/widget/data${search}`),

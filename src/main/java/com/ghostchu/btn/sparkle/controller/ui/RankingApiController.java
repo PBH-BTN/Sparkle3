@@ -2,6 +2,8 @@ package com.ghostchu.btn.sparkle.controller.ui;
 
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.RankingEntry;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.RankingResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PointsRankingEntry;
+import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PointsRankingResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AdminConfigService;
@@ -10,6 +12,7 @@ import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +30,7 @@ public class RankingApiController {
     private final IUserService userService;
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
     private final AdminConfigService adminConfigService;
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public RankingResponse ranking(@AuthenticationPrincipal SparkleUserDetails userDetails)
@@ -72,6 +76,80 @@ public class RankingApiController {
         return new RankingResponse(self, entries);
     }
 
+    @GetMapping("/points")
+    public PointsRankingResponse pointsRanking(
+            @AuthenticationPrincipal SparkleUserDetails userDetails
+    ) {
+        List<Long> systemUids = userService.getSystemUids();
+        String exclusion = notInClause("id", systemUids.size());
+        Object[] exclusionArgs = systemUids.toArray();
+        List<PointsRankRow> ranked = jdbcTemplate.query(
+                """
+                SELECT id, ROW_NUMBER() OVER (
+                    ORDER BY score_bytes DESC, id ASC
+                ) AS ranking
+                FROM public."user"
+                WHERE 1 = 1 %s
+                ORDER BY score_bytes DESC, id ASC
+                LIMIT 500
+                """.formatted(exclusion),
+                (resultSet, rowNum) -> new PointsRankRow(
+                        resultSet.getLong("id"),
+                        resultSet.getLong("ranking")
+                ),
+                exclusionArgs
+        );
+        List<Long> userIds = ranked.stream().map(PointsRankRow::userId).toList();
+        Map<Long, com.ghostchu.btn.sparkle.entity.User> users = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userService.listByIds(userIds).forEach(user -> users.put(user.getId(), user));
+        }
+        List<PointsRankingEntry> entries = new ArrayList<>(ranked.size());
+        for (PointsRankRow row : ranked) {
+            var user = users.get(row.userId());
+            if (user != null && !systemUids.contains(user.getId())) {
+                entries.add(toPointsEntry(row, user));
+            }
+        }
+
+        PointsRankingEntry self = null;
+        if (userDetails != null && !systemUids.contains(userDetails.getUserId())) {
+            var user = userService.getById(userDetails.getUserId());
+            if (user != null) {
+                long score = value(user.getScoreBytes());
+                String selfExclusion = notInClause("id", systemUids.size());
+                List<Object> args = new ArrayList<>();
+                args.add(score);
+                args.add(score);
+                args.add(user.getId());
+                args.addAll(systemUids);
+                Long rank = jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*) + 1
+                        FROM public."user"
+                        WHERE (
+                            score_bytes > ?
+                            OR (score_bytes = ? AND id < ?)
+                        ) %s
+                        """.formatted(selfExclusion),
+                        Long.class,
+                        args.toArray()
+                );
+                self = new PointsRankingEntry(
+                        rank == null ? 0 : rank,
+                        user.getId(),
+                        null,
+                        false,
+                        null,
+                        false,
+                        user.getBannedAt() != null,
+                        Long.toString(score)
+                );
+            }
+        }
+        return new PointsRankingResponse(self, entries);
+    }
+
     private RankingEntry toEntry(UserSwarmStatisticTrackRankingDto ranking,
                                  com.ghostchu.btn.sparkle.entity.User user) {
         var privacy = user.getPrivacyLevel();
@@ -112,5 +190,46 @@ public class RankingApiController {
 
     private long value(Long value) {
         return value == null ? 0 : value;
+    }
+
+    private PointsRankingEntry toPointsEntry(
+            PointsRankRow ranking,
+            com.ghostchu.btn.sparkle.entity.User user
+    ) {
+        var privacy = user.getPrivacyLevel();
+        boolean anonymous = !privacy.isAllowFullUserName()
+                && !privacy.isAllowBlurredUsername();
+        String displayName = null;
+        if (privacy.isAllowFullUserName()) {
+            displayName = user.getNickname();
+        } else if (privacy.isAllowBlurredUsername()) {
+            displayName = blurNickname(user.getNickname());
+        }
+        boolean avatarAvailable = privacy.isAllowOriginalAvatar()
+                || privacy.isAllowBlurredAvatar();
+        return new PointsRankingEntry(
+                ranking.rank(),
+                user.getId(),
+                displayName,
+                anonymous,
+                avatarAvailable ? user.getAvatarUrl() : null,
+                avatarAvailable,
+                user.getBannedAt() != null,
+                Long.toString(value(user.getScoreBytes()))
+        );
+    }
+
+    private String notInClause(String column, int size) {
+        if (size == 0) {
+            return "";
+        }
+        return "AND " + column + " NOT IN ("
+                + java.util.stream.IntStream.range(0, size)
+                .mapToObj(ignored -> "?")
+                .collect(java.util.stream.Collectors.joining(", "))
+                + ")";
+    }
+
+    private record PointsRankRow(long userId, long rank) {
     }
 }

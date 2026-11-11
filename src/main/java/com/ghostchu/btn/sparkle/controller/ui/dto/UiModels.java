@@ -177,4 +177,22 @@ public final class UiModels {
     ) {
     }
 
+    public record PointsRankingEntry(
+            long rank,
+            Long userId,
+            String displayName,
+            boolean anonymous,
+            String avatarUrl,
+            boolean avatarAvailable,
+            boolean banned,
+            String scoreBytes
+    ) {
+    }
+
+    public record PointsRankingResponse(
+            PointsRankingEntry self,
+            List<PointsRankingEntry> entries
+    ) {
+    }
+
 }

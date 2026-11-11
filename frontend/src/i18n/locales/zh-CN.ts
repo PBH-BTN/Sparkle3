@@ -346,8 +346,15 @@ export default {
   },
   ranking: {
     title: '数据贡献排行榜',
-    description: '根据已确认与自主汇报的种群流量计算贡献排名。',
+    description: '查看数据流量贡献与 Bytes 积分排名。',
+    tabs: {
+      traffic: '数据流量贡献排行榜',
+      points: 'Bytes 积分排行榜',
+    },
     myRanking: '我的排名',
+    myPointsRanking: '我的积分排名',
+    pointsBalance: 'Bytes 积分',
+    pointsTop500: 'Bytes 积分 TOP 500',
     noSelf:
       '您还没有排行榜数据。新注册用户或刚创建的用户应用可能需要一段时间才会产生统计。',
     top500: 'TOP 500',
@@ -671,10 +678,6 @@ export default {
         'ban-history-statistics-refresh': {
           name: '封禁记录统计刷新',
           description: '手动删除封禁历史后，在后台重新生成相关统计数量。',
-        },
-        'ban-traffic-startup-refresh': {
-          name: 'BitTorrent 流量启动补算',
-          description: '应用启动后补齐封禁流量增量状态，并刷新连接与城市小时快照。',
         },
       },
     },
