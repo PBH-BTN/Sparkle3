@@ -2,12 +2,12 @@ export const footerMessages = {
   'zh-CN': {
     siteFooter: {
       worldTime: {
-        server: '服务器 {time}',
-        beijing: '北京 {time}',
-        tokyo: '东京 {time}',
-        unitedStates: '美国 {time}',
-        germany: '德国 {time}',
-        browser: '浏览器 {time}',
+        server: '服务器',
+        beijing: '北京',
+        tokyo: '东京',
+        unitedStates: '美国',
+        germany: '德国',
+        browser: '浏览器',
       },
       performance: {
         loadAverage: 'Load average',
@@ -31,6 +31,8 @@ export const footerMessages = {
         systemBrowser: '{system} {browser}',
         viaCloudflare: '经由 Cloudflare',
         viaEdgeOne: '经由腾讯 EdgeOne',
+        viaRelay: '经由中继',
+        viaDirect: '直接路由',
         unknown: '未知',
       },
       icpLabel: 'ICP 备案',
@@ -68,7 +70,7 @@ export const footerMessages = {
       timeAudience: '世界时间可见范围',
       timeDescription: '以纯文本显示服务器、北京、东京、美国和德国时间，以及浏览器本地时间。',
       loginAudience: '访问来源可见范围',
-      loginDescription: '显示当前访问 IP、GeoIP、操作系统、浏览器，以及 Cloudflare / 腾讯 EdgeOne 代理来源。',
+      loginDescription: '显示当前访问 IP、GeoIP、操作系统、浏览器，以及 Cloudflare、腾讯 EdgeOne、直接路由或中继来源。',
       performanceTitle: '服务器性能',
       performanceDescription: '所有指标默认仅管理员可见，可逐项控制启用状态和可见范围。',
       metricEnabled: '显示',
@@ -82,12 +84,12 @@ export const footerMessages = {
   'en-US': {
     siteFooter: {
       worldTime: {
-        server: 'Server {time}',
-        beijing: 'Beijing {time}',
-        tokyo: 'Tokyo {time}',
-        unitedStates: 'US {time}',
-        germany: 'Germany {time}',
-        browser: 'Browser {time}',
+        server: 'Server',
+        beijing: 'Beijing',
+        tokyo: 'Tokyo',
+        unitedStates: 'US',
+        germany: 'Germany',
+        browser: 'Browser',
       },
       performance: {
         loadAverage: 'Load average',
@@ -111,6 +113,8 @@ export const footerMessages = {
         systemBrowser: '{system} {browser}',
         viaCloudflare: 'Via Cloudflare',
         viaEdgeOne: 'Via Tencent EdgeOne',
+        viaRelay: 'Via relay',
+        viaDirect: 'Direct route',
         unknown: 'Unknown',
       },
       icpLabel: 'ICP filing',
@@ -153,7 +157,7 @@ export const footerMessages = {
         'Shows plain-text server, Beijing, Tokyo, US, Germany, and browser-local time.',
       loginAudience: 'Visitor source visibility',
       loginDescription:
-        'Shows the current IP, GeoIP location, operating system, browser, and Cloudflare or Tencent EdgeOne proxy source.',
+        'Shows the current IP, GeoIP location, operating system, browser, and whether access used Cloudflare, Tencent EdgeOne, a direct route, or a relay.',
       performanceTitle: 'Server performance',
       performanceDescription:
         'Every metric defaults to administrators only and can be enabled and shared independently.',

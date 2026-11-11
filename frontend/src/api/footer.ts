@@ -84,7 +84,7 @@ export interface FooterVisitor {
   geo: string | null
   system: string | null
   browser: string | null
-  proxyProvider: 'CLOUDFLARE' | 'TENCENT_EDGEONE' | null
+  proxyProvider: 'CLOUDFLARE' | 'TENCENT_EDGEONE' | 'DIRECT' | 'RELAY'
 }
 
 export interface FooterResponse {

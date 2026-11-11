@@ -67,7 +67,6 @@ const worldClockText = computed(() => {
 
   return zones
     .map(([label, timeZone]) => {
-      const template = label.replace('{time}', '\u0000')
       const time = new Intl.DateTimeFormat(locale.value, {
         timeZone,
         month: '2-digit',
@@ -77,7 +76,7 @@ const worldClockText = computed(() => {
         second: '2-digit',
         hourCycle: 'h23',
       }).format(instant)
-      return template.replace('\u0000', time)
+      return `${label} ${time}`
     })
     .join(' · ')
 })
@@ -181,6 +180,10 @@ const visitorText = computed(() => {
     parts.push(t('siteFooter.login.viaCloudflare'))
   } else if (visitor.proxyProvider === 'TENCENT_EDGEONE') {
     parts.push(t('siteFooter.login.viaEdgeOne'))
+  } else if (visitor.proxyProvider === 'RELAY') {
+    parts.push(t('siteFooter.login.viaRelay'))
+  } else {
+    parts.push(t('siteFooter.login.viaDirect'))
   }
   return parts.join(' · ')
 })

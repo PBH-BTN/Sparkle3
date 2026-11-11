@@ -79,7 +79,9 @@ public final class FooterModels {
 
     public enum ProxyProvider {
         CLOUDFLARE,
-        TENCENT_EDGEONE
+        TENCENT_EDGEONE,
+        DIRECT,
+        RELAY
     }
 
     public record VisitorView(

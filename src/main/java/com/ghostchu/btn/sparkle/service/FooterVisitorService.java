@@ -163,7 +163,7 @@ public class FooterVisitorService {
         return value.replace('_', '.').split("\\.")[0];
     }
 
-    private @Nullable ProxyProvider proxyProvider(HttpServletRequest request) {
+    private @NotNull ProxyProvider proxyProvider(HttpServletRequest request) {
         if (headerPresent(request, "CF-Connecting-IP")
                 || headerPresent(request, "CF-Ray")
                 || headerPresent(request, "CF-Visitor")) {
@@ -180,7 +180,14 @@ public class FooterVisitorService {
                 || containsHeaderValue(request, "Server", "edgeone")) {
             return ProxyProvider.TENCENT_EDGEONE;
         }
-        return null;
+        if (headerPresent(request, "Forwarded")
+                || headerPresent(request, "Via")
+                || headerPresent(request, "X-Forwarded-For")
+                || headerPresent(request, "X-Real-IP")
+                || headerPresent(request, "True-Client-IP")) {
+            return ProxyProvider.RELAY;
+        }
+        return ProxyProvider.DIRECT;
     }
 
     private boolean headerPresent(HttpServletRequest request, String name) {
