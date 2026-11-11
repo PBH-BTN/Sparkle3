@@ -658,6 +658,8 @@ export default {
         'Saving immediately rebuilds the schedule. Switches, windows, and thresholds are read dynamically from the database. Changes made directly in the config database sync within one minute.',
       saved: 'Module settings updated and schedules rebuilt.',
       saveModule: 'Save module',
+      runNow: 'Run now',
+      runStarted: 'The module update started in the background.',
       restartRequired: 'Restart required',
       includeModulesHint: 'Separate full module class names with commas.',
       cronDisabledHint: 'Use - to pause this scheduled job while keeping the module enabled.',

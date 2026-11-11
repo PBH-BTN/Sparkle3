@@ -27,4 +27,10 @@ public final class AnalyseModuleModels {
             Map<String, String> values
     ) {
     }
+
+    public record RunModuleResponse(
+            String module,
+            boolean started
+    ) {
+    }
 }

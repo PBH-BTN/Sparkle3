@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -7,6 +8,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -94,6 +96,40 @@ public class AnalyseModuleScheduler {
             log.warn("Skipping analysis module {} because the previous run is still active", moduleId);
             return;
         }
+        runModule(moduleId, runner, moduleRunning, "SCHEDULED");
+    }
+
+    public void triggerNow(String moduleId) throws BusinessException {
+        Runnable runner = executionService.runner(moduleId);
+        if (runner == null) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "Analysis module not found");
+        }
+        if (!configService.isEnabled(moduleId)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Analysis module is disabled");
+        }
+        AtomicBoolean moduleRunning = running.computeIfAbsent(
+                moduleId,
+                ignored -> new AtomicBoolean()
+        );
+        if (!moduleRunning.compareAndSet(false, true)) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "Analysis module is already running"
+            );
+        }
+        Thread.startVirtualThread(() ->
+                runModule(moduleId, runner, moduleRunning, "MANUAL")
+        );
+    }
+
+    private void runModule(
+            String moduleId,
+            Runnable runner,
+            AtomicBoolean moduleRunning,
+            String trigger
+    ) {
+        long startedNanos = System.nanoTime();
+        log.info("Starting analysis module {} ({})", moduleId, trigger);
         try {
             if (configService.isEnabled(moduleId)) {
                 runner.run();
@@ -102,6 +138,12 @@ public class AnalyseModuleScheduler {
             log.error("Analysis module {} failed", moduleId, exception);
         } finally {
             moduleRunning.set(false);
+            log.info(
+                    "Finished analysis module {} ({}) in {}ms",
+                    moduleId,
+                    trigger,
+                    java.time.Duration.ofNanos(System.nanoTime() - startedNanos).toMillis()
+            );
         }
     }
 

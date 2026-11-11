@@ -19,6 +19,7 @@ const modules = ref<AnalyseModule[]>([])
 const drafts = reactive<Record<string, Record<string, string>>>({})
 const loading = ref(true)
 const savingId = ref<string | null>(null)
+const runningId = ref<string | null>(null)
 
 function moduleLabel(id: string, suffix: 'name' | 'description') {
   return t(`admin.modules.items.${id}.${suffix}`)
@@ -94,6 +95,18 @@ async function save(module: AnalyseModule) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
     savingId.value = null
+  }
+}
+
+async function runNow(module: AnalyseModule) {
+  runningId.value = module.id
+  try {
+    await adminApi.runAnalyseModule(module.id)
+    Message.success(t('admin.modules.runStarted'))
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    runningId.value = null
   }
 }
 
@@ -191,10 +204,26 @@ onMounted(load)
                   {{ t('admin.modules.configMoved') }}
                 </span>
               </a-tooltip>
-              <a-button type="primary" :loading="savingId === module.id" @click="save(module)">
-                <template #icon><IconSave /></template>
-                {{ t('admin.modules.saveModule') }}
-              </a-button>
+              <a-space>
+                <a-button
+                  type="outline"
+                  :loading="runningId === module.id"
+                  :disabled="!module.enabled || savingId === module.id"
+                  @click="runNow(module)"
+                >
+                  <template #icon><IconRefresh /></template>
+                  {{ t('admin.modules.runNow') }}
+                </a-button>
+                <a-button
+                  type="primary"
+                  :loading="savingId === module.id"
+                  :disabled="runningId === module.id"
+                  @click="save(module)"
+                >
+                  <template #icon><IconSave /></template>
+                  {{ t('admin.modules.saveModule') }}
+                </a-button>
+              </a-space>
             </div>
           </a-form>
         </a-card>

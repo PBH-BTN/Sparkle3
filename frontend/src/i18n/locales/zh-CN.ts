@@ -643,6 +643,8 @@ export default {
         '保存后会立即重建执行计划；开关、时间窗口和阈值会从数据库动态读取。直接从配置数据库修改的值最多 1 分钟内自动同步。',
       saved: '模块配置已更新并重新安排执行计划。',
       saveModule: '保存模块',
+      runNow: '立即更新',
+      runStarted: '模块更新任务已在后台启动。',
       restartRequired: '重启后生效',
       includeModulesHint: '多个完整模块类名使用英文逗号分隔。',
       cronDisabledHint: '输入 - 可暂停此模块的计划任务，同时保持模块开关为启用状态。',

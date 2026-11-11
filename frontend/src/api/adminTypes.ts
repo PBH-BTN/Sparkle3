@@ -326,6 +326,11 @@ export interface AnalyseModuleUpdate {
   values: Record<string, string>
 }
 
+export interface AnalyseModuleRunResult {
+  module: string
+  started: boolean
+}
+
 export interface StoragePolicy {
   enabled: boolean
   after: string | null

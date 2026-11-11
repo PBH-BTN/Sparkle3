@@ -3,6 +3,7 @@ import type {
   Announcement,
   AnnouncementInput,
   AnalyseModule,
+  AnalyseModuleRunResult,
   AnalyseModuleUpdate,
   AdminNavigationItem,
   AdminApplication,
@@ -218,6 +219,11 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  runAnalyseModule: (id: string) =>
+    request<AnalyseModuleRunResult>(
+      `/api/admin/modules/${encodeURIComponent(id)}/run`,
+      { method: 'POST' },
+    ),
 
   storage: () => request<StorageOverview>('/api/admin/storage/tables'),
   updateCompressionPolicy: (
