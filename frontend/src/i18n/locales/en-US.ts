@@ -300,6 +300,8 @@ export default {
       'The content below is generated dynamically and is provided for reference only. These rules are not a replacement for anti-cheat tools and clients such as PeerBanHelper, because they do not include Peer ID or client-name rules and do not perform real-time anti-cheat against local data. Statistics and rules may be delayed by tens of minutes or several hours. Rules hosted only on GitHub are not shown on this page.',
     noRules: 'No content is currently available for this rule type.',
     generatedRule: 'Generated rule',
+    emptyGeneratedContent:
+      'No content has been generated yet. The module may not have run, or no records currently match.',
     entryCount: '{count} rule entries',
     characters: '{count} characters',
     copyFailed: 'Unable to copy the rule content.',

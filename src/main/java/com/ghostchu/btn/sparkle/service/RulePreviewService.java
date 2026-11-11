@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -70,7 +71,7 @@ public class RulePreviewService {
         return new RulePreviewResponse(List.copyOf(sections), OffsetDateTime.now(ZoneOffset.UTC));
     }
 
-    private List<RulePreviewEntry> providerEntries(List<? extends Object> providers) {
+    List<RulePreviewEntry> providerEntries(List<? extends Object> providers) {
         return providers.stream()
                 .sorted(Comparator.comparing(this::providerSource))
                 .map(provider -> {
@@ -81,23 +82,23 @@ public class RulePreviewService {
                         } else {
                             content = ((IPAllowListRuleProvider) provider).getContent();
                         }
-                        if (content == null || content.isBlank()) {
-                            return null;
-                        }
-                        return new RulePreviewEntry(providerSource(provider), null, content);
+                        return new RulePreviewEntry(
+                                providerSource(provider),
+                                null,
+                                content == null ? "" : content
+                        );
                     } catch (Exception exception) {
                         log.warn("Unable to load rule preview provider {}: {}",
-                                provider.getClass().getSimpleName(),
+                                providerSource(provider),
                                 exception.getMessage());
-                        return null;
+                        return new RulePreviewEntry(providerSource(provider), null, "");
                     }
                 })
-                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
-    private String providerSource(Object provider) {
-        String simpleName = provider.getClass().getSimpleName();
+    String providerSource(Object provider) {
+        String simpleName = AopUtils.getTargetClass(provider).getSimpleName();
         return switch (simpleName) {
             case "RuleServiceImpl" -> "manual";
             case "AnalyseRuleOverDownloadServiceImpl" -> "overdownload";

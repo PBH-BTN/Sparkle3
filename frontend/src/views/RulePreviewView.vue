@@ -143,7 +143,7 @@ onMounted(load)
                     </a-button>
                   </div>
                 </header>
-                <pre>{{ entry.content }}</pre>
+                <pre>{{ entry.content || t('rulePreview.emptyGeneratedContent') }}</pre>
               </article>
             </div>
             <a-empty v-else :description="t('rulePreview.noRules')" />

@@ -292,6 +292,7 @@ export default {
       '以下内容为动态生成，仅供参考用途。此规则不能代替如PeerBanHelper等反作弊工具和客户端，因为本规则不包含基于PeerID/客户端名称规则，也不包含针对本机数据的实时反作弊。统计数据和规则可能有数十分钟或数小时不等的延迟。部分仅托管在 GitHub 上的规则不在此页面中显示。',
     noRules: '当前规则类型暂无内容。',
     generatedRule: '动态生成规则',
+    emptyGeneratedContent: '尚未生成内容。模块可能尚未执行，或当前没有符合条件的数据。',
     entryCount: '{count} 个规则条目',
     characters: '{count} 字符',
     copyFailed: '复制规则内容失败。',

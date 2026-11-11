@@ -53,4 +53,30 @@ class GeoIpCityBlacklistServiceTest {
                 .map(network -> network.toCompressedString())
                 .toList());
     }
+
+    @Test
+    void keepsLocationCommentImmediatelyBeforeItsRules() {
+        GeoIpCityBlacklistEntry entry = new GeoIpCityBlacklistEntry()
+                .setCountryCode("CN")
+                .setProvince("海南省")
+                .setCity("海口市");
+
+        String content = service.renderContent(
+                entry,
+                List.of(
+                        IPAddressUtil.getIPAddress("192.0.2.0/31"),
+                        IPAddressUtil.getIPAddress("192.0.2.2/31")
+                ),
+                List.of(IPAddressUtil.getIPAddress("2001:db8::/56"))
+        );
+
+        assertEquals(
+                """
+                # [Sparkle3 GeoIP 城市黑名单] CN 海南省 / 海口市
+                192.0.2.0/31
+                192.0.2.2/31
+                2001:db8::/56""",
+                content
+        );
+    }
 }

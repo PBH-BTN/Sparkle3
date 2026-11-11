@@ -246,13 +246,18 @@ public class GeoIpCityBlacklistService
 
             Collection<IPAddress> combinedIpv4 = new ArrayList<>();
             Collection<IPAddress> combinedIpv6 = new ArrayList<>();
+            StringBuilder combinedContent = new StringBuilder();
             OffsetDateTime generatedAt = OffsetDateTime.now(ZoneOffset.UTC);
             int generatedEntries = 0;
             for (GeoIpCityBlacklistEntry entry : enabledEntries) {
                 List<IPAddress> ipv4 = mergeNetworks(rawIpv4.getOrDefault(entry.getId(), List.of()));
                 List<IPAddress> ipv6 = mergeNetworks(rawIpv6.getOrDefault(entry.getId(), List.of()));
-                String content = renderContent(List.of(entry), ipv4, ipv6);
+                String content = renderContent(entry, ipv4, ipv6);
                 redisTemplate.opsForValue().set(entryContentKey(entry.getId()), content);
+                if (!combinedContent.isEmpty()) {
+                    combinedContent.append("\n\n");
+                }
+                combinedContent.append(content);
                 update(new LambdaUpdateWrapper<GeoIpCityBlacklistEntry>()
                         .eq(GeoIpCityBlacklistEntry::getId, entry.getId())
                         .set(GeoIpCityBlacklistEntry::getIpv4CidrCount, ipv4.size())
@@ -267,7 +272,6 @@ public class GeoIpCityBlacklistService
 
             List<IPAddress> mergedIpv4 = mergeNetworks(combinedIpv4);
             List<IPAddress> mergedIpv6 = mergeNetworks(combinedIpv6);
-            String combinedContent = renderContent(enabledEntries, mergedIpv4, mergedIpv6);
             if (!moduleConfigService.isEnabled(MODULE_ID)) {
                 clearCombinedOutput();
                 finishGeneration(
@@ -282,7 +286,7 @@ public class GeoIpCityBlacklistService
                 );
                 return;
             }
-            writeCombinedOutput(combinedContent);
+            writeCombinedOutput(combinedContent.toString());
             finishGeneration(
                     startedAt,
                     startedNanos,
@@ -390,21 +394,19 @@ public class GeoIpCityBlacklistService
         output.addAll(List.of(networks.getFirst().mergeToPrefixBlocks(blocks)));
     }
 
-    private String renderContent(
-            List<GeoIpCityBlacklistEntry> entries,
+    String renderContent(
+            GeoIpCityBlacklistEntry entry,
             List<IPAddress> ipv4,
             List<IPAddress> ipv6
     ) {
         StringBuilder content = new StringBuilder();
-        for (GeoIpCityBlacklistEntry entry : entries) {
-            content.append("# [Sparkle3 GeoIP 城市黑名单] ")
-                    .append(entry.getCountryCode())
-                    .append(" ")
-                    .append(entry.getProvince())
-                    .append(" / ")
-                    .append(entry.getCity())
-                    .append('\n');
-        }
+        content.append("# [Sparkle3 GeoIP 城市黑名单] ")
+                .append(entry.getCountryCode())
+                .append(" ")
+                .append(entry.getProvince())
+                .append(" / ")
+                .append(entry.getCity())
+                .append('\n');
         ipv4.forEach(network -> content.append(network.toCompressedString()).append('\n'));
         ipv6.forEach(network -> content.append(network.toCompressedString()).append('\n'));
         return content.toString().stripTrailing();
