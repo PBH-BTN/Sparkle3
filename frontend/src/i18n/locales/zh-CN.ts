@@ -577,6 +577,9 @@ export default {
       moduleEnabled: '启用模块',
       moduleEnabledSaved: '模块已启用。',
       moduleDisabledSaved: '模块已停用。',
+      runNow: '立即执行',
+      runNowConfirm: '确定立即执行“{name}”吗？',
+      runNowStarted: '任务已在后台开始执行。',
       summary: {
         total: '任务总数',
         running: '正在运行',

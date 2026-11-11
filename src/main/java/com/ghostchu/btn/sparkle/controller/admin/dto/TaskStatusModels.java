@@ -24,6 +24,7 @@ public final class TaskStatusModels {
             String scheduleType,
             String moduleId,
             Boolean moduleEnabled,
+            boolean manualExecutable,
             String nameKey,
             String descriptionKey,
             String schedule,
@@ -46,6 +47,12 @@ public final class TaskStatusModels {
     public record TaskStatusResponse(
             List<TaskStatusView> tasks,
             OffsetDateTime generatedAt
+    ) {
+    }
+
+    public record TaskTriggerResponse(
+            String taskId,
+            boolean started
     ) {
     }
 }

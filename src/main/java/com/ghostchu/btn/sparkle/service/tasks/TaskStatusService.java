@@ -33,6 +33,7 @@ public class TaskStatusService {
     private final ConcurrentMap<String, TaskDescriptor> descriptors = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, TaskState> states = new ConcurrentHashMap<>();
     private final ThreadLocal<Set<String>> activeTaskIds = ThreadLocal.withInitial(HashSet::new);
+    private final ThreadLocal<Set<String>> manualTaskIds = ThreadLocal.withInitial(HashSet::new);
 
     public TaskStatusService(Environment environment) {
         this.environment = environment;
@@ -139,6 +140,34 @@ public class TaskStatusService {
         }
     }
 
+    public void setManualExecutable(String taskId, boolean executable) {
+        TaskDescriptor descriptor = descriptors.get(taskId);
+        if (descriptor != null) {
+            descriptor.manualExecutable = executable;
+        }
+    }
+
+    public void markManualExecution(String taskId) {
+        manualTaskIds.get().add(taskId);
+    }
+
+    public String consumeScheduledTrigger(String taskId) {
+        Set<String> manualOnThread = manualTaskIds.get();
+        boolean manual = manualOnThread.remove(taskId);
+        if (manualOnThread.isEmpty()) {
+            manualTaskIds.remove();
+        }
+        return manual ? "MANUAL" : "SCHEDULED";
+    }
+
+    public void clearManualExecution(String taskId) {
+        Set<String> manualOnThread = manualTaskIds.get();
+        manualOnThread.remove(taskId);
+        if (manualOnThread.isEmpty()) {
+            manualTaskIds.remove();
+        }
+    }
+
     public void configurationError(String taskId, String message) {
         TaskDescriptor descriptor = descriptors.get(taskId);
         if (descriptor != null) {
@@ -177,6 +206,13 @@ public class TaskStatusService {
         return new TaskStatusResponse(tasks, toOffsetDateTime(now));
     }
 
+    public TaskStatusView task(String taskId) {
+        TaskDescriptor descriptor = descriptors.get(taskId);
+        return descriptor == null
+                ? null
+                : toView(descriptor, states.get(taskId), Instant.now());
+    }
+
     private TaskStatusView toView(TaskDescriptor descriptor, TaskState state, Instant now) {
         List<Map.Entry<String, ActiveRun>> active = state == null
                 ? List.of()
@@ -211,6 +247,7 @@ public class TaskStatusService {
                 descriptor.scheduleType.name(),
                 descriptor.moduleId,
                 descriptor.moduleEnabled,
+                descriptor.manualExecutable,
                 descriptor.nameKey,
                 descriptor.descriptionKey,
                 scheduleLabel(descriptor),
@@ -461,6 +498,7 @@ public class TaskStatusService {
         private volatile TaskScheduleType scheduleType = TaskScheduleType.EVENT;
         private volatile String moduleId;
         private volatile Boolean moduleEnabled;
+        private volatile boolean manualExecutable;
         private volatile String scheduleExpression;
         private volatile long intervalMillis;
         private volatile long initialDelayMillis;

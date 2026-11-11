@@ -7,6 +7,7 @@ import {
   IconClockCircle,
   IconExclamationCircle,
   IconLoading,
+  IconPlayArrow,
   IconRefresh,
   IconSave,
   IconSchedule,
@@ -35,6 +36,7 @@ const cronDrafts = reactive<Record<string, string>>({})
 const cronDirty = reactive<Record<string, boolean>>({})
 const savingCronId = ref<string | null>(null)
 const togglingModuleId = ref<string | null>(null)
+const runningTaskId = ref<string | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
 let pollInFlight = false
@@ -221,6 +223,20 @@ async function toggleModule(task: BackgroundTaskStatus, enabled: boolean) {
   }
 }
 
+async function runNow(task: BackgroundTaskStatus) {
+  if (!task.manualExecutable) return
+  runningTaskId.value = task.id
+  try {
+    await adminApi.runTask(task.id)
+    Message.success(t('admin.tasks.runNowStarted'))
+    window.setTimeout(() => load(true), 300)
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    runningTaskId.value = null
+  }
+}
+
 async function load(silent = false) {
   if (pollInFlight) return
   pollInFlight = true
@@ -360,7 +376,26 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
-              <a-tag :color="taskState(task).color">{{ taskState(task).label }}</a-tag>
+              <div class="task-actions">
+                <a-tag :color="taskState(task).color">{{ taskState(task).label }}</a-tag>
+                <a-popconfirm
+                  v-if="task.manualExecutable"
+                  :content="t('admin.tasks.runNowConfirm', { name: t(task.nameKey) })"
+                  :ok-text="t('admin.tasks.runNow')"
+                  :cancel-text="t('common.cancel')"
+                  @ok="runNow(task)"
+                >
+                  <a-button
+                    size="small"
+                    type="outline"
+                    :loading="runningTaskId === task.id"
+                    :disabled="!task.enabled || task.runningCount > 0"
+                  >
+                    <template #icon><IconPlayArrow /></template>
+                    {{ t('admin.tasks.runNow') }}
+                  </a-button>
+                </a-popconfirm>
+              </div>
             </header>
 
             <div class="task-metrics">
@@ -631,6 +666,14 @@ onBeforeUnmount(() => {
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .module-editor {

@@ -12,6 +12,7 @@ import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskManualExecutionService;
 import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,6 +48,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private AdminConfigService adminConfigService;
     @Autowired
     private TaskStatusService taskStatusService;
+    @Autowired
+    private TaskManualExecutionService taskManualExecutionService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -235,6 +238,18 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                 nextRunAt,
                 enabled
         ));
+        taskManualExecutionService.registerRunner(
+                REFRESH_TASK_ID,
+                this::requestManualRefreshFromTask
+        );
+    }
+
+    private void requestManualRefreshFromTask() {
+        if (!requestManualRefresh(null)) {
+            throw new IllegalStateException(
+                    "Swarm statistics refresh is disabled or already running"
+            );
+        }
     }
 
     @Override

@@ -590,6 +590,9 @@ export default {
       moduleEnabled: 'Enable module',
       moduleEnabledSaved: 'Module enabled.',
       moduleDisabledSaved: 'Module disabled.',
+      runNow: 'Run now',
+      runNowConfirm: 'Run "{name}" now?',
+      runNowStarted: 'The task started in the background.',
       summary: {
         total: 'Total tasks',
         running: 'Running',

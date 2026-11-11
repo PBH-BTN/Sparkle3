@@ -37,6 +37,7 @@ import type {
   StorageOverview,
   SwarmStatisticsStatus,
   TableStorage,
+  TaskTriggerResponse,
   UserContactEmailAudit,
   VersionAlertDelivery,
   VersionAlertMatch,
@@ -58,6 +59,10 @@ function queryString(values: object) {
 export const adminApi = {
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
   taskStatus: () => request<BackgroundTaskStatusResponse>('/api/admin/tasks'),
+  runTask: (id: string) =>
+    request<TaskTriggerResponse>(`/api/admin/tasks/${encodeURIComponent(id)}/run`, {
+      method: 'POST',
+    }),
 
   homepageStatistics: () =>
     request<HomepageStatisticsAdminResponse>('/api/admin/homepage-statistics'),

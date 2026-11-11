@@ -69,6 +69,7 @@ export interface BackgroundTaskStatus {
   scheduleType: TaskScheduleType
   moduleId: string | null
   moduleEnabled: boolean | null
+  manualExecutable: boolean
   nameKey: string
   descriptionKey: string
   schedule: string
@@ -90,6 +91,11 @@ export interface BackgroundTaskStatus {
 export interface BackgroundTaskStatusResponse {
   tasks: BackgroundTaskStatus[]
   generatedAt: string
+}
+
+export interface TaskTriggerResponse {
+  taskId: string
+  started: boolean
 }
 
 export interface HomepageStatisticsModuleConfig {

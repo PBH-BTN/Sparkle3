@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskManualExecutionService;
 import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,8 @@ public class HomepageStatisticsRefreshService {
             HomeStatisticsService homeStatisticsService,
             BittorrentTrafficStatisticsService bittorrentTrafficStatisticsService,
             DatabaseConfigService databaseConfigService,
-            TaskStatusService taskStatusService
+            TaskStatusService taskStatusService,
+            TaskManualExecutionService taskManualExecutionService
     ) {
         this.statisticsRefreshService = statisticsRefreshService;
         this.homeStatisticsService = homeStatisticsService;
@@ -71,6 +73,10 @@ public class HomepageStatisticsRefreshService {
                     module.defaultIntervalMinutes(),
                     true
             ));
+            taskManualExecutionService.registerRunner(
+                    homepageTaskId(module),
+                    () -> requestManualTaskRefresh(module)
+            );
         }
     }
 
@@ -189,6 +195,17 @@ public class HomepageStatisticsRefreshService {
                 .orElseThrow();
         startRefresh(module, config, "MANUAL", operatorId);
         return getStatus();
+    }
+
+    private void requestManualTaskRefresh(Module module) {
+        try {
+            requestRefresh(module.id(), null);
+        } catch (BusinessException exception) {
+            throw new IllegalStateException(
+                    "Unable to refresh homepage statistics module " + module.id(),
+                    exception
+            );
+        }
     }
 
     private void updateConfigValue(ModuleConfig config, @Nullable Long operatorId)

@@ -20,7 +20,7 @@ public class MonitoredScheduledTaskAspect {
         taskStatusService.configure(monitoredTask);
         TaskStatusService.TaskExecution execution = taskStatusService.begin(
                 monitoredTask.id(),
-                "SCHEDULED"
+                taskStatusService.consumeScheduledTrigger(monitoredTask.id())
         );
         try {
             Object result = joinPoint.proceed();

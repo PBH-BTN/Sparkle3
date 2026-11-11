@@ -94,6 +94,7 @@ public class AnalyseModuleScheduler {
                     moduleId,
                     configService.booleanValue(moduleId, "enabled", true)
             );
+            taskStatusService.setManualExecutable(analysisTaskId(moduleId), true);
             if (!enabled || AnalyseModuleCron.isDisabled(cron)) {
                 cancel(moduleId);
                 continue;
