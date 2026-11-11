@@ -23,6 +23,7 @@ import type {
 } from '@/api/types'
 import { usePagedQuery } from '@/composables/usePagedQuery'
 import { useSessionStore } from '@/stores/session'
+import { distributionPieOption } from '@/utils/charts'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
@@ -195,30 +196,15 @@ const columns = computed<TableColumnData[]>(() => {
   return result
 })
 
-const peerVersionOption = computed<EChartsCoreOption>(() => ({
-  tooltip: { trigger: 'item' },
-  color: ['#0e7490', '#f59e0b'],
-  series: [
-    {
-      name: t('banHistory.peerVersionsTitle'),
-      type: 'pie',
-      radius: ['50%', '76%'],
-      center: ['50%', '50%'],
-      itemStyle: {
-        borderRadius: 5,
-        borderColor: 'var(--color-bg-2)',
-        borderWidth: 2,
-      },
-      label: {
-        formatter: '{b}\n{d}%',
-      },
-      data: (peerInsights.value?.ipVersions ?? []).map((item) => ({
-        name: item.name,
-        value: item.peers,
-      })),
-    },
-  ],
-}))
+const peerVersionOption = computed<EChartsCoreOption>(() =>
+  distributionPieOption(
+    t('banHistory.peerVersionsTitle'),
+    (peerInsights.value?.ipVersions ?? []).map((item) => ({
+      name: item.name,
+      value: item.peers,
+    })),
+  ),
+)
 
 function reset() {
   form.timeRange = undefined

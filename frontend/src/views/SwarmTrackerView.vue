@@ -15,6 +15,7 @@ import type {
   SwarmTrackerRecord,
 } from '@/api/types'
 import { usePagedQuery } from '@/composables/usePagedQuery'
+import { distributionPieOption, stackedAreaChartOption } from '@/utils/charts'
 import { useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
@@ -147,82 +148,27 @@ const columns = computed<TableColumnData[]>(() => [
   },
 ])
 
-const peerPieOption = computed<EChartsCoreOption>(() => ({
-  tooltip: { trigger: 'item' },
-  color: ['#0e7490', '#f59e0b'],
-  series: [
-    {
-      name: t('swarmTracker.ipVersionsTitle'),
-      type: 'pie',
-      radius: ['48%', '74%'],
-      center: ['50%', '48%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 5,
-        borderColor: 'var(--color-bg-2)',
-        borderWidth: 2,
-      },
-      label: {
-        formatter: '{b}\n{d}%',
-      },
-      data: (insights.value?.ipVersions ?? []).map((item) => ({
-        name: item.name,
-        value: item.peers,
-      })),
-    },
-  ],
-}))
+const peerPieOption = computed<EChartsCoreOption>(() =>
+  distributionPieOption(
+    t('swarmTracker.ipVersionsTitle'),
+    (insights.value?.ipVersions ?? []).map((item) => ({
+      name: item.name,
+      value: item.peers,
+    })),
+  ),
+)
 
 const peerDistributionOption = computed<EChartsCoreOption>(() => {
   const categories = (insights.value?.categories ?? []).map((value) =>
     formatDate(value),
   )
-  return {
-    tooltip: {
-      trigger: 'axis',
-      confine: true,
-    },
-    legend: {
-      type: 'scroll',
-      top: 0,
-      textStyle: { fontSize: 10 },
-    },
-    grid: {
-      left: 54,
-      right: 20,
-      top: 54,
-      bottom: 54,
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: categories,
-      axisLabel: {
-        hideOverlap: true,
-        fontSize: 10,
-      },
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      name: t('swarmTracker.peerCount'),
-    },
-    dataZoom: [
-      { type: 'inside', start: 0, end: 100 },
-      { type: 'slider', height: 16, bottom: 8 },
-    ],
-    series: (insights.value?.series ?? []).map((item) => ({
+  return stackedAreaChartOption(
+    categories,
+    (insights.value?.series ?? []).map((item) => ({
       name: item.torrentId,
-      type: 'line',
-      stack: 'peer-count',
-      smooth: 0.2,
-      showSymbol: false,
-      emphasis: { focus: 'series' },
-      areaStyle: { opacity: 0.18 },
-      lineStyle: { width: 1.2 },
-      data: item.values,
+      values: item.values,
     })),
-  }
+  )
 })
 
 function reset() {
