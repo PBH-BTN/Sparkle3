@@ -24,8 +24,69 @@ const pageSize = ref(20)
 const total = ref(0)
 
 const balanceDisplay = computed(() =>
-  formatPointBytes(overview.value?.balanceRaw ?? '0'),
+  formatPointAmount(overview.value?.balanceRaw ?? '0'),
 )
+
+interface PointsDisplayLog extends PointsLogEntry {
+  groupCount: number
+  groupPointsRaw: string
+  groupEndAt: string
+}
+
+const displayLogs = computed<PointsDisplayLog[]>(() => {
+  const result: PointsDisplayLog[] = []
+  for (const record of logs.value) {
+    const previous = result[result.length - 1]
+    const sameConsecutive =
+      previous &&
+      previous.eventType === record.eventType &&
+      previous.pointsRaw === record.pointsRaw &&
+      previous.details?.reason === record.details?.reason
+    if (sameConsecutive) {
+      previous.groupCount += 1
+      previous.groupPointsRaw = (
+        BigInt(previous.groupPointsRaw) + BigInt(record.pointsRaw)
+      ).toString()
+      previous.groupEndAt = record.occurredAt
+      continue
+    }
+    result.push({
+      ...record,
+      groupCount: 1,
+      groupPointsRaw: record.pointsRaw,
+      groupEndAt: record.occurredAt,
+    })
+  }
+  return result
+})
+
+function pointBytes(value: string | number | null | undefined) {
+  if (value == null) return null
+  try {
+    return BigInt(
+      typeof value === 'number' ? Math.trunc(value) : String(value),
+    )
+  } catch {
+    return null
+  }
+}
+
+function formatPointAmount(value: string | number | null | undefined) {
+  const points = pointBytes(value)
+  if (points == null) return 'N/A'
+  const absolute = points < 0n ? -points : points
+  if (absolute < 1024n) {
+    return `${formatNumber(Number(points))} Bytes`
+  }
+  return formatPointBytes(points)
+}
+
+function showPointRaw(value: string | number | null | undefined) {
+  const points = pointBytes(value)
+  if (points == null) return false
+  const absolute = points < 0n ? -points : points
+  return absolute >= 1024n
+}
 
 const fixedProgress = computed(() => {
   if (!overview.value) return 0
@@ -77,6 +138,14 @@ function pointsDeltaClass(pointsRaw: string) {
     return BigInt(pointsRaw) < 0n ? 'negative' : 'positive'
   } catch {
     return ''
+  }
+}
+
+function groupedPoints(record: PointsDisplayLog, value: string | number) {
+  try {
+    return (BigInt(value) * BigInt(record.groupCount)).toString()
+  } catch {
+    return String(value)
   }
 }
 
@@ -146,8 +215,9 @@ onMounted(refresh)
           <div class="balance-copy">
             <span class="eyebrow">{{ t('points.unit') }}</span>
             <strong>{{ balanceDisplay }}</strong>
-            <span class="raw-value">{{ overview.balanceRaw }} Bytes</span>
-            <p>{{ t('points.balanceHint') }}</p>
+            <span v-if="showPointRaw(overview.balanceRaw)" class="raw-value">
+              {{ overview.balanceRaw }} Bytes
+            </span>
           </div>
           <div class="balance-mark" aria-hidden="true">B</div>
         </a-card>
@@ -156,21 +226,25 @@ onMounted(refresh)
           <a-card class="surface-card summary-card">
             <div class="card-heading">
               <div>
-                <span class="eyebrow">{{ t('points.fixed.eyebrow') }}</span>
                 <h2>{{ t('points.fixed.title') }}</h2>
               </div>
               <a-tag color="arcoblue">{{ t('points.fixed.badge') }}</a-tag>
             </div>
             <div class="summary-value">
-              <strong>{{ formatPointBytes(overview.fixed.pointsTodayRaw) }}</strong>
-              <span class="raw-value">{{ overview.fixed.pointsTodayRaw }} Bytes</span>
+              <strong>{{ formatPointAmount(overview.fixed.pointsTodayRaw) }}</strong>
+              <span
+                v-if="showPointRaw(overview.fixed.pointsTodayRaw)"
+                class="raw-value"
+              >
+                {{ overview.fixed.pointsTodayRaw }} Bytes
+              </span>
             </div>
             <div class="progress-heading">
               <span>{{ t('points.fixed.progress') }}</span>
               <span>
-                {{ formatPointBytes(overview.fixed.cappedPointsTodayRaw) }}
+                {{ formatPointAmount(overview.fixed.cappedPointsTodayRaw) }}
                 /
-                {{ formatPointBytes(overview.fixed.dailyCapRaw) }}
+                {{ formatPointAmount(overview.fixed.dailyCapRaw) }}
               </span>
             </div>
             <a-progress
@@ -182,8 +256,10 @@ onMounted(refresh)
             <div class="average-line">
               <span>{{ t('points.last24HoursAverage') }}</span>
               <span class="average-number">
-                <strong>{{ formatPointBytes(overview.fixed.averagePerHourRaw) }} / h</strong>
-                <small>{{ overview.fixed.averagePerHourRaw }} Bytes/h</small>
+                <strong>{{ formatPointAmount(overview.fixed.averagePerHourRaw) }} / h</strong>
+                <small v-if="showPointRaw(overview.fixed.averagePerHourRaw)">
+                  {{ overview.fixed.averagePerHourRaw }} Bytes/h
+                </small>
               </span>
             </div>
             <div class="category-grid">
@@ -194,7 +270,9 @@ onMounted(refresh)
               >
                 <div class="category-label">
                   <span>{{ categoryLabel(category.category) }}</span>
-                  <span class="raw-inline">{{ category.pointsRaw }} Bytes</span>
+                  <span v-if="showPointRaw(category.pointsRaw)" class="raw-inline">
+                    {{ category.pointsRaw }} Bytes
+                  </span>
                 </div>
                 <a-progress
                   v-if="categoryPercent(category) !== null"
@@ -205,11 +283,11 @@ onMounted(refresh)
                   :stroke-width="4"
                 />
                 <span v-if="category.dailyCapRaw" class="category-cap">
-                  {{ formatPointBytes(category.pointsRaw) }} /
-                  {{ formatPointBytes(category.dailyCapRaw) }}
+                  {{ formatPointAmount(category.pointsRaw) }} /
+                  {{ formatPointAmount(category.dailyCapRaw) }}
                 </span>
                 <span v-else class="category-cap">
-                  {{ formatPointBytes(category.pointsRaw) }}
+                  {{ formatPointAmount(category.pointsRaw) }}
                 </span>
               </div>
             </div>
@@ -222,14 +300,18 @@ onMounted(refresh)
             >
               <div class="card-heading">
                 <div>
-                  <span class="eyebrow">{{ t('points.oneTime.eyebrow') }}</span>
                   <h2>{{ t('points.oneTime.title') }}</h2>
                 </div>
                 <span class="panel-orbit"></span>
               </div>
               <div class="summary-value compact">
-                <strong>{{ formatPointBytes(overview.oneTime.pointsTodayRaw) }}</strong>
-                <span class="raw-value">{{ overview.oneTime.pointsTodayRaw }} Bytes</span>
+                <strong>{{ formatPointAmount(overview.oneTime.pointsTodayRaw) }}</strong>
+                <span
+                  v-if="showPointRaw(overview.oneTime.pointsTodayRaw)"
+                  class="raw-value"
+                >
+                  {{ overview.oneTime.pointsTodayRaw }} Bytes
+                </span>
               </div>
               <div class="metric-pair">
                 <div v-if="overview.oneTime.newTorrentEnabled">
@@ -244,8 +326,10 @@ onMounted(refresh)
               <div class="average-line">
                 <span>{{ t('points.last24HoursAverage') }}</span>
                 <span class="average-number">
-                  <strong>{{ formatPointBytes(overview.oneTime.averagePerHourRaw) }} / h</strong>
-                  <small>{{ overview.oneTime.averagePerHourRaw }} Bytes/h</small>
+                  <strong>{{ formatPointAmount(overview.oneTime.averagePerHourRaw) }} / h</strong>
+                  <small v-if="showPointRaw(overview.oneTime.averagePerHourRaw)">
+                    {{ overview.oneTime.averagePerHourRaw }} Bytes/h
+                  </small>
                 </span>
               </div>
               <p class="panel-note">{{ t('points.oneTime.hint') }}</p>
@@ -257,37 +341,49 @@ onMounted(refresh)
             >
               <div class="card-heading">
                 <div>
-                  <span class="eyebrow">{{ t('points.dynamic.eyebrow') }}</span>
                   <h2>{{ t('points.dynamic.title') }}</h2>
                 </div>
                 <span class="live-dot"></span>
               </div>
               <div class="summary-value compact">
-                <strong>{{ formatPointBytes(overview.dynamic?.pointsTodayRaw) }}</strong>
-                <span class="raw-value">{{ overview.dynamic?.pointsTodayRaw ?? '0' }} Bytes</span>
+                <strong>{{ formatPointAmount(overview.dynamic?.pointsTodayRaw) }}</strong>
+                <span
+                  v-if="showPointRaw(overview.dynamic?.pointsTodayRaw)"
+                  class="raw-value"
+                >
+                  {{ overview.dynamic?.pointsTodayRaw ?? '0' }} Bytes
+                </span>
               </div>
               <div class="dynamic-breakdown">
                 <div v-if="overview.dynamic?.seedUploadEnabled">
                   <span>{{ t('points.categories.DYNAMIC_SEED_UPLOAD') }}</span>
-                  <strong>{{ formatPointBytes(overview.dynamic?.seedUploadPointsTodayRaw) }}</strong>
-                  <small>{{ overview.dynamic?.seedUploadPointsTodayRaw ?? '0' }} Bytes</small>
+                  <strong>{{ formatPointAmount(overview.dynamic?.seedUploadPointsTodayRaw) }}</strong>
+                  <small v-if="showPointRaw(overview.dynamic?.seedUploadPointsTodayRaw)">
+                    {{ overview.dynamic?.seedUploadPointsTodayRaw ?? '0' }} Bytes
+                  </small>
                 </div>
                 <div v-if="overview.dynamic?.downloadEnabled">
                   <span>{{ t('points.categories.DYNAMIC_DOWNLOAD') }}</span>
-                  <strong>{{ formatPointBytes(overview.dynamic?.downloadPointsTodayRaw) }}</strong>
-                  <small>{{ overview.dynamic?.downloadPointsTodayRaw ?? '0' }} Bytes</small>
+                  <strong>{{ formatPointAmount(overview.dynamic?.downloadPointsTodayRaw) }}</strong>
+                  <small v-if="showPointRaw(overview.dynamic?.downloadPointsTodayRaw)">
+                    {{ overview.dynamic?.downloadPointsTodayRaw ?? '0' }} Bytes
+                  </small>
                 </div>
                 <div v-if="overview.dynamic?.hotPeerEnabled">
                   <span>{{ t('points.categories.DYNAMIC_HOT_PEER') }}</span>
-                  <strong>{{ formatPointBytes(overview.dynamic?.hotPeerPointsTodayRaw) }}</strong>
-                  <small>{{ overview.dynamic?.hotPeerPointsTodayRaw ?? '0' }} Bytes</small>
+                  <strong>{{ formatPointAmount(overview.dynamic?.hotPeerPointsTodayRaw) }}</strong>
+                  <small v-if="showPointRaw(overview.dynamic?.hotPeerPointsTodayRaw)">
+                    {{ overview.dynamic?.hotPeerPointsTodayRaw ?? '0' }} Bytes
+                  </small>
                 </div>
               </div>
               <div class="average-line">
                 <span>{{ t('points.last24HoursAverage') }}</span>
                 <span class="average-number">
-                  <strong>{{ formatPointBytes(overview.dynamic?.averagePerHourRaw) }} / h</strong>
-                  <small>{{ overview.dynamic?.averagePerHourRaw ?? 0 }} Bytes/h</small>
+                  <strong>{{ formatPointAmount(overview.dynamic?.averagePerHourRaw) }} / h</strong>
+                  <small v-if="showPointRaw(overview.dynamic?.averagePerHourRaw)">
+                    {{ overview.dynamic?.averagePerHourRaw ?? 0 }} Bytes/h
+                  </small>
                 </span>
               </div>
             </a-card>
@@ -301,7 +397,7 @@ onMounted(refresh)
           </template>
           <a-table
             :columns="columns"
-            :data="logs"
+            :data="displayLogs"
             :loading="logsLoading"
             :pagination="false"
             row-key="id"
@@ -312,12 +408,19 @@ onMounted(refresh)
             </template>
             <template #time="{ record }">{{ formatDate(record.occurredAt) }}</template>
             <template #event="{ record }">
-              <a-tag color="arcoblue">{{ eventLabel(record.eventType) }}</a-tag>
+              <div class="event-cell">
+                <a-tag color="arcoblue">{{ eventLabel(record.eventType) }}</a-tag>
+                <a-tag v-if="record.groupCount > 1" color="gray" size="small">
+                  {{ t('points.logs.groupCount', { count: record.groupCount }) }}
+                </a-tag>
+              </div>
             </template>
             <template #points="{ record }">
-              <div class="points-delta" :class="pointsDeltaClass(record.pointsRaw)">
-                <strong>{{ formatPointBytes(record.pointsRaw) }}</strong>
-                <span>{{ record.pointsRaw }} Bytes</span>
+              <div class="points-delta" :class="pointsDeltaClass(record.groupPointsRaw)">
+                <strong>{{ formatPointAmount(record.groupPointsRaw) }}</strong>
+                <span v-if="showPointRaw(record.groupPointsRaw)">
+                  {{ record.groupPointsRaw }} Bytes
+                </span>
               </div>
             </template>
             <template #details="{ record }">
@@ -328,7 +431,7 @@ onMounted(refresh)
                   size="small"
                 >
                   {{ t('points.categories.ADMIN_ADJUSTMENT') }}
-                  · {{ formatPointBytes(record.manualPointsRaw) }}
+                  · {{ formatPointAmount(groupedPoints(record, record.manualPointsRaw)) }}
                 </a-tag>
                 <a-tag
                   v-for="entry in record.details?.breakdown ?? []"
@@ -341,7 +444,7 @@ onMounted(refresh)
                       : 'green'"
                 >
                   {{ categoryLabel(entry.category) }}
-                  · {{ formatPointBytes(entry.awardedPoints) }}
+                  · {{ formatPointAmount(groupedPoints(record, entry.awardedPoints)) }}
                 </a-tag>
                 <span v-if="!(record.details?.breakdown?.length)" class="muted">
                   {{ record.details?.reason || t('common.noData') }}
@@ -447,6 +550,7 @@ onMounted(refresh)
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
   gap: 16px;
+  margin-top: 16px;
 }
 
 .summary-card :deep(.arco-card-body),
@@ -652,6 +756,13 @@ onMounted(refresh)
 .breakdown-tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 

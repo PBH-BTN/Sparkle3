@@ -263,17 +263,12 @@ onMounted(() => {
       :description="t('swarmTracker.description')"
     />
 
-    <a-card
-      v-if="insights?.enabled"
-      class="surface-card insights-card"
-    >
-      <template #title>
+    <a-card v-if="insights?.enabled" class="surface-card chart-controls">
+      <div class="chart-controls-row">
         <div class="insights-title">
-          <span>{{ t('swarmTracker.insightsTitle') }}</span>
+          <strong>{{ t('swarmTracker.insightsTitle') }}</strong>
           <small>{{ t('swarmTracker.insightsDescription') }}</small>
         </div>
-      </template>
-      <template #extra>
         <a-radio-group
           v-model="insightDays"
           type="button"
@@ -284,46 +279,53 @@ onMounted(() => {
           <a-radio :value="3">{{ t('swarmTracker.range3') }}</a-radio>
           <a-radio :value="7">{{ t('swarmTracker.range7') }}</a-radio>
         </a-radio-group>
-      </template>
-      <a-spin :loading="insightsLoading">
-        <div class="insights-grid">
-          <section class="pie-panel">
-            <div class="chart-heading">
-              <strong>{{ t('swarmTracker.ipVersionsTitle') }}</strong>
-              <span v-if="insights?.generatedAt">
-                {{ formatDate(insights.generatedAt) }}
-              </span>
-            </div>
-            <EChart
-              v-if="insights?.ipVersions?.some((item) => item.peers > 0)"
-              :option="peerPieOption"
-              height="290px"
-            />
-            <EmptyState
-              v-else
-              :title="t('common.noData')"
-              :description="t('swarmTracker.noInsights')"
-            />
-          </section>
-          <section class="distribution-panel">
-            <div class="chart-heading">
-              <strong>{{ t('swarmTracker.insightsTitle') }}</strong>
-              <span>{{ t('swarmTracker.top50Hint') }}</span>
-            </div>
-            <EChart
-              v-if="insights?.series?.length"
-              :option="peerDistributionOption"
-              height="340px"
-            />
-            <EmptyState
-              v-else
-              :title="t('common.noData')"
-              :description="t('swarmTracker.noInsights')"
-            />
-          </section>
-        </div>
-      </a-spin>
+      </div>
     </a-card>
+
+    <a-spin
+      v-if="insights?.enabled"
+      :loading="insightsLoading"
+      class="insights-spin"
+    >
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="24" :xl="12">
+          <a-card
+            class="surface-card chart-card"
+            :title="t('swarmTracker.ipVersionsTitle')"
+          >
+            <template #extra>
+              <a-tag color="arcoblue">{{ t('swarmTracker.peerCount') }}</a-tag>
+            </template>
+            <EChart
+              v-if="insights.ipVersions?.some((item) => item.peers > 0)"
+              :option="peerPieOption"
+              height="330px"
+              :loading="insightsLoading"
+              :loading-text="t('common.loading')"
+            />
+            <a-empty v-else :description="t('swarmTracker.noInsights')" />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :xl="12">
+          <a-card
+            class="surface-card chart-card"
+            :title="t('swarmTracker.insightsTitle')"
+          >
+            <template #extra>
+              <a-tag color="green">{{ t('swarmTracker.top50Hint') }}</a-tag>
+            </template>
+            <EChart
+              v-if="insights.series?.length"
+              :option="peerDistributionOption"
+              height="330px"
+              :loading="insightsLoading"
+              :loading-text="t('common.loading')"
+            />
+            <a-empty v-else :description="t('swarmTracker.noInsights')" />
+          </a-card>
+        </a-col>
+      </a-row>
+    </a-spin>
 
     <a-card class="surface-card filter-card">
       <a-form :model="form" layout="vertical" @submit="search">
@@ -491,10 +493,24 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.chart-controls-row,
 .insights-title {
   display: flex;
+}
+
+.chart-controls-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.insights-title {
   flex-direction: column;
   gap: 3px;
+}
+
+.insights-title strong {
+  font-size: 14px;
 }
 
 .insights-title small {
@@ -503,45 +519,23 @@ onMounted(() => {
   font-weight: 400;
 }
 
-.insights-grid {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.8fr);
-  gap: 20px;
+.insights-spin {
+  display: block;
+  width: 100%;
 }
 
-.pie-panel {
-  min-width: 0;
-  padding-right: 20px;
-  border-right: 1px solid var(--color-border-2);
+.chart-card :deep(.arco-card-body) {
+  min-height: 270px;
 }
 
-.distribution-panel {
-  min-width: 0;
+.chart-card :deep(.arco-empty) {
+  padding: 70px 0;
 }
 
-.chart-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 28px;
-}
-
-.chart-heading span {
-  color: var(--color-text-3);
-  font-size: 10px;
-}
-
-@media (max-width: 900px) {
-  .insights-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pie-panel {
-    padding-right: 0;
-    padding-bottom: 18px;
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border-2);
+@media (max-width: 720px) {
+  .chart-controls-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

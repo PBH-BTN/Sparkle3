@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -15,11 +16,25 @@ import type { AnalyseModule, AnalyseModuleField } from '@/api/adminTypes'
 import { errorMessage } from '@/utils/format'
 
 const { t } = useI18n()
+const route = useRoute()
 const modules = ref<AnalyseModule[]>([])
 const drafts = reactive<Record<string, Record<string, string>>>({})
 const loading = ref(true)
 const savingId = ref<string | null>(null)
 const runningId = ref<string | null>(null)
+const pointsModuleIds = new Set([
+  'points-settings',
+  'points-fixed-rules',
+  'points-once-rules',
+  'points-dynamic-rules',
+  'points-dynamic',
+])
+const isPointsScope = computed(() => route.name === 'admin-points-modules')
+const visibleModules = computed(() => modules.value.filter((module) =>
+  isPointsScope.value
+    ? pointsModuleIds.has(module.id)
+    : !pointsModuleIds.has(module.id),
+))
 
 function moduleLabel(id: string, suffix: 'name' | 'description') {
   return t(`admin.modules.items.${id}.${suffix}`)
@@ -115,7 +130,12 @@ onMounted(load)
 
 <template>
   <div class="page-stack modules-page">
-    <PageHeader :title="t('admin.modules.title')" :description="t('admin.modules.description')">
+    <PageHeader
+      :title="t(isPointsScope ? 'admin.pointsModules.title' : 'admin.modules.title')"
+      :description="t(
+        isPointsScope ? 'admin.pointsModules.description' : 'admin.modules.description',
+      )"
+    >
       <template #actions>
         <a-button :loading="loading" @click="load">
           <template #icon><IconRefresh /></template>
@@ -135,7 +155,7 @@ onMounted(load)
     <a-spin :loading="loading" class="modules-spin">
       <div class="module-grid">
         <a-card
-          v-for="module in modules"
+          v-for="module in visibleModules"
           :key="module.id"
           class="surface-card module-card"
         >

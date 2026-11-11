@@ -123,6 +123,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminModulesView.vue'),
         },
         {
+          path: 'points-modules',
+          name: 'admin-points-modules',
+          component: () => import('@/views/admin/AdminModulesView.vue'),
+        },
+        {
           path: 'settings',
           name: 'admin-settings',
           component: () => import('@/views/admin/AdminSettingsView.vue'),

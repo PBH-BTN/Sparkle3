@@ -40,6 +40,11 @@ const items = computed(() => [
     icon: IconLocation,
   },
   { key: '/admin/modules', label: t('admin.nav.modules'), icon: IconCode },
+  {
+    key: '/admin/points-modules',
+    label: t('admin.nav.pointsModules'),
+    icon: IconDashboard,
+  },
   { key: '/admin/storage', label: t('admin.nav.storage'), icon: IconStorage },
   { key: '/admin/version-alerts', label: t('admin.nav.versionAlerts'), icon: IconNotification },
   {

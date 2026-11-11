@@ -312,59 +312,35 @@ onMounted(async () => {
   <div class="page-stack">
     <PageHeader :title="t('banHistory.title')" :description="t('banHistory.description')" />
 
-    <a-card
-      v-if="peerInsights?.enabled"
-      class="surface-card peer-insights-card"
-    >
-      <template #title>
-        <div class="peer-insights-title">
-          <span>{{ t('banHistory.peerVersionsTitle') }}</span>
-          <small>{{ t('banHistory.peerVersionsHint') }}</small>
-        </div>
-      </template>
-      <template #extra>
-        <a-radio-group
-          v-model="peerInsightDays"
-          type="button"
-          size="small"
-          @change="loadPeerInsights"
+    <a-row v-if="peerInsights?.enabled" :gutter="[16, 16]">
+      <a-col :xs="24" :xl="12">
+        <a-card
+          class="surface-card chart-card"
+          :title="t('banHistory.peerVersionsTitle')"
         >
-          <a-radio :value="1">{{ t('banHistory.range1') }}</a-radio>
-          <a-radio :value="3">{{ t('banHistory.range3') }}</a-radio>
-          <a-radio :value="7">{{ t('banHistory.range7') }}</a-radio>
-        </a-radio-group>
-      </template>
-      <a-spin :loading="peerInsightsLoading">
-        <div class="peer-insights-layout">
-          <EChart
-            v-if="peerInsights?.ipVersions?.some((item) => item.peers > 0)"
-            :option="peerVersionOption"
-            height="250px"
-            class="peer-pie"
-          />
-          <div class="peer-insights-legend">
-            <div
-              v-for="(item, index) in peerInsights?.ipVersions ?? []"
-              :key="item.name"
-              class="peer-legend-row"
+          <template #extra>
+            <a-radio-group
+              v-model="peerInsightDays"
+              type="button"
+              size="small"
+              @change="loadPeerInsights"
             >
-              <span class="legend-dot" :class="`dot-${index}`"></span>
-              <span>{{ item.name }}</span>
-              <strong>{{ formatNumber(item.peers) }}</strong>
-              <small>{{ t('banHistory.peers') }}</small>
-            </div>
-            <span v-if="peerInsights?.generatedAt" class="peer-generated-at">
-              {{ formatDate(peerInsights.generatedAt) }}
-            </span>
-          </div>
-        </div>
-        <EmptyState
-          v-if="!peerInsights?.ipVersions?.some((item) => item.peers > 0)"
-          :title="t('common.noData')"
-          :description="t('banHistory.noInsights')"
-        />
-      </a-spin>
-    </a-card>
+              <a-radio :value="1">{{ t('banHistory.range1') }}</a-radio>
+              <a-radio :value="3">{{ t('banHistory.range3') }}</a-radio>
+              <a-radio :value="7">{{ t('banHistory.range7') }}</a-radio>
+            </a-radio-group>
+          </template>
+          <EChart
+            v-if="peerInsights.ipVersions?.some((item) => item.peers > 0)"
+            :option="peerVersionOption"
+            height="330px"
+            :loading="peerInsightsLoading"
+            :loading-text="t('common.loading')"
+          />
+          <a-empty v-else :description="t('banHistory.noInsights')" />
+        </a-card>
+      </a-col>
+    </a-row>
 
     <a-card class="surface-card filter-card">
       <a-form :model="form" layout="vertical" @submit="search">
@@ -593,73 +569,12 @@ onMounted(async () => {
   vertical-align: middle;
 }
 
-.peer-insights-title {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.chart-card :deep(.arco-card-body) {
+  min-height: 270px;
 }
 
-.peer-insights-title small {
-  color: var(--color-text-3);
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.peer-insights-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(220px, 1.2fr);
-  align-items: center;
-  max-width: 760px;
-}
-
-.peer-pie {
-  min-width: 0;
-}
-
-.peer-insights-legend {
-  display: grid;
-  gap: 10px;
-}
-
-.peer-legend-row {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  background: var(--color-fill-1);
-  border-radius: 8px;
-}
-
-.peer-legend-row strong {
-  font-size: 18px;
-}
-
-.peer-legend-row small,
-.peer-generated-at {
-  color: var(--color-text-3);
-}
-
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  background: #0e7490;
-  border-radius: 50%;
-}
-
-.dot-1 {
-  background: #f59e0b;
-}
-
-.peer-generated-at {
-  margin-top: 4px;
-  font-size: 11px;
-}
-
-@media (max-width: 720px) {
-  .peer-insights-layout {
-    grid-template-columns: 1fr;
-  }
+.chart-card :deep(.arco-empty) {
+  padding: 70px 0;
 }
 
 .geoip-text {

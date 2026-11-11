@@ -407,18 +407,19 @@ export default {
       change: 'Point change',
       details: 'Point details',
       empty: 'No point acquisition records yet',
+      groupCount: '{count} items',
     },
     categories: {
       LOGIN: 'Daily sign-in',
       ACTIVE_APP: 'Active application',
       APP_ONLINE: 'Application online time',
-      BAN_HISTORY: 'BanHistory submission',
+      BAN_HISTORY: 'Ban History submission',
       SWARM_TRACKER: 'Swarm Tracker submission',
       RULES_FETCH: 'Rule fetch',
       KEEPALIVE: 'Keepalive heartbeat',
       RULE_HIT_IP: 'Rule-matched IP',
       NEW_IP: 'New IP address',
-      WASTED_UPLOAD: 'BanHistory wasted upload',
+      WASTED_UPLOAD: 'Ban History capture compensation',
       NEW_TORRENT: 'New torrent',
       CLIENT_DISCOVERY: 'New client signature',
       DYNAMIC_SEED_UPLOAD: 'Seeding upload reward',
@@ -503,7 +504,8 @@ export default {
       userApps: 'Applications',
       rules: 'Manual rules',
       geoIpCityBlacklist: 'GeoIP city blacklist',
-      modules: 'Analysis modules',
+      modules: 'Ban module configuration',
+      pointsModules: 'Point modules',
       settings: 'Runtime settings',
       storage: 'Storage & policies',
       versionAlerts: 'Version alerts',
@@ -874,9 +876,9 @@ export default {
       duration: 'Duration',
     },
     modules: {
-      title: 'Analysis modules',
+      title: 'Ban module configuration',
       description:
-        'Manage enablement, schedules, analysis windows, and thresholds for automatic analysis modules.',
+        'Manage enablement, schedules, analysis windows, and thresholds for ban analysis and peer distribution jobs.',
       hotReloadTitle: 'All settings are hot-reloadable',
       hotReloadText:
         'Saving immediately rebuilds the schedule. Switches, windows, and thresholds are read dynamically from the database. Changes made directly in the config database sync within one minute.',
@@ -1042,6 +1044,11 @@ export default {
             'Adjust seeding, download, and hot-peer rewards, traffic ratios, torrent-size units, and the hot-torrent top count.',
         },
       },
+    },
+    pointsModules: {
+      title: 'Point module management',
+      description:
+        'Manage point source switches, reward values, daily caps, and the dynamic point settlement job.',
     },
     settings: {
       title: 'Runtime settings',
