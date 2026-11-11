@@ -42,6 +42,46 @@ export interface AdminDashboard {
   generatedAt: string
 }
 
+export type TaskGroup = 'ANALYSIS' | 'STATISTICS' | 'MAINTENANCE' | 'SYNC' | 'STARTUP'
+export type TaskKind = 'SCHEDULED' | 'ASYNC'
+export type TaskRunResult = 'SUCCESS' | 'FAILED' | 'SKIPPED'
+
+export interface BackgroundTaskRun {
+  trigger: string
+  result: TaskRunResult
+  startedAt: string
+  finishedAt: string
+  durationMs: number
+  message: string | null
+}
+
+export interface BackgroundTaskStatus {
+  id: string
+  group: TaskGroup
+  kind: TaskKind
+  nameKey: string
+  descriptionKey: string
+  schedule: string
+  enabled: boolean
+  runningCount: number
+  nextRunAt: string | null
+  lastStartedAt: string | null
+  lastFinishedAt: string | null
+  currentDurationMs: number
+  lastDurationMs: number
+  lastTrigger: string | null
+  lastResult: TaskRunResult | null
+  lastMessage: string | null
+  lastError: string | null
+  scheduleError: string | null
+  recentRuns: BackgroundTaskRun[]
+}
+
+export interface BackgroundTaskStatusResponse {
+  tasks: BackgroundTaskStatus[]
+  generatedAt: string
+}
+
 export interface HomepageStatisticsModuleConfig {
   module: string
   enabled: boolean

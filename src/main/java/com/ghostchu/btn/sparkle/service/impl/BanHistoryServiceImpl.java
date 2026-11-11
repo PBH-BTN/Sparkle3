@@ -13,6 +13,8 @@ import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
@@ -318,6 +320,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Scheduled(cron = "${sparkle.banhistory.refresh-module-name-cache-cron}")
+    @MonitoredScheduledTask(
+            id = "ban-module-name-cache",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.ban-module-name-cache.name",
+            descriptionKey = "admin.tasks.items.ban-module-name-cache.description",
+            expression = "${sparkle.banhistory.refresh-module-name-cache-cron}"
+    )
     public void refreshDistinctModuleNamesCache() {
         List<String> moduleNames = this.baseMapper.selectObjs(
                 new QueryWrapper<BanHistory>()
@@ -330,6 +339,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             stringStringRedisTemplate.opsForValue().set(DISTINCT_MODULE_NAMES_CACHE_KEY, serialized);
         } catch (Exception e) {
             log.error("Failed to serialize distinct module names for caching", e);
+            throw new IllegalStateException(
+                    "Failed to cache distinct ban module names",
+                    e
+            );
         }
     }
 

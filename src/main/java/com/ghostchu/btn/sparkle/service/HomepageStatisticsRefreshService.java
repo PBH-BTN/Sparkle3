@@ -6,6 +6,12 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.HomepageStatisticsModels.Mo
 import com.ghostchu.btn.sparkle.controller.admin.dto.HomepageStatisticsModels.ModuleStatus;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.impl.StatisticsRefreshServiceImpl;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -35,6 +42,7 @@ public class HomepageStatisticsRefreshService {
     private final HomeStatisticsService homeStatisticsService;
     private final BittorrentTrafficStatisticsService bittorrentTrafficStatisticsService;
     private final DatabaseConfigService databaseConfigService;
+    private final TaskStatusService taskStatusService;
     private final ConcurrentMap<String, AtomicBoolean> running = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ModuleRunState> runStates = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Long> nextRefreshAt = new ConcurrentHashMap<>();
@@ -45,23 +53,49 @@ public class HomepageStatisticsRefreshService {
             StatisticsRefreshServiceImpl statisticsRefreshService,
             HomeStatisticsService homeStatisticsService,
             BittorrentTrafficStatisticsService bittorrentTrafficStatisticsService,
-            DatabaseConfigService databaseConfigService
+            DatabaseConfigService databaseConfigService,
+            TaskStatusService taskStatusService
     ) {
         this.statisticsRefreshService = statisticsRefreshService;
         this.homeStatisticsService = homeStatisticsService;
         this.bittorrentTrafficStatisticsService = bittorrentTrafficStatisticsService;
         this.databaseConfigService = databaseConfigService;
+        this.taskStatusService = taskStatusService;
         long dueAt = System.currentTimeMillis();
         for (Module module : Module.values()) {
             running.put(module.id(), new AtomicBoolean());
-            nextRefreshAt.put(module.id(), dueAt + Duration.ofMinutes(module.defaultIntervalMinutes()).toMillis());
+            long nextAt = dueAt + Duration.ofMinutes(module.defaultIntervalMinutes()).toMillis();
+            nextRefreshAt.put(module.id(), nextAt);
+            taskStatusService.configure(homepageTaskDefinition(
+                    module,
+                    module.defaultIntervalMinutes(),
+                    true
+            ));
         }
     }
 
     @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
+    @MonitoredScheduledTask(
+            id = "homepage-statistics-dispatch",
+            group = TaskGroup.STATISTICS,
+            nameKey = "admin.tasks.items.homepage-statistics-dispatch.name",
+            descriptionKey = "admin.tasks.items.homepage-statistics-dispatch.description",
+            scheduleType = TaskScheduleType.FIXED_DELAY,
+            intervalMillis = 30_000,
+            initialDelayMillis = 30_000
+    )
     public void runScheduledRefreshes() {
         long now = System.currentTimeMillis();
         for (ModuleConfig config : getConfig()) {
+            Module module = Module.BY_ID.get(config.module());
+            if (module == null) {
+                continue;
+            }
+            taskStatusService.configure(homepageTaskDefinition(
+                    module,
+                    config.refreshIntervalMinutes(),
+                    config.enabled()
+            ));
             if (!config.enabled()) {
                 continue;
             }
@@ -70,10 +104,7 @@ public class HomepageStatisticsRefreshService {
                     ignored -> now + Duration.ofMinutes(config.refreshIntervalMinutes()).toMillis()
             );
             if (now >= dueAt) {
-                Module module = Module.BY_ID.get(config.module());
-                if (module != null) {
-                    startRefresh(module, config, "SCHEDULED", null);
-                }
+                startRefresh(module, config, "SCHEDULED", null);
             }
         }
     }
@@ -129,6 +160,11 @@ public class HomepageStatisticsRefreshService {
                     System.currentTimeMillis()
                             + Duration.ofMinutes(config.refreshIntervalMinutes()).toMillis()
             );
+            taskStatusService.configure(homepageTaskDefinition(
+                    Module.byId(config.module()),
+                    config.refreshIntervalMinutes(),
+                    config.enabled()
+            ));
         }
         return getStatus();
     }
@@ -193,10 +229,19 @@ public class HomepageStatisticsRefreshService {
                 operatorId,
                 null
         ));
+        taskStatusService.configure(homepageTaskDefinition(
+                module,
+                config.refreshIntervalMinutes(),
+                config.enabled()
+        ));
 
         log.info("Starting homepage statistics refresh for {} ({}, operator {})",
                 module.id(), trigger, operatorId);
         Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    homepageTaskId(module),
+                    trigger
+            );
             long startedNanos = System.nanoTime();
             try {
                 execute(module);
@@ -209,6 +254,7 @@ public class HomepageStatisticsRefreshService {
                         operatorId,
                         null
                 ));
+                execution.success("Refreshed homepage statistics module " + module.id());
                 log.info("Refreshed homepage statistics module {} in {}ms",
                         module.id(), durationMs);
             } catch (Exception exception) {
@@ -224,6 +270,7 @@ public class HomepageStatisticsRefreshService {
                         operatorId,
                         message
                 ));
+                execution.failure(exception);
                 log.error("Unable to refresh homepage statistics module {}", module.id(), exception);
             } finally {
                 moduleRunning.set(false);
@@ -323,6 +370,28 @@ public class HomepageStatisticsRefreshService {
 
     private String configKey(Module module, String suffix) {
         return CONFIG_PREFIX + module.id() + "." + suffix;
+    }
+
+    private TaskDefinition homepageTaskDefinition(
+            Module module,
+            int intervalMinutes,
+            boolean enabled
+    ) {
+        Long nextAt = nextRefreshAt.get(module.id());
+        return TaskDefinition.interval(
+                homepageTaskId(module),
+                TaskGroup.STATISTICS,
+                TaskKind.ASYNC,
+                "admin.homepageStatistics.modules." + module.id() + ".name",
+                "admin.homepageStatistics.modules." + module.id() + ".description",
+                Duration.ofMinutes(intervalMinutes).toMillis(),
+                nextAt == null ? null : Instant.ofEpochMilli(nextAt),
+                enabled
+        );
+    }
+
+    private String homepageTaskId(Module module) {
+        return "homepage-statistics-" + module.id();
     }
 
     private boolean parseBoolean(String value, boolean fallback) {

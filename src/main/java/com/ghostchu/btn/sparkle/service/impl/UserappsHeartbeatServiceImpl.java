@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +78,13 @@ public class UserappsHeartbeatServiceImpl extends ServiceImpl<UserAppsHeartbeatM
     }
 
     @Scheduled(cron = "${sparkle.ping.heartbeat.cleanup-cron}")
+    @MonitoredScheduledTask(
+            id = "heartbeat-cleanup",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.heartbeat-cleanup.name",
+            descriptionKey = "admin.tasks.items.heartbeat-cleanup.description",
+            expression = "${sparkle.ping.heartbeat.cleanup-cron}"
+    )
     @Transactional
     public void deleteOldData() {
         long deleted = 0;

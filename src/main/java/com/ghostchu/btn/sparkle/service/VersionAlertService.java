@@ -7,6 +7,9 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionA
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertRuleInput;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import com.vdurmont.semver4j.Requirement;
 import com.vdurmont.semver4j.Semver;
 import jakarta.mail.internet.InternetAddress;
@@ -48,6 +51,7 @@ public class VersionAlertService {
     private final ObjectMapper objectMapper;
     private final JavaMailSender mailSender;
     private final IUserService userService;
+    private final TaskStatusService taskStatusService;
     private final String fromAddress;
     private final String fromName;
 
@@ -59,6 +63,7 @@ public class VersionAlertService {
             ObjectMapper objectMapper,
             JavaMailSender mailSender,
             IUserService userService,
+            TaskStatusService taskStatusService,
             @Value("${sparkle.version-alert.from-address}") String fromAddress,
             @Value("${sparkle.version-alert.from-name}") String fromName
     ) {
@@ -66,8 +71,15 @@ public class VersionAlertService {
         this.objectMapper = objectMapper;
         this.mailSender = mailSender;
         this.userService = userService;
+        this.taskStatusService = taskStatusService;
         this.fromAddress = fromAddress;
         this.fromName = fromName;
+        taskStatusService.ensure(TaskDefinition.event(
+                "version-alert-delivery",
+                TaskGroup.MAINTENANCE,
+                "admin.tasks.items.version-alert-delivery.name",
+                "admin.tasks.items.version-alert-delivery.description"
+        ));
     }
 
     public @NotNull List<VersionAlertRule> listRules() {
@@ -194,16 +206,30 @@ public class VersionAlertService {
             return;
         }
         Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    "version-alert-delivery",
+                    "EVENT"
+            );
             User user = userService.getById(ownerId);
             if (user == null
                     || user.getBannedAt() != null
                     || user.getEmail() == null
                     || user.getEmail().isBlank()
                     || user.getEmail().toLowerCase(Locale.ROOT).endsWith("@sparkle.system")) {
+                execution.skipped("No deliverable email address");
                 return;
             }
-            for (RuleMatch match : matches) {
-                evaluateAndSend(match.rule(), user, match.version(), userAgent);
+            try {
+                int sent = 0;
+                for (RuleMatch match : matches) {
+                    if (evaluateAndSend(match.rule(), user, match.version(), userAgent)) {
+                        sent++;
+                    }
+                }
+                execution.success("Sent " + sent + " alert email(s)");
+            } catch (Exception exception) {
+                execution.failure(exception);
+                log.warn("Unable to evaluate version alerts asynchronously", exception);
             }
         });
     }
@@ -225,15 +251,15 @@ public class VersionAlertService {
         return deliveries;
     }
 
-    private void evaluateAndSend(VersionAlertRule rule,
-                                 User user,
-                                 String version,
-                                 String userAgent) {
+    private boolean evaluateAndSend(VersionAlertRule rule,
+                                    User user,
+                                    String version,
+                                    String userAgent) {
         String sentKey = SENT_KEY_PREFIX + rule.id() + ":" + user.getId();
         if (LEGACY_RULE_ID.equals(rule.id())
                 && Boolean.TRUE.equals(redisTemplate.hasKey(LEGACY_SENT_KEY_PREFIX + user.getId()))) {
             redisTemplate.opsForValue().set(sentKey, String.valueOf(System.currentTimeMillis()));
-            return;
+            return false;
         }
         if (rule.oncePerUser()) {
             Boolean reserved = redisTemplate.opsForValue().setIfAbsent(
@@ -241,7 +267,7 @@ public class VersionAlertService {
                     String.valueOf(System.currentTimeMillis())
             );
             if (!Boolean.TRUE.equals(reserved)) {
-                return;
+                return false;
             }
         } else {
             Boolean reserved = redisTemplate.opsForValue().setIfAbsent(
@@ -250,7 +276,7 @@ public class VersionAlertService {
                     Duration.ofHours(24)
             );
             if (!Boolean.TRUE.equals(reserved)) {
-                return;
+                return false;
             }
         }
         try {
@@ -264,9 +290,11 @@ public class VersionAlertService {
                     "AUTOMATIC",
                     null
             );
+            return true;
         } catch (BusinessException exception) {
             redisTemplate.delete(sentKey);
             log.warn("Version alert email failed for user {}: {}", user.getId(), exception.getMessage());
+            return false;
         }
     }
 

@@ -1,7 +1,10 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.points.PointToggleService;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.util.concurrent.CountDownLatch;
@@ -25,7 +28,9 @@ class AnalyseModuleSchedulerTest {
         AnalyseModuleScheduler scheduler = new AnalyseModuleScheduler(
                 mock(TaskScheduler.class),
                 configService,
-                executionService
+                executionService,
+                mock(PointToggleService.class),
+                new TaskStatusService(new MockEnvironment())
         );
 
         scheduler.triggerNow("manual-test");
@@ -45,7 +50,9 @@ class AnalyseModuleSchedulerTest {
         AnalyseModuleScheduler scheduler = new AnalyseModuleScheduler(
                 mock(TaskScheduler.class),
                 configService,
-                executionService
+                executionService,
+                mock(PointToggleService.class),
+                new TaskStatusService(new MockEnvironment())
         );
 
         assertThrows(BusinessException.class, () -> scheduler.triggerNow("disabled-test"));

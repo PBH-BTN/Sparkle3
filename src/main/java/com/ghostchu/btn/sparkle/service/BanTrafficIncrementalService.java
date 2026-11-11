@@ -1,6 +1,9 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.mapper.BittorrentTrafficMapper;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -28,17 +31,31 @@ public class BanTrafficIncrementalService {
     private final BittorrentTrafficMapper mapper;
     private final JdbcTemplate jdbcTemplate;
     private final PlatformTransactionManager transactionManager;
+    private final TaskStatusService taskStatusService;
     private final Object refreshLock = new Object();
 
     @EventListener(ApplicationReadyEvent.class)
     public void scheduleStartupRefresh() {
+        taskStatusService.configure(TaskDefinition.startup(
+                "ban-traffic-startup-refresh",
+                TaskGroup.STARTUP,
+                "admin.tasks.items.ban-traffic-startup-refresh.name",
+                "admin.tasks.items.ban-traffic-startup-refresh.description"
+        ));
         Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    "ban-traffic-startup-refresh",
+                    "STARTUP"
+            );
             try {
                 Thread.sleep(Duration.ofSeconds(20));
                 refresh();
+                execution.success("BitTorrent traffic incremental state initialized");
             } catch (InterruptedException exception) {
+                execution.failure(exception);
                 Thread.currentThread().interrupt();
             } catch (Exception exception) {
+                execution.failure(exception);
                 log.error("Unable to initialize incremental BitTorrent traffic state", exception);
             }
         });

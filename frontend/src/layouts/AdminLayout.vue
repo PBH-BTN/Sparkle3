@@ -13,6 +13,7 @@ import {
   IconMenu,
   IconNotification,
   IconRefresh,
+  IconSchedule,
   IconSettings,
   IconStorage,
   IconUserGroup,
@@ -24,6 +25,7 @@ const { t } = useI18n()
 
 const items = computed(() => [
   { key: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: IconDashboard },
+  { key: '/admin/tasks', label: t('admin.nav.tasks'), icon: IconSchedule },
   {
     key: '/admin/homepage-statistics',
     label: t('admin.nav.homepageStatistics'),

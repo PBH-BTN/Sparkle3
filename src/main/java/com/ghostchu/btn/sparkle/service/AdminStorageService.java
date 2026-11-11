@@ -7,6 +7,10 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.StorageModels.StorageOvervi
 import com.ghostchu.btn.sparkle.controller.admin.dto.StorageModels.TableStorageView;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.impl.StatisticsRefreshServiceImpl;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -51,6 +55,17 @@ public class AdminStorageService {
 
     private final JdbcTemplate jdbcTemplate;
     private final StatisticsRefreshServiceImpl statisticsRefreshService;
+    private final TaskStatusService taskStatusService;
+
+    @PostConstruct
+    void registerTaskDefinitions() {
+        taskStatusService.ensure(TaskDefinition.event(
+                "ban-history-statistics-refresh",
+                TaskGroup.STATISTICS,
+                "admin.tasks.items.ban-history-statistics-refresh.name",
+                "admin.tasks.items.ban-history-statistics-refresh.description"
+        ));
+    }
 
     public @NotNull StorageOverview overview() {
         TimescaleSupport support = timescaleSupport();
@@ -293,9 +308,15 @@ public class AdminStorageService {
 
     private void refreshStatisticsAfterCommit() {
         Runnable refresh = () -> Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    "ban-history-statistics-refresh",
+                    "AFTER_DELETE"
+            );
             try {
                 statisticsRefreshService.onBanCountRefresh();
+                execution.success("Ban history statistics refreshed");
             } catch (Exception exception) {
+                execution.failure(exception);
                 log.warn("Unable to refresh ban history statistics after manual deletion: {}",
                         exception.getMessage());
             }

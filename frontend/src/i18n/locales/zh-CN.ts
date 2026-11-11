@@ -482,6 +482,7 @@ export default {
     backToSite: '返回站点',
     nav: {
       dashboard: '仪表盘',
+      tasks: '任务状态',
       homepageStatistics: '首页数据刷新',
       users: '用户管理',
       userApps: '应用管理',
@@ -549,6 +550,128 @@ export default {
         bans24h: '24 小时封禁',
         activeApps24h: '24 小时活跃应用',
         swarms24h: '24 小时种群记录',
+      },
+    },
+    tasks: {
+      title: '任务状态',
+      description:
+        '统一查看程序中的定时任务和异步任务，包括下次运行时间、当前运行时长以及最近多次执行结果。',
+      updatedAt: '状态更新于 {time}',
+      pollHint: '每 5 秒自动刷新',
+      timeline: '任务运行时间线',
+      summary: {
+        total: '任务总数',
+        running: '正在运行',
+        scheduled: '计划任务',
+        attention: '需要关注',
+      },
+      groups: {
+        ALL: '全部',
+        ANALYSIS: '分析任务',
+        STATISTICS: '统计任务',
+        MAINTENANCE: '维护任务',
+        SYNC: '同步任务',
+        STARTUP: '启动任务',
+      },
+      kinds: {
+        scheduled: '计划任务',
+        async: '异步任务',
+      },
+      states: {
+        running: '运行中 · {count}',
+        success: '最近成功',
+        failed: '需要关注',
+        skipped: '已跳过',
+        idle: '待运行',
+        disabled: '已停用',
+      },
+      results: {
+        none: '尚无记录',
+        SUCCESS: '成功',
+        FAILED: '失败',
+        SKIPPED: '跳过',
+      },
+      nextRun: '下次运行',
+      currentDuration: '当前已运行',
+      lastStarted: '最近开始',
+      lastDuration: '最近耗时',
+      lastTrigger: '最近触发方式',
+      lastResult: '最近结果',
+      scheduleError: '计划配置错误',
+      lastError: '最近一次运行失败',
+      recentRuns: '最近运行结果',
+      recentLimit: '最多显示最近 5 次',
+      noRuns: '当前进程尚无运行记录。',
+      noMessage: '无附加信息',
+      noTasks: '当前分组没有任务。',
+      triggers: {
+        SCHEDULED: '定时调度',
+        MANUAL: '管理员触发',
+        EVENT: '事件触发',
+        STARTUP: '应用启动',
+        AFTER_DELETE: '删除后刷新',
+      },
+      items: {
+        'admin-metrics-sample': {
+          name: '主机指标采样',
+          description: '定期采样 CPU、内存和磁盘使用率，用于后台仪表盘趋势。',
+        },
+        'admin-metrics-cleanup': {
+          name: '主机指标历史清理',
+          description: '每小时清理过期和超量保存的主机资源趋势采样。',
+        },
+        'footer-metrics-sample': {
+          name: '页脚运行指标采样',
+          description: '采集 CPU、内存、磁盘与网络吞吐及 Redis 指标，供前台页脚展示。',
+        },
+        'analysis-schedule-poll': {
+          name: '分析计划配置巡检',
+          description: '检查分析模块热更新配置，并重建发生变化的 Cron 执行计划。',
+        },
+        'homepage-statistics-dispatch': {
+          name: '首页统计调度器',
+          description: '检查首页各统计模块是否到期，并分派异步刷新任务。',
+        },
+        'ban-module-name-cache': {
+          name: '封禁模块名称缓存',
+          description: '刷新封禁记录筛选项中使用的去重模块名称缓存。',
+        },
+        'github-rule-sync': {
+          name: 'GitHub 规则同步',
+          description: '将当前生成的分析规则发布到 GitHub 远程规则存储库。',
+        },
+        'swarm-data-retention': {
+          name: '种群数据保留清理',
+          description: '分批删除超过保留期限的种群跟踪数据。',
+        },
+        'heartbeat-cleanup': {
+          name: '用户应用心跳清理',
+          description: '分批删除超过保留期限的用户应用心跳记录。',
+        },
+        'user-ip-warning': {
+          name: '用户 IP 风险提示',
+          description: '匹配黑名单 IP 与近期心跳记录，生成后台用户 IP 风险提示。',
+        },
+        'swarm-statistics-scheduler': {
+          name: '种群统计到期检查',
+          description: '每分钟检查用户种群统计是否达到配置的刷新周期。',
+        },
+        'swarm-statistics-refresh': {
+          name: '用户种群统计刷新',
+          description: '按配置统计窗口重算用户流量与种群排行榜数据。',
+        },
+        'version-alert-delivery': {
+          name: '版本提醒投递',
+          description: '客户端上报后异步匹配版本规则并投递提醒邮件。',
+        },
+        'ban-history-statistics-refresh': {
+          name: '封禁记录统计刷新',
+          description: '手动删除封禁历史后，在后台重新生成相关统计数量。',
+        },
+        'ban-traffic-startup-refresh': {
+          name: 'BitTorrent 流量启动补算',
+          description: '应用启动后补齐封禁流量增量状态，并刷新连接与城市小时快照。',
+        },
       },
     },
     homepageStatistics: {

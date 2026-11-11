@@ -8,6 +8,11 @@ import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
 import com.ghostchu.btn.sparkle.service.dto.SwarmStatisticsStatusDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +24,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 @Service
 public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatisticMapper, UserSwarmStatistic> implements IUserSwarmStatisticsService {
+    private static final String REFRESH_TASK_ID = "swarm-statistics-refresh";
     @Autowired
     private IUserService userService;
     @Autowired
@@ -38,6 +45,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private IUserappsHeartbeatService heartbeatService;
     @Autowired
     private AdminConfigService adminConfigService;
+    @Autowired
+    private TaskStatusService taskStatusService;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
     private double rankingSentTrafficOtherAckWeight;
     @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
@@ -57,9 +66,20 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private volatile String lastError;
 
     @Scheduled(cron = "0 * * * * *")
+    @MonitoredScheduledTask(
+            id = "swarm-statistics-scheduler",
+            group = TaskGroup.STATISTICS,
+            nameKey = "admin.tasks.items.swarm-statistics-scheduler.name",
+            descriptionKey = "admin.tasks.items.swarm-statistics-scheduler.description",
+            expression = "0 * * * * *"
+    )
     public void scheduledUserSwarmStatisticsUpdate() {
         var config = adminConfigService.get();
-        if (!config.swarmStatisticsEnabled() || refreshing.get()) {
+        if (!config.swarmStatisticsEnabled()) {
+            configureRefreshTask(false, config.swarmStatisticsRefreshMinutes(), null);
+            return;
+        }
+        if (refreshing.get()) {
             return;
         }
         try {
@@ -67,6 +87,7 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
             OffsetDateTime dueAt = latest == null
                     ? OffsetDateTime.now()
                     : latest.plusMinutes(config.swarmStatisticsRefreshMinutes());
+            configureRefreshTask(true, config.swarmStatisticsRefreshMinutes(), dueAt.toInstant());
             if (OffsetDateTime.now().isBefore(dueAt)) {
                 return;
             }
@@ -74,6 +95,10 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         } catch (Exception exception) {
             lastError = exception.getMessage();
             log.warn("Unable to check swarm statistics refresh schedule", exception);
+            throw new IllegalStateException(
+                    "Unable to check swarm statistics refresh schedule",
+                    exception
+            );
         }
     }
 
@@ -91,8 +116,14 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     public boolean requestManualRefresh(@Nullable Long operatorId) {
         var config = adminConfigService.get();
         if (!config.swarmStatisticsEnabled()) {
+            configureRefreshTask(false, config.swarmStatisticsRefreshMinutes(), null);
             return false;
         }
+        configureRefreshTask(
+                true,
+                config.swarmStatisticsRefreshMinutes(),
+                OffsetDateTime.now().toInstant()
+        );
         return startRefresh(
                 "MANUAL",
                 operatorId,
@@ -143,10 +174,18 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
         lastTrigger = trigger;
         lastTriggeredBy = operatorId;
         lastError = null;
-
+        configureRefreshTask(
+                true,
+                adminConfigService.get().swarmStatisticsRefreshMinutes(),
+                Instant.now()
+        );
         log.info("Starting swarm statistics refresh ({}, {} day window, operator {})",
                 trigger, windowDays, operatorId);
         Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    REFRESH_TASK_ID,
+                    trigger
+            );
             long startedNanos = System.nanoTime();
             try {
                 int updated = baseMapper.refreshUserSwarmStatistics(startAt, endAt);
@@ -155,18 +194,47 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
                 lastDurationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
                 log.info("Refreshed {} user swarm statistics in {}ms",
                         updated, lastDurationMs);
+                execution.success("Updated " + updated + " users");
             } catch (Exception exception) {
                 lastFinishedAt = OffsetDateTime.now();
                 lastDurationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
                 lastError = exception.getMessage() == null
                         ? exception.getClass().getSimpleName()
                         : exception.getMessage();
+                execution.failure(exception);
                 log.error("Unable to refresh user swarm statistics", exception);
             } finally {
                 refreshing.set(false);
+                if (lastFinishedAt != null) {
+                    int refreshMinutes = adminConfigService.get().swarmStatisticsRefreshMinutes();
+                    configureRefreshTask(
+                            true,
+                            refreshMinutes,
+                            lastFinishedAt
+                                    .plusMinutes(refreshMinutes)
+                                    .toInstant()
+                    );
+                }
             }
         });
         return true;
+    }
+
+    private void configureRefreshTask(
+            boolean enabled,
+            int intervalMinutes,
+            Instant nextRunAt
+    ) {
+        taskStatusService.configure(TaskDefinition.interval(
+                REFRESH_TASK_ID,
+                TaskGroup.STATISTICS,
+                TaskKind.ASYNC,
+                "admin.tasks.items.swarm-statistics-refresh.name",
+                "admin.tasks.items.swarm-statistics-refresh.description",
+                Duration.ofMinutes(intervalMinutes).toMillis(),
+                nextRunAt,
+                enabled
+        ));
     }
 
     @Override

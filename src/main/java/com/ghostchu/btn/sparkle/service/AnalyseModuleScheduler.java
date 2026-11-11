@@ -1,6 +1,14 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.points.PointToggleService;
+import com.ghostchu.btn.sparkle.service.points.PointsDynamicService;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -24,6 +32,8 @@ public class AnalyseModuleScheduler {
     private final TaskScheduler taskScheduler;
     private final AnalyseModuleConfigService configService;
     private final AnalyseModuleExecutionService executionService;
+    private final PointToggleService pointToggleService;
+    private final TaskStatusService taskStatusService;
     private final Map<String, ScheduledFuture<?>> futures = new ConcurrentHashMap<>();
     private final Map<String, String> signatures = new ConcurrentHashMap<>();
     private final Map<String, AtomicBoolean> running = new ConcurrentHashMap<>();
@@ -31,11 +41,15 @@ public class AnalyseModuleScheduler {
     public AnalyseModuleScheduler(
             @Qualifier("taskScheduler") TaskScheduler taskScheduler,
             AnalyseModuleConfigService configService,
-            AnalyseModuleExecutionService executionService
+            AnalyseModuleExecutionService executionService,
+            PointToggleService pointToggleService,
+            TaskStatusService taskStatusService
     ) {
         this.taskScheduler = taskScheduler;
         this.configService = configService;
         this.executionService = executionService;
+        this.pointToggleService = pointToggleService;
+        this.taskStatusService = taskStatusService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -44,6 +58,15 @@ public class AnalyseModuleScheduler {
     }
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
+    @MonitoredScheduledTask(
+            id = "analysis-schedule-poll",
+            group = TaskGroup.ANALYSIS,
+            nameKey = "admin.tasks.items.analysis-schedule-poll.name",
+            descriptionKey = "admin.tasks.items.analysis-schedule-poll.description",
+            scheduleType = TaskScheduleType.FIXED_DELAY,
+            intervalMillis = 60_000,
+            initialDelayMillis = 60_000
+    )
     public void pollConfigurationChanges() {
         refreshSchedules();
     }
@@ -55,6 +78,17 @@ public class AnalyseModuleScheduler {
             if (runner == null) continue;
             boolean enabled = configService.isEnabled(moduleId);
             String cron = configService.textValue(moduleId, "schedule", "");
+            if (enabled
+                    && PointsDynamicService.MODULE_ID.equals(moduleId)
+                    && !pointToggleService.isAnyDynamicEnabled()) {
+                enabled = false;
+            }
+            boolean scheduleEnabled = enabled && !AnalyseModuleCron.isDisabled(cron);
+            taskStatusService.configure(analysisTaskDefinition(
+                    moduleId,
+                    scheduleEnabled ? AnalyseModuleCron.normalize(cron) : cron,
+                    scheduleEnabled
+            ));
             if (!enabled || AnalyseModuleCron.isDisabled(cron)) {
                 cancel(moduleId);
                 continue;
@@ -79,6 +113,10 @@ public class AnalyseModuleScheduler {
                 }
             } catch (IllegalArgumentException exception) {
                 signatures.remove(moduleId);
+                taskStatusService.configurationError(
+                        analysisTaskId(moduleId),
+                        exception.getMessage()
+                );
                 log.error("Invalid cron '{}' for analysis module {}", cron, moduleId, exception);
             }
         }
@@ -128,13 +166,20 @@ public class AnalyseModuleScheduler {
             AtomicBoolean moduleRunning,
             String trigger
     ) {
+        TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                analysisTaskId(moduleId),
+                trigger
+        );
         long startedNanos = System.nanoTime();
         log.info("Starting analysis module {} ({})", moduleId, trigger);
+        boolean executed = false;
         try {
             if (configService.isEnabled(moduleId)) {
                 runner.run();
+                executed = true;
             }
         } catch (Exception exception) {
+            execution.failure(exception);
             log.error("Analysis module {} failed", moduleId, exception);
         } finally {
             moduleRunning.set(false);
@@ -145,6 +190,11 @@ public class AnalyseModuleScheduler {
                     java.time.Duration.ofNanos(System.nanoTime() - startedNanos).toMillis()
             );
         }
+        if (executed) {
+            execution.success();
+        } else {
+            execution.skipped("Analysis module is disabled");
+        }
     }
 
     private void cancel(String moduleId) {
@@ -154,5 +204,25 @@ public class AnalyseModuleScheduler {
             future.cancel(false);
             log.info("Cancelled analysis module schedule {}", moduleId);
         }
+    }
+
+    private TaskDefinition analysisTaskDefinition(
+            String moduleId,
+            String cron,
+            boolean enabled
+    ) {
+        return TaskDefinition.cron(
+                analysisTaskId(moduleId),
+                TaskGroup.ANALYSIS,
+                TaskKind.SCHEDULED,
+                "admin.modules.items." + moduleId + ".name",
+                "admin.modules.items." + moduleId + ".description",
+                cron,
+                enabled
+        );
+    }
+
+    private String analysisTaskId(String moduleId) {
+        return "analysis-" + moduleId;
     }
 }

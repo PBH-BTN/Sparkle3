@@ -15,6 +15,8 @@ import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficRes
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
@@ -74,6 +76,13 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
 
     @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
+    @MonitoredScheduledTask(
+            id = "swarm-data-retention",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.swarm-data-retention.name",
+            descriptionKey = "admin.tasks.items.swarm-data-retention.description",
+            expression = "${sparkle.ping.sync-swarm.data-retention-cron}"
+    )
     public void cronDataRetentionCleanup() {
         log.info("Performing scheduled cleanup of expired swarm tracker data...");
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);

@@ -8,6 +8,9 @@ import com.ghostchu.btn.sparkle.entity.GeoIpCityBlacklistEntry;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.GeoIpCityBlacklistMapper;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoNetworkRecord;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDB;
@@ -61,6 +64,7 @@ public class GeoIpCityBlacklistService
     private final IPDBManager ipdbManager;
     private final AnalyseModuleConfigService moduleConfigService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final TaskStatusService taskStatusService;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean rerunRequested = new AtomicBoolean();
     private volatile GenerationStatus generationStatus = GenerationStatus.idle();
@@ -68,11 +72,14 @@ public class GeoIpCityBlacklistService
     public GeoIpCityBlacklistService(
             IPDBManager ipdbManager,
             AnalyseModuleConfigService moduleConfigService,
-            @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate
+            @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate,
+            TaskStatusService taskStatusService
     ) {
         this.ipdbManager = ipdbManager;
         this.moduleConfigService = moduleConfigService;
         this.redisTemplate = redisTemplate;
+        this.taskStatusService = taskStatusService;
+        this.taskStatusService.ensure(geoIpTaskDefinition());
     }
 
     public List<GeoIpCityBlacklistEntry> listEntries() {
@@ -161,12 +168,19 @@ public class GeoIpCityBlacklistService
         }
         OffsetDateTime startedAt = OffsetDateTime.now(ZoneOffset.UTC);
         generationStatus = GenerationStatus.started(startedAt, "MANUAL", operatorId);
-        Thread.startVirtualThread(() -> executeGeneration(
-                startedAt,
-                System.nanoTime(),
-                "MANUAL",
-                operatorId
-        ));
+        Thread.startVirtualThread(() -> {
+            TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                    taskId(),
+                    "MANUAL"
+            );
+            executeGeneration(
+                    startedAt,
+                    System.nanoTime(),
+                    "MANUAL",
+                    operatorId
+            );
+            finishTaskExecution(execution);
+        });
         return generationStatus;
     }
 
@@ -176,7 +190,12 @@ public class GeoIpCityBlacklistService
         }
         OffsetDateTime startedAt = OffsetDateTime.now(ZoneOffset.UTC);
         generationStatus = GenerationStatus.started(startedAt, "SCHEDULED", null);
+        TaskStatusService.TaskExecution execution = taskStatusService.begin(
+                taskId(),
+                "SCHEDULED"
+        );
         executeGeneration(startedAt, System.nanoTime(), "SCHEDULED", null);
+        finishTaskExecution(execution);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -460,6 +479,32 @@ public class GeoIpCityBlacklistService
                 operatorId,
                 error
         );
+    }
+
+    private void finishTaskExecution(TaskStatusService.TaskExecution execution) {
+        GenerationStatus status = generationStatus;
+        if (status.lastError() != null) {
+            execution.failure(status.lastError());
+        } else {
+            execution.success(
+                    "Generated " + status.enabledEntries() + " entries, "
+                            + status.ipv4CidrCount() + " IPv4 CIDRs and "
+                            + status.ipv6CidrCount() + " IPv6 CIDRs"
+            );
+        }
+    }
+
+    private TaskDefinition geoIpTaskDefinition() {
+        return TaskDefinition.event(
+                taskId(),
+                TaskGroup.ANALYSIS,
+                "admin.modules.items." + MODULE_ID + ".name",
+                "admin.modules.items." + MODULE_ID + ".description"
+        );
+    }
+
+    private String taskId() {
+        return "analysis-" + MODULE_ID;
     }
 
     private Location normalizeLocation(String countryCode, String province, String city)

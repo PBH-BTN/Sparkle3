@@ -16,6 +16,7 @@ import type {
   AdminUser,
   AdminUserInput,
   AdminUserQuery,
+  BackgroundTaskStatusResponse,
   BanHistoryDeletePreview,
   BanHistoryDeleteResult,
   CompressionPolicyInput,
@@ -56,6 +57,7 @@ function queryString(values: object) {
 
 export const adminApi = {
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
+  taskStatus: () => request<BackgroundTaskStatusResponse>('/api/admin/tasks'),
 
   homepageStatistics: () =>
     request<HomepageStatisticsAdminResponse>('/api/admin/homepage-statistics'),

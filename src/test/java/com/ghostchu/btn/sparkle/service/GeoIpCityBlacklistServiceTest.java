@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.entity.GeoIpCityBlacklistEntry;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.ipdb.GeoNetworkRecord;
 import com.maxmind.db.Network;
@@ -13,10 +14,16 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class GeoIpCityBlacklistServiceTest {
     private final GeoIpCityBlacklistService service =
-            new GeoIpCityBlacklistService(null, null, null);
+            new GeoIpCityBlacklistService(
+                    null,
+                    null,
+                    null,
+                    mock(TaskStatusService.class)
+            );
 
     @Test
     void matchesChineseNamesWithOptionalAdministrativeSuffixes() {

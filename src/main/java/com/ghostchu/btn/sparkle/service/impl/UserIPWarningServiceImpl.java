@@ -2,6 +2,8 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import inet.ipaddr.IPAddress;
@@ -34,6 +36,13 @@ public class UserIPWarningServiceImpl {
     private RedisTemplate<String, Object> stringObjectRedisTemplate;
 
     @Scheduled(cron = "${sparkle.admin.user-ip-warning.cron}")
+    @MonitoredScheduledTask(
+            id = "user-ip-warning",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.user-ip-warning.name",
+            descriptionKey = "admin.tasks.items.user-ip-warning.description",
+            expression = "${sparkle.admin.user-ip-warning.cron}"
+    )
     public void userIpWarning() {
         Map<IPAddress, String> map = new LinkedHashMap<>();
         DualIPv4v6AssociativeTries<String> ips = new DualIPv4v6AssociativeTries<>();

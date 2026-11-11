@@ -2,6 +2,9 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.SystemSample;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -37,11 +40,24 @@ public class AdminMetricsService {
     }
 
     @Scheduled(fixedRate = 60_000, initialDelay = 10_000)
+    @MonitoredScheduledTask(
+            id = "admin-metrics-sample",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.admin-metrics-sample.name",
+            descriptionKey = "admin.tasks.items.admin-metrics-sample.description",
+            scheduleType = TaskScheduleType.FIXED_RATE,
+            intervalMillis = 60_000,
+            initialDelayMillis = 10_000
+    )
     public void sample() {
         try {
             recordSample(currentSample());
         } catch (Exception exception) {
             log.warn("Unable to record admin host metric sample: {}", exception.getMessage());
+            throw new IllegalStateException(
+                    "Unable to record admin host metric sample",
+                    exception
+            );
         }
     }
 
@@ -101,6 +117,13 @@ public class AdminMetricsService {
     }
 
     @Scheduled(cron = "0 15 * * * *")
+    @MonitoredScheduledTask(
+            id = "admin-metrics-cleanup",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.admin-metrics-cleanup.name",
+            descriptionKey = "admin.tasks.items.admin-metrics-cleanup.description",
+            expression = "0 15 * * * *"
+    )
     public void cleanupHistory() {
         try {
             Long removed = trimHistory(Instant.now().toEpochMilli());
@@ -109,6 +132,10 @@ public class AdminMetricsService {
             }
         } catch (Exception exception) {
             log.warn("Unable to clean admin host metric history: {}", exception.getMessage());
+            throw new IllegalStateException(
+                    "Unable to clean admin host metric history",
+                    exception
+            );
         }
     }
 

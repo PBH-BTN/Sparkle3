@@ -3,6 +3,9 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.SystemSample;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterPerformanceView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.HttpResponsePerformanceView;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.HistogramSnapshot;
@@ -65,6 +68,15 @@ public class FooterMetricsService {
     }
 
     @Scheduled(fixedRate = 10_000, initialDelay = 5_000)
+    @MonitoredScheduledTask(
+            id = "footer-metrics-sample",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.footer-metrics-sample.name",
+            descriptionKey = "admin.tasks.items.footer-metrics-sample.description",
+            scheduleType = TaskScheduleType.FIXED_RATE,
+            intervalMillis = 10_000,
+            initialDelayMillis = 5_000
+    )
     public void sample() {
         synchronized (SAMPLE_LOCK) {
             try {

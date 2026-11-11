@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.service.impl.denylist.*;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.GHRepository;
@@ -43,6 +45,13 @@ public class GithubSyncServiceImpl {
 
 
     @Scheduled(cron = "${sparkle.github-sync.schedule}")
+    @MonitoredScheduledTask(
+            id = "github-rule-sync",
+            group = TaskGroup.SYNC,
+            nameKey = "admin.tasks.items.github-rule-sync.name",
+            descriptionKey = "admin.tasks.items.github-rule-sync.description",
+            expression = "${sparkle.github-sync.schedule}"
+    )
     public void scheduleSync() throws IOException {
         log.info("开始更新 GitHub 同步规则存储库...");
         GitHub github = new GitHubBuilder().withOAuthToken(accessToken, orgName).build();

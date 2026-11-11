@@ -495,6 +495,7 @@ export default {
     backToSite: 'Back to site',
     nav: {
       dashboard: 'Dashboard',
+      tasks: 'Task status',
       homepageStatistics: 'Homepage refresh',
       users: 'Users',
       userApps: 'Applications',
@@ -562,6 +563,128 @@ export default {
         bans24h: 'Bans · 24h',
         activeApps24h: 'Active apps · 24h',
         swarms24h: 'Swarm records · 24h',
+      },
+    },
+    tasks: {
+      title: 'Task status',
+      description:
+        'Monitor scheduled and asynchronous work in one place, including next runs, live duration, and recent execution results.',
+      updatedAt: 'Status updated at {time}',
+      pollHint: 'Automatically refreshes every 5 seconds',
+      timeline: 'Task execution timeline',
+      summary: {
+        total: 'Total tasks',
+        running: 'Running',
+        scheduled: 'Scheduled',
+        attention: 'Needs attention',
+      },
+      groups: {
+        ALL: 'All',
+        ANALYSIS: 'Analysis',
+        STATISTICS: 'Statistics',
+        MAINTENANCE: 'Maintenance',
+        SYNC: 'Sync',
+        STARTUP: 'Startup',
+      },
+      kinds: {
+        scheduled: 'Scheduled',
+        async: 'Async',
+      },
+      states: {
+        running: 'Running · {count}',
+        success: 'Recently succeeded',
+        failed: 'Needs attention',
+        skipped: 'Skipped',
+        idle: 'Waiting',
+        disabled: 'Disabled',
+      },
+      results: {
+        none: 'No runs',
+        SUCCESS: 'Success',
+        FAILED: 'Failed',
+        SKIPPED: 'Skipped',
+      },
+      nextRun: 'Next run',
+      currentDuration: 'Elapsed',
+      lastStarted: 'Last started',
+      lastDuration: 'Last duration',
+      lastTrigger: 'Last trigger',
+      lastResult: 'Last result',
+      scheduleError: 'Schedule configuration error',
+      lastError: 'Last execution failure',
+      recentRuns: 'Recent execution results',
+      recentLimit: 'Up to 5 recent runs',
+      noRuns: 'No executions have been recorded in this process.',
+      noMessage: 'No details',
+      noTasks: 'No tasks in this group.',
+      triggers: {
+        SCHEDULED: 'Scheduled',
+        MANUAL: 'Administrator',
+        EVENT: 'Event',
+        STARTUP: 'Application startup',
+        AFTER_DELETE: 'Post-delete refresh',
+      },
+      items: {
+        'admin-metrics-sample': {
+          name: 'Host metrics sampling',
+          description: 'Samples CPU, memory, and disk utilization for dashboard trends.',
+        },
+        'admin-metrics-cleanup': {
+          name: 'Host metric history cleanup',
+          description: 'Removes expired and excess host resource samples every hour.',
+        },
+        'footer-metrics-sample': {
+          name: 'Footer runtime metrics sampling',
+          description: 'Samples CPU, memory, disk, network, and Redis metrics for the public footer.',
+        },
+        'analysis-schedule-poll': {
+          name: 'Analysis schedule reconciliation',
+          description: 'Checks hot-reloaded module settings and rebuilds changed cron schedules.',
+        },
+        'homepage-statistics-dispatch': {
+          name: 'Homepage statistics dispatcher',
+          description: 'Checks due homepage statistic modules and dispatches asynchronous refreshes.',
+        },
+        'ban-module-name-cache': {
+          name: 'Ban module name cache',
+          description: 'Refreshes the distinct module-name cache used by ban history filters.',
+        },
+        'github-rule-sync': {
+          name: 'GitHub rule sync',
+          description: 'Publishes generated analysis rules to the remote GitHub rule repository.',
+        },
+        'swarm-data-retention': {
+          name: 'Swarm data retention cleanup',
+          description: 'Deletes swarm tracking data past its retention window in batches.',
+        },
+        'heartbeat-cleanup': {
+          name: 'Application heartbeat cleanup',
+          description: 'Deletes expired user application heartbeat records in batches.',
+        },
+        'user-ip-warning': {
+          name: 'User IP risk warnings',
+          description: 'Matches deny-listed IPs against recent heartbeats for administrator warnings.',
+        },
+        'swarm-statistics-scheduler': {
+          name: 'Swarm statistics due check',
+          description: 'Checks every minute whether user swarm statistics are due for refresh.',
+        },
+        'swarm-statistics-refresh': {
+          name: 'User swarm statistics refresh',
+          description: 'Recalculates user traffic and swarm rankings for the configured window.',
+        },
+        'version-alert-delivery': {
+          name: 'Version alert delivery',
+          description: 'Matches client version rules and delivers alert emails asynchronously.',
+        },
+        'ban-history-statistics-refresh': {
+          name: 'Ban history statistics refresh',
+          description: 'Rebuilds related statistics asynchronously after ban history deletion.',
+        },
+        'ban-traffic-startup-refresh': {
+          name: 'BitTorrent traffic startup backfill',
+          description: 'Initializes incremental ban traffic state and refreshes connection snapshots after startup.',
+        },
       },
     },
     homepageStatistics: {
