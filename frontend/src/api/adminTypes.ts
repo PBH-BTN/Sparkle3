@@ -309,7 +309,7 @@ export interface AnalyseModuleField {
     | 'decimal'
     | 'duration-hours'
     | 'bytes-gib'
-    | 'bytes-tib'
+    | 'bytes-gb'
     | 'cron'
     | 'text'
   value: string

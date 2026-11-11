@@ -667,7 +667,7 @@ export default {
       units: {
         hours: 'hours',
         gib: 'GiB',
-        tib: 'TiB',
+        gb: 'GB',
       },
       fields: {
         enabled: 'Enable module',

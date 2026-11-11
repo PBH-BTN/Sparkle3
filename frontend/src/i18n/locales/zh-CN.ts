@@ -652,7 +652,7 @@ export default {
       units: {
         hours: '小时',
         gib: 'GiB',
-        tib: 'TiB',
+        gb: 'GB',
       },
       fields: {
         enabled: '启用模块',
