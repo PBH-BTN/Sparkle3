@@ -61,13 +61,17 @@ export interface FooterHttpPerformance {
 }
 
 export interface FooterPerformance {
-  loadAverage: number | null
+  loadAverage1: number | null
+  loadAverage5: number | null
+  loadAverage15: number | null
   cpuPercent: number | null
   memoryPercent: number | null
   systemUptimeSeconds: number | null
   serverUptimeSeconds: number | null
-  diskIoBytesPerSecond: number | null
-  networkBytesPerSecond: number | null
+  diskIoReadBytesPerSecond: number | null
+  diskIoWriteBytesPerSecond: number | null
+  networkReceiveBytesPerSecond: number | null
+  networkTransmitBytesPerSecond: number | null
   httpRequestsPerSecond: number | null
   sqlQueriesPerSecond: number | null
   redisQueriesPerSecond: number | null

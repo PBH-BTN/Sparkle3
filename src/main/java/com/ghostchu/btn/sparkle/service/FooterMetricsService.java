@@ -47,8 +47,10 @@ public class FooterMetricsService {
     private final RollingLatencyWindow sqlWindow = new RollingLatencyWindow();
     private final Deque<MetricSample> samples = new ArrayDeque<>();
     private volatile long lastSampleAt;
-    private Long previousDiskIoBytes;
-    private Long previousNetworkBytes;
+    private Long previousDiskIoReadBytes;
+    private Long previousDiskIoWriteBytes;
+    private Long previousNetworkReceiveBytes;
+    private Long previousNetworkTransmitBytes;
 
     public FooterMetricsService(AdminMetricsService adminMetricsService,
                                 @Qualifier("stringStringRedisTemplate")
@@ -83,26 +85,56 @@ public class FooterMetricsService {
                 long now = System.currentTimeMillis();
                 SystemSample system = adminMetricsService.currentSample();
                 PlatformIo platformIo = platformIo();
-                Long diskIoRate = rate(previousDiskIoBytes, platformIo.diskIoBytes(), now);
-                Long networkRate = rate(previousNetworkBytes, platformIo.networkBytes(), now);
-                previousDiskIoBytes = platformIo.diskIoBytes();
-                previousNetworkBytes = platformIo.networkBytes();
-
-                double loadAverage = ManagementFactory.getOperatingSystemMXBean()
-                        .getSystemLoadAverage();
+                Long diskReadRate = rate(
+                        previousDiskIoReadBytes,
+                        platformIo.diskIoReadBytes(),
+                        now
+                );
+                Long diskWriteRate = rate(
+                        previousDiskIoWriteBytes,
+                        platformIo.diskIoWriteBytes(),
+                        now
+                );
+                Long networkReceiveRate = rate(
+                        previousNetworkReceiveBytes,
+                        platformIo.networkReceiveBytes(),
+                        now
+                );
+                Long networkTransmitRate = rate(
+                        previousNetworkTransmitBytes,
+                        platformIo.networkTransmitBytes(),
+                        now
+                );
+                previousDiskIoReadBytes = platformIo.diskIoReadBytes();
+                previousDiskIoWriteBytes = platformIo.diskIoWriteBytes();
+                previousNetworkReceiveBytes = platformIo.networkReceiveBytes();
+                previousNetworkTransmitBytes = platformIo.networkTransmitBytes();
+                LoadAverages loadAverages = loadAverages();
                 samples.addLast(new MetricSample(
                         now,
                         system.cpuUsage() * 100,
                         system.memoryUsage() * 100,
-                        loadAverage < 0 || !Double.isFinite(loadAverage) ? null : loadAverage,
+                        loadAverages.oneMinute(),
+                        loadAverages.fiveMinutes(),
+                        loadAverages.fifteenMinutes(),
                         platformIo.systemUptimeSeconds(),
                         ManagementFactory.getRuntimeMXBean().getUptime() / 1_000,
-                        platformIo.diskIoRate() != null
-                                ? platformIo.diskIoRate()
-                                : diskIoRate == null ? null : diskIoRate.doubleValue(),
-                        platformIo.networkRate() != null
-                                ? platformIo.networkRate()
-                                : networkRate == null ? null : networkRate.doubleValue(),
+                        platformIo.diskIoReadRate() != null
+                                ? platformIo.diskIoReadRate()
+                                : diskReadRate == null ? null : diskReadRate.doubleValue(),
+                        platformIo.diskIoWriteRate() != null
+                                ? platformIo.diskIoWriteRate()
+                                : diskWriteRate == null ? null : diskWriteRate.doubleValue(),
+                        platformIo.networkReceiveRate() != null
+                                ? platformIo.networkReceiveRate()
+                                : networkReceiveRate == null
+                                ? null
+                                : networkReceiveRate.doubleValue(),
+                        platformIo.networkTransmitRate() != null
+                                ? platformIo.networkTransmitRate()
+                                : networkTransmitRate == null
+                                ? null
+                                : networkTransmitRate.doubleValue(),
                         redisOpsPerSecond()
                 ));
                 long cutoff = now - SAMPLE_RETENTION.toMillis();
@@ -147,13 +179,17 @@ public class FooterMetricsService {
         long sqlQueries = sqlWindow.stats().count();
 
         return new FooterPerformanceView(
-                latest == null ? null : latest.loadAverage(),
+                latest == null ? null : latest.loadAverage1(),
+                latest == null ? null : latest.loadAverage5(),
+                latest == null ? null : latest.loadAverage15(),
                 average(currentSamples, MetricSample::cpuPercent),
                 average(currentSamples, MetricSample::memoryPercent),
                 latest == null ? null : latest.systemUptimeSeconds(),
                 latest == null ? null : latest.serverUptimeSeconds(),
-                averageNullable(currentSamples, MetricSample::diskIoBytesPerSecond),
-                averageNullable(currentSamples, MetricSample::networkBytesPerSecond),
+                averageNullable(currentSamples, MetricSample::diskIoReadBytesPerSecond),
+                averageNullable(currentSamples, MetricSample::diskIoWriteBytesPerSecond),
+                averageNullable(currentSamples, MetricSample::networkReceiveBytesPerSecond),
+                averageNullable(currentSamples, MetricSample::networkTransmitBytesPerSecond),
                 httpRequests / (double) requestWindowSeconds,
                 sqlQueries / (double) requestWindowSeconds,
                 averageNullable(currentSamples, MetricSample::redisOpsPerSecond),
@@ -219,6 +255,30 @@ public class FooterMetricsService {
         return Math.round((current - previous) / elapsedSeconds);
     }
 
+    private LoadAverages loadAverages() {
+        try {
+            String[] fields = Files.readString(
+                    Path.of("/proc/loadavg"),
+                    StandardCharsets.US_ASCII
+            ).trim().split("\\s+");
+            if (fields.length >= 3) {
+                return new LoadAverages(
+                        finiteOrNull(Double.parseDouble(fields[0])),
+                        finiteOrNull(Double.parseDouble(fields[1])),
+                        finiteOrNull(Double.parseDouble(fields[2]))
+                );
+            }
+        } catch (Exception ignored) {
+        }
+        double loadAverage = ManagementFactory.getOperatingSystemMXBean()
+                .getSystemLoadAverage();
+        return new LoadAverages(finiteOrNull(loadAverage), null, null);
+    }
+
+    private @Nullable Double finiteOrNull(double value) {
+        return value < 0 || !Double.isFinite(value) ? null : value;
+    }
+
     private @Nullable Double redisOpsPerSecond() {
         try {
             Properties info = redisTemplate.execute(
@@ -243,22 +303,31 @@ public class FooterMetricsService {
 
     private PlatformIo linuxPlatformIo() {
         Long uptime = null;
-        Long diskIoBytes = null;
-        Long networkBytes = null;
         try {
             String uptimeText = Files.readString(Path.of("/proc/uptime"), StandardCharsets.US_ASCII);
             uptime = Math.round(Double.parseDouble(uptimeText.trim().split("\\s+")[0]));
         } catch (Exception ignored) {
         }
-        diskIoBytes = linuxDiskIoBytes();
-        networkBytes = linuxNetworkBytes();
-        return new PlatformIo(uptime, diskIoBytes, networkBytes, null, null);
+        DiskCounters disk = linuxDiskCounters();
+        NetworkCounters network = linuxNetworkCounters();
+        return new PlatformIo(
+                uptime,
+                disk == null ? null : disk.readBytes(),
+                disk == null ? null : disk.writeBytes(),
+                network == null ? null : network.receiveBytes(),
+                network == null ? null : network.transmitBytes(),
+                null,
+                null,
+                null,
+                null
+        );
     }
 
-    private @Nullable Long linuxDiskIoBytes() {
+    private @Nullable DiskCounters linuxDiskCounters() {
         Path blockDirectory = Path.of("/sys/block");
         if (!Files.isDirectory(blockDirectory)) return null;
-        long total = 0;
+        long readBytes = 0;
+        long writeBytes = 0;
         boolean found = false;
         try (var devices = Files.list(blockDirectory)) {
             for (Path device : devices.toList()) {
@@ -273,19 +342,20 @@ public class FooterMetricsService {
                         .trim()
                         .split("\\s+");
                 if (fields.length < 7) continue;
-                total += Long.parseLong(fields[2]) * 512L;
-                total += Long.parseLong(fields[6]) * 512L;
+                readBytes += Long.parseLong(fields[2]) * 512L;
+                writeBytes += Long.parseLong(fields[6]) * 512L;
                 found = true;
             }
         } catch (Exception exception) {
             return null;
         }
-        return found ? total : null;
+        return found ? new DiskCounters(readBytes, writeBytes) : null;
     }
 
-    private @Nullable Long linuxNetworkBytes() {
+    private @Nullable NetworkCounters linuxNetworkCounters() {
         try {
-            long total = 0;
+            long receiveBytes = 0;
+            long transmitBytes = 0;
             boolean found = false;
             for (String line : Files.readAllLines(Path.of("/proc/net/dev"))) {
                 int separator = line.indexOf(':');
@@ -294,11 +364,11 @@ public class FooterMetricsService {
                 if (name.equals("lo")) continue;
                 String[] fields = line.substring(separator + 1).trim().split("\\s+");
                 if (fields.length < 16) continue;
-                total += Long.parseLong(fields[0]);
-                total += Long.parseLong(fields[8]);
+                receiveBytes += Long.parseLong(fields[0]);
+                transmitBytes += Long.parseLong(fields[8]);
                 found = true;
             }
-            return found ? total : null;
+            return found ? new NetworkCounters(receiveBytes, transmitBytes) : null;
         } catch (Exception exception) {
             return null;
         }
@@ -309,12 +379,15 @@ public class FooterMetricsService {
                 $ErrorActionPreference = 'SilentlyContinue';
                 $os = Get-CimInstance Win32_OperatingSystem;
                 $uptime = [long]((Get-Date).ToUniversalTime() - $os.LastBootUpTime.ToUniversalTime()).TotalSeconds;
-                $disk = [double](Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk |
+                $disk = Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk |
                     Where-Object { $_.Name -eq '_Total' } |
-                    Select-Object -First 1 -ExpandProperty DiskBytesPersec);
-                $net = [double]((Get-CimInstance Win32_PerfFormattedData_Tcpip_NetworkInterface |
-                    Measure-Object -Property BytesTotalPersec -Sum).Sum);
-                Write-Output ("{0}|{1}|{2}" -f $uptime, $disk, $net)
+                    Select-Object -First 1;
+                $diskRead = [double]$disk.DiskReadBytesPersec;
+                $diskWrite = [double]$disk.DiskWriteBytesPersec;
+                $nets = @(Get-CimInstance Win32_PerfFormattedData_Tcpip_NetworkInterface);
+                $netRx = [double](($nets | Measure-Object -Property BytesReceivedPersec -Sum).Sum);
+                $netTx = [double](($nets | Measure-Object -Property BytesSentPersec -Sum).Sum);
+                Write-Output ("{0}|{1}|{2}|{3}|{4}" -f $uptime, $diskRead, $diskWrite, $netRx, $netTx)
                 """;
         try {
             Process process = new ProcessBuilder(
@@ -335,11 +408,23 @@ public class FooterMetricsService {
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                     .trim();
             String[] fields = output.split("\\|", -1);
-            if (fields.length != 3) return PlatformIo.empty();
+            if (fields.length != 5) return PlatformIo.empty();
             Long uptime = parseNullableLong(fields[0]);
-            Double disk = parseNullableDouble(fields[1]);
-            Double network = parseNullableDouble(fields[2]);
-            return new PlatformIo(uptime, null, null, disk, network);
+            Double diskRead = parseNullableDouble(fields[1]);
+            Double diskWrite = parseNullableDouble(fields[2]);
+            Double networkReceive = parseNullableDouble(fields[3]);
+            Double networkTransmit = parseNullableDouble(fields[4]);
+            return new PlatformIo(
+                    uptime,
+                    null,
+                    null,
+                    null,
+                    null,
+                    diskRead,
+                    diskWrite,
+                    networkReceive,
+                    networkTransmit
+            );
         } catch (Exception exception) {
             return PlatformIo.empty();
         }
@@ -384,25 +469,47 @@ public class FooterMetricsService {
             long timestamp,
             double cpuPercent,
             double memoryPercent,
-            Double loadAverage,
+            Double loadAverage1,
+            Double loadAverage5,
+            Double loadAverage15,
             Long systemUptimeSeconds,
             Long serverUptimeSeconds,
-            Double diskIoBytesPerSecond,
-            Double networkBytesPerSecond,
+            Double diskIoReadBytesPerSecond,
+            Double diskIoWriteBytesPerSecond,
+            Double networkReceiveBytesPerSecond,
+            Double networkTransmitBytesPerSecond,
             Double redisOpsPerSecond
     ) {
     }
 
     private record PlatformIo(
             Long systemUptimeSeconds,
-            Long diskIoBytes,
-            Long networkBytes,
-            Double diskIoRate,
-            Double networkRate
+            Long diskIoReadBytes,
+            Long diskIoWriteBytes,
+            Long networkReceiveBytes,
+            Long networkTransmitBytes,
+            Double diskIoReadRate,
+            Double diskIoWriteRate,
+            Double networkReceiveRate,
+            Double networkTransmitRate
     ) {
         private static PlatformIo empty() {
-            return new PlatformIo(null, null, null, null, null);
+            return new PlatformIo(null, null, null, null, null,
+                    null, null, null, null);
         }
+    }
+
+    private record LoadAverages(
+            Double oneMinute,
+            Double fiveMinutes,
+            Double fifteenMinutes
+    ) {
+    }
+
+    private record DiskCounters(long readBytes, long writeBytes) {
+    }
+
+    private record NetworkCounters(long receiveBytes, long transmitBytes) {
     }
 
     private static final class RollingLatencyWindow {

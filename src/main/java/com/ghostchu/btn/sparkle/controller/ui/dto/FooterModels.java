@@ -47,13 +47,17 @@ public final class FooterModels {
     }
 
     public record FooterPerformanceView(
-            Double loadAverage,
+            Double loadAverage1,
+            Double loadAverage5,
+            Double loadAverage15,
             Double cpuPercent,
             Double memoryPercent,
             Long systemUptimeSeconds,
             Long serverUptimeSeconds,
-            Double diskIoBytesPerSecond,
-            Double networkBytesPerSecond,
+            Double diskIoReadBytesPerSecond,
+            Double diskIoWriteBytesPerSecond,
+            Double networkReceiveBytesPerSecond,
+            Double networkTransmitBytesPerSecond,
             Double httpRequestsPerSecond,
             Double sqlQueriesPerSecond,
             Double redisQueriesPerSecond,

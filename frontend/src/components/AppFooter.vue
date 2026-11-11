@@ -17,7 +17,7 @@ const props = withDefaults(
 )
 
 const { t, locale } = useI18n()
-const { formatBytes, formatDuration, formatRatio } = useFormatters()
+const { formatRatio } = useFormatters()
 const data = ref<FooterResponse | null>(null)
 const now = ref(Date.now())
 const serverOffset = ref(0)
@@ -86,45 +86,97 @@ const performanceItems = computed(() => {
   if (!performance) return []
   const items: string[] = []
   const push = (label: string, value: string | null) => {
-    if (value != null) items.push(`${label} ${value}`)
+    if (value != null) items.push(`${label}: ${value}`)
   }
-  const percent = (value: number | null) =>
-    value == null ? null : `${formatDecimal(value)}%`
-  const perSecond = (value: number | null, bytes = false) =>
+  const compactNumber = (value: number | null) =>
     value == null
       ? null
-      : bytes
-        ? `${formatBytes(Math.round(value))}/s`
-        : `${formatDecimal(value)}/s`
-
+      : new Intl.NumberFormat(locale.value, {
+          maximumFractionDigits: 1,
+        }).format(value)
+  const percent = (value: number | null) =>
+    value == null ? null : `${compactNumber(value)}%`
+  const rate = (value: number | null) => formatCompactRate(value)
+  const uptime = (seconds: number | null) => formatCompactUptime(seconds)
+  const loads = [performance.loadAverage1, performance.loadAverage5, performance.loadAverage15]
   push(
     t('siteFooter.performance.loadAverage'),
-    performance.loadAverage == null ? null : formatRatio(performance.loadAverage),
+    loads.every((value) => value == null)
+      ? null
+      : loads.map((value) => (value == null ? 'N/A' : formatRatio(value))).join(', '),
   )
   push(t('siteFooter.performance.cpu'), percent(performance.cpuPercent))
   push(t('siteFooter.performance.memory'), percent(performance.memoryPercent))
   push(
     t('siteFooter.performance.systemUptime'),
-    performance.systemUptimeSeconds == null
-      ? null
-      : formatDuration(performance.systemUptimeSeconds * 1_000),
+    uptime(performance.systemUptimeSeconds),
   )
   push(
     t('siteFooter.performance.serverUptime'),
-    performance.serverUptimeSeconds == null
-      ? null
-      : formatDuration(performance.serverUptimeSeconds * 1_000),
+    uptime(performance.serverUptimeSeconds),
   )
   push(
     t('siteFooter.performance.diskIo'),
-    perSecond(performance.diskIoBytesPerSecond, true),
+    performance.diskIoReadBytesPerSecond == null
+      && performance.diskIoWriteBytesPerSecond == null
+      ? null
+      : `${rate(performance.diskIoReadBytesPerSecond) ?? 'N/A'}(read), ${
+          rate(performance.diskIoWriteBytesPerSecond) ?? 'N/A'
+        }(write)`,
   )
-  push(t('siteFooter.performance.network'), perSecond(performance.networkBytesPerSecond, true))
-  push(t('siteFooter.performance.httpRps'), perSecond(performance.httpRequestsPerSecond))
-  push(t('siteFooter.performance.sqlQps'), perSecond(performance.sqlQueriesPerSecond))
-  push(t('siteFooter.performance.redisQps'), perSecond(performance.redisQueriesPerSecond))
+  push(
+    t('siteFooter.performance.network'),
+    performance.networkReceiveBytesPerSecond == null
+      && performance.networkTransmitBytesPerSecond == null
+      ? null
+      : `↑${rate(performance.networkTransmitBytesPerSecond) ?? 'N/A'}, ↓${
+          rate(performance.networkReceiveBytesPerSecond) ?? 'N/A'
+        }`,
+  )
+  push(
+    t('siteFooter.performance.httpRps'),
+    performance.httpRequestsPerSecond == null
+      ? null
+      : `${compactNumber(performance.httpRequestsPerSecond)}/s`,
+  )
+  push(
+    t('siteFooter.performance.sqlQps'),
+    performance.sqlQueriesPerSecond == null
+      ? null
+      : `${compactNumber(performance.sqlQueriesPerSecond)}/s`,
+  )
+  push(
+    t('siteFooter.performance.redisQps'),
+    performance.redisQueriesPerSecond == null
+      ? null
+      : `${compactNumber(performance.redisQueriesPerSecond)}/s`,
+  )
   return items
 })
+
+function formatCompactRate(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return null
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+  let scaled = Math.max(0, value)
+  let index = 0
+  while (index < units.length - 1 && scaled >= 1024) {
+    scaled /= 1024
+    index++
+  }
+  return `${new Intl.NumberFormat(locale.value, {
+    maximumFractionDigits: index === 0 ? 0 : 2,
+  }).format(scaled)}${units[index]}/s`
+}
+
+function formatCompactUptime(seconds: number | null) {
+  if (seconds == null || !Number.isFinite(seconds)) return null
+  const totalMinutes = Math.max(0, Math.floor(seconds / 60))
+  const days = Math.floor(totalMinutes / (24 * 60))
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60)
+  const minutes = totalMinutes % 60
+  const clock = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  return days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}, ${clock}` : clock
+}
 
 const httpPerformanceItems = computed(() => {
   const http = data.value?.performance?.httpResponses
@@ -279,7 +331,7 @@ onBeforeUnmount(() => {
 
     <div v-if="performanceItems.length || httpPerformanceItems.length" class="footer-performance">
       <p v-if="performanceItems.length" class="footer-text">
-        {{ performanceItems.join(' · ') }}
+        {{ performanceItems.join('; ') }}
       </p>
       <p v-if="httpPerformanceItems.length" class="footer-text">
         {{ httpPerformanceItems.join(' · ') }}

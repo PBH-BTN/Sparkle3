@@ -99,7 +99,11 @@ public class FooterApiController {
     ) {
         HttpResponsePerformanceView http = performance.httpResponses();
         return new FooterPerformanceView(
-                metric(performance.loadAverage(), metricVisible(
+                metric(performance.loadAverage1(), metricVisible(
+                        settings, "loadAverage", authenticated, admin)),
+                metric(performance.loadAverage5(), metricVisible(
+                        settings, "loadAverage", authenticated, admin)),
+                metric(performance.loadAverage15(), metricVisible(
                         settings, "loadAverage", authenticated, admin)),
                 metric(performance.cpuPercent(), metricVisible(
                         settings, "cpu", authenticated, admin)),
@@ -109,9 +113,13 @@ public class FooterApiController {
                         settings, "systemUptime", authenticated, admin)),
                 metric(performance.serverUptimeSeconds(), metricVisible(
                         settings, "serverUptime", authenticated, admin)),
-                metric(performance.diskIoBytesPerSecond(), metricVisible(
+                metric(performance.diskIoReadBytesPerSecond(), metricVisible(
                         settings, "diskIo", authenticated, admin)),
-                metric(performance.networkBytesPerSecond(), metricVisible(
+                metric(performance.diskIoWriteBytesPerSecond(), metricVisible(
+                        settings, "diskIo", authenticated, admin)),
+                metric(performance.networkReceiveBytesPerSecond(), metricVisible(
+                        settings, "network", authenticated, admin)),
+                metric(performance.networkTransmitBytesPerSecond(), metricVisible(
                         settings, "network", authenticated, admin)),
                 metric(performance.httpRequestsPerSecond(), metricVisible(
                         settings, "httpRps", authenticated, admin)),
