@@ -100,8 +100,8 @@ export default {
       totalUpload: 'Total uploaded',
       totalUploadHint:
         'to_peer_traffic: uploaded as a seeder or while downloading as a leecher',
-      topUploadCities: 'Top 30 upload GeoIP cities (submitter → peer)',
-      topDownloadCities: 'Top 30 download GeoIP cities (peer → submitter)',
+      topUploadCities: 'Top 30 upload GeoIP cities (BTN user → peer)',
+      topDownloadCities: 'Top 30 download GeoIP cities (peer → BTN user)',
       top30: 'TOP 30',
       topEightPlusOther: 'TOP 8 + OTHER',
       viewTop30: 'View the complete Top 30 ranking',

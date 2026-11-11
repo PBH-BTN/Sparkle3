@@ -96,8 +96,8 @@ export default {
       totalUpload: '总上传流量',
       totalUploadHint:
         'to_peer_traffic：作为 Seeder 上传，或 Leecher 下载过程中上传的流量',
-      topUploadCities: 'Top 30 上传流量 GeoIP 城市（提交者 → Peer）',
-      topDownloadCities: 'Top 30 下载流量 GeoIP 城市（Peer → 提交者）',
+      topUploadCities: 'Top 30 上传流量 GeoIP 城市（BTN用户 → Peer）',
+      topDownloadCities: 'Top 30 下载流量 GeoIP 城市（Peer → BTN用户）',
       top30: 'TOP 30',
       topEightPlusOther: 'TOP 8 + 其他',
       viewTop30: '查看完整 Top 30 排行',
