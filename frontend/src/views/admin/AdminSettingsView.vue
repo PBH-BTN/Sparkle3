@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -14,6 +14,11 @@ import {
 import PageHeader from '@/components/PageHeader.vue'
 import { adminApi } from '@/api/admin'
 import type { RuntimeConfig, SwarmStatisticsStatus } from '@/api/adminTypes'
+import {
+  footerApi,
+  type FooterConfig,
+  type FooterMetricKey,
+} from '@/api/footer'
 import { useSessionStore } from '@/stores/session'
 import { errorMessage, useFormatters } from '@/utils/format'
 
@@ -44,12 +49,61 @@ const form = reactive<RuntimeConfig>({
   userContactEmailBodyTemplate:
     '{{senderName}}（UID {{senderId}}）通过 Sparkle BTN 向你发送了一条消息：\n\n{{content}}',
 })
+const performanceMetricKeys: FooterMetricKey[] = [
+  'loadAverage',
+  'cpu',
+  'memory',
+  'systemUptime',
+  'serverUptime',
+  'diskIo',
+  'network',
+  'httpRps',
+  'sqlQps',
+  'redisQps',
+  'httpApiAverage',
+  'httpApiP99',
+  'httpPingAverage',
+  'httpPingP99',
+  'httpOtherAverage',
+  'httpOtherP99',
+]
+const footerForm = reactive<FooterConfig>({
+  disclaimerZh: '',
+  disclaimerEn: '',
+  disclaimerAudience: 'AUTHENTICATED',
+  icp: '',
+  icpAudience: 'AUTHENTICATED',
+  columns: [],
+  columnsAudience: 'AUTHENTICATED',
+  timeAudience: 'AUTHENTICATED',
+  loginAudience: 'AUTHENTICATED',
+  performanceMetrics: performanceMetricKeys.map((key) => ({
+    key,
+    enabled: true,
+    audience: 'ADMIN',
+  })),
+})
+const audienceOptions = computed(() => [
+  {
+    label: t('siteFooterAdmin.authenticated'),
+    value: 'AUTHENTICATED',
+  },
+  {
+    label: t('siteFooterAdmin.adminOnly'),
+    value: 'ADMIN',
+  },
+])
 let pollTimer: number | undefined
 
 async function load() {
   loading.value = true
   try {
-    Object.assign(form, await adminApi.config())
+    const [runtimeConfig, footerConfig] = await Promise.all([
+      adminApi.config(),
+      footerApi.config(),
+    ])
+    Object.assign(form, runtimeConfig)
+    applyFooterConfig(footerConfig)
     await loadStatus()
   } catch (error) {
     Message.error(errorMessage(error, t('common.loadFailed')))
@@ -96,9 +150,15 @@ async function save() {
     Message.warning(t('admin.settings.invalidEmailTemplate'))
     return
   }
+  if (!validateFooter()) return
   saving.value = true
   try {
-    Object.assign(form, await adminApi.updateConfig(form))
+    const [runtimeConfig, footerConfig] = await Promise.all([
+      adminApi.updateConfig(form),
+      footerApi.updateConfig(footerForm),
+    ])
+    Object.assign(form, runtimeConfig)
+    applyFooterConfig(footerConfig)
     await loadStatus()
     if (!form.swarmStatisticsEnabled) {
       session.traffic = null
@@ -110,6 +170,89 @@ async function save() {
   } finally {
     saving.value = false
   }
+}
+
+function applyFooterConfig(config: FooterConfig) {
+  const normalized = structuredClone(config)
+  const configuredMetrics = new Map(
+    normalized.performanceMetrics.map((metric) => [metric.key, metric]),
+  )
+  normalized.performanceMetrics = performanceMetricKeys.map(
+    (key) =>
+      configuredMetrics.get(key) ?? {
+        key,
+        enabled: true,
+        audience: 'ADMIN',
+      },
+  )
+  Object.assign(footerForm, normalized)
+}
+
+function validateFooter() {
+  for (const column of footerForm.columns) {
+    if (!column.titleZh.trim() && !column.titleEn.trim()) {
+      Message.warning(t('siteFooterAdmin.invalidColumn'))
+      return false
+    }
+    for (const link of column.links) {
+      if (
+        (!link.labelZh.trim() && !link.labelEn.trim()) ||
+        !link.href.trim() ||
+        (!link.href.startsWith('/') &&
+          !/^https?:\/\/[^\s]+$/i.test(link.href.trim()))
+      ) {
+        Message.warning(t('siteFooterAdmin.invalidLink'))
+        return false
+      }
+    }
+  }
+  return true
+}
+
+function addFooterColumn() {
+  if (footerForm.columns.length >= 12) return
+  footerForm.columns.push({
+    titleZh: '',
+    titleEn: '',
+    links: [],
+  })
+}
+
+function removeFooterColumn(index: number) {
+  footerForm.columns.splice(index, 1)
+}
+
+function addFooterLink(columnIndex: number) {
+  const column = footerForm.columns[columnIndex]
+  if (!column || column.links.length >= 30) return
+  column.links.push({
+    labelZh: '',
+    labelEn: '',
+    href: '',
+  })
+}
+
+function removeFooterLink(columnIndex: number, linkIndex: number) {
+  footerForm.columns[columnIndex]?.links.splice(linkIndex, 1)
+}
+
+function footerMetricLabel(key: FooterMetricKey) {
+  const httpMetric = key.match(
+    /^http(Api|Ping|Other)(Average|P99)$/,
+  )
+  if (httpMetric) {
+    const categoryKey =
+      httpMetric[1] === 'Api'
+        ? 'api'
+        : httpMetric[1] === 'Ping'
+          ? 'btnPing'
+          : 'other'
+    const valueKey = httpMetric[2] === 'Average' ? 'average' : 'p99'
+    return `${t(`siteFooter.performance.${categoryKey}`)} ${t(
+      `siteFooter.performance.${valueKey}`,
+    )}`
+  }
+  return t(`siteFooter.performance.${key}`)
 }
 
 async function refreshStatistics() {
@@ -329,6 +472,213 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
         </a-form>
       </a-card>
 
+      <a-card class="surface-card footer-settings-card">
+        <template #title>
+          <span class="card-title">
+            <IconSettings />
+            {{ t('siteFooterAdmin.title') }}
+          </span>
+        </template>
+        <template #extra>
+          <span class="footer-settings-description">
+            {{ t('siteFooterAdmin.description') }}
+          </span>
+        </template>
+
+        <a-form :model="footerForm" layout="vertical">
+          <section class="footer-settings-section">
+            <div class="footer-section-heading">
+              <div>
+                <strong>{{ t('siteFooterAdmin.disclaimerTitle') }}</strong>
+                <p>{{ t('siteFooterAdmin.disclaimerDescription') }}</p>
+              </div>
+              <a-select
+                v-model="footerForm.disclaimerAudience"
+                :options="audienceOptions"
+                class="audience-select"
+              />
+            </div>
+            <div class="settings-grid">
+              <a-form-item :label="t('siteFooterAdmin.disclaimerZh')">
+                <a-textarea
+                  v-model="footerForm.disclaimerZh"
+                  :auto-size="{ minRows: 5, maxRows: 12 }"
+                  :max-length="20000"
+                />
+              </a-form-item>
+              <a-form-item :label="t('siteFooterAdmin.disclaimerEn')">
+                <a-textarea
+                  v-model="footerForm.disclaimerEn"
+                  :auto-size="{ minRows: 5, maxRows: 12 }"
+                  :max-length="20000"
+                />
+              </a-form-item>
+            </div>
+            <div class="settings-grid">
+              <a-form-item :label="t('siteFooterAdmin.icp')">
+                <a-input v-model="footerForm.icp" :max-length="128" />
+                <template #extra>{{ t('siteFooterAdmin.icpHint') }}</template>
+              </a-form-item>
+              <a-form-item :label="t('siteFooterAdmin.icpAudience')">
+                <a-select
+                  v-model="footerForm.icpAudience"
+                  :options="audienceOptions"
+                />
+              </a-form-item>
+            </div>
+          </section>
+
+          <a-divider />
+
+          <section class="footer-settings-section">
+            <div class="footer-section-heading">
+              <div>
+                <strong>{{ t('siteFooterAdmin.columnsTitle') }}</strong>
+                <p>{{ t('siteFooterAdmin.columnsDescription') }}</p>
+              </div>
+              <div class="footer-section-actions">
+                <a-select
+                  v-model="footerForm.columnsAudience"
+                  :options="audienceOptions"
+                  class="audience-select"
+                />
+                <a-button type="outline" @click="addFooterColumn">
+                  {{ t('siteFooterAdmin.addColumn') }}
+                </a-button>
+              </div>
+            </div>
+
+            <p v-if="footerForm.columns.length === 0" class="empty-columns">
+              {{ t('siteFooterAdmin.noColumns') }}
+            </p>
+            <div class="footer-column-editor-list">
+              <div
+                v-for="(column, columnIndex) in footerForm.columns"
+                :key="columnIndex"
+                class="footer-column-editor"
+              >
+                <div class="footer-column-editor-heading">
+                  <strong>
+                    {{
+                      t('siteFooterAdmin.column', {
+                        index: columnIndex + 1,
+                      })
+                    }}
+                  </strong>
+                  <a-button
+                    type="text"
+                    size="small"
+                    @click="removeFooterColumn(columnIndex)"
+                  >
+                    {{ t('siteFooterAdmin.removeColumn') }}
+                  </a-button>
+                </div>
+                <div class="settings-grid">
+                  <a-form-item :label="t('siteFooterAdmin.columnTitleZh')">
+                    <a-input v-model="column.titleZh" :max-length="100" />
+                  </a-form-item>
+                  <a-form-item :label="t('siteFooterAdmin.columnTitleEn')">
+                    <a-input v-model="column.titleEn" :max-length="100" />
+                  </a-form-item>
+                </div>
+
+                <div class="footer-link-list">
+                  <div class="field-label">{{ t('siteFooterAdmin.links') }}</div>
+                  <div
+                    v-for="(link, linkIndex) in column.links"
+                    :key="linkIndex"
+                    class="footer-link-editor"
+                  >
+                    <a-input
+                      v-model="link.labelZh"
+                      :placeholder="t('siteFooterAdmin.linkLabelZh')"
+                      :max-length="100"
+                    />
+                    <a-input
+                      v-model="link.labelEn"
+                      :placeholder="t('siteFooterAdmin.linkLabelEn')"
+                      :max-length="100"
+                    />
+                    <a-input
+                      v-model="link.href"
+                      :placeholder="t('siteFooterAdmin.linkUrlPlaceholder')"
+                      :max-length="2048"
+                    />
+                    <a-button type="text" @click="removeFooterLink(columnIndex, linkIndex)">
+                      {{ t('siteFooterAdmin.removeLink') }}
+                    </a-button>
+                  </div>
+                  <a-button
+                    type="dashed"
+                    long
+                    @click="addFooterLink(columnIndex)"
+                  >
+                    {{ t('siteFooterAdmin.addLink') }}
+                  </a-button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <a-divider />
+
+          <section class="footer-settings-section">
+            <div class="settings-grid">
+              <a-form-item :label="t('siteFooterAdmin.timeAudience')">
+                <a-select
+                  v-model="footerForm.timeAudience"
+                  :options="audienceOptions"
+                />
+                <template #extra>
+                  {{ t('siteFooterAdmin.timeDescription') }}
+                </template>
+              </a-form-item>
+              <a-form-item :label="t('siteFooterAdmin.loginAudience')">
+                <a-select
+                  v-model="footerForm.loginAudience"
+                  :options="audienceOptions"
+                />
+                <template #extra>
+                  {{ t('siteFooterAdmin.loginDescription') }}
+                </template>
+              </a-form-item>
+            </div>
+          </section>
+
+          <a-divider />
+
+          <section class="footer-settings-section">
+            <div class="footer-section-heading">
+              <div>
+                <strong>{{ t('siteFooterAdmin.performanceTitle') }}</strong>
+                <p>{{ t('siteFooterAdmin.performanceDescription') }}</p>
+              </div>
+            </div>
+            <div class="metric-visibility-grid">
+              <template
+                v-for="(metric, metricIndex) in footerForm.performanceMetrics"
+                :key="metric.key"
+              >
+                <div v-if="metricIndex === 10" class="metric-group-heading">
+                  <strong>{{ t('siteFooterAdmin.httpResponses') }}</strong>
+                  <span>{{ t('siteFooterAdmin.httpResponsesHint') }}</span>
+                </div>
+                <div class="metric-visibility-row">
+                  <span>{{ footerMetricLabel(metric.key) }}</span>
+                  <a-switch v-model="metric.enabled" size="small" />
+                  <a-select
+                    v-model="metric.audience"
+                    :options="audienceOptions"
+                    size="small"
+                    :disabled="!metric.enabled"
+                  />
+                </div>
+              </template>
+            </div>
+          </section>
+        </a-form>
+      </a-card>
+
       <a-card class="surface-card security-card">
         <template #title>
           <span class="card-title">
@@ -420,10 +770,169 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   color: rgb(var(--primary-6));
 }
 
+.footer-settings-card :deep(.arco-card-header) {
+  align-items: flex-start;
+}
+
+.footer-settings-description {
+  display: block;
+  max-width: 570px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.footer-settings-section {
+  min-width: 0;
+}
+
+.footer-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.footer-section-heading strong {
+  color: var(--color-text-1);
+  font-size: 14px;
+}
+
+.footer-section-heading p {
+  margin: 4px 0 0;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.footer-section-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.audience-select {
+  width: 150px;
+}
+
+.empty-columns {
+  margin: 0 0 12px;
+  padding: 18px;
+  color: var(--color-text-3);
+  text-align: center;
+  background: var(--color-fill-1);
+  border: 1px dashed var(--color-border-2);
+  border-radius: 6px;
+}
+
+.footer-column-editor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.footer-column-editor {
+  padding: 16px;
+  background: var(--color-fill-1);
+  border: 1px solid var(--color-border-2);
+  border-radius: 7px;
+}
+
+.footer-column-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.footer-link-list {
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  color: var(--color-text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.footer-link-editor {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(110px, 0.8fr) minmax(220px, 1.7fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.metric-visibility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metric-visibility-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto 130px;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  padding: 6px 10px;
+  background: var(--color-fill-1);
+  border-radius: 5px;
+}
+
+.metric-visibility-row > span {
+  overflow: hidden;
+  color: var(--color-text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-group-heading {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 12px 10px 4px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.metric-group-heading span {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 @media (max-width: 760px) {
   .status-grid,
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer-settings-description {
+    display: none;
+  }
+
+  .footer-section-heading,
+  .footer-section-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .audience-select {
+    width: 100%;
+  }
+
+  .footer-link-editor,
+  .metric-visibility-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-visibility-row {
+    grid-template-columns: minmax(0, 1fr) auto 130px;
   }
 }
 </style>

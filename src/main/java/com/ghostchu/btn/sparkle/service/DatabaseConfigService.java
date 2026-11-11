@@ -56,7 +56,8 @@ public class DatabaseConfigService {
             "sparkle.analyse.mass-download-monitor.ipv6-prefix",
             "sparkle.analyse.mass-download-monitor.threshold-download",
             "sparkle.user-contact-email.subject-template",
-            "sparkle.user-contact-email.content-template"
+            "sparkle.user-contact-email.content-template",
+            "sparkle.footer.config"
     );
     private static final String TABLE = "app_config_entries";
 

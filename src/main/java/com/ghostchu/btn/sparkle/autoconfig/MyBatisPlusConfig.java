@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.ghostchu.btn.sparkle.converter.InetAddressTypeHandler;
+import com.ghostchu.btn.sparkle.service.FooterSqlMetricsInterceptor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,10 +16,13 @@ import org.springframework.context.annotation.Configuration;
 @MapperScan(basePackages = "com.ghostchu.btn.sparkle.mapper")
 public class MyBatisPlusConfig {
     @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+    public MybatisPlusInterceptor mybatisPlusInterceptor(
+            FooterSqlMetricsInterceptor footerSqlMetricsInterceptor
+    ) {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         var pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
         pagination.setMaxLimit(1000L);
+        interceptor.addInnerInterceptor(footerSqlMetricsInterceptor);
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor()); // 防止全表更新与删除插件
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         interceptor.addInnerInterceptor(pagination); // 如果配置多个插件, 切记分页最后添加

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { IconFire, IconGithub, IconLock } from '@arco-design/web-vue/es/icon'
 import { useI18n } from 'vue-i18n'
+import AppFooter from '@/components/AppFooter.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const { t } = useI18n()
@@ -54,14 +55,7 @@ function loginWithGitHub() {
         {{ t('auth.securityNote') }}
       </p>
     </section>
-    <footer class="login-footer">
-      <strong>{{ t('app.footer') }}</strong>
-      <p>{{ t('app.disclaimer.operator') }}</p>
-      <p>{{ t('app.disclaimer.contribution') }}</p>
-      <p>{{ t('app.disclaimer.purpose') }}</p>
-      <p>{{ t('app.disclaimer.notTracker') }}</p>
-      <p>{{ t('app.disclaimer.noTraffic') }}</p>
-    </footer>
+    <AppFooter :show-brand="false" centered />
   </main>
 </template>
 
@@ -175,26 +169,6 @@ function loginWithGitHub() {
 .security-note svg {
   flex: 0 0 auto;
   margin-top: 2px;
-}
-
-.login-footer {
-  display: grid;
-  gap: 4px;
-  width: min(760px, 100%);
-  margin-top: 28px;
-  color: var(--color-text-3);
-  font-size: 12px;
-  line-height: 1.6;
-  text-align: center;
-}
-
-.login-footer strong {
-  margin-bottom: 4px;
-  color: var(--color-text-2);
-}
-
-.login-footer p {
-  margin: 0;
 }
 
 @media (max-width: 520px) {

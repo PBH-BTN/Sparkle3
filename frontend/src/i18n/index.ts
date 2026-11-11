@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n'
+import { footerMessages } from './footer'
 import zhCN from './locales/zh-CN'
 import enUS from './locales/en-US'
 
@@ -26,8 +27,8 @@ const i18n = createI18n({
   locale: initialLocale,
   fallbackLocale: 'zh-CN',
   messages: {
-    'zh-CN': zhCN,
-    'en-US': enUS,
+    'zh-CN': { ...zhCN, ...footerMessages['zh-CN'] },
+    'en-US': { ...enUS, ...footerMessages['en-US'] },
   },
 })
 

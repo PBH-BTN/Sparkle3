@@ -21,6 +21,7 @@ import {
   IconUser,
 } from '@arco-design/web-vue/es/icon'
 import LanguageSwitcher from './LanguageSwitcher.vue'
+import AppFooter from './AppFooter.vue'
 import { useSessionStore } from '@/stores/session'
 import { useFormatters } from '@/utils/format'
 
@@ -193,28 +194,7 @@ function navigate(id: string) {
       </main>
     </a-layout-content>
 
-    <footer class="app-footer">
-      <div class="footer-heading">
-        <div>
-          <IconFire class="footer-icon" />
-          <strong>{{ t('app.footer') }}</strong>
-        </div>
-        <a
-          href="https://github.com/PBH-BTN"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ t('app.footerBy') }}
-        </a>
-      </div>
-      <div class="footer-disclaimer">
-        <p>{{ t('app.disclaimer.operator') }}</p>
-        <p>{{ t('app.disclaimer.contribution') }}</p>
-        <p>{{ t('app.disclaimer.purpose') }}</p>
-        <p>{{ t('app.disclaimer.notTracker') }}</p>
-        <p>{{ t('app.disclaimer.noTraffic') }}</p>
-      </div>
-    </footer>
+    <AppFooter />
 
     <a-drawer
       v-model:visible="mobileMenuOpen"
@@ -259,8 +239,7 @@ function navigate(id: string) {
 
 .app-header-inner,
 .traffic-strip-inner,
-.page-container,
-.app-footer {
+.page-container {
   width: min(1440px, calc(100% - 40px));
   margin: 0 auto;
 }
@@ -430,47 +409,6 @@ function navigate(id: string) {
   padding: 24px 0 48px;
 }
 
-.app-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 26px 0 30px;
-  color: var(--color-text-3);
-  font-size: 12px;
-  border-top: 1px solid var(--color-border-2);
-}
-
-.footer-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.app-footer a {
-  color: var(--color-text-3);
-  text-decoration: none;
-}
-
-.app-footer a:hover {
-  color: rgb(var(--primary-6));
-}
-
-.footer-icon {
-  margin-right: 6px;
-  color: rgb(var(--primary-6));
-}
-
-.footer-disclaimer {
-  display: grid;
-  gap: 5px;
-  max-width: 1040px;
-  line-height: 1.65;
-}
-
-.footer-disclaimer p {
-  margin: 0;
-}
-
 @media (max-width: 1180px) {
   .desktop-navigation {
     display: none;
@@ -488,8 +426,7 @@ function navigate(id: string) {
 @media (max-width: 720px) {
   .app-header-inner,
   .traffic-strip-inner,
-  .page-container,
-  .app-footer {
+  .page-container {
     width: min(100% - 24px, 1440px);
   }
 
@@ -503,12 +440,5 @@ function navigate(id: string) {
     gap: 20px;
   }
 
-  .app-footer {
-    gap: 12px;
-  }
-
-  .footer-heading {
-    flex-direction: column;
-  }
 }
 </style>
