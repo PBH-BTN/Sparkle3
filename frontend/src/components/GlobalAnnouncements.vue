@@ -137,6 +137,7 @@ onMounted(async () => {
 }
 
 .global-announcements--hero {
+  z-index: 1;
   padding: 0;
   background: transparent;
   border-bottom: 0;
