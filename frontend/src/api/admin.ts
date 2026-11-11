@@ -23,6 +23,9 @@ import type {
   DatabaseConfigSummary,
   HomepageStatisticsAdminResponse,
   HomepageStatisticsConfigUpdate,
+  GeoIpCityBlacklistEntry,
+  GeoIpCityBlacklistGenerationStatus,
+  GeoIpCityBlacklistInput,
   ManualRule,
   NavigationItemInput,
   RetentionPolicyInput,
@@ -132,6 +135,33 @@ export const adminApi = {
       method: 'DELETE',
     }),
   generatedRules: () => request<string>('/api/admin/rules/generated-content'),
+
+  geoIpCityBlacklist: () =>
+    request<GeoIpCityBlacklistEntry[]>('/api/admin/geoip-city-blacklist'),
+  geoIpCityBlacklistStatus: () =>
+    request<GeoIpCityBlacklistGenerationStatus>('/api/admin/geoip-city-blacklist/status'),
+  refreshGeoIpCityBlacklist: () =>
+    request<GeoIpCityBlacklistGenerationStatus>('/api/admin/geoip-city-blacklist/refresh', {
+      method: 'POST',
+    }),
+  createGeoIpCityBlacklistEntry: (body: GeoIpCityBlacklistInput) =>
+    request<GeoIpCityBlacklistEntry>('/api/admin/geoip-city-blacklist', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateGeoIpCityBlacklistEntry: (id: number, body: GeoIpCityBlacklistInput) =>
+    request<GeoIpCityBlacklistEntry>(`/api/admin/geoip-city-blacklist/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteGeoIpCityBlacklistEntry: (id: number) =>
+    request<void>(`/api/admin/geoip-city-blacklist/${id}`, {
+      method: 'DELETE',
+    }),
+  generatedGeoIpCityBlacklistContent: (id: number) =>
+    request<{ content: string }>(
+      `/api/admin/geoip-city-blacklist/${id}/generated-content`,
+    ),
 
   config: () => request<RuntimeConfig>('/api/admin/config'),
   updateConfig: (body: RuntimeConfig) =>

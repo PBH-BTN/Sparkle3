@@ -64,6 +64,10 @@ public class AnalyseModuleConfigService {
             simpleIdentityModule("rain000-identity-analyse"),
             simpleIdentityModule("gopeeddev-identity-analyse"),
             simpleIdentityModule("datacenter-highrisk-analyse"),
+            module("geoip-city-blacklist", "geoip-city-blacklist",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 0 4 * * *")
+            ),
             module("btnbypass-userapps", "btnbypass-userapps",
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 */20 * * * *")
@@ -99,6 +103,10 @@ public class AnalyseModuleConfigService {
             "datacenter-highrisk-analyse", List.of(
                     RedisKeyConstant.ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VALUE,
                     RedisKeyConstant.ANALYSE_DATACENTER_HIGH_RISK_IDENTITY_VERSION
+            ),
+            "geoip-city-blacklist", List.of(
+                    RedisKeyConstant.ANALYSE_GEOIP_CITY_BLACKLIST_VALUE,
+                    RedisKeyConstant.ANALYSE_GEOIP_CITY_BLACKLIST_VERSION
             ),
             "btnbypass-userapps", List.of(
                     RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VALUE,

@@ -33,9 +33,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -140,6 +146,92 @@ public final class IPDB implements AutoCloseable {
         } catch (IOException ioe) {
             log.debug("Unable to query GeoCN", ioe);
         }
+    }
+
+    public void forEachChineseCityNetwork(Consumer<GeoNetworkRecord> consumer) throws IOException {
+        if (geoCN2 != null) {
+            try {
+                geoCN2.forEachNetwork(consumer);
+                return;
+            } catch (IllegalStateException exception) {
+                log.debug("GeoCN database uses revision 1, falling back to legacy reader");
+            }
+        }
+        if (geoCN1 != null) {
+            geoCN1.forEachNetwork(consumer);
+            return;
+        }
+        throw new IOException("GeoCN database is not available");
+    }
+
+    @SuppressWarnings("unchecked")
+    public void forEachWorldCityNetwork(Consumer<GeoNetworkRecord> consumer) throws IOException {
+        try (Reader reader = new Reader(
+                mmdbCityFile,
+                Reader.FileMode.MEMORY_MAPPED,
+                new MaxMindNodeCache()
+        )) {
+            try {
+                var networks = reader.networks(Map.class);
+                while (networks.hasNext()) {
+                    var record = networks.next();
+                    Map<String, Object> data = record.getData();
+                    if (data == null) {
+                        continue;
+                    }
+                    Map<String, Object> country = asMap(data.get("country"));
+                    if (country.isEmpty()) {
+                        country = asMap(data.get("registered_country"));
+                    }
+                    String countryIso = stringValue(country.get("iso_code"));
+                    Set<String> provinceNames = new LinkedHashSet<>();
+                    Object subdivisions = data.get("subdivisions");
+                    if (subdivisions instanceof Collection<?> collection) {
+                        for (Object subdivision : collection) {
+                            provinceNames.addAll(collectNames(asMap(subdivision).get("names")));
+                        }
+                    }
+                    Set<String> cityNames = new LinkedHashSet<>(
+                            collectNames(asMap(data.get("city")).get("names"))
+                    );
+                    consumer.accept(new GeoNetworkRecord(
+                            record.getNetwork(),
+                            countryIso,
+                            Set.copyOf(provinceNames),
+                            Set.copyOf(cityNames)
+                    ));
+                }
+            } catch (InvalidNetworkException exception) {
+                throw new IOException("Unable to enumerate GeoIP city networks", exception);
+            }
+        }
+    }
+
+    private Map<String, Object> asMap(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            return Map.of();
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((key, item) -> result.put(String.valueOf(key), item));
+        return result;
+    }
+
+    private Set<String> collectNames(Object value) {
+        if (!(value instanceof Map<?, ?> names)) {
+            return Set.of();
+        }
+        Set<String> result = new LinkedHashSet<>();
+        for (Object name : names.values()) {
+            String text = stringValue(name);
+            if (text != null && !text.isBlank()) {
+                result.add(text);
+            }
+        }
+        return Set.copyOf(result);
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     private IPGeoData.NetworkData queryNetwork(InetAddress address) {

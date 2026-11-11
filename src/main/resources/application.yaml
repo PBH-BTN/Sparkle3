@@ -231,6 +231,9 @@ sparkle:
       enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
+    geoip-city-blacklist:
+      enabled: true
+      schedule: "0 0 4 * * *"
     btnbypass-userapps:
       enabled: true
       schedule: "0 */20 * * * *"

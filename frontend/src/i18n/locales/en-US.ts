@@ -356,6 +356,7 @@ export default {
       'rain000-identity': 'Rain 0.0.0 identity analysis',
       'gopeeddev-identity': 'Gopeed dev identity analysis',
       'datacenter-high-risk': 'High-risk datacenter analysis',
+      'geoip-city-blacklist': 'GeoIP city blacklist',
       'btn-bypass': 'BTN Bypass applications',
     },
   },
@@ -438,6 +439,7 @@ export default {
       users: 'Users',
       userApps: 'Applications',
       rules: 'Manual rules',
+      geoIpCityBlacklist: 'GeoIP city blacklist',
       modules: 'Analysis modules',
       settings: 'Runtime settings',
       storage: 'Storage & policies',
@@ -637,6 +639,46 @@ export default {
         script: 'Script',
       },
     },
+    geoIpCityBlacklist: {
+      title: 'GeoIP city blacklist',
+      description:
+        'Maintain countries, provinces, and cities to block. The module enumerates matching networks from the GeoIP databases and merges them into IPv4 and IPv6 CIDRs.',
+      create: 'Add city',
+      createTitle: 'Add GeoIP city',
+      editTitle: 'Edit GeoIP city',
+      location: 'Location',
+      countryCode: 'Country/region code',
+      province: 'Province or region',
+      city: 'City',
+      provincePlaceholder: 'For example: Hainan',
+      cityPlaceholder: 'For example: Haikou',
+      enabled: 'Include in generation',
+      actions: 'Actions',
+      ipv4Count: 'IPv4 CIDRs',
+      ipv6Count: 'IPv6 CIDRs',
+      lastGeneratedAt: 'Last generated',
+      regenerate: 'Regenerate now',
+      preview: 'View CIDRs',
+      previewTitle: 'Generated CIDR content',
+      emptyContent:
+        'No CIDRs have been generated yet, or this location has no matching networks in the GeoIP database.',
+      required: 'Enter a country/region code, province, and city.',
+      saved: 'GeoIP city saved. Background generation has started.',
+      deleted: 'GeoIP city deleted. Background generation has started.',
+      deleteTitle: 'Delete GeoIP city',
+      deleteConfirm:
+        'Delete “{location}”? Its CIDRs will be regenerated in the background.',
+      refreshStarted: 'GeoIP CIDR generation started in the background.',
+      generationHint:
+        'Adding, editing, enabling, disabling, or deleting a location starts asynchronous generation. Generation enumerates the GeoIP databases and merges adjacent networks; duration depends on database size and the selected location.',
+      generating: 'Generating',
+      idle: 'Idle',
+      enabledEntries: 'Enabled entries',
+      ipv4Cidrs: 'Merged IPv4 CIDRs',
+      ipv6Cidrs: 'Merged IPv6 CIDRs',
+      lastFinished: 'Last finished',
+      duration: 'Duration',
+    },
     modules: {
       title: 'Analysis modules',
       description:
@@ -704,6 +746,11 @@ export default {
         'datacenter-highrisk-analyse': {
           name: 'High-risk datacenter peers',
           description: 'Aggregates peer addresses from high-risk datacenter networks.',
+        },
+        'geoip-city-blacklist': {
+          name: 'GeoIP city blacklist',
+          description:
+            'Generates IPv4 and IPv6 CIDR denylists for configured cities from the GeoIP databases.',
         },
         'btnbypass-userapps': {
           name: 'BTN Bypass allowlist',

@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.util.ipdb.geocn;
 
+import com.ghostchu.btn.sparkle.util.ipdb.GeoNetworkRecord;
 import com.ghostchu.btn.sparkle.util.ipdb.IPGeoData;
+import com.maxmind.db.InvalidNetworkException;
 import com.maxmind.db.NodeCache;
 import de.siegmar.fastcsv.reader.CsvReader;
 import de.siegmar.fastcsv.reader.NamedCsvRecord;
@@ -16,7 +18,9 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.Consumer;
 
 @Slf4j
 public class GeoCN2 implements AutoCloseable {
@@ -72,6 +76,43 @@ public class GeoCN2 implements AutoCloseable {
         geoData.setNetwork(networkData);
         geoData.setAs(new IPGeoData.ASData(null, null, null, asNetworkData));
         return geoData;
+    }
+
+    public void forEachNetwork(Consumer<GeoNetworkRecord> consumer) throws IOException {
+        try {
+            var networks = reader.networks(Map.class);
+            while (networks.hasNext()) {
+                var record = networks.next();
+                Map<?, ?> dataMap = record.getData();
+                if (dataMap == null) {
+                    continue;
+                }
+                if (!dataMap.containsKey("division_code") && dataMap.containsKey("province")) {
+                    throw new IllegalStateException(
+                            "This is a GeoCN (revision 1) but parsing with GeoCN Reader (revision 2)"
+                    );
+                }
+                String divisionCode = String.valueOf(dataMap.get("division_code"));
+                var divisionData = division.lookup(divisionCode);
+                if (divisionData.isEmpty()) {
+                    continue;
+                }
+                String province = divisionData.size() >= 1 ? divisionData.get(0) : null;
+                String city = divisionData.size() >= 2 ? divisionData.get(1) : null;
+                consumer.accept(new GeoNetworkRecord(
+                        record.getNetwork(),
+                        "CN",
+                        names(province),
+                        names(city)
+                ));
+            }
+        } catch (InvalidNetworkException exception) {
+            throw new IOException("Unable to enumerate GeoCN networks", exception);
+        }
+    }
+
+    private Set<String> names(String value) {
+        return value == null || value.isBlank() ? Set.of() : Set.of(value);
     }
 
     @Override

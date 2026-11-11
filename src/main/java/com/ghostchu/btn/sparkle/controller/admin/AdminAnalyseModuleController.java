@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleScheduler;
+import com.ghostchu.btn.sparkle.service.GeoIpCityBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,7 @@ import java.util.List;
 public class AdminAnalyseModuleController {
     private final AnalyseModuleConfigService moduleConfigService;
     private final AnalyseModuleScheduler moduleScheduler;
+    private final GeoIpCityBlacklistService geoIpCityBlacklistService;
 
     @GetMapping
     public List<ModuleView> list() {
@@ -41,6 +43,11 @@ public class AdminAnalyseModuleController {
                 principal == null ? null : principal.getUserId()
         );
         moduleScheduler.refreshSchedules();
+        if (GeoIpCityBlacklistService.MODULE_ID.equals(id) && updated.enabled()) {
+            geoIpCityBlacklistService.requestRefresh(
+                    principal == null ? null : principal.getUserId()
+            );
+        }
         return updated;
     }
 }

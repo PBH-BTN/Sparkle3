@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRandomIdentityServi
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleConcurrentDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleOverDownloadServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.denylist.AnalyseRuleUnTrustVoteServiceImpl;
+import com.ghostchu.btn.sparkle.service.GeoIpCityBlacklistService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class AnalyseModuleExecutionService {
             AnalyseRain000IdentityServiceImpl rain000Identity,
             AnalyseGopeedDevIdentityServiceImpl gopeedDevIdentity,
             AnalyseDatacenterHighRiskServiceImpl datacenterHighRisk,
+            GeoIpCityBlacklistService geoIpCityBlacklist,
             AnalyseBtnBypassServiceImpl btnBypass
     ) {
         runners.put("untrusted-vote", untrustedVote::analyseUntrusted);
@@ -37,6 +39,7 @@ public class AnalyseModuleExecutionService {
         runners.put("rain000-identity-analyse", rain000Identity::analyseRain000Identity);
         runners.put("gopeeddev-identity-analyse", gopeedDevIdentity::analyseGopeedDevIdentity);
         runners.put("datacenter-highrisk-analyse", datacenterHighRisk::analyseDatacenterHighRisk);
+        runners.put("geoip-city-blacklist", geoIpCityBlacklist::generateScheduled);
         runners.put("btnbypass-userapps", btnBypass::analyseBtnBypass);
     }
 

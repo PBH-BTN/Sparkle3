@@ -163,6 +163,41 @@ export interface RuleInput {
   content: string
 }
 
+export interface GeoIpCityBlacklistEntry {
+  id: number
+  countryCode: string
+  province: string
+  city: string
+  enabled: boolean
+  ipv4CidrCount: number
+  ipv6CidrCount: number
+  lastGeneratedAt: string | null
+  createdAt: string
+  updatedAt: string
+  createdBy: number | null
+  updatedBy: number | null
+}
+
+export interface GeoIpCityBlacklistInput {
+  countryCode: string
+  province: string
+  city: string
+  enabled: boolean
+}
+
+export interface GeoIpCityBlacklistGenerationStatus {
+  running: boolean
+  lastStartedAt: string | null
+  lastFinishedAt: string | null
+  lastDurationMs: number
+  enabledEntries: number
+  ipv4CidrCount: number
+  ipv6CidrCount: number
+  trigger: 'MANUAL' | 'SCHEDULED' | null
+  triggeredBy: number | null
+  lastError: string | null
+}
+
 export interface RuntimeConfig {
   protocolMinVersion: number
   protocolMaxVersion: number

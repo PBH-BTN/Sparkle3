@@ -103,6 +103,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminRulesView.vue'),
         },
         {
+          path: 'geoip-city-blacklist',
+          name: 'admin-geoip-city-blacklist',
+          component: () => import('@/views/admin/AdminGeoIpCityBlacklistView.vue'),
+        },
+        {
           path: 'modules',
           name: 'admin-modules',
           component: () => import('@/views/admin/AdminModulesView.vue'),

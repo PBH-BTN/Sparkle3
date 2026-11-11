@@ -107,6 +107,7 @@ public class RulePreviewService {
             case "AnalyseRain000IdentityServiceImpl" -> "rain000-identity";
             case "AnalyseGopeedDevIdentityServiceImpl" -> "gopeeddev-identity";
             case "AnalyseDatacenterHighRiskServiceImpl" -> "datacenter-high-risk";
+            case "GeoIpCityBlacklistService" -> "geoip-city-blacklist";
             case "AnalyseBtnBypassServiceImpl" -> "btn-bypass";
             default -> simpleName;
         };
