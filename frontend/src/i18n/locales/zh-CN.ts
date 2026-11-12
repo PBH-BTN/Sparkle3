@@ -828,6 +828,8 @@ export default {
       suspend: '停用',
       restore: '恢复',
       banReason: '停用原因',
+      banReasonPlaceholder: '请填写停用该应用的原因',
+      banReasonRequired: '请填写停用原因。',
       credentialsTitle: '新的应用凭据',
       credentialsWarning: 'App Secret 只显示一次，请立即妥善保存。',
       resetSuccess: '应用密钥已重置。',

@@ -848,6 +848,8 @@ export default {
       suspend: 'Suspend',
       restore: 'Restore',
       banReason: 'Suspension reason',
+      banReasonPlaceholder: 'Enter a reason visible to the application owner',
+      banReasonRequired: 'Enter a suspension reason.',
       credentialsTitle: 'New application credentials',
       credentialsWarning: 'The App Secret is shown only once. Store it securely now.',
       resetSuccess: 'Application secret reset.',

@@ -61,6 +61,10 @@ const editor = reactive<{
 
 const credentialsVisible = ref(false)
 const credentials = ref<AdminApplicationCredentials | null>(null)
+const banVisible = ref(false)
+const banSaving = ref(false)
+const banApplication = ref<AdminApplication | null>(null)
+const banReason = ref('')
 
 const columns = computed<TableColumnData[]>(() => [
   { title: t('admin.apps.id'), slotName: 'id', width: 90, align: 'center' },
@@ -178,13 +182,34 @@ async function resetSecret(application: AdminApplication) {
   }
 }
 
-async function setBanned(application: AdminApplication, banned: boolean) {
+async function suspendApplication() {
+  const application = banApplication.value
+  if (!application) return
+  const reason = banReason.value.trim()
+  if (!reason) {
+    Message.warning(t('admin.apps.banReasonRequired'))
+    return
+  }
+  banSaving.value = true
+  try {
+    await adminApi.banApplication(application.id, reason)
+    Message.success(t('admin.common.updated'))
+    banVisible.value = false
+    await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    banSaving.value = false
+  }
+}
+
+async function restoreApplication(application: AdminApplication) {
   try {
     await adminApi.updateApplication(application.id, {
       ownerId: application.ownerId,
       comment: application.comment,
-      banned,
-      bannedReason: banned ? application.bannedReason || 'Suspended by administrator' : '',
+      banned: false,
+      bannedReason: '',
       btnBypass: application.btnBypass,
     })
     Message.success(t('admin.common.updated'))
@@ -220,13 +245,18 @@ function confirmResetSecret(application: AdminApplication) {
 }
 
 function confirmToggleBanned(application: AdminApplication) {
-  const banned = !application.bannedAt
+  if (!application.bannedAt) {
+    banApplication.value = application
+    banReason.value = ''
+    banVisible.value = true
+    return
+  }
   Modal.confirm({
-    title: banned ? t('admin.apps.suspend') : t('admin.apps.restore'),
-    content: banned ? t('admin.apps.banReason') : application.comment,
+    title: t('admin.apps.restore'),
+    content: application.comment,
     okText: t('common.confirm'),
     cancelText: t('common.cancel'),
-    onOk: () => setBanned(application, banned),
+    onOk: () => restoreApplication(application),
   })
 }
 
@@ -437,6 +467,31 @@ onMounted(load)
           <a-button @click="editorVisible = false">{{ t('admin.common.cancel') }}</a-button>
           <a-button type="primary" :loading="editorSaving" @click="saveApplication">
             {{ t('admin.common.save') }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="banVisible"
+      :title="t('admin.apps.suspend')"
+      :footer="false"
+      width="520px"
+    >
+      <a-form :model="{ banReason }" layout="vertical">
+        <a-form-item :label="t('admin.apps.banReason')" required>
+          <a-textarea
+            v-model="banReason"
+            :placeholder="t('admin.apps.banReasonPlaceholder')"
+            :max-length="500"
+            :auto-size="{ minRows: 3, maxRows: 6 }"
+            show-word-limit
+          />
+        </a-form-item>
+        <div class="modal-actions">
+          <a-button @click="banVisible = false">{{ t('admin.common.cancel') }}</a-button>
+          <a-button status="danger" type="primary" :loading="banSaving" @click="suspendApplication">
+            {{ t('admin.apps.suspend') }}
           </a-button>
         </div>
       </a-form>
