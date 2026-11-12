@@ -341,6 +341,15 @@ onMounted(load)
                 <template #icon><IconCopy /></template>
               </a-button>
             </a-tooltip>
+            <a-button
+              v-if="!record.bannedAt"
+              type="text"
+              size="mini"
+              status="danger"
+              @click="confirmToggleBanned(record)"
+            >
+              {{ t('admin.apps.quickSuspend') }}
+            </a-button>
           </div>
         </template>
         <template #comment="{ record }">

@@ -42,7 +42,9 @@ const editorForm = reactive<AdminUserInput>({
   nickname: '',
   avatarUrl: '/img/anonymous-user.png',
   role: 'user',
-  privacyLevel: 'MEDIUM',
+  avatarVisibility: 'BLURRED',
+  usernameVisibility: 'BLURRED',
+  pointsVisibility: 'SHOW',
 })
 
 const banVisible = ref(false)
@@ -118,7 +120,9 @@ function openCreate() {
     nickname: '',
     avatarUrl: '/img/anonymous-user.png',
     role: 'user',
-    privacyLevel: 'MEDIUM',
+    avatarVisibility: 'BLURRED',
+    usernameVisibility: 'BLURRED',
+    pointsVisibility: 'SHOW',
   })
   editorVisible.value = true
 }
@@ -129,8 +133,10 @@ function openEdit(user: AdminUser) {
     email: user.email,
     nickname: user.nickname,
     avatarUrl: user.avatarUrl,
-    role: user.role === 'admin' ? 'admin' : 'user',
-    privacyLevel: user.privacyLevel,
+    role: user.role === 'admin' || user.role === 'moderator' ? user.role : 'user',
+    avatarVisibility: user.avatarVisibility,
+    usernameVisibility: user.usernameVisibility,
+    pointsVisibility: user.pointsVisibility,
   })
   editorVisible.value = true
 }
@@ -241,8 +247,18 @@ function isNeverLogin(value: string) {
   return new Date(value).getTime() <= 0
 }
 
-function privacyLabel(level: string) {
-  return t(`privacy.levels.${level}`)
+function roleLabel(role: string) {
+  if (role === 'admin') return t('admin.users.adminRole')
+  if (role === 'moderator') return t('admin.users.moderatorRole')
+  return t('admin.users.userRole')
+}
+
+function privacySummary(user: AdminUser) {
+  return [
+    t(`privacy.avatarOptions.${user.avatarVisibility}`),
+    t(`privacy.usernameOptions.${user.usernameVisibility}`),
+    t(`privacy.pointsOptions.${user.pointsVisibility}`),
+  ].join(' · ')
 }
 
 onMounted(load)
@@ -275,6 +291,7 @@ onMounted(load)
             <a-form-item :label="t('admin.users.role')">
               <a-select v-model="filters.role" allow-clear>
                 <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
+                <a-option value="moderator">{{ t('admin.users.moderatorRole') }}</a-option>
                 <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
               </a-select>
             </a-form-item>
@@ -334,10 +351,10 @@ onMounted(load)
         </template>
         <template #access="{ record }">
           <div class="access-cell">
-            <a-tag :color="record.role === 'admin' ? 'arcoblue' : 'gray'">
-              {{ record.role === 'admin' ? t('admin.users.adminRole') : t('admin.users.userRole') }}
+            <a-tag :color="record.role === 'admin' ? 'arcoblue' : record.role === 'moderator' ? 'purple' : 'gray'">
+              {{ roleLabel(record.role) }}
             </a-tag>
-            <span>{{ privacyLabel(record.privacyLevel) }}</span>
+            <span>{{ privacySummary(record) }}</span>
             <a-tooltip v-if="record.bannedAt" :content="record.bannedReason || ''">
               <a-tag color="red" size="small">{{ t('admin.common.banned') }}</a-tag>
             </a-tooltip>
@@ -441,18 +458,28 @@ onMounted(load)
             <a-form-item :label="t('admin.users.role')">
               <a-select v-model="editorForm.role">
                 <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
+                <a-option value="moderator">{{ t('admin.users.moderatorRole') }}</a-option>
                 <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :xs="12">
+          <a-col :xs="24">
             <a-form-item :label="t('admin.users.privacy')">
-              <a-select v-model="editorForm.privacyLevel">
-                <a-option value="DISABLED">{{ t('privacy.levels.DISABLED') }}</a-option>
-                <a-option value="LOW">{{ t('privacy.levels.LOW') }}</a-option>
-                <a-option value="MEDIUM">{{ t('privacy.levels.MEDIUM') }}</a-option>
-                <a-option value="HIGH">{{ t('privacy.levels.HIGH') }}</a-option>
-              </a-select>
+              <a-space wrap>
+                <a-select v-model="editorForm.avatarVisibility" style="width: 180px">
+                  <a-option value="ORIGINAL">{{ t('privacy.avatarOptions.ORIGINAL') }}</a-option>
+                  <a-option value="BLURRED">{{ t('privacy.avatarOptions.BLURRED') }}</a-option>
+                  <a-option value="HIDDEN">{{ t('privacy.avatarOptions.HIDDEN') }}</a-option>
+                </a-select>
+                <a-select v-model="editorForm.usernameVisibility" style="width: 180px">
+                  <a-option value="FULL">{{ t('privacy.usernameOptions.FULL') }}</a-option>
+                  <a-option value="BLURRED">{{ t('privacy.usernameOptions.BLURRED') }}</a-option>
+                </a-select>
+                <a-select v-model="editorForm.pointsVisibility" style="width: 180px">
+                  <a-option value="SHOW">{{ t('privacy.pointsOptions.SHOW') }}</a-option>
+                  <a-option value="HIDDEN">{{ t('privacy.pointsOptions.HIDDEN') }}</a-option>
+                </a-select>
+              </a-space>
             </a-form-item>
           </a-col>
         </a-row>

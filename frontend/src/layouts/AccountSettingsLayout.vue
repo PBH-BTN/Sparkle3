@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import {
   IconArrowLeft,
   IconLock,
+  IconNotification,
   IconSafe,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
@@ -23,6 +24,11 @@ const items = computed(() => [
     key: '/user/settings/privacy',
     label: t('settings.menu.privacy'),
     icon: IconLock,
+  },
+  {
+    key: '/user/settings/notifications',
+    label: t('settings.menu.notifications'),
+    icon: IconNotification,
   },
 ])
 

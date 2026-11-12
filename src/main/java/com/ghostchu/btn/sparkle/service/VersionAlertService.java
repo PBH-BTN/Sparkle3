@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertDelivery;
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertMatch;
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertRule;
@@ -53,6 +54,8 @@ public class VersionAlertService {
     private final IUserService userService;
     private final TaskStatusService taskStatusService;
     private final BtnRuntimeConfigService btnConfigService;
+    private final UserMessageService messageService;
+    private final NotificationPreferenceService notificationPreferenceService;
 
     private volatile List<VersionAlertRule> cachedRules;
     private volatile long cacheExpiresAt;
@@ -63,7 +66,9 @@ public class VersionAlertService {
             JavaMailSender mailSender,
             IUserService userService,
             TaskStatusService taskStatusService,
-            BtnRuntimeConfigService btnConfigService
+            BtnRuntimeConfigService btnConfigService,
+            UserMessageService messageService,
+            NotificationPreferenceService notificationPreferenceService
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
@@ -71,6 +76,8 @@ public class VersionAlertService {
         this.userService = userService;
         this.taskStatusService = taskStatusService;
         this.btnConfigService = btnConfigService;
+        this.messageService = messageService;
+        this.notificationPreferenceService = notificationPreferenceService;
         taskStatusService.ensure(TaskDefinition.event(
                 "version-alert-delivery",
                 TaskGroup.MAINTENANCE,
@@ -208,12 +215,8 @@ public class VersionAlertService {
                     "EVENT"
             );
             User user = userService.getById(ownerId);
-            if (user == null
-                    || user.getBannedAt() != null
-                    || user.getEmail() == null
-                    || user.getEmail().isBlank()
-                    || user.getEmail().toLowerCase(Locale.ROOT).endsWith("@sparkle.system")) {
-                execution.skipped("No deliverable email address");
+            if (user == null || user.getBannedAt() != null) {
+                execution.skipped("User is unavailable");
                 return;
             }
             try {
@@ -223,7 +226,7 @@ public class VersionAlertService {
                         sent++;
                     }
                 }
-                execution.success("Sent " + sent + " alert email(s)");
+                execution.success("Processed " + sent + " client security notification(s)");
             } catch (Exception exception) {
                 execution.failure(exception);
                 log.warn("Unable to evaluate version alerts asynchronously", exception);
@@ -276,23 +279,48 @@ public class VersionAlertService {
                 return false;
             }
         }
+        String subject = render(rule.subject(), rule, user.getNickname(), version, userAgent, null);
+        String body = render(rule.body(), rule, user.getNickname(), version, userAgent, null);
+        boolean inboxPublished = false;
         try {
-            deliver(
-                    rule,
+            inboxPublished = messageService.publishSystemToUser(
                     user.getId(),
-                    user.getEmail(),
-                    user.getNickname(),
-                    version,
-                    userAgent,
-                    "AUTOMATIC",
-                    null
+                    NotificationCategory.CLIENT_SECURITY,
+                    subject,
+                    body,
+                    false
             );
-            return true;
-        } catch (BusinessException exception) {
-            redisTemplate.delete(sentKey);
-            log.warn("Version alert email failed for user {}: {}", user.getId(), exception.getMessage());
-            return false;
+        } catch (Exception exception) {
+            log.warn("Unable to publish client security inbox notification for user {}: {}",
+                    user.getId(), exception.getMessage());
         }
+        boolean deliverableEmail = user.getEmail() != null
+                && !user.getEmail().isBlank()
+                && !user.getEmail().toLowerCase(Locale.ROOT).endsWith("@sparkle.system");
+        if (deliverableEmail
+                && notificationPreferenceService.emailEnabled(
+                user.getId(),
+                NotificationCategory.CLIENT_SECURITY
+        )) {
+            try {
+                deliver(
+                        rule,
+                        user.getId(),
+                        user.getEmail(),
+                        user.getNickname(),
+                        version,
+                        userAgent,
+                        "AUTOMATIC",
+                        null
+                );
+                return true;
+            } catch (BusinessException exception) {
+                log.warn("Version alert email failed for user {}: {}",
+                        user.getId(), exception.getMessage());
+                return inboxPublished;
+            }
+        }
+        return inboxPublished;
     }
 
     private VersionAlertDelivery deliver(VersionAlertRule rule,

@@ -34,6 +34,16 @@ const showLogin = computed(
 const canRenderRoute = computed(
   () => route.name !== 'ranking' || Boolean(session.traffic),
 )
+const moderatorRouteNames = new Set([
+  'admin-tasks',
+  'admin-announcements',
+  'admin-userapps',
+  'admin-github-sync',
+  'admin-btn',
+  'admin-modules',
+  'admin-rules',
+  'admin-messages',
+])
 
 function handleUnauthorized() {
   session.clear()
@@ -45,17 +55,36 @@ watch(
     [
       session.authenticated,
       session.user?.admin,
+      session.user?.moderator,
       route.name,
       route.meta.admin,
       session.loaded,
       Boolean(session.traffic),
     ] as const,
-  ([authenticated, admin, routeName, requiresAdmin, loaded, statisticsEnabled]) => {
+  ([
+    authenticated,
+    admin,
+    moderator,
+    routeName,
+    requiresAdmin,
+    loaded,
+    statisticsEnabled,
+  ]) => {
     if (authenticated && routeName === 'login') {
       router.replace('/')
     }
-    if (authenticated && requiresAdmin && !admin) {
+    if (authenticated && requiresAdmin && !admin && !moderator) {
       router.replace('/')
+    }
+    if (
+      authenticated &&
+      !admin &&
+      moderator &&
+      route.path.startsWith('/admin') &&
+      route.name !== 'admin' &&
+      !moderatorRouteNames.has(String(routeName))
+    ) {
+      router.replace('/admin/tasks')
     }
     if (authenticated && loaded && routeName === 'ranking' && !statisticsEnabled) {
       router.replace('/')

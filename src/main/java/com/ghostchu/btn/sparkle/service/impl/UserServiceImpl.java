@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,6 +33,8 @@ import java.util.List;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
     @Autowired
     private UserRelMapper userRelMapper;
+    @Autowired
+    private UserPrivacyService userPrivacyService;
 
     @Override
     public @Nullable UserRel getUserRelByBindUserId(long btnUserId) {
@@ -81,6 +84,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (!success) {
             throw new IllegalStateException("Failed to create new user, the changed records count is 0.");
         }
+        userPrivacyService.ensure(newUser.getId());
         UserRel newUserRel = new UserRel()
                 .setPlatform("github")
                 .setBindUserId(newUser.getId())

@@ -420,7 +420,7 @@ onMounted(async () => {
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: session.user?.admin ? 2280 : 2050 }"
+        :scroll="{ x: session.user?.admin || session.user?.moderator ? 2280 : 2050 }"
         row-key="id"
         stripe
         @sorter-change="changeSort"
@@ -436,7 +436,7 @@ onMounted(async () => {
           <div class="userapp-actions">
             <code>{{ record.userappId ?? 'N/A' }}</code>
             <a-button
-              v-if="record.userappId"
+              v-if="record.userappId && (session.user?.admin || session.user?.moderator)"
               size="mini"
               status="danger"
               @click="openQuickBan(record)"

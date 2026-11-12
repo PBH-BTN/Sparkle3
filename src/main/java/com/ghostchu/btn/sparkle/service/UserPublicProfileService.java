@@ -1,6 +1,6 @@
 package com.ghostchu.btn.sparkle.service;
 
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
+import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacySettingsView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PublicUserProfileResponse;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
@@ -15,28 +15,29 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class UserPublicProfileService {
     private final IUserService userService;
+    private final UserPrivacyService privacyService;
 
     public PublicUserProfileResponse profile(long currentUserId, long targetUserId)
             throws BusinessException {
         User sender = requireUser(currentUserId);
         User target = requireUser(targetUserId);
-        UserPrivacyLevel privacy = privacyLevel(target);
+        UserPrivacySettings privacy = privacySettings(target);
         boolean self = sender.getId().equals(target.getId());
 
         String nickname = null;
-        if (self || privacy.isAllowFullUserName()) {
+        if (self || privacy.allowsFullUsername()) {
             nickname = target.getNickname();
-        } else if (privacy.isAllowBlurredUsername()) {
+        } else if (privacy.allowsBlurredUsername()) {
             nickname = blurNickname(target.getNickname());
         }
 
         String avatarUrl = null;
-        if (self || privacy.isAllowOriginalAvatar() || privacy.isAllowBlurredAvatar()) {
+        if (self || !privacy.hidesAvatar()) {
             avatarUrl = target.getAvatarUrl();
         }
 
         Long scoreBytes = null;
-        if (self || privacy.isAllowPublicPoints()) {
+        if (self || privacy.showsPoints()) {
             scoreBytes = target.getScoreBytes() == null ? 0L : target.getScoreBytes();
         }
 
@@ -44,14 +45,24 @@ public class UserPublicProfileService {
                 String.valueOf(target.getId()),
                 nickname,
                 avatarUrl,
-                privacy.name(),
+                PrivacySettingsView.from(privacy),
                 scoreBytes == null ? null : UnitConverter.autoUnit(scoreBytes),
                 scoreBytes == null ? null : Long.toString(scoreBytes),
                 nickname == null,
                 target.getBannedAt() != null,
                 self,
+                canSendMessage(sender, target),
                 canContactEmail(sender, target)
         );
+    }
+
+    public boolean canSendMessage(User sender, User target) {
+        if (sender == null || target == null || sender.getId().equals(target.getId())) {
+            return false;
+        }
+        return sender.getBannedAt() == null
+                && target.getBannedAt() == null
+                && privacySettings(target).receiveUserMessages();
     }
 
     public boolean canContactEmail(User sender, User target) {
@@ -61,8 +72,7 @@ public class UserPublicProfileService {
         if (sender.getBannedAt() != null || target.getBannedAt() != null) {
             return false;
         }
-        UserPrivacyLevel privacy = privacyLevel(target);
-        if (!privacy.isAllowContactEmail()) {
+        if (!privacySettings(target).receiveUserMessages()) {
             return false;
         }
         String email = target.getEmail();
@@ -71,8 +81,11 @@ public class UserPublicProfileService {
                 && !email.toLowerCase(Locale.ROOT).endsWith("@sparkle.system");
     }
 
-    public UserPrivacyLevel privacyLevel(User user) {
-        return user.getPrivacyLevel() == null ? UserPrivacyLevel.MEDIUM : user.getPrivacyLevel();
+    public UserPrivacySettings privacySettings(User user) {
+        if (user == null || user.getId() == null) {
+            return UserPrivacySettings.defaults(0);
+        }
+        return privacyService.get(user.getId());
     }
 
     public User requireUser(long userId) throws BusinessException {
@@ -83,7 +96,7 @@ public class UserPublicProfileService {
         return user;
     }
 
-    private String blurNickname(String nickname) {
+    public String blurNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             return "***";
         }

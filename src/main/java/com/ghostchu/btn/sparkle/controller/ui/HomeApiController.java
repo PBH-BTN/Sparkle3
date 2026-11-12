@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.NavigationService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -31,19 +32,22 @@ public class HomeApiController {
     private final AdminConfigService adminConfigService;
     private final NavigationService navigationService;
     private final PointsService pointsService;
+    private final UserPrivacyService privacyService;
 
     public HomeApiController(@Qualifier("stringLongRedisTemplate") RedisTemplate<String, Long> redisTemplate,
                              IUserSwarmStatisticsService userSwarmStatisticsService,
                              IUserService userService,
                              AdminConfigService adminConfigService,
                              NavigationService navigationService,
-                             PointsService pointsService) {
+                             PointsService pointsService,
+                             UserPrivacyService privacyService) {
         this.redisTemplate = redisTemplate;
         this.userSwarmStatisticsService = userSwarmStatisticsService;
         this.userService = userService;
         this.adminConfigService = adminConfigService;
         this.navigationService = navigationService;
         this.pointsService = pointsService;
+        this.privacyService = privacyService;
     }
 
     @GetMapping("/session")
@@ -66,12 +70,17 @@ public class HomeApiController {
         var statisticsConfig = adminConfigService.get();
         var navigation = navigationService.listPublic();
         if (!statisticsConfig.swarmStatisticsEnabled()) {
-            return new SessionResponse(true, UserView.from(user), null, navigation);
+            return new SessionResponse(
+                    true,
+                    UserView.from(user, privacyService.get(user.getId())),
+                    null,
+                    navigation
+            );
         }
         var statistics = userSwarmStatisticsService.getById(user.getId());
         return new SessionResponse(
                 true,
-                UserView.from(user),
+                UserView.from(user, privacyService.get(user.getId())),
                 TrafficSummary.from(
                         statistics,
                         statisticsConfig.swarmStatisticsRefreshMinutes(),

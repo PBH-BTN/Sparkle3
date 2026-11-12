@@ -1,47 +1,30 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconCheckCircleFill,
-  IconCloseCircleFill,
+  IconEye,
+  IconEyeInvisible,
+  IconLock,
+  IconUser,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import { uiApi } from '@/api'
-import type { PrivacyLevel } from '@/api/types'
+import type { PrivacySettings } from '@/api/types'
 import { errorMessage } from '@/utils/format'
 
 const { t } = useI18n()
-const levels = ref<PrivacyLevel[]>([])
-const selected = ref<PrivacyLevel['name']>('HIGH')
 const loading = ref(true)
 const saving = ref(false)
-
-const features = computed(
-  () =>
-    new Map<
-      PrivacyLevel['name'],
-      Array<{ label: string; allowed: boolean }>
-    >(
-      levels.value.map((level) => [
-        level.name,
-        [
-          { label: t('privacy.fullUsername'), allowed: level.allowFullUsername },
-          { label: t('privacy.blurredUsername'), allowed: level.allowBlurredUsername },
-          { label: t('privacy.originalAvatar'), allowed: level.allowOriginalAvatar },
-          { label: t('privacy.blurredAvatar'), allowed: level.allowBlurredAvatar },
-          { label: t('privacy.publicPoints'), allowed: level.allowPublicPoints },
-          { label: t('privacy.contactEmail'), allowed: level.allowContactEmail },
-        ],
-      ]),
-    ),
-)
+const form = reactive<PrivacySettings>({
+  avatarVisibility: 'BLURRED',
+  usernameVisibility: 'BLURRED',
+  pointsVisibility: 'SHOW',
+})
 
 onMounted(async () => {
   try {
-    const response = await uiApi.privacy()
-    levels.value = response.levels
-    selected.value = response.current.name
+    Object.assign(form, (await uiApi.privacy()).current)
   } catch (error) {
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
@@ -52,8 +35,7 @@ onMounted(async () => {
 async function save() {
   saving.value = true
   try {
-    const response = await uiApi.updatePrivacy(selected.value)
-    selected.value = response.current.name
+    Object.assign(form, (await uiApi.updatePrivacy({ ...form })).current)
     Message.success(t('privacy.saveSuccess'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -68,48 +50,67 @@ async function save() {
     <PageHeader :title="t('privacy.title')" :description="t('privacy.description')" />
 
     <a-spin :loading="loading" class="privacy-spin">
-      <a-radio-group v-model="selected" direction="vertical" class="level-group">
-        <div
-          v-for="level in levels"
-          :key="level.name"
-          class="level-card"
-          :class="{ 'level-card--selected': selected === level.name }"
-          role="radio"
-          :aria-checked="selected === level.name"
-          tabindex="0"
-          @click="selected = level.name"
-          @keydown.enter.prevent="selected = level.name"
-          @keydown.space.prevent="selected = level.name"
-        >
-          <a-radio :value="level.name">
-            <span class="level-title">{{ t(`privacy.levels.${level.name}`) }}</span>
-            <span class="level-description">
-              {{ t(`privacy.levelDescriptions.${level.name}`) }}
-            </span>
-          </a-radio>
-          <div class="feature-grid">
-            <span
-              v-for="feature in features.get(level.name)"
-              :key="feature.label"
-              class="feature"
-              :class="{ 'feature--disabled': !feature.allowed }"
-            >
-              <IconCheckCircleFill v-if="feature.allowed" />
-              <IconCloseCircleFill v-else />
-              {{ feature.label }}
-            </span>
-          </div>
-        </div>
-      </a-radio-group>
+      <div class="privacy-grid">
+        <a-card class="surface-card privacy-card">
+          <template #title>
+            <span class="card-title"><IconUser />{{ t('privacy.avatarTitle') }}</span>
+          </template>
+          <p class="option-description">{{ t('privacy.avatarDescription') }}</p>
+          <a-radio-group v-model="form.avatarVisibility" direction="vertical">
+            <a-radio value="ORIGINAL">
+              <span class="option-label"><IconEye />{{ t('privacy.avatarOptions.ORIGINAL') }}</span>
+              <span class="option-help">{{ t('privacy.avatarHelp.ORIGINAL') }}</span>
+            </a-radio>
+            <a-radio value="BLURRED">
+              <span class="option-label"><IconLock />{{ t('privacy.avatarOptions.BLURRED') }}</span>
+              <span class="option-help">{{ t('privacy.avatarHelp.BLURRED') }}</span>
+            </a-radio>
+            <a-radio value="HIDDEN">
+              <span class="option-label">
+                <IconEyeInvisible />{{ t('privacy.avatarOptions.HIDDEN') }}
+              </span>
+              <span class="option-help">{{ t('privacy.avatarHelp.HIDDEN') }}</span>
+            </a-radio>
+          </a-radio-group>
+        </a-card>
+
+        <a-card class="surface-card privacy-card">
+          <template #title>
+            <span class="card-title"><IconUser />{{ t('privacy.usernameTitle') }}</span>
+          </template>
+          <p class="option-description">{{ t('privacy.usernameDescription') }}</p>
+          <a-radio-group v-model="form.usernameVisibility" direction="vertical">
+            <a-radio value="FULL">
+              <span class="option-label">{{ t('privacy.usernameOptions.FULL') }}</span>
+              <span class="option-help">{{ t('privacy.usernameHelp.FULL') }}</span>
+            </a-radio>
+            <a-radio value="BLURRED">
+              <span class="option-label">{{ t('privacy.usernameOptions.BLURRED') }}</span>
+              <span class="option-help">{{ t('privacy.usernameHelp.BLURRED') }}</span>
+            </a-radio>
+          </a-radio-group>
+        </a-card>
+
+        <a-card class="surface-card privacy-card">
+          <template #title>
+            <span class="card-title"><IconLock />{{ t('privacy.pointsTitle') }}</span>
+          </template>
+          <p class="option-description">{{ t('privacy.pointsDescription') }}</p>
+          <a-radio-group v-model="form.pointsVisibility" direction="vertical">
+            <a-radio value="SHOW">
+              <span class="option-label">{{ t('privacy.pointsOptions.SHOW') }}</span>
+              <span class="option-help">{{ t('privacy.pointsHelp.SHOW') }}</span>
+            </a-radio>
+            <a-radio value="HIDDEN">
+              <span class="option-label">{{ t('privacy.pointsOptions.HIDDEN') }}</span>
+              <span class="option-help">{{ t('privacy.pointsHelp.HIDDEN') }}</span>
+            </a-radio>
+          </a-radio-group>
+        </a-card>
+      </div>
 
       <div class="save-row">
-        <a-button
-          type="primary"
-          size="large"
-          :loading="saving"
-          :disabled="!selected"
-          @click="save"
-        >
+        <a-button type="primary" size="large" :loading="saving" @click="save">
           {{ t('common.save') }}
         </a-button>
       </div>
@@ -118,75 +119,52 @@ async function save() {
 </template>
 
 <style scoped>
-.privacy-page {
-  width: 100%;
-}
-
+.privacy-page,
 .privacy-spin {
   display: block;
   width: 100%;
 }
 
-.level-group {
+.privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.privacy-card:last-child {
+  grid-column: 1 / -1;
+}
+
+.card-title,
+.option-label {
   display: flex;
-  flex-direction: column;
-  width: 100%;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 
-.level-card {
-  display: block;
-  padding: 18px 20px;
-  background: var(--color-bg-2);
-  border: 1px solid var(--color-border-2);
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.level-card:hover,
-.level-card--selected {
-  border-color: rgb(var(--primary-6));
-}
-
-.level-card--selected {
-  box-shadow: 0 0 0 2px rgb(var(--primary-1));
-}
-
-.level-title {
-  display: block;
-  color: var(--color-text-1);
-  font-size: 15px;
+.card-title {
   font-weight: 600;
 }
 
-.level-description {
+.option-description {
+  margin: 0 0 16px;
+  color: var(--color-text-3);
+  line-height: 1.65;
+}
+
+.option-label {
+  color: var(--color-text-1);
+  font-weight: 600;
+}
+
+.option-help {
   display: block;
+  max-width: 520px;
   margin-top: 3px;
   color: var(--color-text-3);
   font-size: 12px;
+  line-height: 1.6;
   white-space: normal;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 16px 0 0 24px;
-}
-
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: rgb(var(--green-6));
-  font-size: 13px;
-}
-
-.feature--disabled {
-  color: var(--color-text-4);
 }
 
 .save-row {
@@ -195,13 +173,13 @@ async function save() {
   margin-top: 20px;
 }
 
-@media (max-width: 620px) {
-  .feature-grid {
+@media (max-width: 760px) {
+  .privacy-grid {
     grid-template-columns: 1fr;
   }
 
-  .level-card {
-    padding: 16px;
+  .privacy-card:last-child {
+    grid-column: auto;
   }
 }
 </style>

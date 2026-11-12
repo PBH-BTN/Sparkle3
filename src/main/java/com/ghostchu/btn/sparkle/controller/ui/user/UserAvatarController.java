@@ -1,10 +1,11 @@
 package com.ghostchu.btn.sparkle.controller.ui.user;
 
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.BlurredAvatarDiskCache;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import com.ghostchu.btn.sparkle.util.ImageBlurUtil;
 import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
@@ -38,14 +39,17 @@ public class UserAvatarController {
 
     private final IUserService userService;
     private final BlurredAvatarDiskCache blurredAvatarDiskCache;
+    private final UserPrivacyService privacyService;
     private final Object[] generationLocks = new Object[GENERATION_LOCK_COUNT];
 
     public UserAvatarController(
             IUserService userService,
-            BlurredAvatarDiskCache blurredAvatarDiskCache
+            BlurredAvatarDiskCache blurredAvatarDiskCache,
+            UserPrivacyService privacyService
     ) {
         this.userService = userService;
         this.blurredAvatarDiskCache = blurredAvatarDiskCache;
+        this.privacyService = privacyService;
         for (int index = 0; index < generationLocks.length; index++) {
             generationLocks[index] = new Object();
         }
@@ -66,11 +70,11 @@ public class UserAvatarController {
         if (userDetails.getUserId().longValue() == userId) {
             return redirectTo(user.getAvatar()); // 自己永远使用原始头像
         }
-        UserPrivacyLevel privacyLevel = user.getPrivacyLevel();
+        UserPrivacySettings privacy = privacyService.get(userId);
         try {
-            if (privacyLevel.isAllowOriginalAvatar()) {
+            if (privacy.allowsOriginalAvatar()) {
                 return redirectTo(user.getAvatar());
-            } else if (privacyLevel.isAllowBlurredAvatar()) {
+            } else if (privacy.allowsBlurredAvatar()) {
                 return handleBlurAvatar(user, webRequest);
             } else {
                 return redirectTo("/img/anonymous-user.png");

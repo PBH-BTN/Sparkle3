@@ -1,10 +1,14 @@
 package com.ghostchu.btn.sparkle.controller.ui.user;
 
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
+import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.PointsVisibility;
+import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.BlurredAvatarDiskCache;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,6 +30,7 @@ class UserAvatarControllerTest {
     void blurredAvatarSupportsStrongEtagAndNotModified() throws Exception {
         IUserService userService = mock(IUserService.class);
         BlurredAvatarDiskCache diskCache = mock(BlurredAvatarDiskCache.class);
+        UserPrivacyService privacyService = mock(UserPrivacyService.class);
         SparkleUserDetails principal = mock(SparkleUserDetails.class);
         when(principal.getUserId()).thenReturn(1L);
 
@@ -33,10 +38,16 @@ class UserAvatarControllerTest {
         when(diskCache.get(2L, "https://example.com/avatar.jpg")).thenReturn(blurred);
         when(userService.getById(2L)).thenReturn(new User()
                 .setId(2L)
-                .setAvatar("https://example.com/avatar.jpg")
-                .setPrivacyLevel(UserPrivacyLevel.LOW));
+                .setAvatar("https://example.com/avatar.jpg"));
+        when(privacyService.get(2L)).thenReturn(new UserPrivacySettings(
+                2L,
+                AvatarVisibility.BLURRED,
+                UsernameVisibility.BLURRED,
+                PointsVisibility.SHOW,
+                true
+        ));
         UserAvatarController controller =
-                new UserAvatarController(userService, diskCache);
+                new UserAvatarController(userService, diskCache, privacyService);
 
         var first = controller.proxyUserAvatar(
                 principal,

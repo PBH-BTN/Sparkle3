@@ -132,6 +132,13 @@ public class AccountDeletionFinalizer {
                 userId, userId
         );
         jdbcTemplate.update("""
+                UPDATE user_messages
+                SET sender_display_name = ?,
+                    sender_ip = NULL,
+                    sender_user_agent = NULL
+                WHERE sender_user_id = ?
+                """, anonymousNickname, userId);
+        jdbcTemplate.update("""
                 UPDATE "user"
                 SET email = ?,
                     nickname = ?,
@@ -148,6 +155,19 @@ public class AccountDeletionFinalizer {
                 UserAccountDeletionService.DELETED_APP_REASON,
                 userId
         );
+        jdbcTemplate.update("""
+                INSERT INTO user_privacy_settings (
+                    user_id, avatar_visibility, username_visibility,
+                    points_visibility, receive_user_messages, updated_at
+                )
+                VALUES (?, 'HIDDEN', 'BLURRED', 'HIDDEN', FALSE, now())
+                ON CONFLICT (user_id) DO UPDATE
+                SET avatar_visibility = 'HIDDEN',
+                    username_visibility = 'BLURRED',
+                    points_visibility = 'HIDDEN',
+                    receive_user_messages = FALSE,
+                    updated_at = now()
+                """, userId);
         jdbcTemplate.update("""
                 UPDATE user_account_deletion_request
                 SET status = 'COMPLETED',

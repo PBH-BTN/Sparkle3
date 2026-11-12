@@ -1,9 +1,11 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.AnnouncementInput;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.AnnouncementView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.PublicAnnouncementView;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class AnnouncementService {
     private static final Set<String> LEVELS = Set.of("GREEN", "YELLOW", "BLUE", "RED");
     private static final Set<String> PLACEMENTS = Set.of("GLOBAL_TOP", "HOME_HERO");
@@ -40,9 +43,14 @@ public class AnnouncementService {
             );
 
     private final JdbcTemplate jdbcTemplate;
+    private final UserMessageService messageService;
 
-    public AnnouncementService(JdbcTemplate jdbcTemplate) {
+    public AnnouncementService(
+            JdbcTemplate jdbcTemplate,
+            UserMessageService messageService
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.messageService = messageService;
     }
 
     public @NotNull List<AnnouncementView> listAll() {
@@ -113,7 +121,11 @@ public class AnnouncementService {
             throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Unable to create announcement");
         }
-        return require(id);
+        AnnouncementView created = require(id);
+        if (created.enabled()) {
+            publishInbox(created);
+        }
+        return created;
     }
 
     public @NotNull AnnouncementView update(
@@ -122,6 +134,7 @@ public class AnnouncementService {
             @Nullable Long operatorId
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
+        AnnouncementView existing = require(id);
         int changed = jdbcTemplate.update("""
                 UPDATE announcements
                 SET level = ?,
@@ -156,7 +169,11 @@ public class AnnouncementService {
         if (changed == 0) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
         }
-        return require(id);
+        AnnouncementView updated = require(id);
+        if (!existing.enabled() && updated.enabled()) {
+            publishInbox(updated);
+        }
+        return updated;
     }
 
     public void delete(long id) throws BusinessException {
@@ -239,6 +256,24 @@ public class AnnouncementService {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private void publishInbox(AnnouncementView announcement) {
+        String title = announcement.titleZh().isBlank()
+                ? announcement.titleEn()
+                : announcement.titleZh();
+        String content = announcement.contentZh().isBlank()
+                ? announcement.contentEn()
+                : announcement.contentZh();
+        NotificationCategory category = "RED".equals(announcement.level())
+                ? NotificationCategory.MAJOR_ANNOUNCEMENT
+                : NotificationCategory.DAILY_ANNOUNCEMENT;
+        try {
+            messageService.publishSystem(category, title, content, true);
+        } catch (Exception exception) {
+            log.warn("Unable to publish inbox notification for announcement {}: {}",
+                    announcement.id(), exception.getMessage());
+        }
     }
 
 }

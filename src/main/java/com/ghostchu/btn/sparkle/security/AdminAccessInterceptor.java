@@ -23,7 +23,15 @@ public class AdminAccessInterceptor implements HandlerInterceptor {
         boolean allowed = false;
         if (principal instanceof SparkleUserDetails userDetails) {
             var user = userService.getById(userDetails.getUserId());
-            allowed = AdminPolicy.isAdmin(user);
+            boolean admin = AdminPolicy.isAdmin(user);
+            boolean moderator = AdminPolicy.isModerator(user);
+            allowed = admin
+                    || (moderator
+                    && AdminPolicy.canAccessModeratorModule(request.getRequestURI()));
+            if (!allowed && moderator && !request.getRequestURI().startsWith("/api/")) {
+                response.sendRedirect("/admin/tasks");
+                return false;
+            }
         }
         if (allowed) {
             return true;
@@ -33,7 +41,7 @@ public class AdminAccessInterceptor implements HandlerInterceptor {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Administrator access required\",\"data\":null}"
+                    "{\"success\":false,\"message\":\"Administrator or moderator access required\",\"data\":null}"
             );
         } else {
             response.sendRedirect("/");

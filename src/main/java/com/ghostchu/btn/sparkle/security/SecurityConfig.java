@@ -47,8 +47,10 @@ public class SecurityConfig {
                                 .requestMatchers("/api/ui/session").permitAll()
                                 .requestMatchers("/api/ui/footer").permitAll()
                                 .requestMatchers("/api/ui/notices").permitAll()
-                                .requestMatchers("/admin", "/admin/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
-                                .requestMatchers("/api/admin/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
+                                .requestMatchers("/admin", "/admin/**")
+                                .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
+                                .requestMatchers("/api/admin/**")
+                                .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
                                 .requestMatchers("/debug/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
                                 .requestMatchers("/api/**").authenticated()
@@ -92,7 +94,7 @@ public class SecurityConfig {
         if (request.getRequestURI().startsWith("/api/")) {
             String message = exception instanceof CsrfException
                     ? "CSRF token is missing or invalid"
-                    : "Administrator access required";
+                    : "Administrator or moderator access required";
             writeJsonError(response, 403, message);
             return;
         }

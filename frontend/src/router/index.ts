@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('@/views/PointsView.vue'),
     },
     {
+      path: '/user/inbox',
+      name: 'inbox',
+      component: () => import('@/views/InboxView.vue'),
+    },
+    {
       path: '/user/profile/:uid',
       name: 'public-profile',
       component: () => import('@/views/PublicProfileView.vue'),
@@ -71,6 +76,11 @@ const router = createRouter({
           path: 'privacy',
           name: 'privacy-settings',
           component: () => import('@/views/PrivacyView.vue'),
+        },
+        {
+          path: 'notifications',
+          name: 'notification-settings',
+          component: () => import('@/views/NotificationSettingsView.vue'),
         },
       ],
     },
@@ -109,7 +119,7 @@ const router = createRouter({
       path: '/admin',
       component: () => import('@/layouts/AdminLayout.vue'),
       meta: { admin: true },
-      redirect: '/admin/dashboard',
+      redirect: '/admin/tasks',
       children: [
         {
           path: 'dashboard',
@@ -165,6 +175,11 @@ const router = createRouter({
           path: 'announcements',
           name: 'admin-announcements',
           component: () => import('@/views/admin/AdminAnnouncementsView.vue'),
+        },
+        {
+          path: 'messages',
+          name: 'admin-messages',
+          component: () => import('@/views/admin/AdminMessagesView.vue'),
         },
         {
           path: 'navigation',

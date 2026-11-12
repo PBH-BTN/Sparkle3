@@ -1,4 +1,9 @@
-import type { NavigationIcon, PrivacyLevel } from './types'
+import type {
+  AvatarVisibility,
+  NavigationIcon,
+  PointsVisibility,
+  UsernameVisibility,
+} from './types'
 
 export interface AdminPage<T> {
   records: T[]
@@ -129,8 +134,10 @@ export interface AdminUser {
   email: string
   nickname: string
   avatarUrl: string
-  role: 'user' | 'admin' | string
-  privacyLevel: PrivacyLevel['name']
+  role: 'user' | 'admin' | 'moderator' | string
+  avatarVisibility: AvatarVisibility
+  usernameVisibility: UsernameVisibility
+  pointsVisibility: PointsVisibility
   registerAt: string
   lastLoginAt: string
   bannedAt: string | null
@@ -151,8 +158,10 @@ export interface AdminUserInput {
   email: string
   nickname: string
   avatarUrl: string
-  role: 'user' | 'admin'
-  privacyLevel: PrivacyLevel['name']
+  role: 'user' | 'admin' | 'moderator'
+  avatarVisibility: AvatarVisibility
+  usernameVisibility: UsernameVisibility
+  pointsVisibility: PointsVisibility
 }
 
 export interface AdminApplication {
@@ -639,4 +648,19 @@ export interface GithubSyncRunResult {
   succeeded: number
   failed: number
   results: GithubSyncTargetRunResult[]
+}
+
+export interface StaffMessageInput {
+  subject: string
+  content: string
+  category: import('./types').NotificationCategory
+  recipientId: number | null
+  systemIdentity: boolean
+  forceEmail: boolean
+}
+
+export interface StaffMessageResult {
+  recipients: number
+  dispatchId: string
+  remainingToday: number
 }

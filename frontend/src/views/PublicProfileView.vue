@@ -12,7 +12,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import { uiApi } from '@/api'
-import type { ContactEmailRequest, PublicUserProfileResponse } from '@/api/types'
+import type { PublicUserProfileResponse } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const route = useRoute()
@@ -22,8 +22,8 @@ const { formatPointBytes } = useFormatters()
 const profile = ref<PublicUserProfileResponse | null>(null)
 const loading = ref(true)
 const sending = ref(false)
-const emailVisible = ref(false)
-const emailForm = reactive<ContactEmailRequest>({
+const messageVisible = ref(false)
+const messageForm = reactive({
   subject: '',
   content: '',
 })
@@ -34,20 +34,14 @@ const displayName = computed(() =>
     ? t('common.anonymous')
     : profile.value?.nickname || t('common.anonymous'),
 )
-const privacyLabel = computed(() =>
-  profile.value
-    ? t(`privacy.levels.${profile.value.privacyLevel}`)
-    : t('common.notAvailable'),
-)
-const privacyColor = computed(() => {
-  const name = profile.value?.privacyLevel
-  return name === 'DISABLED'
-    ? 'green'
-    : name === 'LOW'
-      ? 'arcoblue'
-      : name === 'MEDIUM'
-        ? 'orange'
-        : 'red'
+const privacyTags = computed(() => {
+  const privacy = profile.value?.privacy
+  if (!privacy) return []
+  return [
+    t(`privacy.avatarOptions.${privacy.avatarVisibility}`),
+    t(`privacy.usernameOptions.${privacy.usernameVisibility}`),
+    t(`privacy.pointsOptions.${privacy.pointsVisibility}`),
+  ]
 })
 
 function showPointRaw(value: string | null | undefined) {
@@ -71,33 +65,34 @@ async function load() {
   }
 }
 
-function openEmail() {
-  emailForm.subject = ''
-  emailForm.content = ''
-  emailVisible.value = true
+function openMessage() {
+  messageForm.subject = ''
+  messageForm.content = ''
+  messageVisible.value = true
 }
 
-async function sendEmail(): Promise<boolean> {
-  if (!emailForm.subject.trim()) {
-    Message.warning(t('publicProfile.subjectRequired'))
+async function sendMessage(): Promise<boolean> {
+  if (!messageForm.subject.trim()) {
+    Message.warning(t('publicProfile.messageSubjectRequired'))
     return false
   }
-  if (!emailForm.content.trim()) {
-    Message.warning(t('publicProfile.contentRequired'))
+  if (!messageForm.content.trim()) {
+    Message.warning(t('publicProfile.messageContentRequired'))
     return false
   }
   sending.value = true
   try {
-    const result = await uiApi.sendContactEmail(uid.value, {
-      subject: emailForm.subject,
-      content: emailForm.content,
-    })
+    const result = await uiApi.sendMessage(
+      uid.value,
+      messageForm.subject,
+      messageForm.content,
+    )
     Message.success(
-      t('publicProfile.sent', { remaining: result.remainingToday }),
+      t('publicProfile.messageSent', { remaining: result.remainingToday }),
     )
     return true
   } catch (error) {
-    Message.error(errorMessage(error, t('publicProfile.sendFailed')))
+    Message.error(errorMessage(error, t('publicProfile.messageSendFailed')))
     return false
   } finally {
     sending.value = false
@@ -134,9 +129,13 @@ onMounted(load)
               <h2>{{ displayName }}</h2>
               <span class="muted">UID {{ profile.id }}</span>
               <div class="profile-tags">
-                <a-tag :color="privacyColor">
+                <a-tag
+                  v-for="item in privacyTags"
+                  :key="item"
+                  color="arcoblue"
+                >
                   <template #icon><IconLock /></template>
-                  {{ privacyLabel }}
+                  {{ item }}
                 </a-tag>
                 <a-tag v-if="profile.banned" color="red">
                   {{ t('common.paused') }}
@@ -162,55 +161,55 @@ onMounted(load)
                 {{ t('publicProfile.openOwnProfile') }}
               </a-button>
               <a-button
-                v-else-if="profile.canSendEmail"
+                v-else-if="profile.canSendMessage"
                 type="primary"
-                @click="openEmail"
+                @click="openMessage"
               >
                 <template #icon><IconEmail /></template>
-                {{ t('publicProfile.sendEmail') }}
+                {{ t('publicProfile.sendMessage') }}
               </a-button>
             </div>
           </div>
         </a-card>
 
         <a-alert
-          v-if="!profile.self && !profile.canSendEmail && !profile.banned"
+          v-if="!profile.self && !profile.canSendMessage && !profile.banned"
           type="info"
           show-icon
         >
-          {{ t('publicProfile.emailUnavailable') }}
+          {{ t('publicProfile.messageUnavailable') }}
         </a-alert>
       </template>
     </a-spin>
 
     <a-modal
-      v-model:visible="emailVisible"
-      :title="t('publicProfile.sendEmail')"
+      v-model:visible="messageVisible"
+      :title="t('publicProfile.sendMessage')"
       :ok-loading="sending"
-      :ok-text="t('publicProfile.send')"
+      :ok-text="t('publicProfile.sendMessage')"
       :cancel-text="t('common.cancel')"
-      :on-before-ok="sendEmail"
+      :on-before-ok="sendMessage"
       unmount-on-close
     >
       <a-alert type="info" show-icon class="email-hint">
-        {{ t('publicProfile.emailHint') }}
+        {{ t('publicProfile.messageHint') }}
       </a-alert>
-      <a-form :model="emailForm" layout="vertical" @submit="sendEmail">
-        <a-form-item :label="t('publicProfile.subject')" required>
+      <a-form :model="messageForm" layout="vertical" @submit="sendMessage">
+        <a-form-item :label="t('publicProfile.messageSubject')" required>
           <a-input
-            v-model="emailForm.subject"
+            v-model="messageForm.subject"
             :max-length="80"
             show-word-limit
-            :placeholder="t('publicProfile.subjectPlaceholder')"
+            :placeholder="t('publicProfile.messageSubjectPlaceholder')"
           />
         </a-form-item>
-        <a-form-item :label="t('publicProfile.content')" required>
+        <a-form-item :label="t('publicProfile.messageContent')" required>
           <a-textarea
-            v-model="emailForm.content"
+            v-model="messageForm.content"
             :max-length="2000"
             show-word-limit
             :auto-size="{ minRows: 7, maxRows: 14 }"
-            :placeholder="t('publicProfile.contentPlaceholder')"
+            :placeholder="t('publicProfile.messageContentPlaceholder')"
           />
         </a-form-item>
       </a-form>

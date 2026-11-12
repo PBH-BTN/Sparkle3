@@ -53,13 +53,75 @@ export default {
     profile: 'Profile',
     points: 'Points',
   },
+  inbox: {
+    open: 'Inbox',
+    title: 'Inbox',
+    description: 'Read messages and system notifications from other users and the Sparkle BTN team.',
+    all: 'All messages',
+    unreadOnly: 'Unread only',
+    markAllRead: 'Mark all as read',
+    allRead: 'All messages marked as read.',
+    deleted: 'Message deleted.',
+    deleteConfirm: 'Delete this message?',
+    empty: 'Your inbox is empty.',
+    system: 'System message',
+    forcedEmail: 'Forced email reminder',
+  },
+  notifications: {
+    title: 'Notifications & reminders',
+    description: 'Manage in-app and email reminders separately for each notification category.',
+    hint:
+      'All categories are enabled by default. Legal/compliance and account security notifications cannot be disabled; the system may force an email reminder when necessary.',
+    category: 'Notification category',
+    mandatory: 'Required',
+    saved: 'Notification preferences saved.',
+    types: {
+      inbox: 'In-app',
+      email: 'Email',
+    },
+    categories: {
+      LEGAL_COMPLIANCE: {
+        name: 'Legal, compliance & administration',
+        description:
+          'Legal, compliance, and administrative notices from PBH-BTN. This notification cannot be disabled.',
+      },
+      ACCOUNT_SECURITY: {
+        name: 'Account security',
+        description:
+          'Notices sent when PBH-BTN detects a security issue, risk, or unusual activity affecting your account. This notification cannot be disabled.',
+      },
+      CLIENT_SECURITY: {
+        name: 'Client security',
+        description:
+          'Notices sent when the BTN server detects a known serious security issue in the BTN client you use.',
+      },
+      MAJOR_ANNOUNCEMENT: {
+        name: 'Major announcements',
+        description: 'Important platform notices from PBH-BTN.',
+      },
+      DAILY_ANNOUNCEMENT: {
+        name: 'Routine announcements',
+        description: 'Other non-major announcements and service information.',
+      },
+      CHANGELOG: {
+        name: 'Changelog',
+        description: 'Changelogs for significant BTN updates.',
+      },
+      DIRECT_MESSAGE: {
+        name: 'Direct messages',
+        description: 'Reminders when you receive a direct message from another user or the team.',
+      },
+    },
+  },
   settings: {
     title: 'Settings',
-    description: 'Manage account security, deletion requests, and public profile privacy.',
+    description:
+      'Manage account security, deletion requests, public profile privacy, and notification reminders.',
     backToProfile: 'Back to profile',
     menu: {
       account: 'Delete account',
       privacy: 'Privacy settings',
+      notifications: 'Notifications & reminders',
     },
   },
   accountSettings: {
@@ -254,7 +316,7 @@ export default {
     bannedHint:
       'Suspended accounts cannot submit data. Previously submitted data is excluded on the next update.',
     privacyProtection: 'Privacy',
-    privacyHint: 'The privacy level controls how much information is visible on public pages.',
+    privacyHint: 'Avatar, username, and points visibility can be configured separately.',
     settings: 'Settings',
     githubAccount: 'Linked GitHub account',
     bytesScore: 'Bytes score',
@@ -266,46 +328,54 @@ export default {
     title: 'User profile',
     accountDisabled: 'This user account is currently suspended.',
     openOwnProfile: 'Open my full profile',
-    sendEmail: 'Send email',
-    emailUnavailable: 'This user privacy level does not allow messages from other users.',
-    send: 'Send',
-    emailHint:
-      'Emails are sent as plain text. Titles are limited to 80 characters and messages to 2,000 characters. HTML tags are removed, and you can send at most 15 emails per day.',
-    subject: 'Email title',
-    subjectPlaceholder: 'Enter a title of up to 80 characters',
-    content: 'Email message',
-    contentPlaceholder: 'Enter a plain-text message of up to 2,000 characters',
-    subjectRequired: 'Enter an email title.',
-    contentRequired: 'Enter an email message.',
-    sent: 'Email sent. You can send {remaining} more messages today.',
-    sendFailed: 'Unable to send the email.',
+    sendMessage: 'Send direct message',
+    messageUnavailable: 'This user does not currently accept direct messages from other users.',
+    messageHint:
+      'Messages are sent as plain text. Titles are limited to 80 characters and messages to 2,000 characters. Each user may send at most 15 direct messages per day; email reminders follow the recipient’s notification settings.',
+    messageSubject: 'Message title',
+    messageSubjectPlaceholder: 'Enter a title of up to 80 characters',
+    messageContent: 'Message',
+    messageContentPlaceholder: 'Enter a plain-text message of up to 2,000 characters',
+    messageSubjectRequired: 'Enter a message title.',
+    messageContentRequired: 'Enter a message.',
+    messageSent: 'Message sent. You can send {remaining} more messages today.',
+    messageSendFailed: 'Unable to send the message.',
   },
   privacy: {
     title: 'Privacy settings',
-    description: 'Choose how much information is visible on public pages.',
-    saved: 'Privacy settings updated.',
-    levels: {
-      DISABLED: 'Public',
-      LOW: 'Low privacy',
-      MEDIUM: 'Medium privacy',
-      HIGH: 'High privacy',
+    description: 'Choose separate visibility options for your avatar, username, and points.',
+    avatarTitle: 'Avatar',
+    avatarDescription: 'Choose what other users see when they view your profile.',
+    avatarOptions: {
+      ORIGINAL: 'Original avatar',
+      BLURRED: 'Blurred avatar',
+      HIDDEN: 'Hidden',
     },
-    levelDescriptions: {
-      DISABLED:
-        'Show your full username, original avatar, and points, and allow contact by email.',
-      LOW:
-        'Show a blurred username, blurred avatar, and points, and allow contact by email.',
-      MEDIUM:
-        'Show a blurred username and blurred avatar, hide points, and allow contact by email.',
-      HIGH:
-        'Show a blurred username, hide avatar and points, and disallow contact by email.',
+    avatarHelp: {
+      ORIGINAL: 'Show the original avatar linked to your account.',
+      BLURRED: 'Show a blurred version of your avatar. This is the default.',
+      HIDDEN: 'Other users see an anonymous placeholder avatar.',
     },
-    fullUsername: 'Full username',
-    blurredUsername: 'Blurred username',
-    originalAvatar: 'Original avatar',
-    blurredAvatar: 'Blurred avatar',
-    publicPoints: 'Show points',
-    contactEmail: 'Allow contact by email',
+    usernameTitle: 'Username',
+    usernameDescription: 'Choose whether public pages show your full or blurred username.',
+    usernameOptions: {
+      FULL: 'Full username',
+      BLURRED: 'Blurred username',
+    },
+    usernameHelp: {
+      FULL: 'Show your complete account nickname.',
+      BLURRED: 'Keep a few characters and mask the rest. This is the default.',
+    },
+    pointsTitle: 'Points visibility',
+    pointsDescription: 'Control whether other users can see your Bytes score in profiles and rankings.',
+    pointsOptions: {
+      SHOW: 'Show',
+      HIDDEN: 'Hide',
+    },
+    pointsHelp: {
+      SHOW: 'Allow your points balance and ranking to be shown publicly.',
+      HIDDEN: 'Hide your points balance from other users.',
+    },
     saveSuccess: 'Privacy settings saved.',
   },
   banHistory: {
@@ -602,6 +672,7 @@ export default {
       versionAlerts: 'Version alerts',
       userContactEmails: 'User email audit',
       announcements: 'Announcements',
+      messages: 'Broadcast messages',
       navigation: 'Navigation',
       btn: 'BTN management',
       githubSync: 'GitHub rule sync',
@@ -866,6 +937,43 @@ export default {
         },
       },
     },
+    messages: {
+      title: 'Broadcast messages',
+      description:
+        'Send a message to every active user or a specific UID, with optional system identity and forced email reminders.',
+      permissionHint:
+        'This page is restricted to administrators and moderators. A targeted message bypasses the recipient’s direct-message restriction; a forced email reminder bypasses email notification preferences.',
+      audience: 'Audience',
+      allUsers: 'All active users',
+      singleUser: 'Specific user',
+      recipientId: 'Recipient UID',
+      category: 'Notification category',
+      senderIdentity: 'Sender identity',
+      systemIdentity: 'Sparkle BTN system identity',
+      personalIdentity: 'My account identity',
+      systemIdentityHint:
+        'When enabled, recipients see “Sparkle BTN” as the sender. When disabled, your moderator or administrator nickname is used.',
+      emailReminder: 'Email reminder',
+      forceEmailHint:
+        'Force an email reminder to every recipient with a usable address, ignoring their email notification settings.',
+      subject: 'Message title',
+      subjectPlaceholder: 'Enter the title recipients will see',
+      content: 'Message',
+      contentPlaceholder: 'Enter plain text; line breaks are preserved in the inbox',
+      required: 'Enter a message title and content.',
+      recipientRequired: 'Enter the recipient UID.',
+      broadcastHint:
+        'Broadcasts create an inbox copy for each recipient. Users who disabled the selected in-app category will not receive that category.',
+      bypassPrivacyHint:
+        'Targeted staff messages bypass the recipient’s direct-message restriction. The recipient can still read and manage the message in the inbox.',
+      send: 'Send message',
+      sent: 'Message delivered to {count} users.',
+      sendFailed: 'Unable to send the message.',
+      remaining: '{count} send operations remaining today',
+      resultTitle: 'Delivery complete',
+      resultText:
+        '{count} inbox copies were created. Email reminders are being processed in the background.',
+    },
     users: {
       title: 'User management',
       description: 'Search, create, edit, suspend, and delete BTN users.',
@@ -902,6 +1010,7 @@ export default {
       suspendReason: 'Suspension reason',
       suspendReasonPlaceholder: 'Enter a reason visible to the user',
       adminRole: 'Administrator',
+      moderatorRole: 'Moderator',
       userRole: 'User',
       neverLogin: 'Never',
       emailRequired: 'Enter a valid email address.',
@@ -923,6 +1032,7 @@ export default {
       userAgent: 'Last User-Agent',
       flags: 'Status / Bypass',
       resetSecret: 'Reset secret',
+      quickSuspend: 'Quick suspend',
       suspend: 'Suspend',
       restore: 'Restore',
       banReason: 'Suspension reason',

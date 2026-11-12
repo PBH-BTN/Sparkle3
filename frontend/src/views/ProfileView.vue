@@ -20,20 +20,14 @@ const { formatDate, formatPointBytes } = useFormatters()
 const profile = ref<UserProfileResponse | null>(null)
 const loading = ref(true)
 
-const privacyLabel = computed(() => {
-  const name = profile.value?.user.privacyLevel.name ?? 'HIGH'
-  return t(`privacy.levels.${name}`)
-})
-
-const privacyColor = computed(() => {
-  const name = profile.value?.user.privacyLevel.name
-  return name === 'DISABLED'
-    ? 'green'
-    : name === 'LOW'
-      ? 'arcoblue'
-      : name === 'MEDIUM'
-        ? 'orange'
-        : 'red'
+const privacyItems = computed(() => {
+  const privacy = profile.value?.user.privacy
+  if (!privacy) return []
+  return [
+    t(`privacy.avatarOptions.${privacy.avatarVisibility}`),
+    t(`privacy.usernameOptions.${privacy.usernameVisibility}`),
+    t(`privacy.pointsOptions.${privacy.pointsVisibility}`),
+  ]
 })
 
 function showPointRaw(value: string | null | undefined) {
@@ -124,10 +118,12 @@ onMounted(async () => {
               </div>
             </a-descriptions-item>
             <a-descriptions-item :label="t('profile.privacyProtection')">
-              <a-tag :color="privacyColor">
-                <template #icon><IconLock /></template>
-                {{ privacyLabel }}
-              </a-tag>
+              <a-space wrap>
+                <a-tag v-for="item in privacyItems" :key="item" color="arcoblue">
+                  <template #icon><IconLock /></template>
+                  {{ item }}
+                </a-tag>
+              </a-space>
               <a-button
                 type="text"
                 size="small"

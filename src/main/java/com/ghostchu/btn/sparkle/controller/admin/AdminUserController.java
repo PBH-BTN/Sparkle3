@@ -3,7 +3,9 @@ package com.ghostchu.btn.sparkle.controller.admin;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
+import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.PointsVisibility;
+import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.AdminUserView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.PageResult;
 import com.ghostchu.btn.sparkle.entity.User;
@@ -13,6 +15,8 @@ import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +51,7 @@ public class AdminUserController {
     private final IUserappService userappService;
     private final UserRelMapper userRelMapper;
     private final PointsService pointsService;
+    private final UserPrivacyService userPrivacyService;
 
     @GetMapping
     public PageResult<AdminUserView> list(
@@ -83,13 +88,24 @@ public class AdminUserController {
 
         Page<User> result = userService.page(new Page<>(safePage, safeSize), wrapper);
         Map<Long, String> relations = loadGitHubRelations(result.getRecords());
+        Map<Long, UserPrivacySettings> privacy = userPrivacyService.getAll(
+                result.getRecords().stream().map(User::getId).toList()
+        );
         List<AdminUserView> records = result.getRecords().stream()
-                .map(user -> toView(user, relations.get(user.getId())))
+                .map(user -> toView(
+                        user,
+                        relations.get(user.getId()),
+                        privacy.getOrDefault(
+                                user.getId(),
+                                UserPrivacySettings.defaults(user.getId())
+                        )
+                ))
                 .toList();
         return new PageResult<>(records, result.getCurrent(), result.getSize(), result.getTotal(), result.getPages());
     }
 
     @PostMapping
+    @Transactional
     public AdminUserView create(@RequestBody CreateUserRequest request) {
         validateUserValues(request.email(), request.nickname());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
@@ -101,14 +117,24 @@ public class AdminUserController {
                 .setNickname(request.nickname().trim())
                 .setAvatar(blankToDefault(request.avatarUrl(), "/img/anonymous-user.png"))
                 .setRole(normalizeRole(request.role()))
-                .setPrivacyLevel(request.privacyLevel() == null ? UserPrivacyLevel.MEDIUM : request.privacyLevel())
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(NEVER);
         userService.save(user);
-        return toView(user, null);
+        userPrivacyService.ensure(user.getId());
+        UserPrivacySettings privacy = userPrivacyService.update(
+                user.getId(),
+                request.avatarVisibility() == null
+                        ? AvatarVisibility.BLURRED : request.avatarVisibility(),
+                request.usernameVisibility() == null
+                        ? UsernameVisibility.BLURRED : request.usernameVisibility(),
+                request.pointsVisibility() == null
+                        ? PointsVisibility.SHOW : request.pointsVisibility()
+        );
+        return toView(user, null, privacy);
     }
 
     @PutMapping("/{id}")
+    @Transactional
     public AdminUserView update(@PathVariable long id,
                                 @RequestBody UpdateUserRequest request,
                                 @AuthenticationPrincipal SparkleUserDetails principal) {
@@ -127,11 +153,23 @@ public class AdminUserController {
         user.setEmail(email)
                 .setNickname(request.nickname().trim())
                 .setAvatar(blankToDefault(request.avatarUrl(), "/img/anonymous-user.png"))
-                .setRole(role)
-                .setPrivacyLevel(request.privacyLevel() == null ? UserPrivacyLevel.MEDIUM : request.privacyLevel());
+                .setRole(role);
         userService.updateById(user);
+        UserPrivacySettings privacy = userPrivacyService.update(
+                id,
+                request.avatarVisibility() == null
+                        ? AvatarVisibility.BLURRED : request.avatarVisibility(),
+                request.usernameVisibility() == null
+                        ? UsernameVisibility.BLURRED : request.usernameVisibility(),
+                request.pointsVisibility() == null
+                        ? PointsVisibility.SHOW : request.pointsVisibility()
+        );
         UserRel relation = userService.getUserRelByBindUserId(id);
-        return toView(user, relation == null ? null : relation.getPlatformUserLogin());
+        return toView(
+                user,
+                relation == null ? null : relation.getPlatformUserLogin(),
+                privacy
+        );
     }
 
     @PostMapping("/{id}/ban")
@@ -157,7 +195,11 @@ public class AdminUserController {
             );
         }
         UserRel relation = userService.getUserRelByBindUserId(id);
-        return toView(user, relation == null ? null : relation.getPlatformUserLogin());
+        return toView(
+                user,
+                relation == null ? null : relation.getPlatformUserLogin(),
+                userPrivacyService.get(id)
+        );
     }
 
     @PostMapping("/{id}/points")
@@ -187,7 +229,11 @@ public class AdminUserController {
         );
         User updated = requireUser(id);
         UserRel relation = userService.getUserRelByBindUserId(id);
-        return toView(updated, relation == null ? null : relation.getPlatformUserLogin());
+        return toView(
+                updated,
+                relation == null ? null : relation.getPlatformUserLogin(),
+                userPrivacyService.get(id)
+        );
     }
 
     @DeleteMapping("/{id}")
@@ -232,14 +278,20 @@ public class AdminUserController {
         return user;
     }
 
-    private AdminUserView toView(User user, String githubLogin) {
+    private AdminUserView toView(
+            User user,
+            String githubLogin,
+            UserPrivacySettings privacy
+    ) {
         return new AdminUserView(
                 String.valueOf(user.getId()),
                 user.getEmail(),
                 user.getNickname(),
                 user.getAvatarUrl(),
                 user.getRole(),
-                user.getPrivacyLevel() == null ? UserPrivacyLevel.MEDIUM.name() : user.getPrivacyLevel().name(),
+                privacy.avatarVisibility().name(),
+                privacy.usernameVisibility().name(),
+                privacy.pointsVisibility().name(),
                 user.getRegisterAt(),
                 user.getLastLoginAt(),
                 user.getBannedAt(),
@@ -265,7 +317,13 @@ public class AdminUserController {
     }
 
     private String normalizeRole(String role) {
-        return "admin".equalsIgnoreCase(role) ? "admin" : "user";
+        if ("admin".equalsIgnoreCase(role)) {
+            return "admin";
+        }
+        if ("moderator".equalsIgnoreCase(role)) {
+            return "moderator";
+        }
+        return "user";
     }
 
     private String blankToDefault(String value, String defaultValue) {
@@ -285,7 +343,9 @@ public class AdminUserController {
             String nickname,
             String avatarUrl,
             String role,
-            UserPrivacyLevel privacyLevel
+            AvatarVisibility avatarVisibility,
+            UsernameVisibility usernameVisibility,
+            PointsVisibility pointsVisibility
     ) {
     }
 
@@ -294,7 +354,9 @@ public class AdminUserController {
             String nickname,
             String avatarUrl,
             String role,
-            UserPrivacyLevel privacyLevel
+            AvatarVisibility avatarVisibility,
+            UsernameVisibility usernameVisibility,
+            PointsVisibility pointsVisibility
     ) {
     }
 

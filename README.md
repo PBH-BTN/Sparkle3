@@ -53,18 +53,22 @@ pnpm --dir frontend build
 
 ## 后台管理
 
-角色为 `admin` 的用户可从右上角用户菜单进入 `/admin/dashboard`。后台包含：
+角色为 `admin` 的用户可从右上角用户菜单进入 `/admin/dashboard`。角色为 `moderator`
+的协管用户可从右上角进入受限后台；管理员自动继承协管的全部权限。后台包含：
 
 - 仪表盘：主机 CPU、内存、磁盘实时指标，7 天趋势，JVM 信息及功能模块统计。
 - 用户管理：搜索、创建、编辑、停用/恢复和删除用户。删除用户前必须先删除其用户应用。
-- 用户资料：支持通过 `/user/profile/<uid>` 查看其他用户；昵称和头像严格遵循对方隐私等级。
-- 用户联系邮件：低隐私和公开模式用户可接收纯文本邮件，发送者每天最多 15 封；后台可配置邮件标题/正文模板并查询发送人、目标人、时间、IP 和 User-Agent 审计记录。
+- 用户资料：支持通过 `/user/profile/<uid>` 查看其他用户；头像、用户名与积分分别遵循对方独立隐私选项。
+- 站内信：导航栏头像左侧的收件箱集中展示用户消息和系统通知。普通用户每天最多发起 15 次站内信发送；管理员和协管可向全站群发或指定 UID 发送，支持 Sparkle BTN 系统身份与强制邮件提醒。
+- 通知提醒：用户可分别控制每个通知类别的站内信和邮件提醒。法律合规与账户安全通知不可关闭，其余类别默认开启。
+- 用户联系邮件：原有纯文本联系邮件审核能力保留；后台可配置邮件标题/正文模板并查询发送人、目标人、时间、IP 和 User-Agent 审计记录。
 - 用户应用管理：搜索、创建、转移所有者、停用、恢复、重置密钥和删除。
 - 手动规则：维护 `rules` 表中的 IP 黑名单、Peer ID、客户端名称、端口和脚本规则，并可预览生成的 IP 黑名单。
 - 功能模块：集中维护自动分析模块的开关、Cron、统计窗口、流量阈值和投票阈值，保存后动态重建调度任务。
 - 任务状态与计划：按计划任务、触发任务和启动任务查看运行结果，调整受模块管理的 Cron，并即时启用或停用对应模块。接入方式见 [后台任务系统使用与接入指南](docs/task-scheduling.md)。
 - 运行设置：热更新协议版本、IP 查询 PoW、客户端发现开关，以及最近 7 日流量统计的启用状态、刷新间隔、统计窗口和手动刷新。
-- 公告管理：支持“全局最顶公告区”和“首页 Hero 公告区”两个位置，提供绿、黄、蓝、红四种 Arco 警告样式、中英文内容、定时生效、排序和用户关闭。
+- 公告管理：支持“全局最顶公告区”和“首页 Hero 公告区”两个位置，提供绿、黄、蓝、红四种 Arco 警告样式、中英文内容、定时生效、排序和用户关闭。启用公告时会按重大/日常公告类别创建站内信通知。
+- 站内信群发：管理员和协管可选择全部活跃用户或指定 UID、通知类别、发送身份及是否强制邮件提醒。
 - Navbar 导航管理：内置项可启停、改名、选择图标和排序；自定义项支持中英文名称、站内路径或外部链接。
 - 首页统计：使用 ECharts 展示 Peer ID、客户端、GeoIP 城市、IPv4/IPv6 趋势，以及 BTN 客户端版本和地址栈分布。
 - 存储与策略：查看普通表与 TimescaleDB hypertable 占用，显示压缩/列存前后大小和 chunk 状态，管理自动压缩、列存和自动淘汰策略。
@@ -75,7 +79,9 @@ pnpm --dir frontend build
 后台运行设置保存在 PostgreSQL 表 `app_config_entries`，并保留 `application.yaml` 中的值作为默认值。
 数据库、Redis、OAuth、邮件、Sentry 和令牌等敏感配置不会暴露在后台。
 
-管理 API 位于 `/api/admin/**`，除 Spring Security 的 `admin` authority 校验外，还会在每次请求时重新检查数据库中的最新角色与停用状态。
+管理 API 位于 `/api/admin/**`，除 Spring Security 的 `admin` / `moderator` authority 校验外，
+还会在每次请求时重新检查数据库中的最新角色与停用状态。协管仅能访问任务状态与计划、公告管理、
+站内信群发、应用管理、GitHub 规则同步、BTN 管理、封禁模块管理和手动规则模块。
 
 存储统计会自动识别 TimescaleDB 2.18 以前的 `hypertable_compression_stats` 和 2.18+ 的
 `hypertable_columnstore_stats`。hypertable 使用 `hypertable_detailed_size` 汇总 chunk、
@@ -148,4 +154,8 @@ YAML 扫描。旧版保存在 Redis `sparkle:admin:runtime-config` 中的热更�
 
 ```sql
 UPDATE "user" SET role = 'admin' WHERE id = <user-id>;
+UPDATE "user" SET role = 'moderator' WHERE id = <user-id>;
 ```
+
+隐私设置自 Flyway `V46` 起保存在独立的 `user_privacy_settings` 表，支持原始/模糊/隐藏头像、
+完整/模糊用户名以及显示/隐藏积分。旧 `privacy_level` 列只用于迁移已有用户，不再参与新界面或公开资料计算。

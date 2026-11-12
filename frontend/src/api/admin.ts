@@ -42,6 +42,8 @@ import type {
   RuleSummary,
   RuntimeConfig,
   StorageOverview,
+  StaffMessageInput,
+  StaffMessageResult,
   SwarmStatisticsStatus,
   TableStorage,
   TaskTriggerResponse,
@@ -358,5 +360,10 @@ export const adminApi = {
   runGithubSyncTarget: (id: number) =>
     request<GithubSyncTargetRunResult>(`/api/admin/github-sync/targets/${id}/run`, {
       method: 'POST',
+    }),
+  sendStaffMessage: (body: StaffMessageInput) =>
+    request<StaffMessageResult>('/api/admin/messages', {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 }

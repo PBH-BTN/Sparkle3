@@ -17,18 +17,22 @@ import type {
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
   HomeStats,
+  InboxPage,
   IpQueryResult,
+  NotificationPreferencesResponse,
+  NotificationPreference,
   PageResponse,
   PointsLogPage,
   PointsOverview,
   PointsRankingResponse,
-  PrivacyLevel,
+  PrivacySettings,
   PrivacyResponse,
   PendingGithubRegistration,
   PublicUserProfileResponse,
   RankingResponse,
   RulePreviewResponse,
   SessionResponse,
+  SendMessageResult,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
   SwarmPeerInsightsResponse,
@@ -36,6 +40,7 @@ import type {
   StatisticsSource,
   UserApplication,
   UserProfileResponse,
+  UnreadMessageCount,
 } from './types'
 
 function postQuery<T>(url: string, body: unknown) {
@@ -73,12 +78,43 @@ export const uiApi = {
         body: JSON.stringify(body),
       },
     ),
+  sendMessage: (uid: string, subject: string, content: string) =>
+    request<SendMessageResult>(
+      `/api/ui/user/profile/${encodeURIComponent(uid)}/message`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ subject, content }),
+      },
+    ),
   privacy: () => request<PrivacyResponse>('/api/ui/user/privacy'),
-  updatePrivacy: (level: PrivacyLevel['name']) =>
+  updatePrivacy: (body: PrivacySettings) =>
     request<PrivacyResponse>('/api/ui/user/privacy', {
       method: 'PUT',
-      body: JSON.stringify({ level }),
+      body: JSON.stringify(body),
     }),
+  notifications: () =>
+    request<NotificationPreferencesResponse>('/api/ui/notifications/preferences'),
+  updateNotifications: (
+    preferences: Array<
+      Pick<NotificationPreference, 'category' | 'inboxEnabled' | 'emailEnabled'>
+    >,
+  ) =>
+    request<NotificationPreferencesResponse>('/api/ui/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify({ preferences }),
+    }),
+  inbox: (page: number, size: number, unreadOnly = false) =>
+    request<InboxPage>(
+      `/api/ui/messages?page=${page}&size=${size}&unreadOnly=${unreadOnly}`,
+    ),
+  unreadMessageCount: () =>
+    request<UnreadMessageCount>('/api/ui/messages/unread-count'),
+  markMessageRead: (id: number) =>
+    request<void>(`/api/ui/messages/${id}/read`, { method: 'POST' }),
+  markAllMessagesRead: () =>
+    request<void>('/api/ui/messages/read-all', { method: 'POST' }),
+  deleteMessage: (id: number) =>
+    request<void>(`/api/ui/messages/${id}`, { method: 'DELETE' }),
   accountDeletionStatus: () =>
     request<AccountDeletionStatus>('/api/ui/account-deletion'),
   beginAccountDeletionReauthentication: () =>

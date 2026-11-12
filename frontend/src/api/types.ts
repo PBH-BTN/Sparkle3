@@ -1,12 +1,11 @@
-export interface PrivacyLevel {
-  name: 'DISABLED' | 'LOW' | 'MEDIUM' | 'HIGH'
-  level: number
-  allowBlurredUsername: boolean
-  allowFullUsername: boolean
-  allowBlurredAvatar: boolean
-  allowOriginalAvatar: boolean
-  allowPublicPoints: boolean
-  allowContactEmail: boolean
+export type AvatarVisibility = 'ORIGINAL' | 'BLURRED' | 'HIDDEN'
+export type UsernameVisibility = 'FULL' | 'BLURRED'
+export type PointsVisibility = 'SHOW' | 'HIDDEN'
+
+export interface PrivacySettings {
+  avatarVisibility: AvatarVisibility
+  usernameVisibility: UsernameVisibility
+  pointsVisibility: PointsVisibility
 }
 
 export interface SessionUser {
@@ -17,8 +16,10 @@ export interface SessionUser {
   registerAt: string | null
   bannedAt: string | null
   bannedReason: string | null
+  role: string
   admin: boolean
-  privacyLevel: PrivacyLevel
+  moderator: boolean
+  privacy: PrivacySettings
 }
 
 export interface TrafficSummary {
@@ -309,12 +310,13 @@ export interface PublicUserProfileResponse {
   id: string
   nickname: string | null
   avatarUrl: string | null
-  privacyLevel: PrivacyLevel['name']
+  privacy: PrivacySettings
   scoreBytesDisplay: string | null
   scoreBytesRaw: string | null
   anonymous: boolean
   banned: boolean
   self: boolean
+  canSendMessage: boolean
   canSendEmail: boolean
 }
 
@@ -329,8 +331,54 @@ export interface ContactEmailResult {
 }
 
 export interface PrivacyResponse {
-  current: PrivacyLevel
-  levels: PrivacyLevel[]
+  current: PrivacySettings
+}
+
+export type NotificationCategory =
+  | 'LEGAL_COMPLIANCE'
+  | 'ACCOUNT_SECURITY'
+  | 'CLIENT_SECURITY'
+  | 'MAJOR_ANNOUNCEMENT'
+  | 'DAILY_ANNOUNCEMENT'
+  | 'CHANGELOG'
+  | 'DIRECT_MESSAGE'
+
+export interface NotificationPreference {
+  category: NotificationCategory
+  inboxEnabled: boolean
+  emailEnabled: boolean
+  locked: boolean
+}
+
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreference[]
+}
+
+export interface InboxMessage {
+  id: number
+  senderDisplayName: string
+  senderKind: 'USER' | 'SYSTEM' | string
+  category: NotificationCategory
+  subject: string
+  content: string
+  createdAt: string
+  readAt: string | null
+  read: boolean
+  broadcast: boolean
+  emailRequested: boolean
+  emailForced: boolean
+  emailStatus: 'NONE' | 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | string
+}
+
+export interface InboxPage extends PageResponse<InboxMessage> {}
+
+export interface SendMessageResult {
+  sent: boolean
+  remainingToday: number
+}
+
+export interface UnreadMessageCount {
+  count: number
 }
 
 export interface AccountDeletionStatus {

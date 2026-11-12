@@ -1,18 +1,24 @@
 package com.ghostchu.btn.sparkle.controller.ui;
 
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
-import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacyLevelView;
+import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.PointsVisibility;
+import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
+import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacySettingsView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacyResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailResult;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PublicUserProfileResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.UserProfileResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.UserView;
+import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.SendMessageRequest;
+import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.SendMessageResult;
 import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserContactEmailService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.UserPublicProfileService;
+import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.util.UnitConverter;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +33,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/ui/user")
 @RequiredArgsConstructor
@@ -37,6 +40,8 @@ public class UserApiController {
     private final IUserService userService;
     private final UserPublicProfileService publicProfileService;
     private final UserContactEmailService contactEmailService;
+    private final UserPrivacyService privacyService;
+    private final UserMessageService userMessageService;
 
     @GetMapping("/profile")
     public UserProfileResponse profile(@AuthenticationPrincipal SparkleUserDetails userDetails) {
@@ -44,7 +49,7 @@ public class UserApiController {
         var relation = userService.getUserRelByBindUserId(user.getId());
         long scoreBytes = user.getScoreBytes() == null ? 0 : user.getScoreBytes();
         return new UserProfileResponse(
-                UserView.from(user),
+                UserView.from(user, privacyService.get(user.getId())),
                 relation == null ? null : new UserRelDto(relation),
                 UnitConverter.autoUnit(scoreBytes),
                 Long.toString(scoreBytes)
@@ -77,25 +82,50 @@ public class UserApiController {
         );
     }
 
+    @PostMapping("/profile/{uid}/message")
+    public SendMessageResult sendMessage(
+            @PathVariable long uid,
+            @RequestBody SendMessageRequest request,
+            @AuthenticationPrincipal SparkleUserDetails userDetails,
+            HttpServletRequest httpRequest
+    ) throws com.ghostchu.btn.sparkle.exception.BusinessException {
+        var currentUser = requireCurrentUser(userDetails);
+        return userMessageService.sendFromUser(
+                currentUser.getId(),
+                uid,
+                request,
+                httpRequest.getRemoteAddr(),
+                httpRequest.getHeader("User-Agent")
+        );
+    }
+
     @GetMapping("/privacy")
     public PrivacyResponse privacy(@AuthenticationPrincipal SparkleUserDetails userDetails) {
         var user = requireCurrentUser(userDetails);
-        List<PrivacyLevelView> levels = Arrays.stream(UserPrivacyLevel.values())
-                .map(PrivacyLevelView::from)
-                .toList();
-        return new PrivacyResponse(PrivacyLevelView.from(user.getPrivacyLevel()), levels);
+        return new PrivacyResponse(
+                PrivacySettingsView.from(privacyService.get(user.getId()))
+        );
     }
 
     @PutMapping("/privacy")
     public PrivacyResponse updatePrivacy(@RequestBody PrivacyUpdateRequest request,
                                          @AuthenticationPrincipal SparkleUserDetails userDetails) {
-        if (request == null || request.level() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Privacy level is required");
+        if (request == null
+                || request.avatarVisibility() == null
+                || request.usernameVisibility() == null
+                || request.pointsVisibility() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "All privacy options are required"
+            );
         }
         var user = requireCurrentUser(userDetails);
-        user.setPrivacyLevel(request.level());
-        userService.updateById(user);
-        userDetails.getUser().setPrivacyLevel(request.level());
+        privacyService.update(
+                user.getId(),
+                request.avatarVisibility(),
+                request.usernameVisibility(),
+                request.pointsVisibility()
+        );
         return privacy(userDetails);
     }
 
@@ -110,6 +140,10 @@ public class UserApiController {
         return user;
     }
 
-    public record PrivacyUpdateRequest(UserPrivacyLevel level) {
+    public record PrivacyUpdateRequest(
+            AvatarVisibility avatarVisibility,
+            UsernameVisibility usernameVisibility,
+            PointsVisibility pointsVisibility
+    ) {
     }
 }

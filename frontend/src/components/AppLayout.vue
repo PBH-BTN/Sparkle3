@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  type Component,
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -7,6 +14,7 @@ import {
   IconBug,
   IconDashboard,
   IconDown,
+  IconEmail,
   IconExclamationCircle,
   IconFile,
   IconFire,
@@ -22,6 +30,7 @@ import {
 import LanguageSwitcher from './LanguageSwitcher.vue'
 import AppFooter from './AppFooter.vue'
 import { useSessionStore } from '@/stores/session'
+import { uiApi } from '@/api'
 import { useFormatters } from '@/utils/format'
 
 const route = useRoute()
@@ -30,6 +39,8 @@ const session = useSessionStore()
 const { t, locale } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const mobileMenuOpen = ref(false)
+const unreadMessages = ref(0)
+let unreadTimer: number | undefined
 
 const navigationIcons: Record<string, Component> = {
   home: IconHome,
@@ -93,6 +104,36 @@ function navigate(id: string) {
     window.location.assign(item.href)
   }
 }
+
+async function refreshUnread() {
+  try {
+    unreadMessages.value = (await uiApi.unreadMessageCount()).count
+  } catch {
+    // The next poll or inbox visit retries without blocking navigation.
+  }
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    refreshUnread()
+  },
+)
+
+onMounted(() => {
+  refreshUnread()
+  window.addEventListener('sparkle:messages-changed', refreshUnread)
+  unreadTimer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      refreshUnread()
+    }
+  }, 60_000)
+})
+
+onBeforeUnmount(() => {
+  window.clearInterval(unreadTimer)
+  window.removeEventListener('sparkle:messages-changed', refreshUnread)
+})
 </script>
 
 <template>
@@ -123,6 +164,17 @@ function navigate(id: string) {
 
         <div class="header-actions">
           <LanguageSwitcher />
+          <a-badge :count="unreadMessages" :max-count="99" :offset="[-4, 4]">
+            <a-button
+              class="inbox-trigger"
+              shape="circle"
+              type="text"
+              :aria-label="t('inbox.open')"
+              @click="navigate('/user/inbox')"
+            >
+              <template #icon><IconEmail /></template>
+            </a-button>
+          </a-badge>
           <a-dropdown trigger="click">
             <button class="user-trigger" type="button">
               <a-avatar :size="32" :image-url="session.user?.avatarUrl">
@@ -140,7 +192,10 @@ function navigate(id: string) {
                 <template #icon><IconFire /></template>
                 {{ t('nav.points') }}
               </a-doption>
-              <a-doption v-if="session.user?.admin" @click="navigate('/admin/dashboard')">
+              <a-doption
+                v-if="session.user?.admin || session.user?.moderator"
+                @click="navigate(session.user?.admin ? '/admin/dashboard' : '/admin/tasks')"
+              >
                 <template #icon><IconDashboard /></template>
                 {{ t('admin.title') }}
               </a-doption>
@@ -218,6 +273,10 @@ function navigate(id: string) {
         <a-menu-item key="/user/points">
           <template #icon><IconFire /></template>
           {{ t('nav.points') }}
+        </a-menu-item>
+        <a-menu-item key="/user/inbox">
+          <template #icon><IconEmail /></template>
+          {{ t('inbox.open') }}
         </a-menu-item>
       </a-menu>
     </a-drawer>
@@ -337,6 +396,11 @@ function navigate(id: string) {
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
+}
+
+.inbox-trigger {
+  color: var(--color-text-2);
+  font-size: 18px;
 }
 
 .user-trigger:hover {

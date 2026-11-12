@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.service.account;
 
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
+import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +25,27 @@ public class AccountDeletionNotificationListener {
 
     private final JavaMailSender mailSender;
     private final BtnRuntimeConfigService btnConfigService;
+    private final UserMessageService messageService;
 
     @TransactionalEventListener(
             phase = TransactionPhase.AFTER_COMMIT,
             fallbackExecution = true
     )
     public void send(AccountDeletionNotificationEvent event) {
+        if (event != null) {
+            try {
+                messageService.publishSystemToUser(
+                        event.userId(),
+                        NotificationCategory.ACCOUNT_SECURITY,
+                        subject(event.kind()),
+                        body(event),
+                        false
+                );
+            } catch (Exception exception) {
+                log.warn("Unable to publish account security inbox notification for user {}: {}",
+                        event.userId(), exception.getMessage());
+            }
+        }
         if (event == null || event.recipientEmail() == null || event.recipientEmail().isBlank()) {
             log.warn("Cannot send account deletion notification for user {}: recipient is missing",
                     event == null ? null : event.userId());

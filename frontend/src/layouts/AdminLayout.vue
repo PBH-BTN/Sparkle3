@@ -17,15 +17,18 @@ import {
   IconThunderbolt,
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon'
+import { useSessionStore } from '@/stores/session'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const session = useSessionStore()
 
-const items = computed(() => [
+const allItems = computed(() => [
   { key: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: IconDashboard },
   { key: '/admin/tasks', label: t('admin.nav.tasks'), icon: IconSchedule },
   { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },
+  { key: '/admin/messages', label: t('admin.nav.messages'), icon: IconEmail },
   { key: '/admin/navigation', label: t('admin.nav.navigation'), icon: IconMenu },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },
   { key: '/admin/users', label: t('admin.nav.users'), icon: IconUserGroup },
@@ -47,6 +50,23 @@ const items = computed(() => [
   },
   { key: '/admin/storage', label: t('admin.nav.storage'), icon: IconStorage },
 ])
+
+const moderatorKeys = new Set([
+  '/admin/tasks',
+  '/admin/announcements',
+  '/admin/messages',
+  '/admin/userapps',
+  '/admin/github-sync',
+  '/admin/btn',
+  '/admin/modules',
+  '/admin/rules',
+])
+
+const items = computed(() =>
+  session.user?.admin
+    ? allItems.value
+    : allItems.value.filter((item) => moderatorKeys.has(item.key)),
+)
 
 const selectedKey = computed(
   () => items.value.find((item) => route.path.startsWith(item.key))?.key ?? '/admin/dashboard',

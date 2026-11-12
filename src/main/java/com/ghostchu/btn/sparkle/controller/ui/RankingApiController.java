@@ -9,6 +9,8 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ public class RankingApiController {
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
     private final AdminConfigService adminConfigService;
     private final JdbcTemplate jdbcTemplate;
+    private final UserPrivacyService privacyService;
 
     @GetMapping
     public RankingResponse ranking(@AuthenticationPrincipal SparkleUserDetails userDetails)
@@ -47,11 +50,19 @@ public class RankingApiController {
         if (!userIds.isEmpty()) {
             userService.listByIds(userIds).forEach(user -> users.put(user.getId(), user));
         }
+        Map<Long, UserPrivacySettings> privacy = privacyService.getAll(userIds);
         List<RankingEntry> entries = new ArrayList<>(Math.min(500, ranking.size()));
         for (var item : ranking) {
             var user = users.get(item.getUserId());
             if (user != null) {
-                entries.add(toEntry(item, user));
+                entries.add(toEntry(
+                        item,
+                        user,
+                        privacy.getOrDefault(
+                                user.getId(),
+                                UserPrivacySettings.defaults(user.getId())
+                        )
+                ));
             }
         }
         RankingEntry self = null;
@@ -81,16 +92,17 @@ public class RankingApiController {
             @AuthenticationPrincipal SparkleUserDetails userDetails
     ) {
         List<Long> systemUids = userService.getSystemUids();
-        String exclusion = notInClause("id", systemUids.size());
+        String exclusion = notInClause("u.id", systemUids.size());
         Object[] exclusionArgs = systemUids.toArray();
         List<PointsRankRow> ranked = jdbcTemplate.query(
                 """
-                SELECT id, ROW_NUMBER() OVER (
-                    ORDER BY score_bytes DESC, id ASC
+                SELECT u.id, ROW_NUMBER() OVER (
+                    ORDER BY u.score_bytes DESC, u.id ASC
                 ) AS ranking
-                FROM public."user"
-                WHERE 1 = 1 %s
-                ORDER BY score_bytes DESC, id ASC
+                FROM public."user" u
+                LEFT JOIN public.user_privacy_settings ps ON ps.user_id = u.id
+                WHERE COALESCE(ps.points_visibility, 'SHOW') = 'SHOW' %s
+                ORDER BY u.score_bytes DESC, u.id ASC
                 LIMIT 500
                 """.formatted(exclusion),
                 (resultSet, rowNum) -> new PointsRankRow(
@@ -104,20 +116,28 @@ public class RankingApiController {
         if (!userIds.isEmpty()) {
             userService.listByIds(userIds).forEach(user -> users.put(user.getId(), user));
         }
+        Map<Long, UserPrivacySettings> privacy = privacyService.getAll(userIds);
         List<PointsRankingEntry> entries = new ArrayList<>(ranked.size());
         for (PointsRankRow row : ranked) {
             var user = users.get(row.userId());
             if (user != null && !systemUids.contains(user.getId())) {
-                entries.add(toPointsEntry(row, user));
+                entries.add(toPointsEntry(
+                        row,
+                        user,
+                        privacy.getOrDefault(
+                                user.getId(),
+                                UserPrivacySettings.defaults(user.getId())
+                        )
+                ));
             }
         }
 
         PointsRankingEntry self = null;
         if (userDetails != null && !systemUids.contains(userDetails.getUserId())) {
             var user = userService.getById(userDetails.getUserId());
-            if (user != null) {
+            if (user != null && privacyService.get(user.getId()).showsPoints()) {
                 long score = value(user.getScoreBytes());
-                String selfExclusion = notInClause("id", systemUids.size());
+                String selfExclusion = notInClause("u.id", systemUids.size());
                 List<Object> args = new ArrayList<>();
                 args.add(score);
                 args.add(score);
@@ -126,11 +146,13 @@ public class RankingApiController {
                 Long rank = jdbcTemplate.queryForObject(
                         """
                         SELECT COUNT(*) + 1
-                        FROM public."user"
+                        FROM public."user" u
+                        LEFT JOIN public.user_privacy_settings ps ON ps.user_id = u.id
                         WHERE (
-                            score_bytes > ?
-                            OR (score_bytes = ? AND id < ?)
-                        ) %s
+                            u.score_bytes > ?
+                            OR (u.score_bytes = ? AND u.id < ?)
+                        )
+                          AND COALESCE(ps.points_visibility, 'SHOW') = 'SHOW' %s
                         """.formatted(selfExclusion),
                         Long.class,
                         args.toArray()
@@ -151,16 +173,16 @@ public class RankingApiController {
     }
 
     private RankingEntry toEntry(UserSwarmStatisticTrackRankingDto ranking,
-                                 com.ghostchu.btn.sparkle.entity.User user) {
-        var privacy = user.getPrivacyLevel();
-        boolean anonymous = !privacy.isAllowFullUserName() && !privacy.isAllowBlurredUsername();
+                                 com.ghostchu.btn.sparkle.entity.User user,
+                                 UserPrivacySettings privacy) {
+        boolean anonymous = !privacy.allowsFullUsername() && !privacy.allowsBlurredUsername();
         String displayName = null;
-        if (privacy.isAllowFullUserName()) {
+        if (privacy.allowsFullUsername()) {
             displayName = user.getNickname();
-        } else if (privacy.isAllowBlurredUsername()) {
+        } else if (privacy.allowsBlurredUsername()) {
             displayName = blurNickname(user.getNickname());
         }
-        boolean avatarAvailable = privacy.isAllowOriginalAvatar() || privacy.isAllowBlurredAvatar();
+        boolean avatarAvailable = !privacy.hidesAvatar();
         return new RankingEntry(
                 ranking.getRank(),
                 ranking.getUserId(),
@@ -194,19 +216,18 @@ public class RankingApiController {
 
     private PointsRankingEntry toPointsEntry(
             PointsRankRow ranking,
-            com.ghostchu.btn.sparkle.entity.User user
+            com.ghostchu.btn.sparkle.entity.User user,
+            UserPrivacySettings privacy
     ) {
-        var privacy = user.getPrivacyLevel();
-        boolean anonymous = !privacy.isAllowFullUserName()
-                && !privacy.isAllowBlurredUsername();
+        boolean anonymous = !privacy.allowsFullUsername()
+                && !privacy.allowsBlurredUsername();
         String displayName = null;
-        if (privacy.isAllowFullUserName()) {
+        if (privacy.allowsFullUsername()) {
             displayName = user.getNickname();
-        } else if (privacy.isAllowBlurredUsername()) {
+        } else if (privacy.allowsBlurredUsername()) {
             displayName = blurNickname(user.getNickname());
         }
-        boolean avatarAvailable = privacy.isAllowOriginalAvatar()
-                || privacy.isAllowBlurredAvatar();
+        boolean avatarAvailable = !privacy.hidesAvatar();
         return new PointsRankingEntry(
                 ranking.rank(),
                 user.getId(),

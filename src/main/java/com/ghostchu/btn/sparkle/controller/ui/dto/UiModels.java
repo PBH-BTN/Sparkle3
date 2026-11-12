@@ -3,10 +3,10 @@ package com.ghostchu.btn.sparkle.controller.ui.dto;
 import com.ghostchu.btn.sparkle.controller.ui.user.dto.UserRelDto;
 import com.ghostchu.btn.sparkle.controller.ui.userapp.dto.UserApplicationDto;
 import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.PublicNavigationItem;
-import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
 import com.ghostchu.btn.sparkle.security.AdminPolicy;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -16,27 +16,16 @@ public final class UiModels {
     private UiModels() {
     }
 
-    public record PrivacyLevelView(
-            String name,
-            int level,
-            boolean allowBlurredUsername,
-            boolean allowFullUsername,
-            boolean allowBlurredAvatar,
-            boolean allowOriginalAvatar,
-            boolean allowPublicPoints,
-            boolean allowContactEmail
+    public record PrivacySettingsView(
+            String avatarVisibility,
+            String usernameVisibility,
+            String pointsVisibility
     ) {
-        public static PrivacyLevelView from(UserPrivacyLevel privacyLevel) {
-            UserPrivacyLevel resolved = privacyLevel == null ? UserPrivacyLevel.MEDIUM : privacyLevel;
-            return new PrivacyLevelView(
-                    resolved.name(),
-                    resolved.getLevel(),
-                    resolved.isAllowBlurredUsername(),
-                    resolved.isAllowFullUserName(),
-                    resolved.isAllowBlurredAvatar(),
-                    resolved.isAllowOriginalAvatar(),
-                    resolved.isAllowPublicPoints(),
-                    resolved.isAllowContactEmail()
+        public static PrivacySettingsView from(UserPrivacySettings settings) {
+            return new PrivacySettingsView(
+                    settings.avatarVisibility().name(),
+                    settings.usernameVisibility().name(),
+                    settings.pointsVisibility().name()
             );
         }
     }
@@ -49,10 +38,12 @@ public final class UiModels {
             OffsetDateTime registerAt,
             OffsetDateTime bannedAt,
             String bannedReason,
+            String role,
             boolean admin,
-            PrivacyLevelView privacyLevel
+            boolean moderator,
+            PrivacySettingsView privacy
     ) {
-        public static UserView from(User user) {
+        public static UserView from(User user, UserPrivacySettings privacy) {
             return new UserView(
                     String.valueOf(user.getId()),
                     user.getNickname(),
@@ -61,8 +52,10 @@ public final class UiModels {
                     user.getRegisterAt(),
                     user.getBannedAt(),
                     user.getBannedReason(),
+                    user.getRole(),
                     AdminPolicy.isAdmin(user),
-                    PrivacyLevelView.from(user.getPrivacyLevel())
+                    AdminPolicy.hasModeratorAccess(user),
+                    PrivacySettingsView.from(privacy)
             );
         }
     }
@@ -128,12 +121,13 @@ public final class UiModels {
             String id,
             String nickname,
             String avatarUrl,
-            String privacyLevel,
+            PrivacySettingsView privacy,
             String scoreBytesDisplay,
             String scoreBytesRaw,
             boolean anonymous,
             boolean banned,
             boolean self,
+            boolean canSendMessage,
             boolean canSendEmail
     ) {
     }
@@ -150,10 +144,7 @@ public final class UiModels {
     ) {
     }
 
-    public record PrivacyResponse(
-            PrivacyLevelView current,
-            List<PrivacyLevelView> levels
-    ) {
+    public record PrivacyResponse(PrivacySettingsView current) {
     }
 
     public record ApplicationCredentials(
