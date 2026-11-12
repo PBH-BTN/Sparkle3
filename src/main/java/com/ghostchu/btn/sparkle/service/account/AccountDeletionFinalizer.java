@@ -1,10 +1,25 @@
 package com.ghostchu.btn.sparkle.service.account;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
+import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.UserAccountDeletionRequest;
+import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.entity.UserRel;
+import com.ghostchu.btn.sparkle.entity.UserContactEmailDelivery;
+import com.ghostchu.btn.sparkle.entity.UserMessage;
+import com.ghostchu.btn.sparkle.entity.UserPrivacySettingsEntity;
+import com.ghostchu.btn.sparkle.mapper.UserAccountDeletionRequestMapper;
+import com.ghostchu.btn.sparkle.mapper.UserContactEmailDeliveryMapper;
+import com.ghostchu.btn.sparkle.mapper.UserMapper;
+import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
+import com.ghostchu.btn.sparkle.mapper.UserPrivacySettingsMapper;
+import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
+import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,27 +33,28 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class AccountDeletionFinalizer {
-    private final JdbcTemplate jdbcTemplate;
+    private final UserAccountDeletionRequestMapper requestMapper;
+    private final UserMapper userMapper;
+    private final UserappMapper userappMapper;
+    private final UserRelMapper userRelMapper;
+    private final UserContactEmailDeliveryMapper deliveryMapper;
+    private final UserMessageMapper messageMapper;
+    private final UserPrivacySettingsMapper privacyMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final AccountDeletionPendingRegistry pendingRegistry;
 
     @Transactional
     public boolean finalizeDeletion(long userId) {
-        List<RequestRow> requests = jdbcTemplate.query("""
-                SELECT status, requested_at, cooling_ends_at
-                FROM user_account_deletion_request
-                WHERE user_id = ?
-                FOR UPDATE
-                """, (resultSet, rowNum) -> new RequestRow(
-                resultSet.getString("status"),
-                resultSet.getObject("requested_at", OffsetDateTime.class),
-                resultSet.getObject("cooling_ends_at", OffsetDateTime.class)
-        ), userId);
-        if (requests.isEmpty()) {
+        UserAccountDeletionRequest requestEntity = requestMapper.selectForUpdate(userId);
+        if (requestEntity == null) {
             afterCommit(() -> pendingRegistry.clear(userId));
             return false;
         }
-        RequestRow request = requests.getFirst();
+        RequestRow request = new RequestRow(
+                requestEntity.getStatus(),
+                requestEntity.getRequestedAt(),
+                requestEntity.getCoolingEndsAt()
+        );
         OffsetDateTime now = OffsetDateTime.now();
         if (!"PENDING".equals(request.status())
                 || request.coolingEndsAt().isAfter(now)) {
@@ -48,135 +64,107 @@ public class AccountDeletionFinalizer {
             return false;
         }
 
-        List<DeletedUser> users = jdbcTemplate.query("""
-                SELECT id, email, nickname
-                FROM "user"
-                WHERE id = ?
-                FOR UPDATE
-                """, (resultSet, rowNum) -> new DeletedUser(
-                resultSet.getLong("id"),
-                resultSet.getString("email"),
-                resultSet.getString("nickname")
-        ), userId);
-        if (users.isEmpty()) {
-            jdbcTemplate.update("""
-                    UPDATE user_account_deletion_request
-                    SET status = 'CANCELLED',
-                        cancelled_at = ?,
-                        cancellation_reason = 'USER_NOT_FOUND',
-                        updated_at = ?
-                    WHERE user_id = ?
-                      AND status = 'PENDING'
-                    """, now, now, userId);
+        User userEntity = userMapper.selectForUpdate(userId);
+        if (userEntity == null) {
+            requestMapper.update(null,
+                    new LambdaUpdateWrapper<UserAccountDeletionRequest>()
+                            .set(UserAccountDeletionRequest::getStatus, "CANCELLED")
+                            .set(UserAccountDeletionRequest::getCancelledAt, now)
+                            .set(UserAccountDeletionRequest::getCancellationReason,
+                                    "USER_NOT_FOUND")
+                            .set(UserAccountDeletionRequest::getUpdatedAt, now)
+                            .eq(UserAccountDeletionRequest::getUserId, userId)
+                            .eq(UserAccountDeletionRequest::getStatus, "PENDING")
+            );
             afterCommit(() -> pendingRegistry.clear(userId));
             return false;
         }
 
-        DeletedUser user = users.getFirst();
+        DeletedUser user = new DeletedUser(
+                userEntity.getId(),
+                userEntity.getEmail(),
+                userEntity.getNickname()
+        );
         String anonymousNickname = userId + "-userdeleted";
         String anonymousEmail = userId + "@userdeleted.pbh-btn.com";
-        jdbcTemplate.update("""
-                UPDATE userapp
-                SET banned_at = COALESCE(banned_at, ?),
-                    banned_reason = ?,
-                    comment = ?
-                WHERE owner = ?
-                """, now,
-                UserAccountDeletionService.DELETED_APP_REASON,
-                UserAccountDeletionService.DELETED_APP_REASON,
-                userId
+        userappMapper.selectList(
+                new QueryWrapper<Userapp>().eq("owner", userId)
+        ).forEach(application -> {
+            if (application.getBannedAt() == null) application.setBannedAt(now);
+            application.setBannedReason(UserAccountDeletionService.DELETED_APP_REASON)
+                    .setComment(UserAccountDeletionService.DELETED_APP_REASON);
+            userappMapper.updateById(application);
+        });
+        userRelMapper.selectList(
+                new QueryWrapper<UserRel>()
+                        .eq("bind_user_id", userId)
+                        .eq("platform", "github")
+        ).forEach(relation -> {
+            relation.setPlatformUserId("0")
+                    .setPlatformUserLogin(anonymousNickname)
+                    .setPlatformUserEmail(anonymousEmail);
+            userRelMapper.updateById(relation);
+        });
+        deliveryMapper.selectList(
+                new QueryWrapper<UserContactEmailDelivery>()
+                        .and(query -> query.eq("sender_user_id", userId)
+                                .or().eq("recipient_user_id", userId))
+        ).forEach(delivery -> {
+            if (delivery.getSenderUserId() == userId) {
+                delivery.setSenderNickname(anonymousNickname)
+                        .setSenderEmail(anonymousEmail)
+                        .setSenderIp(null)
+                        .setSenderUserAgent(null);
+            }
+            if (delivery.getRecipientUserId() == userId) {
+                delivery.setRecipientNickname(anonymousNickname)
+                        .setRecipientEmail(anonymousEmail);
+            }
+            deliveryMapper.updateById(delivery);
+        });
+        messageMapper.selectList(
+                new QueryWrapper<UserMessage>().eq("sender_user_id", userId)
+        ).forEach(message -> {
+            message.setSenderDisplayName(anonymousNickname)
+                    .setSenderIp(null)
+                    .setSenderUserAgent(null);
+            messageMapper.updateById(message);
+        });
+        userEntity.setEmail(anonymousEmail)
+                .setNickname(anonymousNickname)
+                .setAvatar("/img/anonymous-user.png")
+                .setPrivacyLevel(UserPrivacyLevel.HIGH)
+                .setRole("user")
+                .setBannedAt(userEntity.getBannedAt() == null
+                        ? now : userEntity.getBannedAt())
+                .setBannedReason(UserAccountDeletionService.DELETED_APP_REASON);
+        userMapper.updateById(userEntity);
+        UserPrivacySettingsEntity privacy = privacyMapper.selectById(userId);
+        if (privacy == null) {
+            privacyMapper.insert(new UserPrivacySettingsEntity()
+                    .setUserId(userId)
+                    .setAvatarVisibility("HIDDEN")
+                    .setUsernameVisibility("BLURRED")
+                    .setPointsVisibility("HIDDEN")
+                    .setReceiveUserMessages(false)
+                    .setUpdatedAt(now));
+        } else {
+            privacy.setAvatarVisibility("HIDDEN")
+                    .setUsernameVisibility("BLURRED")
+                    .setPointsVisibility("HIDDEN")
+                    .setReceiveUserMessages(false)
+                    .setUpdatedAt(now);
+            privacyMapper.updateById(privacy);
+        }
+        requestMapper.update(null,
+                new LambdaUpdateWrapper<UserAccountDeletionRequest>()
+                        .set(UserAccountDeletionRequest::getStatus, "COMPLETED")
+                        .set(UserAccountDeletionRequest::getCompletedAt, now)
+                        .set(UserAccountDeletionRequest::getLastError, null)
+                        .set(UserAccountDeletionRequest::getUpdatedAt, now)
+                        .eq(UserAccountDeletionRequest::getUserId, userId)
+                        .eq(UserAccountDeletionRequest::getStatus, "PENDING")
         );
-        jdbcTemplate.update("""
-                UPDATE user_rel
-                SET platform_user_id = '0',
-                    platform_user_login = ?,
-                    platform_user_email = ?
-                WHERE bind_user_id = ?
-                  AND platform = 'github'
-                """, anonymousNickname, anonymousEmail, userId);
-        jdbcTemplate.update("""
-                UPDATE user_contact_email_deliveries
-                SET sender_nickname = CASE
-                        WHEN sender_user_id = ? THEN ?
-                        ELSE sender_nickname
-                    END,
-                    sender_email = CASE
-                        WHEN sender_user_id = ? THEN ?
-                        ELSE sender_email
-                    END,
-                    sender_ip = CASE
-                        WHEN sender_user_id = ? THEN NULL
-                        ELSE sender_ip
-                    END,
-                    sender_user_agent = CASE
-                        WHEN sender_user_id = ? THEN NULL
-                        ELSE sender_user_agent
-                    END,
-                    recipient_nickname = CASE
-                        WHEN recipient_user_id = ? THEN ?
-                        ELSE recipient_nickname
-                    END,
-                    recipient_email = CASE
-                        WHEN recipient_user_id = ? THEN ?
-                        ELSE recipient_email
-                    END
-                WHERE sender_user_id = ?
-                   OR recipient_user_id = ?
-                """,
-                userId, anonymousNickname,
-                userId, anonymousEmail,
-                userId,
-                userId,
-                userId, anonymousNickname,
-                userId, anonymousEmail,
-                userId, userId
-        );
-        jdbcTemplate.update("""
-                UPDATE user_messages
-                SET sender_display_name = ?,
-                    sender_ip = NULL,
-                    sender_user_agent = NULL
-                WHERE sender_user_id = ?
-                """, anonymousNickname, userId);
-        jdbcTemplate.update("""
-                UPDATE "user"
-                SET email = ?,
-                    nickname = ?,
-                    avatar = '/img/anonymous-user.png',
-                    privacy_level = ?,
-                    role = 'user',
-                    banned_at = COALESCE(banned_at, ?),
-                    banned_reason = ?
-                WHERE id = ?
-                """, anonymousEmail,
-                anonymousNickname,
-                UserPrivacyLevel.HIGH.getLevel(),
-                now,
-                UserAccountDeletionService.DELETED_APP_REASON,
-                userId
-        );
-        jdbcTemplate.update("""
-                INSERT INTO user_privacy_settings (
-                    user_id, avatar_visibility, username_visibility,
-                    points_visibility, receive_user_messages, updated_at
-                )
-                VALUES (?, 'HIDDEN', 'BLURRED', 'HIDDEN', FALSE, now())
-                ON CONFLICT (user_id) DO UPDATE
-                SET avatar_visibility = 'HIDDEN',
-                    username_visibility = 'BLURRED',
-                    points_visibility = 'HIDDEN',
-                    receive_user_messages = FALSE,
-                    updated_at = now()
-                """, userId);
-        jdbcTemplate.update("""
-                UPDATE user_account_deletion_request
-                SET status = 'COMPLETED',
-                    completed_at = ?,
-                    last_error = NULL,
-                    updated_at = ?
-                WHERE user_id = ?
-                  AND status = 'PENDING'
-                """, now, now, userId);
 
         eventPublisher.publishEvent(new AccountDeletionNotificationEvent(
                 userId,
@@ -196,52 +184,45 @@ public class AccountDeletionFinalizer {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelAfterFinalizationFailure(long userId, Throwable failure) {
         OffsetDateTime now = OffsetDateTime.now();
-        List<RequestRow> requests = jdbcTemplate.query("""
-                SELECT status, requested_at, cooling_ends_at
-                FROM user_account_deletion_request
-                WHERE user_id = ?
-                FOR UPDATE
-                """, (resultSet, rowNum) -> new RequestRow(
-                resultSet.getString("status"),
-                resultSet.getObject("requested_at", OffsetDateTime.class),
-                resultSet.getObject("cooling_ends_at", OffsetDateTime.class)
-        ), userId);
-        if (requests.isEmpty()) {
+        UserAccountDeletionRequest requestEntity = requestMapper.selectForUpdate(userId);
+        if (requestEntity == null) {
             return;
         }
-        RequestRow request = requests.getFirst();
+        RequestRow request = new RequestRow(
+                requestEntity.getStatus(),
+                requestEntity.getRequestedAt(),
+                requestEntity.getCoolingEndsAt()
+        );
         if (!"PENDING".equals(request.status())) {
             return;
         }
         String message = failure == null || failure.getMessage() == null
                 ? "Unknown finalization error"
                 : failure.getMessage();
-        int updated = jdbcTemplate.update("""
-                UPDATE user_account_deletion_request
-                SET status = 'CANCELLED',
-                    cancelled_at = ?,
-                    cancellation_reason = 'FINALIZATION_FAILED',
-                    last_error = ?,
-                    updated_at = ?
-                WHERE user_id = ?
-                  AND status = 'PENDING'
-                """, now, limit(message, 2_000), now, userId);
+        int updated = requestMapper.update(null,
+                new LambdaUpdateWrapper<UserAccountDeletionRequest>()
+                        .set(UserAccountDeletionRequest::getStatus, "CANCELLED")
+                        .set(UserAccountDeletionRequest::getCancelledAt, now)
+                        .set(UserAccountDeletionRequest::getCancellationReason,
+                                "FINALIZATION_FAILED")
+                        .set(UserAccountDeletionRequest::getLastError,
+                                limit(message, 2_000))
+                        .set(UserAccountDeletionRequest::getUpdatedAt, now)
+                        .eq(UserAccountDeletionRequest::getUserId, userId)
+                        .eq(UserAccountDeletionRequest::getStatus, "PENDING")
+        );
         if (updated == 0) {
             return;
         }
-        List<DeletedUser> users = jdbcTemplate.query("""
-                SELECT id, email, nickname
-                FROM "user"
-                WHERE id = ?
-                """, (resultSet, rowNum) -> new DeletedUser(
-                resultSet.getLong("id"),
-                resultSet.getString("email"),
-                resultSet.getString("nickname")
-        ), userId);
-        if (users.isEmpty()) {
+        User userEntity = userMapper.selectById(userId);
+        if (userEntity == null) {
             return;
         }
-        DeletedUser user = users.getFirst();
+        DeletedUser user = new DeletedUser(
+                userEntity.getId(),
+                userEntity.getEmail(),
+                userEntity.getNickname()
+        );
         eventPublisher.publishEvent(new AccountDeletionNotificationEvent(
                 userId,
                 user.email(),

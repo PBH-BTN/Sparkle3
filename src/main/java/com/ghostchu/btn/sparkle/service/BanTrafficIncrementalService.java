@@ -1,10 +1,11 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.mapper.BittorrentTrafficMapper;
+import com.ghostchu.btn.sparkle.mapper.BittorrentTrafficRefreshMapper;
+import com.ghostchu.btn.sparkle.service.dto.TrafficRefreshStateRow;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -24,7 +25,7 @@ public class BanTrafficIncrementalService {
     private static final Duration INCREMENTAL_OVERLAP = Duration.ofMinutes(10);
 
     private final BittorrentTrafficMapper mapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final BittorrentTrafficRefreshMapper refreshMapper;
     private final PlatformTransactionManager transactionManager;
     private final Object refreshLock = new Object();
 
@@ -46,10 +47,7 @@ public class BanTrafficIncrementalService {
     private void backfill(@NotNull State state) {
         log.info("Starting seven-day BitTorrent traffic backfill from {}", state.backfillCursor());
         executeInTransaction(() -> {
-            jdbcTemplate.execute(
-                    "ALTER TABLE public.dashboard_ban_connection_traffic "
-                            + "DISABLE TRIGGER dashboard_ban_connection_traffic_hourly_trigger"
-            );
+            refreshMapper.disableHourlyTrigger();
             return null;
         });
 
@@ -84,24 +82,11 @@ public class BanTrafficIncrementalService {
             mapper.deleteExpiredBanConnections(cutoff);
             mapper.clearBanCityHourlyTraffic();
             mapper.rebuildBanCityHourlyTraffic(cutoff);
-            jdbcTemplate.execute(
-                    "ALTER TABLE public.dashboard_ban_connection_traffic "
-                            + "ENABLE TRIGGER dashboard_ban_connection_traffic_hourly_trigger"
-            );
-            jdbcTemplate.update(
-                    "DELETE FROM public.dashboard_ban_city_hourly_traffic WHERE hour < ?",
-                    cutoff
-            );
+            refreshMapper.enableHourlyTrigger();
+            refreshMapper.deleteBanCityHourlyBefore(cutoff);
             mapper.deleteBanTrafficSnapshot();
             mapper.insertBanTrafficSnapshotFromDaily();
-            jdbcTemplate.update("""
-                    UPDATE public.dashboard_bittorrent_traffic_refresh_state
-                    SET backfill_cursor = ?,
-                        watermark = ?,
-                        ready = TRUE,
-                        updated_at = NOW()
-                    WHERE task = ?
-                    """, completedAt, completedAt, TASK);
+            refreshMapper.completeBackfill(TASK, completedAt);
             return null;
         });
         log.info("Completed incremental BitTorrent traffic backfill");
@@ -119,18 +104,10 @@ public class BanTrafficIncrementalService {
         int updated = executeInTransaction(() -> {
             int count = mapper.upsertBanConnectionsIncremental(startAt, now);
             mapper.deleteExpiredBanConnections(cutoff);
-            jdbcTemplate.update(
-                    "DELETE FROM public.dashboard_ban_city_hourly_traffic WHERE hour < ?",
-                    cutoff
-            );
+            refreshMapper.deleteBanCityHourlyBefore(cutoff);
             mapper.deleteBanTrafficSnapshot();
             mapper.insertBanTrafficSnapshotFromDaily();
-            jdbcTemplate.update("""
-                    UPDATE public.dashboard_bittorrent_traffic_refresh_state
-                    SET watermark = ?,
-                        updated_at = NOW()
-                    WHERE task = ?
-                    """, now, TASK);
+            refreshMapper.updateWatermark(TASK, now);
             return count;
         });
         log.info("Incrementally refreshed BitTorrent connection traffic from {} to {} ({} rows)",
@@ -138,25 +115,16 @@ public class BanTrafficIncrementalService {
     }
 
     private State loadState() {
-        var states = jdbcTemplate.query("""
-                SELECT backfill_cursor, watermark, ready
-                FROM public.dashboard_bittorrent_traffic_refresh_state
-                WHERE task = ?
-                """, (resultSet, rowNum) -> new State(
-                resultSet.getObject("backfill_cursor", OffsetDateTime.class),
-                resultSet.getObject("watermark", OffsetDateTime.class),
-                resultSet.getBoolean("ready")
-        ), TASK);
-        return states.isEmpty() ? null : states.getFirst();
+        TrafficRefreshStateRow row = refreshMapper.selectState(TASK);
+        return row == null ? null : new State(
+                row.getBackfillCursor(),
+                row.getWatermark(),
+                Boolean.TRUE.equals(row.getReady())
+        );
     }
 
     private void updateCursor(OffsetDateTime cursor) {
-        jdbcTemplate.update("""
-                UPDATE public.dashboard_bittorrent_traffic_refresh_state
-                SET backfill_cursor = ?,
-                    updated_at = NOW()
-                WHERE task = ?
-                """, cursor, TASK);
+        refreshMapper.updateCursor(TASK, cursor);
     }
 
     private <T> T executeInTransaction(java.util.function.Supplier<T> action) {

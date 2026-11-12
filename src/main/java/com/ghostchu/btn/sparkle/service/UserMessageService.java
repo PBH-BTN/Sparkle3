@@ -1,5 +1,8 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.InboxMessageView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.InboxPage;
@@ -8,18 +11,20 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.SendMessageResul
 import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.StaffMessageRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MessageModels.StaffMessageResult;
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.UserMessage;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
 import com.ghostchu.btn.sparkle.security.AdminPolicy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,7 +36,7 @@ import java.util.UUID;
 public class UserMessageService {
     public static final int DAILY_LIMIT = 15;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final UserMessageMapper messageMapper;
     private final IUserService userService;
     private final UserPublicProfileService publicProfileService;
     private final NotificationPreferenceService notificationPreferenceService;
@@ -118,7 +123,7 @@ public class UserMessageService {
         String senderKind = system ? "SYSTEM" : "USER";
         String senderName = system ? "Sparkle BTN" : actor.getNickname();
         boolean broadcast = request.recipientId() == null;
-        List<Object[]> rows = new ArrayList<>();
+        List<UserMessage> rows = new ArrayList<>();
         for (Long recipientId : recipients) {
             NotificationPreference preference = notificationPreferenceService.preference(
                     recipientId,
@@ -153,7 +158,7 @@ public class UserMessageService {
             throw new BusinessException(HttpStatus.CONFLICT,
                     "No recipients have enabled a delivery channel for this category");
         }
-        jdbcTemplate.batchUpdate(insertSql(), rows);
+        rows.forEach(messageMapper::insert);
         scheduleEmail(dispatchId);
         return new StaffMessageResult(
                 rows.size(),
@@ -171,7 +176,7 @@ public class UserMessageService {
     ) throws BusinessException {
         ValidatedMessage message = validate(subject, content);
         UUID dispatchId = UUID.randomUUID();
-        List<Object[]> rows = new ArrayList<>();
+        List<UserMessage> rows = new ArrayList<>();
         for (Long recipientId : activeRecipientIds()) {
             NotificationPreference preference = notificationPreferenceService.preference(
                     recipientId,
@@ -203,7 +208,7 @@ public class UserMessageService {
             ));
         }
         if (!rows.isEmpty()) {
-            jdbcTemplate.batchUpdate(insertSql(), rows);
+            rows.forEach(messageMapper::insert);
             if (sendEmail) {
                 scheduleEmail(dispatchId);
             }
@@ -258,88 +263,72 @@ public class UserMessageService {
     public InboxPage inbox(long userId, long page, long size, boolean unreadOnly) {
         long safePage = Math.max(1, page);
         long safeSize = Math.min(100, Math.max(1, size));
-        String unreadClause = unreadOnly ? " AND read_at IS NULL" : "";
-        Long total = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM user_messages
-                WHERE recipient_user_id = ?
-                  AND deleted_at IS NULL
-                  AND inbox_visible = TRUE%s
-                """.formatted(unreadClause), Long.class, userId);
-        long totalValue = total == null ? 0 : total;
-        List<InboxMessageView> records = jdbcTemplate.query("""
-                SELECT id, sender_display_name, sender_kind, category, subject, content,
-                       created_at, read_at, broadcast, email_requested, email_forced,
-                       email_status
-                FROM user_messages
-                WHERE recipient_user_id = ?
-                  AND deleted_at IS NULL
-                  AND inbox_visible = TRUE%s
-                ORDER BY created_at DESC, id DESC
-                LIMIT ? OFFSET ?
-                """.formatted(unreadClause), this::mapMessage,
-                userId, safeSize, (safePage - 1) * safeSize
+        QueryWrapper<UserMessage> wrapper = new QueryWrapper<UserMessage>()
+                .eq("recipient_user_id", userId)
+                .isNull("deleted_at")
+                .eq("inbox_visible", true)
+                .orderByDesc("created_at")
+                .orderByDesc("id");
+        if (unreadOnly) {
+            wrapper.isNull("read_at");
+        }
+        Page<UserMessage> result = messageMapper.selectPage(
+                new Page<>(safePage, safeSize),
+                wrapper
         );
+        long totalValue = result.getTotal();
+        List<InboxMessageView> records = result.getRecords().stream()
+                .map(this::mapMessage)
+                .toList();
         long pages = totalValue == 0 ? 0 : (totalValue + safeSize - 1) / safeSize;
         return new InboxPage(records, safePage, safeSize, totalValue, pages);
     }
 
     public int unreadCount(long userId) {
-        Integer count = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM user_messages
-                WHERE recipient_user_id = ?
-                  AND deleted_at IS NULL
-                  AND inbox_visible = TRUE
-                  AND read_at IS NULL
-                """, Integer.class, userId);
-        return count == null ? 0 : count;
+        return Math.toIntExact(messageMapper.selectCount(
+                new QueryWrapper<UserMessage>()
+                        .eq("recipient_user_id", userId)
+                        .isNull("deleted_at")
+                        .eq("inbox_visible", true)
+                        .isNull("read_at")
+        ));
     }
 
     public void markRead(long userId, long messageId) {
-        jdbcTemplate.update("""
-                UPDATE user_messages
-                SET read_at = COALESCE(read_at, now())
-                WHERE id = ? AND recipient_user_id = ? AND deleted_at IS NULL
-                """, messageId, userId);
+        messageMapper.update(null,
+                new LambdaUpdateWrapper<UserMessage>()
+                        .set(UserMessage::getReadAt, OffsetDateTime.now())
+                        .eq(UserMessage::getId, messageId)
+                        .eq(UserMessage::getRecipientUserId, userId)
+                        .isNull(UserMessage::getReadAt)
+                        .isNull(UserMessage::getDeletedAt)
+        );
     }
 
     public void markAllRead(long userId) {
-        jdbcTemplate.update("""
-                UPDATE user_messages
-                SET read_at = COALESCE(read_at, now())
-                WHERE recipient_user_id = ?
-                  AND inbox_visible = TRUE
-                  AND deleted_at IS NULL
-                  AND read_at IS NULL
-                """, userId);
+        messageMapper.update(null,
+                new LambdaUpdateWrapper<UserMessage>()
+                        .set(UserMessage::getReadAt, OffsetDateTime.now())
+                        .eq(UserMessage::getRecipientUserId, userId)
+                        .eq(UserMessage::getInboxVisible, true)
+                        .isNull(UserMessage::getDeletedAt)
+                        .isNull(UserMessage::getReadAt)
+        );
     }
 
     public void delete(long userId, long messageId) {
-        jdbcTemplate.update("""
-                UPDATE user_messages
-                SET deleted_at = now()
-                WHERE id = ? AND recipient_user_id = ? AND deleted_at IS NULL
-                """, messageId, userId);
+        messageMapper.update(null,
+                new LambdaUpdateWrapper<UserMessage>()
+                        .set(UserMessage::getDeletedAt, OffsetDateTime.now())
+                        .eq(UserMessage::getId, messageId)
+                        .eq(UserMessage::getRecipientUserId, userId)
+                        .isNull(UserMessage::getDeletedAt)
+        );
     }
 
     private int reserveDispatch(long senderUserId) throws BusinessException {
-        jdbcTemplate.query(
-                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                resultSet -> {
-                },
-                "sparkle:user-message:" + senderUserId
-        );
-        Integer used = jdbcTemplate.queryForObject("""
-                SELECT COUNT(DISTINCT dispatch_id)
-                FROM user_messages
-                WHERE sender_user_id = ?
-                  AND created_at >= (
-                      date_trunc('day', now() AT TIME ZONE 'Asia/Shanghai')
-                      AT TIME ZONE 'Asia/Shanghai'
-                  )
-                """, Integer.class, senderUserId);
-        int usedValue = used == null ? 0 : used;
+        messageMapper.lockKey("sparkle:user-message:" + senderUserId);
+        int usedValue = messageMapper.countDailyDispatches(senderUserId);
         if (usedValue >= DAILY_LIMIT) {
             throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
                     "Daily direct message limit reached");
@@ -364,7 +353,7 @@ public class UserMessageService {
             String senderIp,
             String senderUserAgent
     ) {
-        jdbcTemplate.update(insertSql(), messageRow(
+        messageMapper.insert(messageRow(
                 dispatchId,
                 broadcast,
                 senderUserId,
@@ -383,7 +372,7 @@ public class UserMessageService {
         ));
     }
 
-    private Object[] messageRow(
+    private UserMessage messageRow(
             UUID dispatchId,
             boolean broadcast,
             Long senderUserId,
@@ -400,66 +389,50 @@ public class UserMessageService {
             String senderIp,
             String senderUserAgent
     ) {
-        return new Object[]{
-                dispatchId,
-                broadcast,
-                senderUserId,
-                senderKind,
-                senderDisplayName,
-                recipientUserId,
-                category.name(),
-                subject,
-                content,
-                inboxVisible,
-                emailRequested,
-                emailForced,
-                emailRequested ? "PENDING" : "NONE",
-                normalizeIp(senderIp),
-                truncate(normalizeHeader(senderUserAgent), 500),
-                initiallyRead ? OffsetDateTime.now() : null
-        };
+        return new UserMessage()
+                .setDispatchId(dispatchId)
+                .setBroadcast(broadcast)
+                .setSenderUserId(senderUserId)
+                .setSenderKind(senderKind)
+                .setSenderDisplayName(senderDisplayName)
+                .setRecipientUserId(recipientUserId)
+                .setCategory(category.name())
+                .setSubject(subject)
+                .setContent(content)
+                .setInboxVisible(inboxVisible)
+                .setEmailRequested(emailRequested)
+                .setEmailForced(emailForced)
+                .setEmailStatus(emailRequested ? "PENDING" : "NONE")
+                .setSenderIp(parseIp(senderIp))
+                .setSenderUserAgent(truncate(normalizeHeader(senderUserAgent), 500))
+                .setReadAt(initiallyRead ? OffsetDateTime.now() : null);
     }
 
-    private String insertSql() {
-        return """
-                INSERT INTO user_messages (
-                    dispatch_id, broadcast, sender_user_id, sender_kind,
-                    sender_display_name, recipient_user_id, category,
-                    subject, content, inbox_visible, email_requested,
-                    email_forced, email_status, sender_ip, sender_user_agent, read_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::inet, ?, ?)
-                """;
-    }
-
-    private InboxMessageView mapMessage(java.sql.ResultSet resultSet, int rowNum)
-            throws java.sql.SQLException {
-        OffsetDateTime readAt = resultSet.getObject("read_at", OffsetDateTime.class);
+    private InboxMessageView mapMessage(UserMessage message) {
         return new InboxMessageView(
-                resultSet.getLong("id"),
-                resultSet.getString("sender_display_name"),
-                resultSet.getString("sender_kind"),
-                resultSet.getString("category"),
-                resultSet.getString("subject"),
-                resultSet.getString("content"),
-                resultSet.getObject("created_at", OffsetDateTime.class),
-                readAt,
-                readAt != null,
-                resultSet.getBoolean("broadcast"),
-                resultSet.getBoolean("email_requested"),
-                resultSet.getBoolean("email_forced"),
-                resultSet.getString("email_status")
+                message.getId(),
+                message.getSenderDisplayName(),
+                message.getSenderKind(),
+                message.getCategory(),
+                message.getSubject(),
+                message.getContent(),
+                message.getCreatedAt(),
+                message.getReadAt(),
+                message.getReadAt() != null,
+                Boolean.TRUE.equals(message.getBroadcast()),
+                Boolean.TRUE.equals(message.getEmailRequested()),
+                Boolean.TRUE.equals(message.getEmailForced()),
+                message.getEmailStatus()
         );
     }
 
     private List<Long> activeRecipientIds() {
-        return jdbcTemplate.queryForList("""
-                SELECT id
-                FROM "user"
-                WHERE banned_at IS NULL
-                  AND LOWER(email) NOT LIKE '%@sparkle.system'
-                ORDER BY id
-                """, Long.class);
+        return userService.list(
+                new QueryWrapper<User>()
+                        .isNull("banned_at")
+                        .notLike("email", "@sparkle.system")
+                        .orderByAsc("id")
+        ).stream().map(User::getId).toList();
     }
 
     private ValidatedMessage validate(String subject, String content)
@@ -504,12 +477,15 @@ public class UserMessageService {
         return value.replaceAll("[\\p{Cc}\\p{Cf}]+", " ").trim();
     }
 
-    private String normalizeIp(String value) {
+    private InetAddress parseIp(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        return normalized.length() <= 64 ? normalized : null;
+        try {
+            return InetAddress.getByName(value.trim());
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     private String truncate(String value, int maxLength) {

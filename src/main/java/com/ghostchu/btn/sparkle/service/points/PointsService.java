@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.mapper.PointsMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class PointsService {
-    private final JdbcTemplate jdbcTemplate;
+    private final PointsMapper pointsMapper;
     private final ObjectMapper objectMapper;
     private final PointAwardContext context;
     private final PointToggleService pointToggleService;
@@ -94,11 +94,7 @@ public class PointsService {
         ).toLocalDate();
 
         for (Long userappId : bucket.getAppActivities().keySet()) {
-            long onlineHours = jdbcTemplate.queryForObject(
-                    """
-                    SELECT public.sparkle_touch_point_app_activity(?, ?, ?, ?)
-                    """,
-                    Long.class,
+            long onlineHours = pointsMapper.touchAppActivity(
                     userappId,
                     bucket.getUserId(),
                     occurredAt,
@@ -206,23 +202,12 @@ public class PointsService {
                 .mapToLong(PointAwardBucket.Contribution::getPoints)
                 .reduce(0L, PointsService::safeAdd));
 
-        int updated = jdbcTemplate.update(
-                "UPDATE public.\"user\" SET score_bytes = score_bytes + ? WHERE id = ?",
-                total,
-                bucket.getUserId()
-        );
+        int updated = pointsMapper.addBalance(bucket.getUserId(), total);
         if (updated != 1) {
             throw new IllegalStateException("Unable to update user point balance");
         }
 
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.points_ledger (
-                    user_id, event_id, occurred_at, event_type, points,
-                    fixed_points, one_time_points, dynamic_points, details
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
-                """,
+        pointsMapper.insertLedger(
                 bucket.getUserId(),
                 bucket.getEventId(),
                 occurredAt,
@@ -231,6 +216,7 @@ public class PointsService {
                 fixedPoints,
                 oneTimePoints,
                 dynamicPoints,
+                0,
                 toJson(details)
         );
     }
@@ -256,21 +242,12 @@ public class PointsService {
             );
         }
 
-        List<Long> balances = jdbcTemplate.query(
-                """
-                SELECT score_bytes
-                FROM public."user"
-                WHERE id = ?
-                FOR UPDATE
-                """,
-                (resultSet, rowNum) -> resultSet.getLong("score_bytes"),
-                userId
-        );
-        if (balances.isEmpty()) {
+        Long lockedBalance = pointsMapper.lockUserBalance(userId);
+        if (lockedBalance == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        long balanceBefore = balances.getFirst();
+        long balanceBefore = lockedBalance;
         long balanceAfter;
         try {
             balanceAfter = Math.addExact(balanceBefore, delta);
@@ -287,11 +264,7 @@ public class PointsService {
             );
         }
 
-        jdbcTemplate.update(
-                "UPDATE public.\"user\" SET score_bytes = ? WHERE id = ?",
-                balanceAfter,
-                userId
-        );
+        pointsMapper.setBalance(userId, balanceAfter);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("reason", normalizedReason);
@@ -300,19 +273,15 @@ public class PointsService {
         details.put("balanceBefore", balanceBefore);
         details.put("balanceAfter", balanceAfter);
         OffsetDateTime occurredAt = OffsetDateTime.now(ZoneOffset.UTC);
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.points_ledger (
-                    user_id, event_id, occurred_at, event_type, points,
-                    fixed_points, one_time_points, dynamic_points,
-                    manual_points, details
-                )
-                VALUES (?, ?, ?, 'ADMIN_ADJUSTMENT', ?, 0, 0, 0, ?, ?::jsonb)
-                """,
+        pointsMapper.insertLedger(
                 userId,
                 java.util.UUID.randomUUID(),
                 occurredAt,
+                "ADMIN_ADJUSTMENT",
                 delta,
+                0,
+                0,
+                0,
                 delta,
                 toJson(details)
         );
@@ -325,31 +294,17 @@ public class PointsService {
             List<String> ruleMatchedIps,
             List<String> allIps
     ) {
-        return jdbcTemplate.query(
-                connection -> {
-                    var statement = connection.prepareStatement(
-                            """
-                            SELECT daily_unique, new_unique
-                            FROM public.sparkle_mark_submitted_ips(
-                                ?, ?, ?::jsonb, ?::jsonb
-                            )
-                            """
-                    );
-                    statement.setLong(1, userId);
-                    statement.setObject(2, pointDay);
-                    statement.setString(3, toJson(ruleMatchedIps));
-                    statement.setString(4, toJson(allIps));
-                    return statement;
-                },
-                resultSet -> {
-                    if (!resultSet.next()) {
-                        return new SubmittedIpResult(0, 0);
-                    }
-                    return new SubmittedIpResult(
-                            resultSet.getLong("daily_unique"),
-                            resultSet.getLong("new_unique")
-                    );
-                }
+        var rows = pointsMapper.markSubmittedIps(
+                userId,
+                pointDay,
+                toJson(ruleMatchedIps),
+                toJson(allIps)
+        );
+        if (rows.isEmpty()) return new SubmittedIpResult(0, 0);
+        Map<String, Object> row = rows.getFirst();
+        return new SubmittedIpResult(
+                ((Number) row.get("daily_unique")).longValue(),
+                ((Number) row.get("new_unique")).longValue()
         );
     }
 
@@ -365,23 +320,12 @@ public class PointsService {
             item.put("points", claim.points());
             return item;
         }).toList();
-        return jdbcTemplate.query(
-                connection -> {
-                    var statement = connection.prepareStatement(
-                            """
-                            SELECT result_category AS category, result_points AS points
-                            FROM public.sparkle_claim_point_awards(?, ?::jsonb)
-                            """
-                    );
-                    statement.setLong(1, userId);
-                    statement.setString(2, toJson(payload));
-                    return statement;
-                },
-                (resultSet, rowNum) -> new ClaimResult(
-                        resultSet.getString("category"),
-                        resultSet.getLong("points")
-                )
-        );
+        return pointsMapper.claimAwards(userId, toJson(payload)).stream()
+                .map(row -> new ClaimResult(
+                        String.valueOf(row.get("category")),
+                        ((Number) row.get("points")).longValue()
+                ))
+                .toList();
     }
 
     private Map<PointCategory, Long> applyDailyCategories(
@@ -400,31 +344,18 @@ public class PointsService {
         }
 
         Map<PointCategory, Long> result = new EnumMap<>(PointCategory.class);
-        jdbcTemplate.query(
-                connection -> {
-                    var statement = connection.prepareStatement(
-                            """
-                            SELECT result_category AS category, result_points AS awarded
-                            FROM public.sparkle_apply_point_categories(?, ?, ?::jsonb)
-                            """
+        pointsMapper.applyDailyCategories(userId, pointDay, toJson(payload))
+                .forEach(row -> {
+                    PointCategory category = parseCategory(
+                            String.valueOf(row.get("category"))
                     );
-                    statement.setLong(1, userId);
-                    statement.setObject(2, pointDay);
-                    statement.setString(3, toJson(payload));
-                    return statement;
-                },
-                resultSet -> {
-                    while (resultSet.next()) {
-                        PointCategory category = parseCategory(
-                                resultSet.getString("category")
+                    if (category != null) {
+                        result.put(
+                                category,
+                                ((Number) row.get("awarded")).longValue()
                         );
-                        if (category != null) {
-                            result.put(category, resultSet.getLong("awarded"));
-                        }
                     }
-                    return null;
-                }
-        );
+                });
         return result;
     }
 

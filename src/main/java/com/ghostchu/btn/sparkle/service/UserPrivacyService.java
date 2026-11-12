@@ -1,10 +1,12 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
 import com.ghostchu.btn.sparkle.constants.PointsVisibility;
 import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
+import com.ghostchu.btn.sparkle.entity.UserPrivacySettingsEntity;
+import com.ghostchu.btn.sparkle.mapper.UserPrivacySettingsMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,31 +16,14 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class UserPrivacyService {
-    private static final RowMapper<UserPrivacySettings> MAPPER = (resultSet, rowNum) ->
-            new UserPrivacySettings(
-                    resultSet.getLong("user_id"),
-                    AvatarVisibility.valueOf(resultSet.getString("avatar_visibility")),
-                    UsernameVisibility.valueOf(resultSet.getString("username_visibility")),
-                    PointsVisibility.valueOf(resultSet.getString("points_visibility")),
-                    resultSet.getBoolean("receive_user_messages")
-            );
-
-    private final JdbcTemplate jdbcTemplate;
-
-    public UserPrivacyService(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private final UserPrivacySettingsMapper settingsMapper;
 
     public UserPrivacySettings get(long userId) {
-        List<UserPrivacySettings> rows = jdbcTemplate.query("""
-                SELECT user_id, avatar_visibility, username_visibility,
-                       points_visibility, receive_user_messages
-                FROM user_privacy_settings
-                WHERE user_id = ?
-                """, MAPPER, userId);
-        if (!rows.isEmpty()) {
-            return rows.getFirst();
+        UserPrivacySettingsEntity row = settingsMapper.selectById(userId);
+        if (row != null) {
+            return map(row);
         }
         UserPrivacySettings defaults = UserPrivacySettings.defaults(userId);
         ensure(userId);
@@ -50,16 +35,11 @@ public class UserPrivacyService {
             return Map.of();
         }
         List<Long> distinctIds = userIds.stream().distinct().toList();
-        String placeholders = String.join(", ", java.util.Collections.nCopies(distinctIds.size(), "?"));
         Map<Long, UserPrivacySettings> settings = new HashMap<>();
-        jdbcTemplate.query("""
-                SELECT user_id, avatar_visibility, username_visibility,
-                       points_visibility, receive_user_messages
-                FROM user_privacy_settings
-                WHERE user_id IN (%s)
-                """.formatted(placeholders), MAPPER, distinctIds.toArray()).forEach(row ->
-                settings.put(row.userId(), row)
-        );
+        settingsMapper.selectList(
+                new QueryWrapper<UserPrivacySettingsEntity>()
+                        .in("user_id", distinctIds)
+        ).forEach(row -> settings.put(row.getUserId(), map(row)));
         return settings;
     }
 
@@ -71,23 +51,18 @@ public class UserPrivacyService {
             PointsVisibility pointsVisibility
     ) {
         UserPrivacySettings current = get(userId);
-        jdbcTemplate.update("""
-                INSERT INTO user_privacy_settings (
-                    user_id, avatar_visibility, username_visibility,
-                    points_visibility, receive_user_messages, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, now())
-                ON CONFLICT (user_id) DO UPDATE
-                SET avatar_visibility = EXCLUDED.avatar_visibility,
-                    username_visibility = EXCLUDED.username_visibility,
-                    points_visibility = EXCLUDED.points_visibility,
-                    updated_at = now()
-                """,
-                userId,
-                avatarVisibility.name(),
-                usernameVisibility.name(),
-                pointsVisibility.name(),
-                current.receiveUserMessages()
+        settingsMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update
+                        .LambdaUpdateWrapper<UserPrivacySettingsEntity>()
+                        .set(UserPrivacySettingsEntity::getAvatarVisibility,
+                                avatarVisibility.name())
+                        .set(UserPrivacySettingsEntity::getUsernameVisibility,
+                                usernameVisibility.name())
+                        .set(UserPrivacySettingsEntity::getPointsVisibility,
+                                pointsVisibility.name())
+                        .set(UserPrivacySettingsEntity::getUpdatedAt,
+                                java.time.OffsetDateTime.now())
+                        .eq(UserPrivacySettingsEntity::getUserId, userId)
         );
         return new UserPrivacySettings(
                 userId,
@@ -99,13 +74,24 @@ public class UserPrivacyService {
     }
 
     public void ensure(long userId) {
-        jdbcTemplate.update("""
-                INSERT INTO user_privacy_settings (
-                    user_id, avatar_visibility, username_visibility,
-                    points_visibility, receive_user_messages
-                )
-                VALUES (?, 'BLURRED', 'BLURRED', 'SHOW', TRUE)
-                ON CONFLICT (user_id) DO NOTHING
-                """, userId);
+        if (settingsMapper.selectById(userId) == null) {
+            settingsMapper.insert(new UserPrivacySettingsEntity()
+                    .setUserId(userId)
+                    .setAvatarVisibility("BLURRED")
+                    .setUsernameVisibility("BLURRED")
+                    .setPointsVisibility("SHOW")
+                    .setReceiveUserMessages(true)
+                    .setUpdatedAt(java.time.OffsetDateTime.now()));
+        }
+    }
+
+    private UserPrivacySettings map(UserPrivacySettingsEntity row) {
+        return new UserPrivacySettings(
+                row.getUserId(),
+                AvatarVisibility.valueOf(row.getAvatarVisibility()),
+                UsernameVisibility.valueOf(row.getUsernameVisibility()),
+                PointsVisibility.valueOf(row.getPointsVisibility()),
+                Boolean.TRUE.equals(row.getReceiveUserMessages())
+        );
     }
 }

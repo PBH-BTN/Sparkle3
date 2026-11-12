@@ -2,7 +2,9 @@ package com.ghostchu.btn.sparkle.service.account;
 
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserRel;
+import com.ghostchu.btn.sparkle.entity.UserAccountDeletionRequest;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.UserAccountDeletionRequestMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
@@ -14,7 +16,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -47,7 +48,7 @@ public class UserAccountDeletionService {
     private static final String COMPLETED = "COMPLETED";
     private static final int FINALIZATION_BATCH_SIZE = 100;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final UserAccountDeletionRequestMapper requestMapper;
     private final IUserService userService;
     private final AccountDeletionFinalizer finalizer;
     private final AccountDeletionPendingRegistry pendingRegistry;
@@ -128,25 +129,26 @@ public class UserAccountDeletionService {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime coolingEndsAt = now.plus(COOLING_PERIOD);
         if (existing == null) {
-            jdbcTemplate.update("""
-                    INSERT INTO user_account_deletion_request (
-                        user_id, status, requested_at, cooling_ends_at, updated_at
-                    )
-                    VALUES (?, ?, ?, ?, ?)
-                    """, userId, PENDING, now, coolingEndsAt, now);
+            requestMapper.insert(new UserAccountDeletionRequest()
+                    .setUserId(userId)
+                    .setStatus(PENDING)
+                    .setRequestedAt(now)
+                    .setCoolingEndsAt(coolingEndsAt)
+                    .setUpdatedAt(now));
         } else {
-            jdbcTemplate.update("""
-                    UPDATE user_account_deletion_request
-                    SET status = ?,
-                        requested_at = ?,
-                        cooling_ends_at = ?,
-                        cancelled_at = NULL,
-                        completed_at = NULL,
-                        cancellation_reason = NULL,
-                        last_error = NULL,
-                        updated_at = ?
-                    WHERE user_id = ?
-                    """, PENDING, now, coolingEndsAt, now, userId);
+            requestMapper.update(null,
+                    new com.baomidou.mybatisplus.core.conditions.update
+                            .LambdaUpdateWrapper<UserAccountDeletionRequest>()
+                            .set(UserAccountDeletionRequest::getStatus, PENDING)
+                            .set(UserAccountDeletionRequest::getRequestedAt, now)
+                            .set(UserAccountDeletionRequest::getCoolingEndsAt, coolingEndsAt)
+                            .set(UserAccountDeletionRequest::getCancelledAt, null)
+                            .set(UserAccountDeletionRequest::getCompletedAt, null)
+                            .set(UserAccountDeletionRequest::getCancellationReason, null)
+                            .set(UserAccountDeletionRequest::getLastError, null)
+                            .set(UserAccountDeletionRequest::getUpdatedAt, now)
+                            .eq(UserAccountDeletionRequest::getUserId, userId)
+            );
         }
         publish(AccountDeletionNotificationEvent.Kind.STARTED,
                 user, now, coolingEndsAt, null, null);
@@ -209,42 +211,20 @@ public class UserAccountDeletionService {
     }
 
     public Long pendingUserIdForGithubAccount(long githubUid) {
-        List<Long> ids = jdbcTemplate.queryForList("""
-                SELECT r.bind_user_id
-                FROM user_rel r
-                JOIN user_account_deletion_request d ON d.user_id = r.bind_user_id
-                WHERE r.platform = 'github'
-                  AND r.platform_user_id = ?
-                  AND d.status = 'PENDING'
-                LIMIT 1
-                """, Long.class, String.valueOf(githubUid));
-        return ids.isEmpty() ? null : ids.getFirst();
+        return requestMapper.findPendingUserIdByGithub(String.valueOf(githubUid));
     }
 
     public AccountDeletionStatus status(long userId) {
-        List<RequestRow> rows = jdbcTemplate.query("""
-                SELECT status, requested_at, cooling_ends_at, cancelled_at,
-                       completed_at, cancellation_reason
-                FROM user_account_deletion_request
-                WHERE user_id = ?
-                """, (resultSet, rowNum) -> new RequestRow(
-                resultSet.getString("status"),
-                resultSet.getObject("requested_at", OffsetDateTime.class),
-                resultSet.getObject("cooling_ends_at", OffsetDateTime.class),
-                resultSet.getObject("cancelled_at", OffsetDateTime.class),
-                resultSet.getObject("completed_at", OffsetDateTime.class),
-                resultSet.getString("cancellation_reason")
-        ), userId);
-        if (rows.isEmpty()) {
+        UserAccountDeletionRequest request = requestMapper.selectById(userId);
+        if (request == null) {
             return AccountDeletionStatus.none();
         }
-        RequestRow row = rows.getFirst();
         return new AccountDeletionStatus(
-                row.status(),
-                row.requestedAt(),
-                row.coolingEndsAt(),
-                row.completedAt(),
-                row.cancellationReason()
+                request.getStatus(),
+                request.getRequestedAt(),
+                request.getCoolingEndsAt(),
+                request.getCompletedAt(),
+                request.getCancellationReason()
         );
     }
 
@@ -276,14 +256,14 @@ public class UserAccountDeletionService {
             initialDelayMillis = 60_000
     )
     public void processDueDeletions() {
-        List<Long> dueUserIds = jdbcTemplate.queryForList("""
-                SELECT user_id
-                FROM user_account_deletion_request
-                WHERE status = 'PENDING'
-                  AND cooling_ends_at <= now()
-                ORDER BY cooling_ends_at
-                LIMIT %d
-                """.formatted(FINALIZATION_BATCH_SIZE), Long.class);
+        List<Long> dueUserIds = requestMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query
+                        .QueryWrapper<UserAccountDeletionRequest>()
+                        .eq("status", PENDING)
+                        .le("cooling_ends_at", OffsetDateTime.now())
+                        .orderByAsc("cooling_ends_at")
+                        .last("LIMIT " + FINALIZATION_BATCH_SIZE)
+        ).stream().map(UserAccountDeletionRequest::getUserId).toList();
         for (Long userId : dueUserIds) {
             try {
                 finalizer.finalizeDeletion(userId);
@@ -324,15 +304,16 @@ public class UserAccountDeletionService {
     ) {
         OffsetDateTime now = OffsetDateTime.now();
         User user = requireUser(userId);
-        int updated = jdbcTemplate.update("""
-                UPDATE user_account_deletion_request
-                SET status = ?,
-                    cancelled_at = ?,
-                    cancellation_reason = ?,
-                    updated_at = ?
-                WHERE user_id = ?
-                  AND status = 'PENDING'
-                """, CANCELLED, now, reasonCode, now, userId);
+        int updated = requestMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update
+                        .LambdaUpdateWrapper<UserAccountDeletionRequest>()
+                        .set(UserAccountDeletionRequest::getStatus, CANCELLED)
+                        .set(UserAccountDeletionRequest::getCancelledAt, now)
+                        .set(UserAccountDeletionRequest::getCancellationReason, reasonCode)
+                        .set(UserAccountDeletionRequest::getUpdatedAt, now)
+                        .eq(UserAccountDeletionRequest::getUserId, userId)
+                        .eq(UserAccountDeletionRequest::getStatus, PENDING)
+        );
         if (updated == 0) {
             return false;
         }
@@ -344,34 +325,28 @@ public class UserAccountDeletionService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void restorePendingDeletionMarkers() {
-        List<PendingMarker> markers = jdbcTemplate.query("""
-                SELECT user_id, cooling_ends_at
-                FROM user_account_deletion_request
-                WHERE status = 'PENDING'
-                """, (resultSet, rowNum) -> new PendingMarker(
-                resultSet.getLong("user_id"),
-                resultSet.getObject("cooling_ends_at", OffsetDateTime.class)
-        ));
+        List<PendingMarker> markers = requestMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query
+                        .QueryWrapper<UserAccountDeletionRequest>()
+                        .eq("status", PENDING)
+        ).stream().map(request -> new PendingMarker(
+                request.getUserId(),
+                request.getCoolingEndsAt()
+        )).toList();
         markers.forEach(marker ->
                 pendingRegistry.mark(marker.userId(), marker.coolingEndsAt()));
     }
 
     private RequestRow lockedRequest(long userId) {
-        List<RequestRow> rows = jdbcTemplate.query("""
-                SELECT status, requested_at, cooling_ends_at, cancelled_at,
-                       completed_at, cancellation_reason
-                FROM user_account_deletion_request
-                WHERE user_id = ?
-                FOR UPDATE
-                """, (resultSet, rowNum) -> new RequestRow(
-                resultSet.getString("status"),
-                resultSet.getObject("requested_at", OffsetDateTime.class),
-                resultSet.getObject("cooling_ends_at", OffsetDateTime.class),
-                resultSet.getObject("cancelled_at", OffsetDateTime.class),
-                resultSet.getObject("completed_at", OffsetDateTime.class),
-                resultSet.getString("cancellation_reason")
-        ), userId);
-        return rows.isEmpty() ? null : rows.getFirst();
+        UserAccountDeletionRequest entity = requestMapper.selectForUpdate(userId);
+        return entity == null ? null : new RequestRow(
+                entity.getStatus(),
+                entity.getRequestedAt(),
+                entity.getCoolingEndsAt(),
+                entity.getCancelledAt(),
+                entity.getCompletedAt(),
+                entity.getCancellationReason()
+        );
     }
 
     private User requireUser(long userId) {

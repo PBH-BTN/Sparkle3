@@ -2,13 +2,18 @@ package com.ghostchu.btn.sparkle.service.github;
 
 import com.ghostchu.btn.sparkle.controller.admin.dto.GithubSyncModels.TargetInput;
 import com.ghostchu.btn.sparkle.controller.admin.dto.GithubSyncModels.TargetView;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.ghostchu.btn.sparkle.entity.GithubSyncTarget;
+import com.ghostchu.btn.sparkle.entity.GithubSyncTargetSource;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.GithubSyncTargetMapper;
+import com.ghostchu.btn.sparkle.mapper.GithubSyncTargetSourceMapper;
 import com.ghostchu.btn.sparkle.service.DatabaseConfigService;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,32 +31,17 @@ public class GithubSyncTargetService {
     private static final Pattern REPOSITORY_PART = Pattern.compile("[A-Za-z0-9_.-]+");
     private static final Pattern BRANCH_NAME = Pattern.compile("[A-Za-z0-9._/-]+");
 
-    private final JdbcTemplate jdbcTemplate;
+    private final GithubSyncTargetMapper targetMapper;
+    private final GithubSyncTargetSourceMapper sourceMapper;
     private final GithubRuleSourceCatalog sourceCatalog;
     private final DatabaseConfigService databaseConfigService;
 
     public List<TargetView> list() {
-        List<TargetRow> rows = jdbcTemplate.query("""
-                SELECT id, name, repository_owner, repository_name, branch_name,
-                       file_path, enabled, created_at, updated_at, last_attempt_at,
-                       last_success_at, last_error, last_commit_sha
-                FROM github_sync_targets
-                ORDER BY name, id
-                """, (rs, rowNum) -> new TargetRow(
-                rs.getLong("id"),
-                rs.getString("name"),
-                rs.getString("repository_owner"),
-                rs.getString("repository_name"),
-                rs.getString("branch_name"),
-                rs.getString("file_path"),
-                rs.getBoolean("enabled"),
-                rs.getObject("created_at", OffsetDateTime.class),
-                rs.getObject("updated_at", OffsetDateTime.class),
-                rs.getObject("last_attempt_at", OffsetDateTime.class),
-                rs.getObject("last_success_at", OffsetDateTime.class),
-                rs.getString("last_error"),
-                rs.getString("last_commit_sha")
-        ));
+        List<TargetRow> rows = targetMapper.selectList(
+                new QueryWrapper<GithubSyncTarget>()
+                        .orderByAsc("name")
+                        .orderByAsc("id")
+        ).stream().map(TargetRow::from).toList();
         if (rows.isEmpty()) {
             return List.of();
         }
@@ -62,7 +52,14 @@ public class GithubSyncTargetService {
     }
 
     public @Nullable TargetView find(long id) {
-        return list().stream().filter(target -> target.id() == id).findFirst().orElse(null);
+        GithubSyncTarget entity = targetMapper.selectById(id);
+        if (entity == null) return null;
+        List<String> sources = sourceMapper.selectList(
+                new QueryWrapper<GithubSyncTargetSource>()
+                        .eq("target_id", id)
+                        .orderByAsc("source_id")
+        ).stream().map(GithubSyncTargetSource::getSourceId).toList();
+        return TargetRow.from(entity).toView(sources);
     }
 
     public List<TargetView> enabledTargets() {
@@ -73,36 +70,29 @@ public class GithubSyncTargetService {
     public TargetView create(TargetInput input, @Nullable Long operatorId)
             throws BusinessException {
         NormalizedTarget target = normalize(input);
-        Long key;
         try {
-            key = jdbcTemplate.queryForObject("""
-                    INSERT INTO github_sync_targets
-                        (name, repository_owner, repository_name, branch_name, file_path,
-                         enabled, created_by, updated_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    RETURNING id
-                    """, Long.class,
-                    target.name(),
-                    target.owner(),
-                    target.repository(),
-                    target.branch(),
-                    target.filePath(),
-                    target.enabled(),
-                    operatorId,
-                    operatorId
-            );
+            GithubSyncTarget entity = new GithubSyncTarget()
+                    .setName(target.name())
+                    .setRepositoryOwner(target.owner())
+                    .setRepositoryName(target.repository())
+                    .setBranchName(target.branch())
+                    .setFilePath(target.filePath())
+                    .setEnabled(target.enabled())
+                    .setCreatedBy(operatorId)
+                    .setUpdatedBy(operatorId);
+            targetMapper.insert(entity);
+            if (entity.getId() == null) {
+                throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Unable to create GitHub sync target");
+            }
+            replaceSources(entity.getId(), target.sourceIds());
+            return Objects.requireNonNull(find(entity.getId()));
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "A target already writes to this repository, branch, and file"
             );
         }
-        if (key == null) {
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Unable to create GitHub sync target");
-        }
-        replaceSources(key, target.sourceIds());
-        return Objects.requireNonNull(find(key));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -111,27 +101,16 @@ public class GithubSyncTargetService {
         requireTarget(id);
         NormalizedTarget target = normalize(input);
         try {
-            jdbcTemplate.update("""
-                    UPDATE github_sync_targets
-                    SET name = ?,
-                        repository_owner = ?,
-                        repository_name = ?,
-                        branch_name = ?,
-                        file_path = ?,
-                        enabled = ?,
-                        updated_at = now(),
-                        updated_by = ?
-                    WHERE id = ?
-                    """,
-                    target.name(),
-                    target.owner(),
-                    target.repository(),
-                    target.branch(),
-                    target.filePath(),
-                    target.enabled(),
-                    operatorId,
-                    id
-            );
+            GithubSyncTarget entity = requireTargetEntity(id)
+                    .setName(target.name())
+                    .setRepositoryOwner(target.owner())
+                    .setRepositoryName(target.repository())
+                    .setBranchName(target.branch())
+                    .setFilePath(target.filePath())
+                    .setEnabled(target.enabled())
+                    .setUpdatedAt(OffsetDateTime.now())
+                    .setUpdatedBy(operatorId);
+            targetMapper.updateById(entity);
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(
                     HttpStatus.CONFLICT,
@@ -144,7 +123,7 @@ public class GithubSyncTargetService {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(long id) throws BusinessException {
-        if (jdbcTemplate.update("DELETE FROM github_sync_targets WHERE id = ?", id) == 0) {
+        if (targetMapper.deleteById(id) == 0) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "GitHub sync target not found");
         }
     }
@@ -186,76 +165,73 @@ public class GithubSyncTargetService {
     }
 
     public void markAttempt(long id) {
-        jdbcTemplate.update("""
-                UPDATE github_sync_targets
-                SET last_attempt_at = now(),
-                    last_error = NULL
-                WHERE id = ?
-                """, id);
+        targetMapper.update(null,
+                new LambdaUpdateWrapper<GithubSyncTarget>()
+                        .set(GithubSyncTarget::getLastAttemptAt, OffsetDateTime.now())
+                        .set(GithubSyncTarget::getLastError, null)
+                        .eq(GithubSyncTarget::getId, id)
+        );
     }
 
     public void markSuccess(long id, @Nullable String commitSha) {
-        jdbcTemplate.update("""
-                UPDATE github_sync_targets
-                SET last_success_at = now(),
-                    last_error = NULL,
-                    last_commit_sha = ?
-                WHERE id = ?
-                """, commitSha, id);
+        targetMapper.update(null,
+                new LambdaUpdateWrapper<GithubSyncTarget>()
+                        .set(GithubSyncTarget::getLastSuccessAt, OffsetDateTime.now())
+                        .set(GithubSyncTarget::getLastError, null)
+                        .set(GithubSyncTarget::getLastCommitSha, commitSha)
+                        .eq(GithubSyncTarget::getId, id)
+        );
     }
 
     public void markFailure(long id, String error) {
-        jdbcTemplate.update("""
-                UPDATE github_sync_targets
-                SET last_error = ?
-                WHERE id = ?
-                """, sanitizeError(error), id);
+        targetMapper.update(null,
+                new LambdaUpdateWrapper<GithubSyncTarget>()
+                        .set(GithubSyncTarget::getLastError, sanitizeError(error))
+                        .eq(GithubSyncTarget::getId, id)
+        );
     }
 
     private long count() {
-        Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM github_sync_targets",
-                Long.class
-        );
-        return count == null ? 0 : count;
+        return targetMapper.selectCount(null);
     }
 
     private void requireTarget(long id) throws BusinessException {
-        Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM github_sync_targets WHERE id = ?",
-                Long.class,
-                id
-        );
-        if (count == null || count == 0) {
+        if (targetMapper.selectById(id) == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "GitHub sync target not found");
         }
     }
 
+    private GithubSyncTarget requireTargetEntity(long id) throws BusinessException {
+        GithubSyncTarget target = targetMapper.selectById(id);
+        if (target == null) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "GitHub sync target not found");
+        }
+        return target;
+    }
+
     private Map<Long, List<String>> loadSources() {
         Map<Long, List<String>> sources = new LinkedHashMap<>();
-        jdbcTemplate.query("""
-                SELECT target_id, source_id
-                FROM github_sync_target_sources
-                ORDER BY target_id, source_id
-                """, rs -> {
-            sources.computeIfAbsent(rs.getLong("target_id"), ignored -> new ArrayList<>())
-                    .add(rs.getString("source_id"));
-        });
+        sourceMapper.selectList(
+                new QueryWrapper<GithubSyncTargetSource>()
+                        .orderByAsc("target_id")
+                        .orderByAsc("source_id")
+        ).forEach(entity -> sources.computeIfAbsent(
+                entity.getTargetId(),
+                ignored -> new ArrayList<>()
+        ).add(entity.getSourceId()));
         return sources;
     }
 
     private void replaceSources(long targetId, List<String> sourceIds) {
-        jdbcTemplate.update(
-                "DELETE FROM github_sync_target_sources WHERE target_id = ?",
-                targetId
+        sourceMapper.delete(
+                new QueryWrapper<GithubSyncTargetSource>()
+                        .eq("target_id", targetId)
         );
-        List<Object[]> values = sourceIds.stream()
-                .map(sourceId -> new Object[]{targetId, sourceId})
-                .toList();
-        jdbcTemplate.batchUpdate(
-                "INSERT INTO github_sync_target_sources (target_id, source_id) VALUES (?, ?)",
-                values
-        );
+        sourceIds.forEach(sourceId -> sourceMapper.insert(
+                new GithubSyncTargetSource()
+                        .setTargetId(targetId)
+                        .setSourceId(sourceId)
+        ));
     }
 
     private NormalizedTarget normalize(TargetInput input) throws BusinessException {
@@ -352,6 +328,24 @@ public class GithubSyncTargetService {
             String lastError,
             String lastCommitSha
     ) {
+        private static TargetRow from(GithubSyncTarget entity) {
+            return new TargetRow(
+                    entity.getId(),
+                    entity.getName(),
+                    entity.getRepositoryOwner(),
+                    entity.getRepositoryName(),
+                    entity.getBranchName(),
+                    entity.getFilePath(),
+                    Boolean.TRUE.equals(entity.getEnabled()),
+                    entity.getCreatedAt(),
+                    entity.getUpdatedAt(),
+                    entity.getLastAttemptAt(),
+                    entity.getLastSuccessAt(),
+                    entity.getLastError(),
+                    entity.getLastCommitSha()
+            );
+        }
+
         private TargetView toView(List<String> sourceIds) {
             return new TargetView(
                     id,

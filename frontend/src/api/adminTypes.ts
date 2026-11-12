@@ -664,3 +664,216 @@ export interface StaffMessageResult {
   dispatchId: string
   remainingToday: number
 }
+
+export type CommunityGroupType = 'GITHUB' | 'LINK'
+
+export interface CommunityGithubTeamInput {
+  slug: string
+  name: string
+}
+
+export interface CommunityGroupInput {
+  slug: string
+  type: CommunityGroupType
+  titleZh: string
+  titleEn: string
+  descriptionZh: string
+  descriptionEn: string
+  url: string
+  githubOrganization: string
+  enabled: boolean
+  sortOrder: number
+  teams: CommunityGithubTeamInput[]
+}
+
+export interface CommunityGroupAdmin {
+  id: number
+  slug: string
+  type: CommunityGroupType
+  titleZh: string
+  titleEn: string
+  descriptionZh: string
+  descriptionEn: string
+  url: string | null
+  githubOrganization: string | null
+  enabled: boolean
+  sortOrder: number
+  teams: CommunityGithubTeamInput[]
+  createdAt: string
+  updatedAt: string
+  updatedBy: number | null
+}
+
+export interface CommunityGroupsSettings {
+  tokenConfigured: boolean
+  apiBaseUrl: string
+  groups: CommunityGroupAdmin[]
+}
+
+export interface CommunityGithubTeamValidation {
+  id: number
+  slug: string
+  name: string
+}
+
+export interface CommunityGithubTeamValidationResult {
+  organization: string
+  teams: CommunityGithubTeamValidation[]
+}
+
+export interface AfdianAdminDonation {
+  outTradeNo: string
+  afdianUserId: string
+  afdianUserName: string | null
+  planId: string | null
+  planTitle: string | null
+  totalAmount: string
+  showAmount: string
+  status: number
+  remark: string | null
+  createdAt: string | null
+  syncedAt: string
+}
+
+export interface AfdianAdminBinding {
+  btnUserId: number
+  btnNickname: string
+  afdianUserId: string
+  afdianName: string | null
+  afdianAvatar: string | null
+  boundOrderNo: string
+  boundAt: string
+  lastSyncedAt: string | null
+  lastError: string | null
+  totalAmount: string
+  donationCount: number
+}
+
+export interface AfdianSettings {
+  userId: string
+  tokenConfigured: boolean
+  configured: boolean
+  apiBaseUrl: string
+  syncEnabled: boolean
+  licensePlanIds: string
+  licenseDonationAmount: string
+  licenseValidYears: number
+  licensePrivateKeyConfigured: boolean
+  baseCurrency: string
+  lastSyncedAt: string | null
+  bindings: AfdianAdminBinding[]
+  recentDonations: AfdianAdminDonation[]
+  recentLicenses: AfdianAdminLicense[]
+}
+
+export interface AfdianAdminLicense {
+  licenseId: string
+  btnUserId: number
+  btnNickname: string
+  afdianUserId: string
+  sourceType: string
+  sourceOrderNo: string | null
+  planId: string | null
+  consumedAmount: string
+  issuedAt: string
+  expireAt: string
+  revokedAt: string | null
+  revokedReason: string | null
+}
+
+export interface AfdianSyncResult {
+  success: boolean
+  pages: number
+  ordersSeen: number
+  completedOrders: number
+  bindingsUpdated: number
+  message: string
+}
+
+export type MemberPlatformCode =
+  | 'PATREON'
+  | 'KOFI'
+  | 'MIANBAODUO'
+  | 'LIANDONG'
+
+export interface MemberPlatformConfig {
+  provider: MemberPlatformCode
+  enabled: boolean
+  apiUrl: string | null
+  accountId: string | null
+  accessTokenConfigured: boolean
+  authHeader: string
+  authScheme: string
+  webhookTokenConfigured: boolean
+  currency: string
+  exchangeRate: string
+  bindingCount: number
+  transactionCount: number
+  lastSyncedAt: string | null
+}
+
+export interface MemberPlatformSettings {
+  providers: MemberPlatformConfig[]
+  baseCurrency: string
+  exchangeRateApiUrl: string
+}
+
+export interface MemberTransactionAdmin {
+  id: number
+  provider: MemberPlatformCode | 'AFDIAN'
+  transactionId: string
+  externalUserId: string
+  externalUserName: string | null
+  type: 'PRODUCT' | 'DONATION' | string
+  sku: string | null
+  productName: string | null
+  amount: string
+  currency: string
+  amountCny: string
+  amountBase: string
+  baseCurrency: string
+  status: string
+  occurredAt: string | null
+  remotePresent: boolean
+  licenseConsumed: boolean
+  firstSeenAt: string | null
+  lastReconciledAt: string | null
+  lastChangedAt: string | null
+}
+
+export interface MemberTransactionPage {
+  items: MemberTransactionAdmin[]
+  total: number
+  page: number
+  size: number
+}
+
+export interface MemberSyncRun {
+  id: number
+  provider: MemberPlatformCode | 'AFDIAN'
+  status: 'RUNNING' | 'COMPLETED' | 'INCOMPLETE' | 'FAILED'
+  startedAt: string
+  completedAt: string | null
+  pagesFetched: number
+  recordsSeen: number
+  insertedCount: number
+  updatedCount: number
+  unchangedCount: number
+  missingCount: number
+  errorMessage: string | null
+}
+
+export interface MemberAuditEvent {
+  id: number
+  syncRunId: number
+  provider: MemberPlatformCode | 'AFDIAN'
+  transactionId: string
+  eventType: 'CREATED' | 'UPDATED' | 'MISSING_REMOTE' | 'RESTORED_REMOTE'
+  changedFields: string[]
+  createdAt: string
+}
+
+export interface MemberReconciliation {
+  runs: MemberSyncRun[]
+  events: MemberAuditEvent[]
+}

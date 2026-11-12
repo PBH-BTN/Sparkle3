@@ -3,13 +3,14 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.RuntimeConfigView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailResult;
+import com.ghostchu.btn.sparkle.entity.UserContactEmailDelivery;
+import com.ghostchu.btn.sparkle.mapper.UserContactEmailDeliveryMapper;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import jakarta.mail.internet.InternetAddress;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -26,20 +27,20 @@ public class UserContactEmailService {
     private static final Pattern TEMPLATE_VARIABLE =
             Pattern.compile("\\{\\{([A-Za-z][A-Za-z0-9]*)}}");
 
-    private final JdbcTemplate jdbcTemplate;
+    private final UserContactEmailDeliveryMapper deliveryMapper;
     private final UserPublicProfileService publicProfileService;
     private final AdminConfigService adminConfigService;
     private final JavaMailSender mailSender;
     private final BtnRuntimeConfigService btnConfigService;
 
     public UserContactEmailService(
-            JdbcTemplate jdbcTemplate,
+            UserContactEmailDeliveryMapper deliveryMapper,
             UserPublicProfileService publicProfileService,
             AdminConfigService adminConfigService,
             JavaMailSender mailSender,
             BtnRuntimeConfigService btnConfigService
     ) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.deliveryMapper = deliveryMapper;
         this.publicProfileService = publicProfileService;
         this.adminConfigService = adminConfigService;
         this.mailSender = mailSender;
@@ -116,49 +117,28 @@ public class UserContactEmailService {
             safeIp = null;
         }
         String safeUserAgent = truncate(sanitizeHeader(senderUserAgent), 500);
-        jdbcTemplate.update("""
-                INSERT INTO user_contact_email_deliveries (
-                    sender_user_id, sender_nickname, sender_email,
-                    recipient_user_id, recipient_nickname, recipient_email,
-                    subject, sender_ip, sender_user_agent
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                sender.getId(),
-                sender.getNickname(),
-                sender.getEmail(),
-                recipient.getId(),
-                recipient.getNickname(),
-                recipient.getEmail(),
-                truncate(renderedSubject, 255),
-                safeIp,
-                safeUserAgent
-        );
+        deliveryMapper.insert(new UserContactEmailDelivery()
+                .setSenderUserId(sender.getId())
+                .setSenderNickname(sender.getNickname())
+                .setSenderEmail(sender.getEmail())
+                .setRecipientUserId(recipient.getId())
+                .setRecipientNickname(recipient.getNickname())
+                .setRecipientEmail(recipient.getEmail())
+                .setSubject(truncate(renderedSubject, 255))
+                .setSenderIp(safeIp)
+                .setSenderUserAgent(safeUserAgent)
+                .setSentAt(java.time.OffsetDateTime.now()));
         log.info("User {} sent a contact email to user {} from {}",
                 sender.getId(), recipient.getId(), safeIp);
         return new ContactEmailResult(true, DAILY_LIMIT - sentToday - 1);
     }
 
     private void lockSenderQuota(long senderUserId) {
-        jdbcTemplate.query(
-                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                resultSet -> {
-                },
-                "sparkle:user-contact-email:" + senderUserId
-        );
+        deliveryMapper.lockKey("sparkle:user-contact-email:" + senderUserId);
     }
 
     private int sentToday(long senderUserId) {
-        Integer count = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM user_contact_email_deliveries
-                WHERE sender_user_id = ?
-                  AND sent_at >= (
-                      date_trunc('day', now() AT TIME ZONE 'Asia/Shanghai')
-                      AT TIME ZONE 'Asia/Shanghai'
-                  )
-                """, Integer.class, senderUserId);
-        return count == null ? 0 : count;
+        return deliveryMapper.countToday(senderUserId);
     }
 
     private void sendPlainTextEmail(String recipient, String subject, String content)

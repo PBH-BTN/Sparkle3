@@ -331,6 +331,21 @@ sparkle:
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
+  github-community:
+    personal-access-token: ""
+    api-base-url: "https://api.github.com"
+  afdian:
+    api-base-url: "https://afdian.com/api/open"
+    user-id: ""
+    access-token: ""
+    sync-enabled: true
+    license-plan-ids: ""
+    license-donation-amount: 50
+    license-valid-years: 100
+    license-private-key: ""
+  memberships:
+    base-currency: "CNY"
+    exchange-rate-api-url: "https://open.er-api.com/v6/latest/{currency}"
   version-alert:
     from-address: "sparkle@pbh-btn.com"
     from-name: "SparkleBTN 系统通知"

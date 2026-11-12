@@ -6,6 +6,9 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.StorageModels.PolicyView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.StorageModels.StorageOverview;
 import com.ghostchu.btn.sparkle.controller.admin.dto.StorageModels.TableStorageView;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.AdminStorageMapper;
+import com.ghostchu.btn.sparkle.mapper.AdminStorageMapper.SqlOptionValue;
+import com.ghostchu.btn.sparkle.mapper.AdminStorageMapper.SqlRelation;
 import com.ghostchu.btn.sparkle.service.impl.StatisticsRefreshServiceImpl;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
@@ -17,7 +20,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -53,7 +55,7 @@ public class AdminStorageService {
             "(?i)(\\d+(?:\\.\\d+)?)\\s*(years?|months?|weeks?|days?|hours?|minutes?|mins?)"
     );
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AdminStorageMapper adminStorageMapper;
     private final StatisticsRefreshServiceImpl statisticsRefreshService;
     private final TaskStatusService taskStatusService;
 
@@ -72,32 +74,17 @@ public class AdminStorageService {
         Map<String, HypertableMeta> hypertables = loadHypertables();
         Map<String, Map<String, Object>> policies = loadPolicies();
 
-        List<BaseTable> baseTables = jdbcTemplate.query("""
-                SELECT n.nspname AS schema_name,
-                       c.relname AS table_name,
-                       COALESCE(s.n_live_tup, 0) AS estimated_rows,
-                       pg_relation_size(c.oid) AS heap_bytes,
-                       pg_indexes_size(c.oid) AS index_bytes,
-                       pg_total_relation_size(c.oid) AS total_bytes,
-                       COALESCE(array_to_string(c.reloptions, E'\\n'), '') AS reloptions
-                FROM pg_class c
-                JOIN pg_namespace n ON n.oid = c.relnamespace
-                LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
-                WHERE c.relkind IN ('r', 'p')
-                  AND NOT c.relispartition
-                  AND n.nspname NOT LIKE 'pg_%'
-                  AND n.nspname <> 'information_schema'
-                  AND n.nspname NOT LIKE '\\_timescaledb\\_%' ESCAPE '\\'
-                ORDER BY pg_total_relation_size(c.oid) DESC, n.nspname, c.relname
-                """, (rs, rowNum) -> new BaseTable(
-                rs.getString("schema_name"),
-                rs.getString("table_name"),
-                rs.getLong("estimated_rows"),
-                rs.getLong("heap_bytes"),
-                rs.getLong("index_bytes"),
-                rs.getLong("total_bytes"),
-                rs.getString("reloptions")
-        ));
+        List<BaseTable> baseTables = adminStorageMapper.selectBaseTables().stream()
+                .map(row -> new BaseTable(
+                        row.getSchemaName(),
+                        row.getTableName(),
+                        valueOrZero(row.getEstimatedRows()),
+                        valueOrZero(row.getHeapBytes()),
+                        valueOrZero(row.getIndexBytes()),
+                        valueOrZero(row.getTotalBytes()),
+                        row.getReloptions()
+                ))
+                .toList();
 
         List<TableStorageView> tables = new ArrayList<>(baseTables.size());
         for (BaseTable table : baseTables) {
@@ -139,48 +126,52 @@ public class AdminStorageService {
         String safeSegmentBy = validateSegmentBy(schemaName, tableName, segmentBy, true);
         String safeOrderBy = validateOrderBy(schemaName, tableName, orderBy, true);
         String relation = qualified(schemaName, tableName);
+        SqlRelation sqlRelation = new SqlRelation(schemaName, tableName);
+        SqlOptionValue sqlOrderBy = new SqlOptionValue(safeOrderBy);
+        SqlOptionValue sqlSegmentBy = safeSegmentBy.isBlank() ? null : new SqlOptionValue(safeSegmentBy);
 
         try {
             if (support.columnstoreStats()) {
-                List<String> options = new ArrayList<>();
-                options.add("timescaledb.enable_columnstore = true");
-                if (!safeSegmentBy.isBlank()) {
-                    options.add("timescaledb.segmentby = '" + sqlLiteral(safeSegmentBy) + "'");
+                if (sqlSegmentBy == null) {
+                    adminStorageMapper.setColumnstoreOptionsWithoutSegment(
+                            sqlRelation,
+                            sqlOrderBy
+                    );
+                } else {
+                    adminStorageMapper.setColumnstoreOptionsWithSegment(
+                            sqlRelation,
+                            sqlSegmentBy,
+                            sqlOrderBy
+                    );
                 }
-                options.add("timescaledb.orderby = '" + sqlLiteral(safeOrderBy) + "'");
-                jdbcTemplate.execute("ALTER TABLE " + relation + " SET (" + String.join(", ", options) + ")");
-                jdbcTemplate.update("CALL remove_columnstore_policy(?::regclass, if_exists => true)", relation);
+                adminStorageMapper.removeColumnstorePolicy(relation);
                 if (enabled) {
-                    jdbcTemplate.update("""
-                            CALL add_columnstore_policy(
-                                ?::regclass,
-                                after => make_interval(days => ?),
-                                schedule_interval => make_interval(hours => ?),
-                                if_not_exists => false
-                            )
-                            """, relation, compressAfterDays, scheduleHours);
+                    adminStorageMapper.addColumnstorePolicy(
+                            relation,
+                            compressAfterDays,
+                            scheduleHours
+                    );
                 }
             } else {
-                List<String> options = new ArrayList<>();
-                options.add("timescaledb.compress = true");
-                if (!safeSegmentBy.isBlank()) {
-                    options.add("timescaledb.compress_segmentby = '" + sqlLiteral(safeSegmentBy) + "'");
+                if (sqlSegmentBy == null) {
+                    adminStorageMapper.setLegacyCompressionOptionsWithoutSegment(
+                            sqlRelation,
+                            sqlOrderBy
+                    );
+                } else {
+                    adminStorageMapper.setLegacyCompressionOptionsWithSegment(
+                            sqlRelation,
+                            sqlSegmentBy,
+                            sqlOrderBy
+                    );
                 }
-                options.add("timescaledb.compress_orderby = '" + sqlLiteral(safeOrderBy) + "'");
-                jdbcTemplate.execute("ALTER TABLE " + relation + " SET (" + String.join(", ", options) + ")");
-                jdbcTemplate.queryForList(
-                        "SELECT remove_compression_policy(?::regclass, if_exists => true)",
-                        relation
-                );
+                adminStorageMapper.removeCompressionPolicy(relation);
                 if (enabled) {
-                    jdbcTemplate.queryForList("""
-                            SELECT add_compression_policy(
-                                ?::regclass,
-                                compress_after => make_interval(days => ?),
-                                schedule_interval => make_interval(hours => ?),
-                                if_not_exists => false
-                            )
-                    """, relation, compressAfterDays, scheduleHours);
+                    adminStorageMapper.addCompressionPolicy(
+                            relation,
+                            compressAfterDays,
+                            scheduleHours
+                    );
                 }
             }
         } catch (DataAccessException exception) {
@@ -201,19 +192,13 @@ public class AdminStorageService {
         validatePolicyValues(enabled, dropAfterDays, scheduleHours);
         String relation = qualified(schemaName, tableName);
         try {
-            jdbcTemplate.queryForList(
-                    "SELECT remove_retention_policy(?::regclass, if_exists => true)",
-                    relation
-            );
+            adminStorageMapper.removeRetentionPolicy(relation);
             if (enabled) {
-                jdbcTemplate.queryForList("""
-                        SELECT add_retention_policy(
-                            ?::regclass,
-                            drop_after => make_interval(days => ?),
-                            schedule_interval => make_interval(hours => ?),
-                            if_not_exists => false
-                        )
-                """, relation, dropAfterDays, scheduleHours);
+                adminStorageMapper.addRetentionPolicy(
+                        relation,
+                        dropAfterDays,
+                        scheduleHours
+                );
             }
         } catch (DataAccessException exception) {
             throw policyFailure(exception);
@@ -226,33 +211,27 @@ public class AdminStorageService {
         validateCutoff(cutoff);
         HypertableMeta hyper = loadHypertables().get(tableKey(BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE));
         if (hyper == null) {
-            Long count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM " + qualified(BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE)
-                            + " WHERE populate_time < ?",
-                    Long.class,
-                    cutoff
-            );
+            long count = valueOrZero(adminStorageMapper.countBanHistoryBefore(cutoff));
             return new BanHistoryDeletePreview(cutoff, false, 0, 0, count, null, null);
         }
         try {
-            return jdbcTemplate.queryForObject("""
-                    SELECT COUNT(*) AS chunk_count,
-                           COUNT(*) FILTER (WHERE is_compressed) AS compressed_count,
-                           MIN(range_start) AS oldest_start,
-                           MAX(range_end) AS newest_end
-                    FROM timescaledb_information.chunks
-                    WHERE hypertable_schema = ?
-                      AND hypertable_name = ?
-                      AND range_end <= ?
-                    """, (rs, rowNum) -> new BanHistoryDeletePreview(
+            var summary = adminStorageMapper.selectChunkSummary(
+                    BAN_HISTORY_SCHEMA,
+                    BAN_HISTORY_TABLE,
+                    cutoff
+            );
+            if (summary == null) {
+                return new BanHistoryDeletePreview(cutoff, true, 0, 0, null, null, null);
+            }
+            return new BanHistoryDeletePreview(
                     cutoff,
                     true,
-                    rs.getLong("chunk_count"),
-                    rs.getLong("compressed_count"),
+                    valueOrZero(summary.getChunkCount()),
+                    valueOrZero(summary.getCompressedCount()),
                     null,
-                    rs.getObject("oldest_start", OffsetDateTime.class),
-                    rs.getObject("newest_end", OffsetDateTime.class)
-            ), BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE, cutoff);
+                    summary.getOldestStart(),
+                    summary.getNewestEnd()
+            );
         } catch (DataAccessException exception) {
             throw new BusinessException(HttpStatus.CONFLICT, "Unable to inspect TimescaleDB chunks: "
                     + exception.getMostSpecificCause().getMessage());
@@ -272,20 +251,14 @@ public class AdminStorageService {
         long affected;
         Long deletedRows = null;
         if (hyper != null) {
-            List<String> dropped = jdbcTemplate.queryForList(
-                    "SELECT drop_chunks(?::regclass, older_than => ?::timestamptz)::text",
-                    String.class,
+            List<String> dropped = adminStorageMapper.dropBanHistoryChunks(
                     qualified(BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE),
                     cutoff
             );
             affected = dropped.size();
-            jdbcTemplate.execute("ANALYZE " + qualified(BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE));
+            adminStorageMapper.analyzeBanHistory();
         } else {
-            affected = jdbcTemplate.update(
-                    "DELETE FROM " + qualified(BAN_HISTORY_SCHEMA, BAN_HISTORY_TABLE)
-                            + " WHERE populate_time < ?",
-                    cutoff
-            );
+            affected = adminStorageMapper.deleteBanHistoryBefore(cutoff);
             deletedRows = affected;
         }
         refreshStatisticsAfterCommit();
@@ -408,19 +381,13 @@ public class AdminStorageService {
     private SizeBreakdown detailedSize(String schemaName, String tableName) {
         String relation = qualified(schemaName, tableName);
         try {
-            SizeBreakdown result = jdbcTemplate.queryForObject("""
-                    SELECT COALESCE(SUM(table_bytes), 0) AS table_bytes,
-                           COALESCE(SUM(index_bytes), 0) AS index_bytes,
-                           COALESCE(SUM(toast_bytes), 0) AS toast_bytes,
-                           COALESCE(SUM(total_bytes), 0) AS total_bytes
-                    FROM hypertable_detailed_size(?::regclass)
-                    """, (rs, rowNum) -> new SizeBreakdown(
-                    rs.getLong("table_bytes"),
-                    rs.getLong("index_bytes"),
-                    rs.getLong("toast_bytes"),
-                    rs.getLong("total_bytes")
-            ), relation);
-            return result == null ? SizeBreakdown.empty() : result;
+            var row = adminStorageMapper.selectDetailedSize(relation);
+            return row == null ? SizeBreakdown.empty() : new SizeBreakdown(
+                    valueOrZero(row.getTableBytes()),
+                    valueOrZero(row.getIndexBytes()),
+                    valueOrZero(row.getToastBytes()),
+                    valueOrZero(row.getTotalBytes())
+            );
         } catch (DataAccessException exception) {
             return SizeBreakdown.empty();
         }
@@ -429,27 +396,20 @@ public class AdminStorageService {
     private CompressionStats compressionStats(String schemaName,
                                               String tableName,
                                               TimescaleSupport support) {
-        String function = support.columnstoreStats()
-                ? "hypertable_columnstore_stats"
-                : support.compressionStats() ? "hypertable_compression_stats" : null;
-        if (function == null) {
+        if (!support.columnstoreStats() && !support.compressionStats()) {
             return CompressionStats.empty();
         }
         String relation = qualified(schemaName, tableName);
         try {
-            CompressionStats stats = jdbcTemplate.queryForObject("""
-                    SELECT COALESCE(SUM(total_chunks), 0) AS total_chunks,
-                           COALESCE(SUM(number_compressed_chunks), 0) AS compressed_chunks,
-                           COALESCE(SUM(before_compression_total_bytes), 0) AS before_bytes,
-                           COALESCE(SUM(after_compression_total_bytes), 0) AS after_bytes
-                    FROM %s(?::regclass)
-                    """.formatted(function), (rs, rowNum) -> new CompressionStats(
-                    rs.getLong("total_chunks"),
-                    rs.getLong("compressed_chunks"),
-                    rs.getLong("before_bytes"),
-                    rs.getLong("after_bytes")
-            ), relation);
-            return stats == null ? CompressionStats.empty() : stats;
+            var row = support.columnstoreStats()
+                    ? adminStorageMapper.selectColumnstoreStats(relation)
+                    : adminStorageMapper.selectCompressionStats(relation);
+            return row == null ? CompressionStats.empty() : new CompressionStats(
+                    valueOrZero(row.getTotalChunks()),
+                    valueOrZero(row.getCompressedChunks()),
+                    valueOrZero(row.getBeforeBytes()),
+                    valueOrZero(row.getAfterBytes())
+            );
         } catch (DataAccessException exception) {
             log.debug("Unable to read compression statistics for {}.{}: {}",
                     schemaName, tableName, exception.getMostSpecificCause().getMessage());
@@ -460,45 +420,35 @@ public class AdminStorageService {
     private Map<String, HypertableMeta> loadHypertables() {
         try {
             Map<String, HypertableMeta> result = new HashMap<>();
-            jdbcTemplate.query("""
-                    SELECT hypertable_schema,
-                           hypertable_name,
-                           compression_enabled,
-                           num_chunks,
-                           primary_dimension,
-                           primary_dimension_type::text AS primary_dimension_type
-                    FROM timescaledb_information.hypertables
-                    """, rs -> {
-                result.put(tableKey(rs.getString("hypertable_schema"), rs.getString("hypertable_name")),
+            for (var row : adminStorageMapper.selectHypertables()) {
+                result.put(tableKey(row.getHypertableSchema(), row.getHypertableName()),
                         new HypertableMeta(
-                                rs.getString("hypertable_schema"),
-                                rs.getString("hypertable_name"),
-                                rs.getBoolean("compression_enabled"),
-                                rs.getLong("num_chunks"),
-                                rs.getString("primary_dimension"),
-                                rs.getString("primary_dimension_type")
-                        ));
-            });
+                                row.getHypertableSchema(),
+                                row.getHypertableName(),
+                                Boolean.TRUE.equals(row.getCompressionEnabled()),
+                                valueOrZero(row.getNumChunks()),
+                                row.getPrimaryDimension(),
+                                row.getPrimaryDimensionType()
+                        )
+                );
+            }
             return result;
         } catch (DataAccessException exception) {
             try {
                 Map<String, HypertableMeta> result = new HashMap<>();
-                jdbcTemplate.query("""
-                        SELECT hypertable_schema, hypertable_name
-                        FROM timescaledb_information.hypertables
-                        """, rs -> {
+                for (var row : adminStorageMapper.selectLegacyHypertables()) {
                     result.put(
-                            tableKey(rs.getString("hypertable_schema"), rs.getString("hypertable_name")),
+                            tableKey(row.getHypertableSchema(), row.getHypertableName()),
                             new HypertableMeta(
-                                    rs.getString("hypertable_schema"),
-                                    rs.getString("hypertable_name"),
+                                    row.getHypertableSchema(),
+                                    row.getHypertableName(),
                                     false,
                                     0,
                                     null,
                                     null
                             )
                     );
-                });
+                }
                 return result;
             } catch (DataAccessException ignored) {
                 return Map.of();
@@ -509,34 +459,24 @@ public class AdminStorageService {
     private Map<String, Map<String, Object>> loadPolicies() {
         try {
             Map<String, Map<String, Object>> result = new HashMap<>();
-            jdbcTemplate.query("""
-                    SELECT hypertable_schema,
-                           hypertable_name,
-                           proc_name,
-                           config->>'compress_after' AS compress_after,
-                           config->>'drop_after' AS drop_after,
-                           EXTRACT(EPOCH FROM schedule_interval)::double precision AS schedule_seconds,
-                           next_start
-                    FROM timescaledb_information.jobs
-                    WHERE proc_name IN ('policy_compression', 'policy_retention')
-                    """, rs -> {
-                String schema = rs.getString("hypertable_schema");
-                String table = rs.getString("hypertable_name");
-                if (schema == null || table == null) return;
+            for (var row : adminStorageMapper.selectPolicies()) {
+                String schema = row.getHypertableSchema();
+                String table = row.getHypertableName();
+                if (schema == null || table == null) continue;
                 Map<String, Object> item = new HashMap<>();
-                String proc = rs.getString("proc_name");
+                String proc = row.getProcName();
                 String after = "policy_compression".equals(proc)
-                        ? rs.getString("compress_after")
-                        : rs.getString("drop_after");
-                BigDecimal scheduleSeconds = rs.getBigDecimal("schedule_seconds");
+                        ? row.getCompressAfter()
+                        : row.getDropAfter();
+                BigDecimal scheduleSeconds = row.getScheduleSeconds();
                 item.put("after", after);
                 item.put("scheduleHours", scheduleSeconds == null ? null : scheduleSeconds.doubleValue() / 3600.0);
-                Object nextStart = rs.getObject("next_start");
+                Object nextStart = row.getNextStart();
                 item.put("nextStart", nextStart == null ? null : nextStart.toString());
                 String key = tableKey(schema, table);
                 result.computeIfAbsent(key, ignored -> new HashMap<>())
                         .put("policy_compression".equals(proc) ? "compression" : "retention", item);
-            });
+            }
             return result;
         } catch (DataAccessException exception) {
             return Map.of();
@@ -581,10 +521,7 @@ public class AdminStorageService {
     private TimescaleSupport timescaleSupport() {
         String version = null;
         try {
-            version = jdbcTemplate.queryForObject(
-                    "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'",
-                    String.class
-            );
+            version = adminStorageMapper.selectTimescaleVersion();
         } catch (DataAccessException ignored) {
         }
         if (version == null) {
@@ -599,11 +536,7 @@ public class AdminStorageService {
 
     private boolean functionExists(String name) {
         try {
-            Boolean exists = jdbcTemplate.queryForObject(
-                    "SELECT to_regprocedure(? || '(regclass)') IS NOT NULL",
-                    Boolean.class,
-                    name
-            );
+            Boolean exists = adminStorageMapper.functionExists(name);
             return Boolean.TRUE.equals(exists);
         } catch (DataAccessException exception) {
             return false;
@@ -665,12 +598,7 @@ public class AdminStorageService {
         String columnsOnly = expression.replaceAll("(?i)\\s+(ASC|DESC)", "")
                 .replaceAll("(?i)\\s+NULLS\\s+(FIRST|LAST)", "");
         for (String column : columnsOnly.split("\\s*,\\s*")) {
-            Long count = jdbcTemplate.queryForObject("""
-                    SELECT COUNT(*)
-                    FROM information_schema.columns
-                    WHERE table_schema = ? AND table_name = ? AND column_name = ?
-                    """, Long.class, schema, table, column);
-            if (count == null || count == 0) {
+            if (adminStorageMapper.countColumn(schema, table, column) == 0) {
                 throw new BusinessException(HttpStatus.BAD_REQUEST, "Unknown compression column: " + column);
             }
         }
@@ -718,12 +646,12 @@ public class AdminStorageService {
         return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 
-    private String sqlLiteral(String value) {
-        return value.replace("'", "''");
-    }
-
     private String tableKey(String schema, String table) {
         return schema + "\u0000" + table;
+    }
+
+    private long valueOrZero(Long value) {
+        return value == null ? 0 : value;
     }
 
     private record TimescaleSupport(String version,

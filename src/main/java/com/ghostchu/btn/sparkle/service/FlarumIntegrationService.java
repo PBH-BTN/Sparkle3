@@ -14,7 +14,6 @@ import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -31,7 +30,6 @@ public class FlarumIntegrationService {
     private final IUserService userService;
     private final IUserSwarmStatisticsService swarmStatisticsService;
     private final AdminConfigService adminConfigService;
-    private final JdbcTemplate jdbcTemplate;
 
     public UserDataResponse findByGithubUid(String githubUid) throws BusinessException {
         String normalizedGithubUid = githubUid == null ? "" : githubUid.trim();
@@ -115,25 +113,15 @@ public class FlarumIntegrationService {
             return new PointsRanking(null, Long.toString(scoreBytes));
         }
 
-        String exclusion = notInClause("id", systemUids.size());
-        List<Object> args = new ArrayList<>();
-        args.add(scoreBytes);
-        args.add(scoreBytes);
-        args.add(user.getId());
-        args.addAll(systemUids);
-
-        Long rank = jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(*) + 1
-                FROM public."user"
-                WHERE (
-                    score_bytes > ?
-                    OR (score_bytes = ? AND id < ?)
-                ) %s
-                """.formatted(exclusion),
-                Long.class,
-                args.toArray()
-        );
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
+                        .and(query -> query.gt("score_bytes", scoreBytes)
+                                .or(nested -> nested.eq("score_bytes", scoreBytes)
+                                        .lt("id", user.getId())));
+        if (!systemUids.isEmpty()) {
+            wrapper.notIn("id", systemUids);
+        }
+        long rank = userService.count(wrapper) + 1;
         return new PointsRanking(rank, Long.toString(scoreBytes));
     }
 
@@ -141,14 +129,4 @@ public class FlarumIntegrationService {
         return Long.toString(value == null ? 0L : value);
     }
 
-    private String notInClause(String column, int size) {
-        if (size == 0) {
-            return "";
-        }
-        return "AND " + column + " NOT IN ("
-                + java.util.stream.IntStream.range(0, size)
-                .mapToObj(ignored -> "?")
-                .collect(java.util.stream.Collectors.joining(", "))
-                + ")";
-    }
 }

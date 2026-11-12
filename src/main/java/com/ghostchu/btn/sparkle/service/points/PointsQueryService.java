@@ -13,9 +13,9 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsOverview;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.mapper.PointsMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -47,7 +47,7 @@ public class PointsQueryService {
             PointCategory.WASTED_UPLOAD
     );
 
-    private final JdbcTemplate jdbcTemplate;
+    private final PointsMapper pointsMapper;
     private final IUserService userService;
     private final AnalyseModuleConfigService moduleConfigService;
     private final PointToggleService pointToggleService;
@@ -67,35 +67,18 @@ public class PointsQueryService {
                 ? 0
                 : user.getScoreBytes();
         Map<PointCategory, Long> categories = loadCategories(userId, pointDay);
-        PointAggregate aggregate = jdbcTemplate.queryForObject(
-                """
-                SELECT
-                    COALESCE(SUM(fixed_points) FILTER (WHERE occurred_at >= ?), 0) AS fixed_today,
-                    COALESCE(SUM(one_time_points) FILTER (WHERE occurred_at >= ?), 0) AS once_today,
-                    COALESCE(SUM(dynamic_points) FILTER (WHERE occurred_at >= ?), 0) AS dynamic_today,
-                    COALESCE(SUM(fixed_points) FILTER (WHERE occurred_at >= ?), 0) AS fixed_24h,
-                    COALESCE(SUM(one_time_points) FILTER (WHERE occurred_at >= ?), 0) AS once_24h,
-                    COALESCE(SUM(dynamic_points) FILTER (WHERE occurred_at >= ?), 0) AS dynamic_24h
-                FROM public.points_ledger
-                WHERE user_id = ?
-                  AND occurred_at >= ?
-                """,
-                (resultSet, rowNum) -> new PointAggregate(
-                        resultSet.getLong("fixed_today"),
-                        resultSet.getLong("once_today"),
-                        resultSet.getLong("dynamic_today"),
-                        resultSet.getLong("fixed_24h"),
-                        resultSet.getLong("once_24h"),
-                        resultSet.getLong("dynamic_24h")
-                ),
-                dayStart,
-                dayStart,
-                dayStart,
-                last24Hours,
-                last24Hours,
-                last24Hours,
+        Map<String, Object> aggregateRow = pointsMapper.selectAggregate(
                 userId,
+                dayStart,
                 last24Hours
+        );
+        PointAggregate aggregate = new PointAggregate(
+                longValue(aggregateRow, "fixed_today"),
+                longValue(aggregateRow, "once_today"),
+                longValue(aggregateRow, "dynamic_today"),
+                longValue(aggregateRow, "fixed_24h"),
+                longValue(aggregateRow, "once_24h"),
+                longValue(aggregateRow, "dynamic_24h")
         );
 
         boolean dynamicEnabled = moduleConfigService.isEnabled("points-dynamic");
@@ -181,66 +164,38 @@ public class PointsQueryService {
     public PointsLogPage logs(long userId, int requestedPage, int requestedSize) {
         int current = Math.max(1, requestedPage);
         int size = Math.min(100, Math.max(1, requestedSize));
-        long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM public.points_ledger WHERE user_id = ?",
-                Long.class,
-                userId
-        );
-        List<PointsLogEntry> entries = jdbcTemplate.query(
-                """
-                SELECT id, occurred_at,
-                       CASE event_type
-                           WHEN 'KEEPALIVE_BATCH' THEN 'KEEPALIVE'
-                           ELSE event_type
-                       END AS event_type,
-                       points, fixed_points,
-                       one_time_points, dynamic_points, manual_points,
-                       details::text AS details
-                FROM public.points_ledger
-                WHERE user_id = ?
-                ORDER BY occurred_at DESC, id DESC
-                LIMIT ? OFFSET ?
-                """,
-                (resultSet, rowNum) -> new PointsLogEntry(
-                        resultSet.getLong("id"),
-                        resultSet.getObject("occurred_at", OffsetDateTime.class),
-                        resultSet.getString("event_type"),
-                        Long.toString(resultSet.getLong("points")),
-                        Long.toString(resultSet.getLong("fixed_points")),
-                        Long.toString(resultSet.getLong("one_time_points")),
-                        Long.toString(resultSet.getLong("dynamic_points")),
-                        Long.toString(resultSet.getLong("manual_points")),
-                        readDetails(resultSet.getString("details"))
-                ),
+        long total = pointsMapper.countLedger(userId);
+        List<PointsLogEntry> entries = pointsMapper.selectLedger(
                 userId,
                 size,
                 (long) (current - 1) * size
-        );
+        ).stream().map(row -> new PointsLogEntry(
+                longValue(row, "id"),
+                (OffsetDateTime) row.get("occurred_at"),
+                String.valueOf(row.get("event_type")),
+                Long.toString(longValue(row, "points")),
+                Long.toString(longValue(row, "fixed_points")),
+                Long.toString(longValue(row, "one_time_points")),
+                Long.toString(longValue(row, "dynamic_points")),
+                Long.toString(longValue(row, "manual_points")),
+                readDetails(String.valueOf(row.get("details")))
+        )).toList();
         long pages = total == 0 ? 0 : (total + size - 1) / size;
         return new PointsLogPage(entries, current, size, total, pages);
     }
 
     private Map<PointCategory, Long> loadCategories(long userId, LocalDate pointDay) {
         Map<PointCategory, Long> result = new EnumMap<>(PointCategory.class);
-        jdbcTemplate.query(
-                """
-                SELECT category, awarded
-                FROM public.point_daily_category
-                WHERE user_id = ? AND point_day = ?
-                """,
-                resultSet -> {
-                    try {
-                        result.put(
-                                PointCategory.valueOf(resultSet.getString("category")),
-                                resultSet.getLong("awarded")
-                        );
-                    } catch (IllegalArgumentException ignored) {
-                        // Ignore categories removed in a newer application version.
-                    }
-                },
-                userId,
-                pointDay
-        );
+        pointsMapper.selectDailyCategories(userId, pointDay).forEach(row -> {
+            try {
+                result.put(
+                        PointCategory.valueOf(String.valueOf(row.get("category"))),
+                        longValue(row, "awarded")
+                );
+            } catch (IllegalArgumentException ignored) {
+                // Ignore categories removed in a newer application version.
+            }
+        });
         return result;
     }
 
@@ -258,6 +213,11 @@ public class PointsQueryService {
         return BigDecimal.valueOf(total)
                 .divide(BigDecimal.valueOf(24), 0, RoundingMode.DOWN)
                 .longValue();
+    }
+
+    private long longValue(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        return value instanceof Number number ? number.longValue() : 0L;
     }
 
     private record PointAggregate(

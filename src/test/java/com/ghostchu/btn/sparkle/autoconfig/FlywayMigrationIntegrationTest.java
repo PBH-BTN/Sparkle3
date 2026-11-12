@@ -155,6 +155,45 @@ class FlywayMigrationIntegrationTest {
 
             try (var result = statement.executeQuery("""
                     SELECT
+                        to_regclass('public.community_groups') IS NOT NULL
+                        AND to_regclass('public.community_group_github_teams') IS NOT NULL
+                        AND to_regclass('public.afdian_bindings') IS NOT NULL
+                        AND to_regclass('public.afdian_donations') IS NOT NULL
+                        AND to_regclass('public.pbh_licenses') IS NOT NULL
+                        AND to_regclass('public.member_platform_configs') IS NOT NULL
+                        AND to_regclass('public.member_platform_bindings') IS NOT NULL
+                        AND to_regclass('public.member_transactions') IS NOT NULL
+                        AND to_regclass('public.currency_exchange_rates') IS NOT NULL
+                        AND to_regclass('public.member_platform_sync_runs') IS NOT NULL
+                        AND to_regclass('public.member_transaction_audit_events') IS NOT NULL
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+
+            try (var result = statement.executeQuery("""
+                    SELECT
+                        COUNT(*) FILTER (
+                            WHERE table_name = 'member_platform_configs'
+                              AND column_name IN ('auth_header', 'auth_scheme')
+                        ) = 2
+                        AND COUNT(*) FILTER (
+                            WHERE table_name = 'member_transactions'
+                              AND column_name IN (
+                                  'remote_present', 'first_seen_at',
+                                  'last_reconciled_at', 'last_sync_run_id',
+                                  'last_changed_at', 'amount_base', 'base_currency'
+                              )
+                        ) = 7
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+
+            try (var result = statement.executeQuery("""
+                    SELECT
                         to_regclass('public.points_ledger') IS NOT NULL
                         AND to_regclass('public.swarm_traffic_delta') IS NOT NULL
                         AND to_regclass('public.swarm_hot_torrent_snapshot') IS NOT NULL

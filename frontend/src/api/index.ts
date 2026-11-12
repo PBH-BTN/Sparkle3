@@ -2,6 +2,7 @@ import { request } from './http'
 import type {
   AccountDeletionReauthenticationResponse,
   AccountDeletionStatus,
+  AfdianBinding,
   Announcement,
   ApplicationCredentials,
   BanHistoryQuery,
@@ -13,15 +14,22 @@ import type {
   ContactEmailResult,
   FilterOptions,
   GithubRegistrationResult,
+  GithubCommunityJoinResult,
+  GithubCommunityStatus,
+  CommunityGroup,
+  FeatureAvailability,
   HomeBittorrentTrafficResponse,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
   HomeStats,
   InboxPage,
+  MemberProviderBinding,
   IpQueryResult,
   NotificationPreferencesResponse,
   NotificationPreference,
   PageResponse,
+  PbhLicense,
+  PbhLicenseAvailability,
   PointsLogPage,
   PointsOverview,
   PointsRankingResponse,
@@ -52,6 +60,7 @@ function postQuery<T>(url: string, body: unknown) {
 
 export const uiApi = {
   session: () => request<SessionResponse>('/api/ui/session'),
+  features: () => request<FeatureAvailability>('/api/ui/features'),
   home: () => request<HomeStats>('/api/ui/home'),
   homeNetworkStatistics: (days: number, source: StatisticsSource) =>
     request<HomeNetworkStatisticsResponse>(
@@ -115,6 +124,48 @@ export const uiApi = {
     request<void>('/api/ui/messages/read-all', { method: 'POST' }),
   deleteMessage: (id: number) =>
     request<void>(`/api/ui/messages/${id}`, { method: 'DELETE' }),
+  communityGroups: () => request<CommunityGroup[]>('/api/ui/community-groups'),
+  communityGroupGithubStatus: (id: number) =>
+    request<GithubCommunityStatus>(`/api/ui/community-groups/${id}/github-status`),
+  joinCommunityGithubGroup: (id: number) =>
+    request<GithubCommunityJoinResult>(`/api/ui/community-groups/${id}/join`, {
+      method: 'POST',
+    }),
+  afdianBinding: () => request<AfdianBinding>('/api/ui/afdian'),
+  bindAfdian: (orderNo: string) =>
+    request<AfdianBinding>('/api/ui/afdian/bind', {
+      method: 'POST',
+      body: JSON.stringify({ orderNo }),
+    }),
+  unbindAfdian: () =>
+    request<void>('/api/ui/afdian', {
+      method: 'DELETE',
+    }),
+  afdianLicenses: () => request<PbhLicenseAvailability>('/api/ui/afdian/licenses'),
+  generateAfdianLicense: () =>
+    request<PbhLicense>('/api/ui/afdian/licenses', {
+      method: 'POST',
+    }),
+  memberPlatforms: () =>
+    request<MemberProviderBinding[]>('/api/ui/memberships'),
+  bindMemberPlatform: (provider: string, proof: string) =>
+    request<MemberProviderBinding>(
+      `/api/ui/memberships/${encodeURIComponent(provider)}/bind`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ proof }),
+      },
+    ),
+  unbindMemberPlatform: (provider: string) =>
+    request<void>(`/api/ui/memberships/${encodeURIComponent(provider)}`, {
+      method: 'DELETE',
+    }),
+  membershipLicenses: () =>
+    request<PbhLicenseAvailability>('/api/ui/memberships/licenses'),
+  generateMembershipLicense: () =>
+    request<PbhLicense>('/api/ui/memberships/licenses', {
+      method: 'POST',
+    }),
   accountDeletionStatus: () =>
     request<AccountDeletionStatus>('/api/ui/account-deletion'),
   beginAccountDeletionReauthentication: () =>

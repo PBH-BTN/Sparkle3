@@ -1,16 +1,17 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.AnnouncementInput;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.AnnouncementView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AnnouncementModels.PublicAnnouncementView;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.entity.Announcement;
+import com.ghostchu.btn.sparkle.mapper.AnnouncementMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -23,42 +24,24 @@ import java.util.Set;
 public class AnnouncementService {
     private static final Set<String> LEVELS = Set.of("GREEN", "YELLOW", "BLUE", "RED");
     private static final Set<String> PLACEMENTS = Set.of("GLOBAL_TOP", "HOME_HERO");
-    private static final RowMapper<AnnouncementView> VIEW_MAPPER = (resultSet, rowNum) ->
-            new AnnouncementView(
-                    resultSet.getLong("id"),
-                    resultSet.getString("level"),
-                    resultSet.getString("placement"),
-                    resultSet.getString("title_zh"),
-                    resultSet.getString("title_en"),
-                    resultSet.getString("content_zh"),
-                    resultSet.getString("content_en"),
-                    resultSet.getBoolean("enabled"),
-                    resultSet.getBoolean("dismissible"),
-                    resultSet.getInt("sort_order"),
-                    resultSet.getObject("starts_at", OffsetDateTime.class),
-                    resultSet.getObject("ends_at", OffsetDateTime.class),
-                    resultSet.getObject("created_at", OffsetDateTime.class),
-                    resultSet.getObject("updated_at", OffsetDateTime.class),
-                    resultSet.getObject("updated_by", Long.class)
-            );
-
-    private final JdbcTemplate jdbcTemplate;
+    private final AnnouncementMapper announcementMapper;
     private final UserMessageService messageService;
 
     public AnnouncementService(
-            JdbcTemplate jdbcTemplate,
+            AnnouncementMapper announcementMapper,
             UserMessageService messageService
     ) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.announcementMapper = announcementMapper;
         this.messageService = messageService;
     }
 
     public @NotNull List<AnnouncementView> listAll() {
-        return jdbcTemplate.query("""
-                SELECT *
-                FROM announcements
-                ORDER BY sort_order DESC, updated_at DESC, id DESC
-                """, VIEW_MAPPER);
+        return announcementMapper.selectList(
+                new QueryWrapper<Announcement>()
+                        .orderByDesc("sort_order")
+                        .orderByDesc("updated_at")
+                        .orderByDesc("id")
+        ).stream().map(this::toView).toList();
     }
 
     public @NotNull List<PublicAnnouncementView> listActive(
@@ -67,28 +50,31 @@ public class AnnouncementService {
         String placement = requestedPlacement == null || requestedPlacement.isBlank()
                 ? "GLOBAL_TOP"
                 : normalizePlacement(requestedPlacement);
-        return jdbcTemplate.query("""
-                SELECT id, level, placement, title_zh, title_en, content_zh, content_en,
-                       dismissible, starts_at, ends_at, updated_at
-                FROM announcements
-                WHERE enabled = TRUE
-                  AND placement = ?
-                  AND (starts_at IS NULL OR starts_at <= now())
-                  AND (ends_at IS NULL OR ends_at > now())
-                ORDER BY sort_order DESC, updated_at DESC, id DESC
-                """, (resultSet, rowNum) -> new PublicAnnouncementView(
-                resultSet.getLong("id"),
-                resultSet.getString("level"),
-                resultSet.getString("placement"),
-                resultSet.getString("title_zh"),
-                resultSet.getString("title_en"),
-                resultSet.getString("content_zh"),
-                resultSet.getString("content_en"),
-                resultSet.getBoolean("dismissible"),
-                resultSet.getObject("starts_at", OffsetDateTime.class),
-                resultSet.getObject("ends_at", OffsetDateTime.class),
-                resultSet.getObject("updated_at", OffsetDateTime.class)
-        ), placement);
+        OffsetDateTime now = OffsetDateTime.now();
+        return announcementMapper.selectList(
+                new QueryWrapper<Announcement>()
+                        .eq("enabled", true)
+                        .eq("placement", placement)
+                        .and(wrapper -> wrapper.isNull("starts_at")
+                                .or().le("starts_at", now))
+                        .and(wrapper -> wrapper.isNull("ends_at")
+                                .or().gt("ends_at", now))
+                        .orderByDesc("sort_order")
+                        .orderByDesc("updated_at")
+                        .orderByDesc("id")
+        ).stream().map(entity -> new PublicAnnouncementView(
+                entity.getId(),
+                entity.getLevel(),
+                entity.getPlacement(),
+                entity.getTitleZh(),
+                entity.getTitleEn(),
+                entity.getContentZh(),
+                entity.getContentEn(),
+                Boolean.TRUE.equals(entity.getDismissible()),
+                entity.getStartsAt(),
+                entity.getEndsAt(),
+                entity.getUpdatedAt()
+        )).toList();
     }
 
     public @NotNull AnnouncementView create(
@@ -96,32 +82,25 @@ public class AnnouncementService {
             @Nullable Long operatorId
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
-        Long id = jdbcTemplate.queryForObject("""
-                INSERT INTO announcements (
-                    level, placement, title_zh, title_en, content_zh, content_en,
-                    enabled, dismissible, sort_order, starts_at, ends_at, updated_by
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id
-                """, Long.class,
-                normalized.level(),
-                normalized.placement(),
-                normalized.titleZh(),
-                normalized.titleEn(),
-                normalized.contentZh(),
-                normalized.contentEn(),
-                normalized.enabled(),
-                normalized.dismissible(),
-                normalized.sortOrder(),
-                normalized.startsAt(),
-                normalized.endsAt(),
-                operatorId
-        );
-        if (id == null) {
+        Announcement entity = new Announcement()
+                .setLevel(normalized.level())
+                .setPlacement(normalized.placement())
+                .setTitleZh(normalized.titleZh())
+                .setTitleEn(normalized.titleEn())
+                .setContentZh(normalized.contentZh())
+                .setContentEn(normalized.contentEn())
+                .setEnabled(normalized.enabled())
+                .setDismissible(normalized.dismissible())
+                .setSortOrder(normalized.sortOrder())
+                .setStartsAt(normalized.startsAt())
+                .setEndsAt(normalized.endsAt())
+                .setUpdatedBy(operatorId);
+        announcementMapper.insert(entity);
+        if (entity.getId() == null) {
             throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Unable to create announcement");
         }
-        AnnouncementView created = require(id);
+        AnnouncementView created = require(entity.getId());
         if (created.enabled()) {
             publishInbox(created);
         }
@@ -135,40 +114,24 @@ public class AnnouncementService {
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
         AnnouncementView existing = require(id);
-        int changed = jdbcTemplate.update("""
-                UPDATE announcements
-                SET level = ?,
-                    placement = ?,
-                    title_zh = ?,
-                    title_en = ?,
-                    content_zh = ?,
-                    content_en = ?,
-                    enabled = ?,
-                    dismissible = ?,
-                    sort_order = ?,
-                    starts_at = ?,
-                    ends_at = ?,
-                    updated_at = now(),
-                    updated_by = ?
-                WHERE id = ?
-                """,
-                normalized.level(),
-                normalized.placement(),
-                normalized.titleZh(),
-                normalized.titleEn(),
-                normalized.contentZh(),
-                normalized.contentEn(),
-                normalized.enabled(),
-                normalized.dismissible(),
-                normalized.sortOrder(),
-                normalized.startsAt(),
-                normalized.endsAt(),
-                operatorId,
-                id
-        );
-        if (changed == 0) {
+        Announcement entity = announcementMapper.selectById(id);
+        if (entity == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
         }
+        entity.setLevel(normalized.level())
+                .setPlacement(normalized.placement())
+                .setTitleZh(normalized.titleZh())
+                .setTitleEn(normalized.titleEn())
+                .setContentZh(normalized.contentZh())
+                .setContentEn(normalized.contentEn())
+                .setEnabled(normalized.enabled())
+                .setDismissible(normalized.dismissible())
+                .setSortOrder(normalized.sortOrder())
+                .setStartsAt(normalized.startsAt())
+                .setEndsAt(normalized.endsAt())
+                .setUpdatedAt(OffsetDateTime.now())
+                .setUpdatedBy(operatorId);
+        announcementMapper.updateById(entity);
         AnnouncementView updated = require(id);
         if (!existing.enabled() && updated.enabled()) {
             publishInbox(updated);
@@ -177,22 +140,38 @@ public class AnnouncementService {
     }
 
     public void delete(long id) throws BusinessException {
-        int changed = jdbcTemplate.update("DELETE FROM announcements WHERE id = ?", id);
+        int changed = announcementMapper.deleteById(id);
         if (changed == 0) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
         }
     }
 
     private AnnouncementView require(long id) throws BusinessException {
-        List<AnnouncementView> values = jdbcTemplate.query(
-                "SELECT * FROM announcements WHERE id = ?",
-                VIEW_MAPPER,
-                id
-        );
-        if (values.isEmpty()) {
+        Announcement value = announcementMapper.selectById(id);
+        if (value == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
         }
-        return values.getFirst();
+        return toView(value);
+    }
+
+    private AnnouncementView toView(Announcement entity) {
+        return new AnnouncementView(
+                entity.getId(),
+                entity.getLevel(),
+                entity.getPlacement(),
+                entity.getTitleZh(),
+                entity.getTitleEn(),
+                entity.getContentZh(),
+                entity.getContentEn(),
+                Boolean.TRUE.equals(entity.getEnabled()),
+                Boolean.TRUE.equals(entity.getDismissible()),
+                entity.getSortOrder() == null ? 0 : entity.getSortOrder(),
+                entity.getStartsAt(),
+                entity.getEndsAt(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
+        );
     }
 
     private AnnouncementInput validate(AnnouncementInput input) throws BusinessException {

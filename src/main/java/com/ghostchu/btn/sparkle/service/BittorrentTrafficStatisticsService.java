@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
@@ -42,7 +41,7 @@ public class BittorrentTrafficStatisticsService {
 
     private final BittorrentTrafficMapper mapper;
     private final BittorrentTrafficSnapshotService snapshotService;
-    private final JdbcTemplate jdbcTemplate;
+    private final BittorrentTrafficMapper trafficMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
@@ -55,13 +54,13 @@ public class BittorrentTrafficStatisticsService {
     public BittorrentTrafficStatisticsService(
             BittorrentTrafficMapper mapper,
             BittorrentTrafficSnapshotService snapshotService,
-            JdbcTemplate jdbcTemplate,
+            BittorrentTrafficMapper trafficMapper,
             @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate,
             ObjectMapper objectMapper
     ) {
         this.mapper = mapper;
         this.snapshotService = snapshotService;
-        this.jdbcTemplate = jdbcTemplate;
+        this.trafficMapper = trafficMapper;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
@@ -308,13 +307,7 @@ public class BittorrentTrafficStatisticsService {
 
     private boolean relationReadable(String relationName) {
         try {
-            Boolean readable = jdbcTemplate.queryForObject(
-                    """
-                    SELECT to_regclass(?) IS NOT NULL
-                       AND has_table_privilege(?, 'SELECT')
-                    """,
-                    Boolean.class,
-                    "public." + relationName,
+            Boolean readable = trafficMapper.relationReadable(
                     "public." + relationName
             );
             return Boolean.TRUE.equals(readable);

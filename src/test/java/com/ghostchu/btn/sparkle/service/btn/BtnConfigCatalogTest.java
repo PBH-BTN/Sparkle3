@@ -105,6 +105,9 @@ class BtnConfigCatalogTest {
                 "sparkle.footer.",
                 "sparkle.user-contact-email.",
                 "sparkle.github-sync.",
+                "sparkle.github-community.",
+                "sparkle.afdian.",
+                "sparkle.memberships.",
                 "sparkle.flarum-integration."
         );
         for (PropertySource<?> source : new YamlPropertySourceLoader().load(

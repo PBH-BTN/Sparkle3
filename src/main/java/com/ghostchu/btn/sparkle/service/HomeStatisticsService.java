@@ -18,7 +18,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -64,7 +63,6 @@ public class HomeStatisticsService {
     private static final long AGGREGATE_ACCESS_CACHE_MILLIS = 60_000L;
 
     private final HomeStatisticsMapper mapper;
-    private final JdbcTemplate jdbcTemplate;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
@@ -74,12 +72,10 @@ public class HomeStatisticsService {
 
     public HomeStatisticsService(
             HomeStatisticsMapper mapper,
-            JdbcTemplate jdbcTemplate,
             @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate,
             ObjectMapper objectMapper
     ) {
         this.mapper = mapper;
-        this.jdbcTemplate = jdbcTemplate;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
@@ -515,18 +511,7 @@ public class HomeStatisticsService {
 
     private boolean loadAggregateAccessibility() {
         try {
-            Boolean available = jdbcTemplate.queryForObject("""
-                    SELECT COUNT(*) = 3
-                    FROM pg_catalog.pg_class relation
-                    JOIN pg_catalog.pg_namespace namespace ON namespace.oid = relation.relnamespace
-                    WHERE namespace.nspname = 'public'
-                      AND relation.relname IN (
-                          'dashboard_ban_daily_peer',
-                          'dashboard_ban_daily_client',
-                          'dashboard_ban_daily_geo'
-                      )
-                      AND has_table_privilege(relation.oid, 'SELECT')
-                    """, Boolean.class);
+            Boolean available = mapper.dashboardAggregatesAvailable();
             boolean enabled = Boolean.TRUE.equals(available);
             if (!enabled) {
                 log.warn("Home statistics aggregates are missing or not readable by the current "

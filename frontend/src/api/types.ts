@@ -381,6 +381,153 @@ export interface UnreadMessageCount {
   count: number
 }
 
+export type CommunityGroupType = 'GITHUB' | 'LINK'
+
+export interface CommunityGroupTeam {
+  slug: string
+  name: string
+}
+
+export interface CommunityGroup {
+  id: number
+  slug: string
+  type: CommunityGroupType
+  titleZh: string
+  titleEn: string
+  descriptionZh: string
+  descriptionEn: string
+  url: string | null
+  githubOrganization: string | null
+  teams: CommunityGroupTeam[]
+  githubLinked: boolean
+  githubLogin: string | null
+  githubConfigured: boolean
+}
+
+export type GithubMembershipStatus =
+  | 'NOT_LINKED'
+  | 'NOT_MEMBER'
+  | 'PENDING'
+  | 'PARTIAL'
+  | 'ACTIVE'
+  | 'UNAVAILABLE'
+  | 'ERROR'
+
+export interface GithubTeamStatus extends CommunityGroupTeam {
+  state: 'ACTIVE' | 'PENDING' | 'NONE' | string
+}
+
+export interface GithubCommunityStatus {
+  groupId: number
+  status: GithubMembershipStatus
+  organizationState: string
+  teams: GithubTeamStatus[]
+  message: string | null
+  checkedAt: string
+}
+
+export interface GithubCommunityJoinResult {
+  status: string
+  message: string
+}
+
+export interface AfdianDonation {
+  outTradeNo: string
+  planId: string | null
+  planTitle: string | null
+  type: 'PRODUCT' | 'DONATION' | string
+  amount: string
+  status: string
+  remotePresent: boolean
+  remark: string | null
+  createdAt: string | null
+}
+
+export interface PbhLicense {
+  licenseId: string
+  sourceType: 'PRODUCT' | 'DONATION' | string
+  sourceOrderNo: string | null
+  planId: string | null
+  consumedAmount: string
+  licenseKey: string
+  issuedAt: string
+  startAt: string
+  expireAt: string
+  revokedAt: string | null
+  revokedReason: string | null
+}
+
+export interface PbhLicenseAvailability {
+  configured: boolean
+  availableProductLicenses: number
+  availableDonationLicenses: number
+  totalAvailable: number
+  donationLicenseAmount: string
+  baseCurrency: string
+  validYears: number
+  licenses: PbhLicense[]
+}
+
+export type MemberPlatformCode =
+  | 'AFDIAN'
+  | 'PATREON'
+  | 'KOFI'
+  | 'MIANBAODUO'
+  | 'LIANDONG'
+
+export interface MemberTransaction {
+  transactionId: string
+  type: 'PRODUCT' | 'DONATION' | string
+  sku: string | null
+  productName: string | null
+  amount: string
+  currency: string
+  amountCny: string
+  amountBase: string
+  baseCurrency: string
+  status: string
+  remotePresent: boolean
+  occurredAt: string | null
+}
+
+export interface MemberProviderBinding {
+  configured: boolean
+  bound: boolean
+  provider: MemberPlatformCode
+  externalUserId: string | null
+  externalUserName: string | null
+  externalUserAvatar: string | null
+  proof: string | null
+  boundAt: string | null
+  lastSyncedAt: string | null
+  lastError: string | null
+  totalCny: string
+  totalBase: string
+  baseCurrency: string
+  donationCount: number
+  productCount: number
+  transactions: MemberTransaction[]
+}
+
+export interface AfdianBinding {
+  configured: boolean
+  bound: boolean
+  afdianUserId: string | null
+  afdianName: string | null
+  afdianAvatar: string | null
+  boundAt: string | null
+  lastSyncedAt: string | null
+  totalAmount: string
+  donationCount: number
+  donations: AfdianDonation[]
+}
+
+export interface FeatureAvailability {
+  afdianConfigured: boolean
+  communityGroupsAvailable: boolean
+  memberPlatformsConfigured: boolean
+}
+
 export interface AccountDeletionStatus {
   state: 'NONE' | 'PENDING' | 'CANCELLED' | 'COMPLETED'
   requestedAt: string | null

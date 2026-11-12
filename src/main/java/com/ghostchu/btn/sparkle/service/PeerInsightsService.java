@@ -5,10 +5,13 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.PeerInsightsModels.PeerTorrent
 import com.ghostchu.btn.sparkle.controller.ui.dto.PeerInsightsModels.PeerVersionCount;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PeerInsightsModels.SwarmPeerInsightsResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.PeerInsightsMapper;
+import com.ghostchu.btn.sparkle.service.dto.HotTorrentRow;
+import com.ghostchu.btn.sparkle.service.dto.PeerVersionSnapshotRow;
+import com.ghostchu.btn.sparkle.service.dto.TorrentPointRow;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +35,7 @@ public class PeerInsightsService {
     private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 3, 7);
     private static final int TOP_TORRENTS = 50;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final PeerInsightsMapper peerInsightsMapper;
     private final AnalyseModuleConfigService moduleConfigService;
 
     @Transactional
@@ -42,30 +45,20 @@ public class PeerInsightsService {
         }
         long startedNanos = System.nanoTime();
         OffsetDateTime capturedAt = OffsetDateTime.now(ZoneOffset.UTC);
-        List<HotTorrent> hotTorrents = jdbcTemplate.query(
-                """
-                SELECT
-                    torrent_id,
-                    COUNT(DISTINCT peer_ip) AS peer_count,
-                    COUNT(DISTINCT peer_ip) FILTER (WHERE family(peer_ip) = 4)
-                        AS ipv4_peer_count,
-                    COUNT(DISTINCT peer_ip) FILTER (WHERE family(peer_ip) = 6)
-                        AS ipv6_peer_count
-                FROM public.swarm_tracker
-                WHERE last_time_seen >= NOW() - INTERVAL '1 hour'
-                  AND last_time_seen <= NOW()
-                GROUP BY torrent_id
-                ORDER BY peer_count DESC, torrent_id ASC
-                LIMIT 50
-                """,
-                (resultSet, rowNum) -> new HotTorrent(
-                        resultSet.getLong("torrent_id"),
-                        resultSet.getLong("peer_count"),
-                        resultSet.getLong("ipv4_peer_count"),
-                        resultSet.getLong("ipv6_peer_count"),
-                        rowNum + 1
-                )
-        );
+        List<HotTorrentRow> hotTorrentRows = peerInsightsMapper.selectHotTorrents();
+        List<HotTorrent> hotTorrents = java.util.stream.IntStream.range(
+                0,
+                hotTorrentRows.size()
+        ).mapToObj(index -> {
+            HotTorrentRow row = hotTorrentRows.get(index);
+            return new HotTorrent(
+                    row.getTorrentId(),
+                    row.getPeerCount(),
+                    row.getIpv4PeerCount(),
+                    row.getIpv6PeerCount(),
+                    index + 1
+            );
+        }).toList();
         long ipv4Peers = hotTorrents.stream()
                 .mapToLong(HotTorrent::ipv4PeerCount)
                 .sum();
@@ -90,37 +83,14 @@ public class PeerInsightsService {
         }
         long startedNanos = System.nanoTime();
         OffsetDateTime capturedAt = OffsetDateTime.now(ZoneOffset.UTC);
-        List<PeerVersionSnapshot> versions = jdbcTemplate.query(
-                """
-                WITH peers AS (
-                    SELECT
-                        peer_ip,
-                        family(peer_ip) AS ip_version,
-                        BOOL_OR(insert_time >= NOW() - INTERVAL '24 hours') AS within_24h,
-                        BOOL_OR(insert_time >= NOW() - INTERVAL '3 days') AS within_3d
-                    FROM public.ban_history
-                    WHERE insert_time >= NOW() - INTERVAL '7 days'
-                    GROUP BY peer_ip
-                )
-                SELECT
-                    ranges.range_hours,
-                    COUNT(*) FILTER (WHERE peers.ip_version = 4) AS ipv4_peers,
-                    COUNT(*) FILTER (WHERE peers.ip_version = 6) AS ipv6_peers
-                FROM peers
-                CROSS JOIN (VALUES (24), (72), (168)) AS ranges(range_hours)
-                WHERE
-                    (ranges.range_hours = 24 AND peers.within_24h)
-                    OR (ranges.range_hours = 72 AND peers.within_3d)
-                    OR ranges.range_hours = 168
-                GROUP BY ranges.range_hours
-                ORDER BY ranges.range_hours
-                """,
-                (resultSet, rowNum) -> new PeerVersionSnapshot(
-                        resultSet.getInt("range_hours"),
-                        resultSet.getLong("ipv4_peers"),
-                        resultSet.getLong("ipv6_peers")
-                )
-        );
+        List<PeerVersionSnapshot> versions = peerInsightsMapper
+                .selectBanVersionSnapshots().stream()
+                .map(row -> new PeerVersionSnapshot(
+                        row.getRangeHours(),
+                        row.getIpv4Peers(),
+                        row.getIpv6Peers()
+                ))
+                .toList();
         insertPeerVersions("BAN", capturedAt, versions);
         log.info("Refreshed ban peer insights in {}ms",
                 Duration.ofNanos(System.nanoTime() - startedNanos).toMillis());
@@ -143,39 +113,14 @@ public class PeerInsightsService {
 
         List<PeerVersionCount> versions = loadLatestPeerVersions("SWARM", 1);
         int bucketHours = days == 1 ? 1 : days == 3 ? 3 : 6;
-        List<TorrentPoint> points = jdbcTemplate.query(
-                """
-                WITH top_torrents AS (
-                    SELECT torrent_id, MAX(peer_count) AS max_peers
-                    FROM public.swarm_hot_torrent_snapshot
-                    WHERE captured_at >= NOW() - (?::integer * INTERVAL '1 day')
-                    GROUP BY torrent_id
-                    ORDER BY max_peers DESC, torrent_id ASC
-                    LIMIT 50
-                ),
-                bucketed AS (
-                    SELECT
-                        time_bucket((?::integer * INTERVAL '1 hour'), s.captured_at) AS bucket,
-                        s.torrent_id,
-                        MAX(s.peer_count) AS peer_count
-                    FROM public.swarm_hot_torrent_snapshot s
-                    INNER JOIN top_torrents t ON t.torrent_id = s.torrent_id
-                    WHERE s.captured_at >= NOW() - (?::integer * INTERVAL '1 day')
-                    GROUP BY bucket, s.torrent_id
-                )
-                SELECT bucket, torrent_id, peer_count
-                FROM bucketed
-                ORDER BY bucket, torrent_id
-                """,
-                (resultSet, rowNum) -> new TorrentPoint(
-                        resultSet.getObject("bucket", OffsetDateTime.class),
-                        resultSet.getLong("torrent_id"),
-                        resultSet.getLong("peer_count")
-                ),
-                days,
-                bucketHours,
-                days
-        );
+        List<TorrentPoint> points = peerInsightsMapper
+                .selectTorrentPoints(days, bucketHours).stream()
+                .map(row -> new TorrentPoint(
+                        row.getBucket(),
+                        row.getTorrentId(),
+                        row.getPeerCount()
+                ))
+                .toList();
         return buildSwarmResponse(days, versions, points);
     }
 
@@ -199,24 +144,13 @@ public class PeerInsightsService {
         if (versions.isEmpty()) {
             return;
         }
-        List<Object[]> rows = versions.stream()
-                .map(version -> new Object[]{
-                        capturedAt,
-                        dataset,
-                        version.rangeHours(),
-                        version.ipv4Peers(),
-                        version.ipv6Peers()
-                })
-                .toList();
-        jdbcTemplate.batchUpdate(
-                """
-                INSERT INTO public.peer_version_snapshot (
-                    captured_at, dataset, range_hours, ipv4_peers, ipv6_peers
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                rows
-        );
+        versions.forEach(version -> peerInsightsMapper.insertPeerVersion(
+                capturedAt,
+                dataset,
+                version.rangeHours(),
+                version.ipv4Peers(),
+                version.ipv6Peers()
+        ));
     }
 
     private void insertHotTorrents(
@@ -226,44 +160,27 @@ public class PeerInsightsService {
         if (torrents.isEmpty()) {
             return;
         }
-        List<Object[]> rows = torrents.stream()
-                .map(torrent -> new Object[]{
-                        capturedAt,
-                        torrent.torrentId(),
-                        torrent.peerCount(),
-                        torrent.ipv4PeerCount(),
-                        torrent.ipv6PeerCount(),
-                        torrent.rank()
-                })
-                .toList();
-        jdbcTemplate.batchUpdate(
-                """
-                INSERT INTO public.swarm_hot_torrent_snapshot (
-                    captured_at, torrent_id, peer_count,
-                    ipv4_peer_count, ipv6_peer_count, rank
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                rows
-        );
+        torrents.forEach(torrent -> peerInsightsMapper.insertHotTorrent(
+                capturedAt,
+                torrent.torrentId(),
+                torrent.peerCount(),
+                torrent.ipv4PeerCount(),
+                torrent.ipv6PeerCount(),
+                torrent.rank()
+        ));
     }
 
     private List<PeerVersionCount> loadLatestPeerVersions(String dataset, int rangeHours) {
-        return jdbcTemplate.query(
-                """
-                SELECT ipv4_peers, ipv6_peers
-                FROM public.peer_version_snapshot
-                WHERE dataset = ? AND range_hours = ?
-                ORDER BY captured_at DESC
-                LIMIT 1
-                """,
-                (resultSet, rowNum) -> List.of(
-                        new PeerVersionCount("IPv4", resultSet.getLong("ipv4_peers")),
-                        new PeerVersionCount("IPv6", resultSet.getLong("ipv6_peers"))
-                ),
+        PeerVersionSnapshotRow row = peerInsightsMapper.selectLatestPeerVersions(
                 dataset,
                 rangeHours
-        ).stream().findFirst().orElse(List.of());
+        );
+        return row == null
+                ? List.of()
+                : List.of(
+                        new PeerVersionCount("IPv4", row.getIpv4Peers()),
+                        new PeerVersionCount("IPv6", row.getIpv6Peers())
+                );
     }
 
     private SwarmPeerInsightsResponse buildSwarmResponse(

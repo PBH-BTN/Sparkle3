@@ -3,12 +3,13 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.NavigationItemInput;
 import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.NavigationItemView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.PublicNavigationItem;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.ghostchu.btn.sparkle.entity.NavigationItem;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.NavigationItemMapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -28,30 +29,14 @@ public class NavigationService {
             "home", "apps", "ban", "search", "swarm", "ranking",
             "rules", "link", "file", "dashboard"
     );
-    private static final RowMapper<NavigationItemView> ROW_MAPPER = (resultSet, rowNum) ->
-            new NavigationItemView(
-                    resultSet.getString("id"),
-                    resultSet.getBoolean("built_in"),
-                    resultSet.getString("label_zh"),
-                    resultSet.getString("label_en"),
-                    resultSet.getString("href"),
-                    resultSet.getString("icon"),
-                    resultSet.getInt("sort_order"),
-                    resultSet.getBoolean("enabled"),
-                    resultSet.getBoolean("open_in_new_tab"),
-                    resultSet.getObject("created_at", java.time.OffsetDateTime.class),
-                    resultSet.getObject("updated_at", java.time.OffsetDateTime.class),
-                    resultSet.getObject("updated_by", Long.class)
-            );
-
-    private final JdbcTemplate jdbcTemplate;
+    private final NavigationItemMapper navigationMapper;
     private final AdminConfigService adminConfigService;
     private volatile List<NavigationItemView> cached;
     private volatile long cacheExpiresAt;
     private volatile boolean defaultsReady;
 
-    public NavigationService(JdbcTemplate jdbcTemplate, AdminConfigService adminConfigService) {
-        this.jdbcTemplate = jdbcTemplate;
+    public NavigationService(NavigationItemMapper navigationMapper, AdminConfigService adminConfigService) {
+        this.navigationMapper = navigationMapper;
         this.adminConfigService = adminConfigService;
     }
 
@@ -82,23 +67,17 @@ public class NavigationService {
         NavigationItemInput normalized = validate(input);
         ensureDefaults();
         String id = "custom-" + UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO navigation_items (
-                    id, built_in, label_zh, label_en, href, icon,
-                    sort_order, enabled, open_in_new_tab, updated_by
-                )
-                VALUES (?, FALSE, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                id,
-                normalized.labelZh(),
-                normalized.labelEn(),
-                normalized.href(),
-                normalized.icon(),
-                normalized.sortOrder(),
-                normalized.enabled(),
-                normalized.openInNewTab(),
-                operatorId
-        );
+        navigationMapper.insert(new NavigationItem()
+                .setId(id)
+                .setBuiltIn(false)
+                .setLabelZh(normalized.labelZh())
+                .setLabelEn(normalized.labelEn())
+                .setHref(normalized.href())
+                .setIcon(normalized.icon())
+                .setSortOrder(normalized.sortOrder())
+                .setEnabled(normalized.enabled())
+                .setOpenInNewTab(normalized.openInNewTab())
+                .setUpdatedBy(operatorId));
         invalidateCache();
         return require(id);
     }
@@ -111,32 +90,20 @@ public class NavigationService {
         NavigationItemView existing = require(id);
         NavigationItemInput normalized = validate(input);
         String href = existing.builtIn() ? existing.href() : normalized.href();
-        int changed = jdbcTemplate.update("""
-                UPDATE navigation_items
-                SET label_zh = ?,
-                    label_en = ?,
-                    href = ?,
-                    icon = ?,
-                    sort_order = ?,
-                    enabled = ?,
-                    open_in_new_tab = ?,
-                    updated_at = now(),
-                    updated_by = ?
-                WHERE id = ?
-                """,
-                normalized.labelZh(),
-                normalized.labelEn(),
-                href,
-                normalized.icon(),
-                normalized.sortOrder(),
-                normalized.enabled(),
-                normalized.openInNewTab(),
-                operatorId,
-                id
-        );
-        if (changed == 0) {
+        NavigationItem entity = navigationMapper.selectById(id);
+        if (entity == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Navigation item not found");
         }
+        entity.setLabelZh(normalized.labelZh())
+                .setLabelEn(normalized.labelEn())
+                .setHref(href)
+                .setIcon(normalized.icon())
+                .setSortOrder(normalized.sortOrder())
+                .setEnabled(normalized.enabled())
+                .setOpenInNewTab(normalized.openInNewTab())
+                .setUpdatedAt(java.time.OffsetDateTime.now())
+                .setUpdatedBy(operatorId);
+        navigationMapper.updateById(entity);
         invalidateCache();
         return require(id);
     }
@@ -147,7 +114,7 @@ public class NavigationService {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Built-in navigation items cannot be deleted");
         }
-        jdbcTemplate.update("DELETE FROM navigation_items WHERE id = ?", id);
+        navigationMapper.deleteById(id);
         invalidateCache();
     }
 
@@ -161,11 +128,12 @@ public class NavigationService {
                 return cached;
             }
             ensureDefaults();
-            cached = jdbcTemplate.query("""
-                    SELECT *
-                    FROM navigation_items
-                    ORDER BY sort_order, created_at, id
-                    """, ROW_MAPPER);
+            cached = navigationMapper.selectList(
+                    new QueryWrapper<NavigationItem>()
+                            .orderByAsc("sort_order")
+                            .orderByAsc("created_at")
+                            .orderByAsc("id")
+            ).stream().map(this::toView).toList();
             cacheExpiresAt = now + CACHE_TTL.toMillis();
             return cached;
         }
@@ -173,15 +141,11 @@ public class NavigationService {
 
     private NavigationItemView require(String id) throws BusinessException {
         ensureDefaults();
-        List<NavigationItemView> items = jdbcTemplate.query(
-                "SELECT * FROM navigation_items WHERE id = ?",
-                ROW_MAPPER,
-                id
-        );
-        if (items.isEmpty()) {
+        NavigationItem item = navigationMapper.selectById(id);
+        if (item == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Navigation item not found");
         }
-        return items.getFirst();
+        return toView(item);
     }
 
     private NavigationItemInput validate(NavigationItemInput input) throws BusinessException {
@@ -266,21 +230,18 @@ public class NavigationService {
                 defaultItem("排行榜", "Ranking", "/ranking/swarmStatistics", "ranking", 60));
         for (Map.Entry<String, NavigationItemInput> entry : defaults.entrySet()) {
             NavigationItemInput item = entry.getValue();
-            jdbcTemplate.update("""
-                    INSERT INTO navigation_items (
-                        id, built_in, label_zh, label_en, href, icon,
-                        sort_order, enabled, open_in_new_tab
-                    )
-                    VALUES (?, TRUE, ?, ?, ?, ?, ?, TRUE, FALSE)
-                    ON CONFLICT (id) DO NOTHING
-                    """,
-                    entry.getKey(),
-                    item.labelZh(),
-                    item.labelEn(),
-                    item.href(),
-                    item.icon(),
-                    item.sortOrder()
-            );
+            if (navigationMapper.selectById(entry.getKey()) == null) {
+                navigationMapper.insert(new NavigationItem()
+                        .setId(entry.getKey())
+                        .setBuiltIn(true)
+                        .setLabelZh(item.labelZh())
+                        .setLabelEn(item.labelEn())
+                        .setHref(item.href())
+                        .setIcon(item.icon())
+                        .setSortOrder(item.sortOrder())
+                        .setEnabled(true)
+                        .setOpenInNewTab(false));
+            }
         }
     }
 
@@ -305,5 +266,22 @@ public class NavigationService {
     private void invalidateCache() {
         cached = null;
         cacheExpiresAt = 0;
+    }
+
+    private NavigationItemView toView(NavigationItem item) {
+        return new NavigationItemView(
+                item.getId(),
+                Boolean.TRUE.equals(item.getBuiltIn()),
+                item.getLabelZh(),
+                item.getLabelEn(),
+                item.getHref(),
+                item.getIcon(),
+                item.getSortOrder() == null ? 0 : item.getSortOrder(),
+                Boolean.TRUE.equals(item.getEnabled()),
+                Boolean.TRUE.equals(item.getOpenInNewTab()),
+                item.getCreatedAt(),
+                item.getUpdatedAt(),
+                item.getUpdatedBy()
+        );
     }
 }

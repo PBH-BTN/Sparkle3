@@ -3,6 +3,8 @@ import type {
   Announcement,
   AnnouncementInput,
   AnalyseModule,
+  AfdianSettings,
+  AfdianSyncResult,
   AnalyseModuleRunResult,
   AnalyseModuleUpdate,
   AdminNavigationItem,
@@ -22,6 +24,10 @@ import type {
   BtnConfigView,
   CompressionPolicyInput,
   ConfigMigrationResult,
+  CommunityGroupAdmin,
+  CommunityGroupInput,
+  CommunityGroupsSettings,
+  CommunityGithubTeamValidationResult,
   DatabaseConfigEntry,
   DatabaseConfigSummary,
   HomepageStatisticsAdminResponse,
@@ -36,6 +42,10 @@ import type {
   GithubSyncTargetRunResult,
   GithubSyncUpdateSettings,
   ManualRule,
+  MemberPlatformConfig,
+  MemberPlatformSettings,
+  MemberReconciliation,
+  MemberTransactionPage,
   NavigationItemInput,
   RetentionPolicyInput,
   RuleInput,
@@ -366,4 +376,134 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  communityGroups: () =>
+    request<CommunityGroupsSettings>('/api/admin/community-groups'),
+  updateCommunityGroupSettings: (body: {
+    personalAccessToken?: string
+    clearToken?: boolean
+    apiBaseUrl: string
+  }) =>
+    request<CommunityGroupsSettings>('/api/admin/community-groups/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  createCommunityGroup: (body: CommunityGroupInput) =>
+    request<CommunityGroupAdmin>('/api/admin/community-groups', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateCommunityGroup: (id: number, body: CommunityGroupInput) =>
+    request<CommunityGroupAdmin>(`/api/admin/community-groups/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteCommunityGroup: (id: number) =>
+    request<void>(`/api/admin/community-groups/${id}`, {
+      method: 'DELETE',
+    }),
+  validateCommunityGithubTeams: (organization: string, teamSlugs: string[]) =>
+    request<CommunityGithubTeamValidationResult>(
+      '/api/admin/community-groups/validate-teams',
+      {
+        method: 'POST',
+        body: JSON.stringify({ organization, teamSlugs }),
+      },
+    ),
+  afdianSettings: () => request<AfdianSettings>('/api/admin/afdian'),
+  updateAfdianSettings: (body: {
+    userId: string
+    accessToken?: string
+    clearToken?: boolean
+    apiBaseUrl: string
+    syncEnabled: boolean
+    licensePlanIds: string
+    licenseDonationAmount: string
+    licenseValidYears: number
+    licensePrivateKey?: string
+    clearLicensePrivateKey?: boolean
+  }) =>
+    request<AfdianSettings>('/api/admin/afdian/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  syncAfdian: () =>
+    request<AfdianSyncResult>('/api/admin/afdian/sync', {
+      method: 'POST',
+    }),
+  memberPlatformSettings: () =>
+    request<MemberPlatformSettings>('/api/admin/memberships'),
+  updateMemberPlatform: (
+    provider: string,
+    body: {
+      enabled: boolean
+      apiUrl: string
+      accountId: string
+      accessToken?: string
+      clearAccessToken?: boolean
+      authHeader: string
+      authScheme: string
+      webhookToken?: string
+      clearWebhookToken?: boolean
+      currency: string
+      exchangeRate: string
+    },
+  ) =>
+    request<MemberPlatformConfig>(`/api/admin/memberships/${provider}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  updateMembershipCurrency: (body: {
+    baseCurrency: string
+    exchangeRateApiUrl: string
+  }) =>
+    request<{
+      baseCurrency: string
+      exchangeRateApiUrl: string
+      recalculatedTransactions: number
+    }>(
+      '/api/admin/memberships/currency',
+      {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      },
+    ),
+  syncMemberPlatforms: () =>
+    request<{ synchronizedProviders: number }>('/api/admin/memberships/sync', {
+      method: 'POST',
+    }),
+  memberPlatformTransactions: (params: {
+    provider?: string
+    keyword?: string
+    type?: string
+    status?: string
+    remotePresent?: boolean
+    occurredFrom?: string
+    occurredTo?: string
+    page?: number
+    size?: number
+  }) => {
+    const search = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, String(value))
+      }
+    })
+    return request<MemberTransactionPage>(
+      `/api/admin/memberships/transactions?${search.toString()}`,
+    )
+  },
+  memberPlatformReconciliation: (params: {
+    provider?: string
+    limit?: number
+  }) => {
+    const search = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, String(value))
+      }
+    })
+    return request<MemberReconciliation>(
+      `/api/admin/memberships/reconciliation?${search.toString()}`,
+    )
+  },
 }

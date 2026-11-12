@@ -82,6 +82,21 @@ const router = createRouter({
           name: 'notification-settings',
           component: () => import('@/views/NotificationSettingsView.vue'),
         },
+        {
+          path: 'community-groups',
+          name: 'community-group-settings',
+          component: () => import('@/views/CommunityGroupsView.vue'),
+        },
+        {
+          path: 'afdian',
+          name: 'afdian-settings',
+          component: () => import('@/views/AfdianSettingsView.vue'),
+        },
+        {
+          path: 'memberships',
+          name: 'membership-settings',
+          component: () => import('@/views/MembershipPlatformsView.vue'),
+        },
       ],
     },
     {
@@ -180,6 +195,21 @@ const router = createRouter({
           path: 'messages',
           name: 'admin-messages',
           component: () => import('@/views/admin/AdminMessagesView.vue'),
+        },
+        {
+          path: 'community-groups',
+          name: 'admin-community-groups',
+          component: () => import('@/views/admin/AdminCommunityGroupsView.vue'),
+        },
+        {
+          path: 'afdian',
+          name: 'admin-afdian',
+          component: () => import('@/views/admin/AdminAfdianView.vue'),
+        },
+        {
+          path: 'memberships',
+          name: 'admin-memberships',
+          component: () => import('@/views/admin/AdminMembershipsView.vue'),
         },
         {
           path: 'navigation',

@@ -30,7 +30,10 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http.csrf(csrf -> csrf
                         .spa()
-                        .ignoringRequestMatchers("/ping/**"))
+                        .ignoringRequestMatchers(
+                                "/ping/**",
+                                "/api/integrations/memberships/**"
+                        ))
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
                                 .requestMatchers("/error").permitAll()
@@ -48,6 +51,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/ui/footer").permitAll()
                                 .requestMatchers("/api/ui/notices").permitAll()
                                 .requestMatchers("/api/integrations/flarum/**").permitAll()
+                                .requestMatchers("/api/integrations/memberships/**").permitAll()
                                 .requestMatchers("/admin", "/admin/**")
                                 .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
                                 .requestMatchers("/api/admin/**")

@@ -2,9 +2,9 @@ package com.ghostchu.btn.sparkle.service.points;
 
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
+import com.ghostchu.btn.sparkle.mapper.PointsDynamicMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -23,7 +23,7 @@ public class PointsDynamicService {
     private static final String JOB_ID = "points-dynamic-hourly";
     private static final int MAX_BACKFILL_HOURS = 1;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final PointsDynamicMapper pointsDynamicMapper;
     private final PointsService pointsService;
     private final AnalyseModuleConfigService moduleConfigService;
     private final PointToggleService pointToggleService;
@@ -109,79 +109,32 @@ public class PointsDynamicService {
             return;
         }
         long torrentSizeGib = pointRulesService.dynamicTorrentSizeGib();
-        jdbcTemplate.query(
-                """
-                WITH traffic AS (
-                    SELECT
-                        time_bucket(INTERVAL '1 hour', occurred_at) AS bucket,
-                        user_id,
-                        torrent_id,
-                        MAX(GREATEST(torrent_size, 0)) AS torrent_size,
-                        SUM(GREATEST(upload_bytes, 0)) AS upload_bytes,
-                        SUM(GREATEST(download_bytes, 0)) AS download_bytes
-                    FROM public.swarm_traffic_delta
-                    WHERE occurred_at >= ? AND occurred_at < ?
-                    GROUP BY bucket, user_id, torrent_id
-                ),
-                scored AS (
-                    SELECT
-                        bucket,
-                        user_id,
-                        SUM(FLOOR(
-                            ?::numeric
-                            * upload_bytes
-                            * torrent_size
-                            / (
-                                ?::numeric * 1024 * 1024
-                                * ?::numeric * 1024 * 1024 * 1024
-                            )
-                        ))::bigint AS upload_points,
-                        SUM(FLOOR(
-                            ?::numeric
-                            * download_bytes
-                            * torrent_size
-                            / (
-                                ?::numeric * 1024 * 1024
-                                * ?::numeric * 1024 * 1024 * 1024
-                            )
-                        ))::bigint AS download_points
-                    FROM traffic
-                    GROUP BY bucket, user_id
-                )
-                SELECT bucket, user_id, upload_points, download_points
-                FROM scored
-                WHERE upload_points > 0 OR download_points > 0
-                """,
-                resultSet -> {
-                    while (resultSet.next()) {
-                        EventKey key = new EventKey(
-                                resultSet.getObject("bucket", OffsetDateTime.class),
-                                resultSet.getLong("user_id")
-                        );
-                        DynamicEvent event = events.computeIfAbsent(
-                                key,
-                                ignored -> new DynamicEvent(key.bucket(), key.userId())
-                        );
-                        long uploadPoints = resultSet.getLong("upload_points");
-                        long downloadPoints = resultSet.getLong("download_points");
-                        if (uploadEnabled && uploadPoints > 0) {
-                            event.add(PointCategory.DYNAMIC_SEED_UPLOAD, uploadPoints);
-                        }
-                        if (downloadEnabled && downloadPoints > 0) {
-                            event.add(PointCategory.DYNAMIC_DOWNLOAD, downloadPoints);
-                        }
-                    }
-                    return null;
-                },
+        pointsDynamicMapper.selectTrafficEvents(
                 startAt,
                 endAt,
                 pointRulesService.points(PointCategory.DYNAMIC_SEED_UPLOAD),
                 pointRulesService.dynamicSeedUploadMib(),
-                torrentSizeGib,
                 pointRulesService.points(PointCategory.DYNAMIC_DOWNLOAD),
                 pointRulesService.dynamicDownloadMib(),
                 torrentSizeGib
-        );
+        ).forEach(row -> {
+            EventKey key = new EventKey(
+                    (OffsetDateTime) row.get("bucket"),
+                    ((Number) row.get("user_id")).longValue()
+            );
+            DynamicEvent event = events.computeIfAbsent(
+                    key,
+                    ignored -> new DynamicEvent(key.bucket(), key.userId())
+            );
+            long uploadPoints = ((Number) row.get("upload_points")).longValue();
+            long downloadPoints = ((Number) row.get("download_points")).longValue();
+            if (uploadEnabled && uploadPoints > 0) {
+                event.add(PointCategory.DYNAMIC_SEED_UPLOAD, uploadPoints);
+            }
+            if (downloadEnabled && downloadPoints > 0) {
+                event.add(PointCategory.DYNAMIC_DOWNLOAD, downloadPoints);
+            }
+        });
     }
 
     private void loadHotPeerEvents(
@@ -194,122 +147,33 @@ public class PointsDynamicService {
         }
         int hotPeerTop = pointRulesService.dynamicHotPeerTop();
         long hotPeerPoints = pointRulesService.points(PointCategory.DYNAMIC_HOT_PEER);
-        jdbcTemplate.query(
-                """
-                WITH active AS (
-                    SELECT
-                        time_bucket(INTERVAL '1 hour', s.last_time_seen) AS bucket,
-                        s.torrent_id,
-                        s.userapps_id,
-                        s.peer_ip,
-                        s.peer_port,
-                        s.peer_id,
-                        u.owner AS user_id
-                    FROM public.swarm_tracker s
-                    INNER JOIN public.userapp u ON u.id = s.userapps_id
-                    WHERE s.last_time_seen >= ? AND s.last_time_seen < ?
-                ),
-                torrent_counts AS (
-                    SELECT
-                        bucket,
-                        torrent_id,
-                        COUNT(DISTINCT peer_ip) AS unique_peers
-                    FROM active
-                    GROUP BY bucket, torrent_id
-                ),
-                top_torrents AS (
-                    SELECT bucket, torrent_id, unique_peers
-                    FROM (
-                        SELECT
-                            bucket,
-                            torrent_id,
-                            unique_peers,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY bucket
-                                ORDER BY unique_peers DESC, torrent_id ASC
-                            ) AS rank
-                        FROM torrent_counts
-                    ) ranked
-                    WHERE rank <= ?
-                ),
-                user_peers AS (
-                    SELECT
-                        bucket,
-                        user_id,
-                        torrent_id,
-                        COUNT(DISTINCT COALESCE(
-                            NULLIF(peer_id, ''),
-                            host(peer_ip) || ':' || peer_port
-                        )) AS peer_count
-                    FROM active
-                    GROUP BY bucket, user_id, torrent_id
-                )
-                SELECT
-                    user_peers.bucket,
-                    user_peers.user_id,
-                    SUM(user_peers.peer_count * ?::bigint)::bigint AS points
-                FROM user_peers
-                INNER JOIN top_torrents
-                    ON top_torrents.bucket = user_peers.bucket
-                   AND top_torrents.torrent_id = user_peers.torrent_id
-                GROUP BY user_peers.bucket, user_peers.user_id
-                HAVING SUM(user_peers.peer_count * ?::bigint) > 0
-                """,
-                resultSet -> {
-                    while (resultSet.next()) {
-                        EventKey key = new EventKey(
-                                resultSet.getObject("bucket", OffsetDateTime.class),
-                                resultSet.getLong("user_id")
-                        );
-                        DynamicEvent event = events.computeIfAbsent(
-                                key,
-                                ignored -> new DynamicEvent(key.bucket(), key.userId())
-                        );
-                        event.add(
-                                PointCategory.DYNAMIC_HOT_PEER,
-                                resultSet.getLong("points")
-                        );
-                    }
-                    return null;
-                },
+        pointsDynamicMapper.selectHotPeerEvents(
                 startAt,
                 endAt,
                 hotPeerTop,
-                hotPeerPoints,
                 hotPeerPoints
-        );
+        ).forEach(row -> {
+            EventKey key = new EventKey(
+                    (OffsetDateTime) row.get("bucket"),
+                    ((Number) row.get("user_id")).longValue()
+            );
+            DynamicEvent event = events.computeIfAbsent(
+                    key,
+                    ignored -> new DynamicEvent(key.bucket(), key.userId())
+            );
+            event.add(
+                    PointCategory.DYNAMIC_HOT_PEER,
+                    ((Number) row.get("points")).longValue()
+            );
+        });
     }
 
     private Optional<OffsetDateTime> loadLastSuccess() {
-        var values = jdbcTemplate.query(
-                """
-                SELECT last_success_at
-                FROM public.point_job_state
-                WHERE job_id = ?
-                """,
-                (resultSet, rowNum) -> resultSet.getObject(
-                        "last_success_at",
-                        OffsetDateTime.class
-                ),
-                JOB_ID
-        );
-        return values.isEmpty()
-                ? Optional.empty()
-                : Optional.of(values.getFirst());
+        return Optional.ofNullable(pointsDynamicMapper.selectLastSuccess(JOB_ID));
     }
 
     private void updateLastSuccess(OffsetDateTime endAt) {
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.point_job_state (job_id, last_success_at, updated_at)
-                VALUES (?, ?, NOW())
-                ON CONFLICT (job_id) DO UPDATE
-                SET last_success_at = EXCLUDED.last_success_at,
-                    updated_at = NOW()
-                """,
-                JOB_ID,
-                endAt
-        );
+        pointsDynamicMapper.updateLastSuccess(JOB_ID, endAt);
     }
 
     public void resetCursor() {

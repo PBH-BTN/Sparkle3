@@ -11,10 +11,12 @@ import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +34,6 @@ public class RankingApiController {
     private final IUserService userService;
     private final IUserSwarmStatisticsService userSwarmStatisticsService;
     private final AdminConfigService adminConfigService;
-    private final JdbcTemplate jdbcTemplate;
     private final UserPrivacyService privacyService;
 
     @GetMapping
@@ -92,25 +93,23 @@ public class RankingApiController {
             @AuthenticationPrincipal SparkleUserDetails userDetails
     ) {
         List<Long> systemUids = userService.getSystemUids();
-        String exclusion = notInClause("u.id", systemUids.size());
-        Object[] exclusionArgs = systemUids.toArray();
-        List<PointsRankRow> ranked = jdbcTemplate.query(
-                """
-                SELECT u.id, ROW_NUMBER() OVER (
-                    ORDER BY u.score_bytes DESC, u.id ASC
-                ) AS ranking
-                FROM public."user" u
-                LEFT JOIN public.user_privacy_settings ps ON ps.user_id = u.id
-                WHERE COALESCE(ps.points_visibility, 'SHOW') = 'SHOW' %s
-                ORDER BY u.score_bytes DESC, u.id ASC
-                LIMIT 500
-                """.formatted(exclusion),
-                (resultSet, rowNum) -> new PointsRankRow(
-                        resultSet.getLong("id"),
-                        resultSet.getLong("ranking")
-                ),
-                exclusionArgs
-        );
+        QueryWrapper<User> rankingQuery = new QueryWrapper<User>()
+                .orderByDesc("score_bytes")
+                .orderByAsc("id");
+        if (!systemUids.isEmpty()) {
+            rankingQuery.notIn("id", systemUids);
+        }
+        List<User> rankedUsers = userService.page(
+                new Page<>(1, 500),
+                rankingQuery
+        ).getRecords();
+        List<PointsRankRow> ranked = java.util.stream.IntStream.range(
+                0,
+                rankedUsers.size()
+        ).mapToObj(index -> new PointsRankRow(
+                rankedUsers.get(index).getId(),
+                index + 1L
+        )).toList();
         List<Long> userIds = ranked.stream().map(PointsRankRow::userId).toList();
         Map<Long, com.ghostchu.btn.sparkle.entity.User> users = new HashMap<>();
         if (!userIds.isEmpty()) {
@@ -137,28 +136,16 @@ public class RankingApiController {
             var user = userService.getById(userDetails.getUserId());
             if (user != null && privacyService.get(user.getId()).showsPoints()) {
                 long score = value(user.getScoreBytes());
-                String selfExclusion = notInClause("u.id", systemUids.size());
-                List<Object> args = new ArrayList<>();
-                args.add(score);
-                args.add(score);
-                args.add(user.getId());
-                args.addAll(systemUids);
-                Long rank = jdbcTemplate.queryForObject(
-                        """
-                        SELECT COUNT(*) + 1
-                        FROM public."user" u
-                        LEFT JOIN public.user_privacy_settings ps ON ps.user_id = u.id
-                        WHERE (
-                            u.score_bytes > ?
-                            OR (u.score_bytes = ? AND u.id < ?)
-                        )
-                          AND COALESCE(ps.points_visibility, 'SHOW') = 'SHOW' %s
-                        """.formatted(selfExclusion),
-                        Long.class,
-                        args.toArray()
-                );
+                QueryWrapper<User> rankQuery = new QueryWrapper<User>()
+                        .and(query -> query.gt("score_bytes", score)
+                                .or(nested -> nested.eq("score_bytes", score)
+                                        .lt("id", user.getId())));
+                if (!systemUids.isEmpty()) {
+                    rankQuery.notIn("id", systemUids);
+                }
+                long rank = userService.count(rankQuery) + 1;
                 self = new PointsRankingEntry(
-                        rank == null ? 0 : rank,
+                        rank,
                         user.getId(),
                         null,
                         false,

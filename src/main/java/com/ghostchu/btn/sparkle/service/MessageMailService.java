@@ -1,10 +1,14 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.UserMessage;
+import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -17,31 +21,30 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class MessageMailService {
-    private final JdbcTemplate jdbcTemplate;
+    private final UserMessageMapper messageMapper;
+    private final IUserService userService;
     private final JavaMailSender mailSender;
     private final BtnRuntimeConfigService btnConfigService;
 
     public void deliverDispatch(UUID dispatchId) {
-        List<MailRow> rows = jdbcTemplate.query("""
-                SELECT m.id, m.sender_kind, m.sender_display_name, m.subject, m.content,
-                       u.email AS recipient_email, u.nickname AS recipient_nickname
-                FROM user_messages m
-                JOIN "user" u ON u.id = m.recipient_user_id
-                WHERE m.dispatch_id = ?
-                  AND m.email_requested = TRUE
-                  AND m.email_status = 'PENDING'
-                ORDER BY m.id
-                """, (resultSet, rowNum) -> new MailRow(
-                resultSet.getLong("id"),
-                resultSet.getString("sender_kind"),
-                resultSet.getString("sender_display_name"),
-                resultSet.getString("subject"),
-                resultSet.getString("content"),
-                resultSet.getString("recipient_email"),
-                resultSet.getString("recipient_nickname")
-        ), dispatchId);
-        for (MailRow row : rows) {
-            deliver(row);
+        List<UserMessage> messages = messageMapper.selectList(
+                new QueryWrapper<UserMessage>()
+                        .eq("dispatch_id", dispatchId)
+                        .eq("email_requested", true)
+                        .eq("email_status", "PENDING")
+                        .orderByAsc("id")
+        );
+        for (UserMessage message : messages) {
+            User recipient = userService.getById(message.getRecipientUserId());
+            deliver(new MailRow(
+                    message.getId(),
+                    message.getSenderKind(),
+                    message.getSenderDisplayName(),
+                    message.getSubject(),
+                    message.getContent(),
+                    recipient == null ? null : recipient.getEmail(),
+                    recipient == null ? null : recipient.getNickname()
+            ));
         }
     }
 
@@ -106,14 +109,16 @@ public class MessageMailService {
     }
 
     private void mark(long id, String status, String error, boolean sentAt) {
-        jdbcTemplate.update("""
-                UPDATE user_messages
-                SET email_status = ?,
-                    email_error = ?,
-                    email_sent_at = CASE WHEN ? THEN now() ELSE email_sent_at END
-                WHERE id = ?
-                  AND email_status = 'PENDING'
-                """, status, truncate(error, 2_000), sentAt, id);
+        LambdaUpdateWrapper<UserMessage> update =
+                new LambdaUpdateWrapper<UserMessage>()
+                        .set(UserMessage::getEmailStatus, status)
+                        .set(UserMessage::getEmailError, truncate(error, 2_000))
+                        .eq(UserMessage::getId, id)
+                        .eq(UserMessage::getEmailStatus, "PENDING");
+        if (sentAt) {
+            update.set(UserMessage::getEmailSentAt, java.time.OffsetDateTime.now());
+        }
+        messageMapper.update(null, update);
     }
 
     private String stripLineBreaks(String value) {

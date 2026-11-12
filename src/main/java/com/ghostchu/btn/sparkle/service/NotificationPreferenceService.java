@@ -1,7 +1,10 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.ghostchu.btn.sparkle.entity.UserNotificationPreference;
+import com.ghostchu.btn.sparkle.mapper.UserNotificationPreferenceMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,26 +14,21 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationPreferenceService {
-    private final JdbcTemplate jdbcTemplate;
-
-    public NotificationPreferenceService(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private final UserNotificationPreferenceMapper preferenceMapper;
 
     public List<NotificationPreference> list(long userId) {
         Map<NotificationCategory, StoredPreference> stored = new HashMap<>();
-        jdbcTemplate.query("""
-                SELECT category, inbox_enabled, email_enabled
-                FROM user_notification_preferences
-                WHERE user_id = ?
-                """, (resultSet, rowNum) -> stored.put(
-                parse(resultSet.getString("category")),
+        preferenceMapper.selectList(
+                new QueryWrapper<UserNotificationPreference>().eq("user_id", userId)
+        ).forEach(item -> stored.put(
+                parse(item.getCategory()),
                 new StoredPreference(
-                        resultSet.getBoolean("inbox_enabled"),
-                        resultSet.getBoolean("email_enabled")
+                        Boolean.TRUE.equals(item.getInboxEnabled()),
+                        Boolean.TRUE.equals(item.getEmailEnabled())
                 )
-        ), userId);
+        ));
 
         List<NotificationPreference> preferences = new ArrayList<>();
         for (NotificationCategory category : NotificationCategory.values()) {
@@ -58,22 +56,18 @@ public class NotificationPreferenceService {
         if (category.isMandatory()) {
             return NotificationPreference.defaults(category);
         }
-        List<StoredPreference> rows = jdbcTemplate.query("""
-                SELECT inbox_enabled, email_enabled
-                FROM user_notification_preferences
-                WHERE user_id = ? AND category = ?
-                """, (resultSet, rowNum) -> new StoredPreference(
-                resultSet.getBoolean("inbox_enabled"),
-                resultSet.getBoolean("email_enabled")
-        ), userId, category.name());
-        if (rows.isEmpty()) {
+        UserNotificationPreference row = preferenceMapper.selectOne(
+                new QueryWrapper<UserNotificationPreference>()
+                        .eq("user_id", userId)
+                        .eq("category", category.name())
+        );
+        if (row == null) {
             return NotificationPreference.defaults(category);
         }
-        StoredPreference value = rows.getFirst();
         return new NotificationPreference(
                 category,
-                value.inboxEnabled(),
-                value.emailEnabled(),
+                Boolean.TRUE.equals(row.getInboxEnabled()),
+                Boolean.TRUE.equals(row.getEmailEnabled()),
                 false
         );
     }
@@ -93,16 +87,29 @@ public class NotificationPreferenceService {
                     || requested == null
                     || requested[1] == null
                     || requested[1];
-            jdbcTemplate.update("""
-                    INSERT INTO user_notification_preferences (
-                        user_id, category, inbox_enabled, email_enabled, updated_at
-                    )
-                    VALUES (?, ?, ?, ?, now())
-                    ON CONFLICT (user_id, category) DO UPDATE
-                    SET inbox_enabled = EXCLUDED.inbox_enabled,
-                        email_enabled = EXCLUDED.email_enabled,
-                        updated_at = now()
-                    """, userId, category.name(), inbox, email);
+            UserNotificationPreference row = preferenceMapper.selectOne(
+                    new QueryWrapper<UserNotificationPreference>()
+                            .eq("user_id", userId)
+                            .eq("category", category.name())
+            );
+            if (row == null) {
+                preferenceMapper.insert(new UserNotificationPreference()
+                        .setUserId(userId)
+                        .setCategory(category.name())
+                        .setInboxEnabled(inbox)
+                        .setEmailEnabled(email)
+                        .setUpdatedAt(java.time.OffsetDateTime.now()));
+            } else {
+                row.setInboxEnabled(inbox)
+                        .setEmailEnabled(email)
+                        .setUpdatedAt(java.time.OffsetDateTime.now());
+                preferenceMapper.update(
+                        row,
+                        new QueryWrapper<UserNotificationPreference>()
+                                .eq("user_id", userId)
+                                .eq("category", category.name())
+                );
+            }
         }
         return list(userId);
     }

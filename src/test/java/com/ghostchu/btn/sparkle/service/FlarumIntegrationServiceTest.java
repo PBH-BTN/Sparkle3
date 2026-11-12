@@ -8,7 +8,6 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 
@@ -17,8 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -29,13 +26,11 @@ class FlarumIntegrationServiceTest {
     private final IUserSwarmStatisticsService swarmStatisticsService =
             mock(IUserSwarmStatisticsService.class);
     private final AdminConfigService adminConfigService = mock(AdminConfigService.class);
-    private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     private final FlarumIntegrationService service = new FlarumIntegrationService(
             userRelMapper,
             userService,
             swarmStatisticsService,
-            adminConfigService,
-            jdbcTemplate
+            adminConfigService
     );
 
     @Test
@@ -84,11 +79,7 @@ class FlarumIntegrationServiceTest {
                 "{{title}}",
                 "{{content}}"
         ));
-        when(jdbcTemplate.queryForObject(
-                anyString(),
-                eq(Long.class),
-                any(Object[].class)
-        )).thenReturn(9L);
+        when(userService.count(any())).thenReturn(8L);
 
         UserDataResponse response = service.findByGithubUid("12345");
 

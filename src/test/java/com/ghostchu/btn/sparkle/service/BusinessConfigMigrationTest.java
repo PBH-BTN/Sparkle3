@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BusinessConfigMigrationTest {
     private static final Pattern SQL_DEFAULT_KEY = Pattern.compile(
-            "\\('(sparkle\\.[^']+)',"
+            "(?m)^\\s*\\(\\s*(?:\\R\\s*)?'(sparkle\\.[^']+)',"
     );
 
     @Test
@@ -40,6 +40,18 @@ class BusinessConfigMigrationTest {
 
         String sql = new ClassPathResource(
                 "db/migration/V44__business_config_defaults.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V47__community_groups.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V48__afdian_integration.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V49__pbh_license_v2.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V51__membership_currency_rates.sql"
         ).getContentAsString(StandardCharsets.UTF_8)
                 + new ClassPathResource(
                 "db/migration/V52__flarum_integration_config.sql"

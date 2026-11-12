@@ -1,18 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   IconArrowLeft,
+  IconHeart,
   IconLock,
   IconNotification,
   IconSafe,
+  IconUserGroup,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { uiApi } from '@/api'
+import type { FeatureAvailability } from '@/api/types'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const features = ref<FeatureAvailability>({
+  afdianConfigured: false,
+  communityGroupsAvailable: false,
+  memberPlatformsConfigured: false,
+})
 
 const items = computed(() => [
   {
@@ -30,6 +39,33 @@ const items = computed(() => [
     label: t('settings.menu.notifications'),
     icon: IconNotification,
   },
+  ...(features.value.communityGroupsAvailable
+    ? [
+        {
+          key: '/user/settings/community-groups',
+          label: t('settings.menu.communityGroups'),
+          icon: IconUserGroup,
+        },
+      ]
+    : []),
+  ...(features.value.afdianConfigured
+    ? [
+        {
+          key: '/user/settings/afdian',
+          label: t('settings.menu.afdian'),
+          icon: IconHeart,
+        },
+      ]
+    : []),
+  ...(features.value.memberPlatformsConfigured
+    ? [
+        {
+          key: '/user/settings/memberships',
+          label: t('settings.menu.memberships'),
+          icon: IconHeart,
+        },
+      ]
+    : []),
 ])
 
 const selectedKey = computed(
@@ -39,6 +75,14 @@ const selectedKey = computed(
 function navigate(key: string) {
   router.push(key)
 }
+
+onMounted(async () => {
+  try {
+    features.value = await uiApi.features()
+  } catch {
+    // Optional integration entries stay hidden when availability cannot be loaded.
+  }
+})
 </script>
 
 <template>
