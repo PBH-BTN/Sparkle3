@@ -7,12 +7,11 @@ import com.ghostchu.btn.sparkle.entity.UserContactEmailDelivery;
 import com.ghostchu.btn.sparkle.mapper.UserContactEmailDeliveryMapper;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
-import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
-import jakarta.mail.internet.InternetAddress;
+import com.ghostchu.btn.sparkle.service.mail.MailDeliveryException;
+import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
+import com.ghostchu.btn.sparkle.service.mail.SmtpMailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,21 +29,21 @@ public class UserContactEmailService {
     private final UserContactEmailDeliveryMapper deliveryMapper;
     private final UserPublicProfileService publicProfileService;
     private final AdminConfigService adminConfigService;
-    private final JavaMailSender mailSender;
-    private final BtnRuntimeConfigService btnConfigService;
+    private final SmtpMailService smtpMailService;
+    private final MailSettingsService mailSettingsService;
 
     public UserContactEmailService(
             UserContactEmailDeliveryMapper deliveryMapper,
             UserPublicProfileService publicProfileService,
             AdminConfigService adminConfigService,
-            JavaMailSender mailSender,
-            BtnRuntimeConfigService btnConfigService
+            SmtpMailService smtpMailService,
+            MailSettingsService mailSettingsService
     ) {
         this.deliveryMapper = deliveryMapper;
         this.publicProfileService = publicProfileService;
         this.adminConfigService = adminConfigService;
-        this.mailSender = mailSender;
-        this.btnConfigService = btnConfigService;
+        this.smtpMailService = smtpMailService;
+        this.mailSettingsService = mailSettingsService;
     }
 
     @Transactional
@@ -144,23 +143,14 @@ public class UserContactEmailService {
     private void sendPlainTextEmail(String recipient, String subject, String content)
             throws BusinessException {
         try {
-            InternetAddress[] parsedRecipients = InternetAddress.parse(recipient, true);
-            if (parsedRecipients.length != 1) {
-                throw new IllegalArgumentException("Exactly one recipient is required");
-            }
-            InternetAddress recipientAddress = parsedRecipients[0];
-            recipientAddress.validate();
-            var mimeMessage = mailSender.createMimeMessage();
-            var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(new InternetAddress(
-                    btnConfigService.text("userContactEmail", "fromAddress"),
-                    btnConfigService.text("userContactEmail", "fromName")
-            ));
-            helper.setTo(recipientAddress);
-            helper.setSubject(subject);
-            helper.setText(content, false);
-            mailSender.send(mimeMessage);
-        } catch (Exception exception) {
+            smtpMailService.send(
+                    mailSettingsService.get().userSender(),
+                    recipient,
+                    subject,
+                    content,
+                    null
+            );
+        } catch (MailDeliveryException exception) {
             log.warn("Unable to send user contact email: {}", exception.getMessage());
             throw new BusinessException(HttpStatus.BAD_GATEWAY,
                     "Unable to send contact email");

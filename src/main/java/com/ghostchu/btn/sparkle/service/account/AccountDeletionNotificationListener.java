@@ -2,12 +2,10 @@ package com.ghostchu.btn.sparkle.service.account;
 
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.service.UserMessageService;
-import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
-import jakarta.mail.internet.InternetAddress;
+import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
+import com.ghostchu.btn.sparkle.service.mail.SmtpMailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -23,8 +21,8 @@ public class AccountDeletionNotificationListener {
     private static final String DISCLAIMER =
             "\n\n此邮件由 Sparkle BTN 自动发送。如非本人操作，请立即联系系统管理员。";
 
-    private final JavaMailSender mailSender;
-    private final BtnRuntimeConfigService btnConfigService;
+    private final SmtpMailService smtpMailService;
+    private final MailSettingsService mailSettingsService;
     private final UserMessageService messageService;
 
     @TransactionalEventListener(
@@ -52,24 +50,15 @@ public class AccountDeletionNotificationListener {
             return;
         }
         try {
-            InternetAddress[] recipients = InternetAddress.parse(event.recipientEmail(), true);
-            if (recipients.length != 1) {
-                throw new IllegalArgumentException("Exactly one recipient is required");
-            }
-            recipients[0].validate();
-
             String subject = subject(event.kind());
             String body = body(event);
-            var mimeMessage = mailSender.createMimeMessage();
-            var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(new InternetAddress(
-                    btnConfigService.text("versionAlert", "fromAddress"),
-                    btnConfigService.text("versionAlert", "fromName")
-            ));
-            helper.setTo(recipients[0]);
-            helper.setSubject(subject);
-            helper.setText(body, false);
-            mailSender.send(mimeMessage);
+            smtpMailService.send(
+                    mailSettingsService.get().systemSender(),
+                    event.recipientEmail(),
+                    subject,
+                    body,
+                    null
+            );
             log.info("Sent {} account deletion notification for user {}",
                     event.kind(), event.userId());
         } catch (Exception exception) {

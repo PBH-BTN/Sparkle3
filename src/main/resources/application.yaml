@@ -63,20 +63,6 @@ spring:
             token-uri: https://github.com/login/oauth/access_token
             user-info-uri: https://api.github.com/user
             user-name-attribute: id
-  mail:
-    host: localhost
-    username: mail@mail.com
-    password: 123
-    port: 465
-    protocol: smtps
-    properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
-      mail.smtp.starttls.required: true
-      mail.smtp.connectiontimeout: 5000
-      mail.smtp.timeout: 3000
-      mail.smtp.writetimeout: 5000
-    default-encoding: UTF-8
 server:
   address: 0.0.0.0
   port: 7799
@@ -122,8 +108,9 @@ sparkle:
   root-url: "http://localhost:7799"
   chn-root-url: "http://chn.sparkle.local:7799"
   flarum-integration:
-    # Set SPARKLE_FLARUM_INTEGRATION_TOKEN in production. Requests are rejected
-    # while this value is empty.
+    # Managed from /admin/flarum-integration and stored in app_config_entries.
+    # An environment value remains available as a fallback when no database
+    # value has been saved.
     token: ""
   security:
     zip-bomb-threshold: 33554432

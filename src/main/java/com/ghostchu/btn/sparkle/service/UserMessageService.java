@@ -326,6 +326,81 @@ public class UserMessageService {
         );
     }
 
+    @Transactional
+    public long replyFromEmail(
+            UUID replyToken,
+            String fromAddress,
+            String replySubject,
+            String replyContent
+    ) throws BusinessException {
+        if (replyToken == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Reply token is required");
+        }
+        UserMessage original = messageMapper.selectOne(
+                new QueryWrapper<UserMessage>()
+                        .eq("reply_token", replyToken)
+                        .last("LIMIT 1")
+        );
+        if (original == null) {
+            throw new BusinessException(HttpStatus.NOT_FOUND,
+                    "The message referenced by this email reply no longer exists");
+        }
+        if (!NotificationCategory.DIRECT_MESSAGE.name().equals(original.getCategory())
+                || original.getSenderUserId() == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "This message does not accept email replies");
+        }
+        User sender = requireUser(original.getRecipientUserId());
+        User recipient = requireUser(original.getSenderUserId());
+        String expectedAddress = normalizeEmail(sender.getEmail());
+        if (expectedAddress == null
+                || !expectedAddress.equals(normalizeEmail(fromAddress))) {
+            throw new BusinessException(HttpStatus.FORBIDDEN,
+                    "The replying email address does not match the original recipient");
+        }
+        if (sender.getId().equals(recipient.getId())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "A message cannot be replied to itself");
+        }
+
+        String subject = replySubject == null || replySubject.isBlank()
+                ? original.getSubject()
+                : replySubject;
+        if (!subject.toLowerCase(Locale.ROOT).startsWith("re:")) {
+            subject = "Re: " + subject;
+        }
+        ValidatedMessage validated = validate(subject, replyContent);
+        reserveDispatch(sender.getId());
+        NotificationPreference preference = notificationPreferenceService.preference(
+                recipient.getId(),
+                NotificationCategory.DIRECT_MESSAGE
+        );
+        UUID dispatchId = UUID.randomUUID();
+        UserMessage inserted = insertMessage(
+                dispatchId,
+                false,
+                sender.getId(),
+                "USER",
+                senderDisplayName(sender),
+                recipient.getId(),
+                NotificationCategory.DIRECT_MESSAGE,
+                validated.subject(),
+                validated.content(),
+                true,
+                !preference.inboxEnabled(),
+                preference.emailEnabled(),
+                false,
+                null,
+                "POP3 email reply"
+        );
+        if (preference.emailEnabled()) {
+            scheduleEmail(dispatchId);
+        }
+        log.info("Imported email reply for message {} as inbox message {}",
+                original.getId(), inserted.getId());
+        return inserted.getId();
+    }
+
     private int reserveDispatch(long senderUserId) throws BusinessException {
         messageMapper.lockKey("sparkle:user-message:" + senderUserId);
         int usedValue = messageMapper.countDailyDispatches(senderUserId);
@@ -336,7 +411,7 @@ public class UserMessageService {
         return usedValue;
     }
 
-    private void insertMessage(
+    private UserMessage insertMessage(
             UUID dispatchId,
             boolean broadcast,
             Long senderUserId,
@@ -353,7 +428,7 @@ public class UserMessageService {
             String senderIp,
             String senderUserAgent
     ) {
-        messageMapper.insert(messageRow(
+        UserMessage message = messageRow(
                 dispatchId,
                 broadcast,
                 senderUserId,
@@ -369,7 +444,9 @@ public class UserMessageService {
                 emailForced,
                 senderIp,
                 senderUserAgent
-        ));
+        );
+        messageMapper.insert(message);
+        return message;
     }
 
     private UserMessage messageRow(
@@ -403,6 +480,10 @@ public class UserMessageService {
                 .setEmailRequested(emailRequested)
                 .setEmailForced(emailForced)
                 .setEmailStatus(emailRequested ? "PENDING" : "NONE")
+                .setReplyToken(senderUserId != null
+                        && category == NotificationCategory.DIRECT_MESSAGE
+                        ? UUID.randomUUID()
+                        : null)
                 .setSenderIp(parseIp(senderIp))
                 .setSenderUserAgent(truncate(normalizeHeader(senderUserAgent), 500))
                 .setReadAt(initiallyRead ? OffsetDateTime.now() : null);
@@ -493,6 +574,13 @@ public class UserMessageService {
             return value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private String normalizeEmail(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     private void scheduleEmail(UUID dispatchId) {

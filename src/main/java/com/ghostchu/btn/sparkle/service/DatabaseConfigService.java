@@ -241,6 +241,7 @@ public class DatabaseConfigService {
                 || key.startsWith("sparkle.userapp.auto-account.")
                 || key.startsWith("sparkle.banhistory.")
                 || key.startsWith("sparkle.points.")
+                || key.startsWith("sparkle.mail.")
                 || key.startsWith("sparkle.version-alert.")
                 || key.startsWith("sparkle.user-contact-email.")
                 || key.startsWith("sparkle.analyse.")

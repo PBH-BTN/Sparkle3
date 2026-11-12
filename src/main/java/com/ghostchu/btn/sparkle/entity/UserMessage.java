@@ -45,6 +45,8 @@ public class UserMessage {
     private String emailError;
     @TableField("email_sent_at")
     private OffsetDateTime emailSentAt;
+    @TableField("reply_token")
+    private UUID replyToken;
     @TableField("sender_ip")
     private InetAddress senderIp;
     @TableField("sender_user_agent")

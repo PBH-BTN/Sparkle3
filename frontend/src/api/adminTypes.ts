@@ -276,6 +276,95 @@ export interface RuntimeConfig {
   userContactEmailBodyTemplate: string
 }
 
+export type MailSecurity = 'NONE' | 'STARTTLS' | 'SSL'
+
+export interface MailSenderSettings {
+  address: string
+  name: string
+}
+
+export interface SmtpMailSettings {
+  enabled: boolean
+  host: string
+  port: number
+  username: string
+  security: MailSecurity
+  auth: boolean
+  connectionTimeoutSeconds: number
+  readTimeoutSeconds: number
+  writeTimeoutSeconds: number
+  fromAddress: string
+  fromName: string
+}
+
+export interface Pop3MailSettings {
+  enabled: boolean
+  host: string
+  port: number
+  username: string
+  security: MailSecurity
+  replyAddress: string
+  pollIntervalSeconds: number
+  connectionTimeoutSeconds: number
+  maxMessagesPerPoll: number
+}
+
+export interface MailIngestionStatus {
+  running: boolean
+  lastScanAt: string | null
+  lastSuccessAt: string | null
+  nextScanAt: string | null
+  lastImported: number
+  lastSkipped: number
+  lastFailed: number
+  totalImported: number
+  lastError: string | null
+}
+
+export interface MailSettings {
+  smtp: SmtpMailSettings
+  pop3: Pop3MailSettings
+  systemSender: MailSenderSettings
+  userSender: MailSenderSettings
+  smtpPasswordConfigured: boolean
+  pop3PasswordConfigured: boolean
+  ingestion: MailIngestionStatus
+}
+
+export interface MailSettingsUpdate {
+  smtpEnabled: boolean
+  smtpHost: string
+  smtpPort: number
+  smtpUsername: string
+  smtpPassword: string | null
+  clearSmtpPassword: boolean
+  smtpSecurity: MailSecurity
+  smtpAuth: boolean
+  smtpConnectionTimeoutSeconds: number
+  smtpReadTimeoutSeconds: number
+  smtpWriteTimeoutSeconds: number
+  smtpFromAddress: string
+  smtpFromName: string
+  pop3Enabled: boolean
+  pop3Host: string
+  pop3Port: number
+  pop3Username: string
+  pop3Password: string | null
+  clearPop3Password: boolean
+  pop3Security: MailSecurity
+  pop3ReplyAddress: string
+  pop3PollIntervalSeconds: number
+  pop3ConnectionTimeoutSeconds: number
+  pop3MaxMessagesPerPoll: number
+  systemSender: MailSenderSettings
+  userSender: MailSenderSettings
+}
+
+export interface MailTestResult {
+  success: boolean
+  message: string
+}
+
 export interface UserContactEmailAudit {
   id: number
   senderId: string
@@ -632,6 +721,17 @@ export interface GithubSyncSettings {
 export interface GithubSyncUpdateSettings {
   schedule: string
   personalAccessToken?: string
+  clearToken?: boolean
+}
+
+export interface FlarumIntegrationSettings {
+  tokenConfigured: boolean
+  updatedAt: string | null
+  updatedBy: number | null
+}
+
+export interface FlarumIntegrationUpdateSettings {
+  token?: string
   clearToken?: boolean
 }
 

@@ -30,6 +30,8 @@ import type {
   CommunityGithubTeamValidationResult,
   DatabaseConfigEntry,
   DatabaseConfigSummary,
+  FlarumIntegrationSettings,
+  FlarumIntegrationUpdateSettings,
   HomepageStatisticsAdminResponse,
   HomepageStatisticsConfigUpdate,
   GeoIpCityBlacklistEntry,
@@ -41,6 +43,10 @@ import type {
   GithubSyncTargetInput,
   GithubSyncTargetRunResult,
   GithubSyncUpdateSettings,
+  MailIngestionStatus,
+  MailSettings,
+  MailSettingsUpdate,
+  MailTestResult,
   ManualRule,
   MemberPlatformConfig,
   MemberPlatformSettings,
@@ -200,6 +206,25 @@ export const adminApi = {
     request<RuntimeConfig>('/api/admin/config', {
       method: 'PUT',
       body: JSON.stringify(body),
+    }),
+  mailSettings: () => request<MailSettings>('/api/admin/mail/settings'),
+  updateMailSettings: (body: MailSettingsUpdate) =>
+    request<MailSettings>('/api/admin/mail/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  testSmtp: (recipient: string) =>
+    request<MailTestResult>('/api/admin/mail/settings/test-smtp', {
+      method: 'POST',
+      body: JSON.stringify({ recipient }),
+    }),
+  testPop3: () =>
+    request<MailTestResult>('/api/admin/mail/settings/test-pop3', {
+      method: 'POST',
+    }),
+  scanMail: () =>
+    request<MailIngestionStatus>('/api/admin/mail/settings/scan', {
+      method: 'POST',
     }),
   swarmStatisticsStatus: () =>
     request<SwarmStatisticsStatus>('/api/admin/swarm-statistics/status'),
@@ -370,6 +395,13 @@ export const adminApi = {
   runGithubSyncTarget: (id: number) =>
     request<GithubSyncTargetRunResult>(`/api/admin/github-sync/targets/${id}/run`, {
       method: 'POST',
+    }),
+  flarumIntegration: () =>
+    request<FlarumIntegrationSettings>('/api/admin/flarum-integration'),
+  updateFlarumIntegration: (body: FlarumIntegrationUpdateSettings) =>
+    request<FlarumIntegrationSettings>('/api/admin/flarum-integration/token', {
+      method: 'PUT',
+      body: JSON.stringify(body),
     }),
   sendStaffMessage: (body: StaffMessageInput) =>
     request<StaffMessageResult>('/api/admin/messages', {

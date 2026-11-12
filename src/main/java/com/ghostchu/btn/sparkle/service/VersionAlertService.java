@@ -8,7 +8,9 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionA
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertRuleInput;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
-import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.mail.MailDeliveryException;
+import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
+import com.ghostchu.btn.sparkle.service.mail.SmtpMailService;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
@@ -21,8 +23,6 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -50,10 +50,10 @@ public class VersionAlertService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
-    private final JavaMailSender mailSender;
+    private final SmtpMailService smtpMailService;
+    private final MailSettingsService mailSettingsService;
     private final IUserService userService;
     private final TaskStatusService taskStatusService;
-    private final BtnRuntimeConfigService btnConfigService;
     private final UserMessageService messageService;
     private final NotificationPreferenceService notificationPreferenceService;
 
@@ -63,19 +63,19 @@ public class VersionAlertService {
     public VersionAlertService(
             @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate,
             ObjectMapper objectMapper,
-            JavaMailSender mailSender,
+            SmtpMailService smtpMailService,
+            MailSettingsService mailSettingsService,
             IUserService userService,
             TaskStatusService taskStatusService,
-            BtnRuntimeConfigService btnConfigService,
             UserMessageService messageService,
             NotificationPreferenceService notificationPreferenceService
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
-        this.mailSender = mailSender;
+        this.smtpMailService = smtpMailService;
+        this.mailSettingsService = mailSettingsService;
         this.userService = userService;
         this.taskStatusService = taskStatusService;
-        this.btnConfigService = btnConfigService;
         this.messageService = messageService;
         this.notificationPreferenceService = notificationPreferenceService;
         taskStatusService.ensure(TaskDefinition.event(
@@ -348,16 +348,13 @@ public class VersionAlertService {
                 sentAt
         );
         try {
-            var mimeMessage = mailSender.createMimeMessage();
-            var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(new InternetAddress(
-                    btnConfigService.text("versionAlert", "fromAddress"),
-                    btnConfigService.text("versionAlert", "fromName")
-            ));
-            helper.setTo(to);
-            helper.setSubject(render(rule.subject(), rule, nickname, version, userAgent, operatorId));
-            helper.setText(render(rule.body(), rule, nickname, version, userAgent, operatorId), false);
-            mailSender.send(mimeMessage);
+            smtpMailService.send(
+                    mailSettingsService.get().systemSender(),
+                    to,
+                    render(rule.subject(), rule, nickname, version, userAgent, operatorId),
+                    render(rule.body(), rule, nickname, version, userAgent, operatorId),
+                    null
+            );
             recordDelivery(delivery);
             return delivery;
         } catch (Exception exception) {
