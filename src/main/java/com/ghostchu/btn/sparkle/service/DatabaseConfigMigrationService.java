@@ -53,22 +53,34 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
     }
 
     public synchronized @NotNull MigrationResult migrateNow() {
-        Map<String, String> values = loadYamlValues();
+        LoadedYamlValues loaded = loadYamlValues();
+        Map<String, String> values = new LinkedHashMap<>(loaded.bundled());
+        values.putAll(loaded.external());
         int inserted = 0;
+        int updated = 0;
         int skipped = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            if (configService.isExcludedKey(entry.getKey())) {
+            if (configService.isExcludedKey(entry.getKey())
+                    || configService.isDeprecatedKey(entry.getKey())) {
                 skipped++;
                 continue;
             }
-            int changed = configService.insertIfMissing(entry.getKey(), entry.getValue(), "yaml");
+            boolean external = loaded.external().containsKey(entry.getKey());
+            boolean exists = configService.exists(entry.getKey());
+            int changed = external
+                    ? configService.upsertYamlValue(entry.getKey(), entry.getValue())
+                    : configService.insertIfMissing(entry.getKey(), entry.getValue(), "yaml");
             if (changed > 0) {
-                inserted++;
+                if (exists) {
+                    updated++;
+                } else {
+                    inserted++;
+                }
             } else {
                 skipped++;
             }
         }
-        int updated = migrateLegacyRedisOverrides();
+        updated += migrateLegacyRedisOverrides();
         return new MigrationResult(
                 values.size(),
                 inserted,
@@ -105,23 +117,31 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
         }
     }
 
-    private Map<String, String> loadYamlValues() {
-        List<String> locations = new ArrayList<>();
-        locations.add("classpath:/application.yaml");
-        locations.add("classpath:/application.yml");
-        locations.add("file:./config/application.yaml");
-        locations.add("file:./config/application.yml");
-        locations.add("file:./application.yaml");
-        locations.add("file:./application.yml");
+    private LoadedYamlValues loadYamlValues() {
+        List<String> bundledLocations = new ArrayList<>();
+        bundledLocations.add("classpath:/application.yaml");
+        bundledLocations.add("classpath:/application.yml");
+        List<String> externalLocations = new ArrayList<>();
+        externalLocations.add("file:./config/application.yaml");
+        externalLocations.add("file:./config/application.yml");
+        externalLocations.add("file:./application.yaml");
+        externalLocations.add("file:./application.yml");
         for (String profile : environment.getActiveProfiles()) {
-            locations.add("classpath:/application-" + profile + ".yaml");
-            locations.add("classpath:/application-" + profile + ".yml");
-            locations.add("file:./config/application-" + profile + ".yaml");
-            locations.add("file:./config/application-" + profile + ".yml");
-            locations.add("file:./application-" + profile + ".yaml");
-            locations.add("file:./application-" + profile + ".yml");
+            bundledLocations.add("classpath:/application-" + profile + ".yaml");
+            bundledLocations.add("classpath:/application-" + profile + ".yml");
+            externalLocations.add("file:./config/application-" + profile + ".yaml");
+            externalLocations.add("file:./config/application-" + profile + ".yml");
+            externalLocations.add("file:./application-" + profile + ".yaml");
+            externalLocations.add("file:./application-" + profile + ".yml");
         }
 
+        return new LoadedYamlValues(
+                loadYamlLocations(bundledLocations),
+                loadYamlLocations(externalLocations)
+        );
+    }
+
+    private Map<String, String> loadYamlLocations(List<String> locations) {
         Map<String, String> values = new LinkedHashMap<>();
         for (String location : locations) {
             Resource resource = resourceLoader.getResource(location);
@@ -144,5 +164,11 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
             }
         }
         return values;
+    }
+
+    private record LoadedYamlValues(
+            Map<String, String> bundled,
+            Map<String, String> external
+    ) {
     }
 }

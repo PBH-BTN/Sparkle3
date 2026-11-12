@@ -7,7 +7,6 @@ import com.ghostchu.btn.sparkle.service.IUserappConfigService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -20,9 +19,6 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
     private List<SparkleBtnAbility> btnAbilities;
     @Autowired
     private BtnRuntimeConfigService configService;
-
-    @Value("${sparkle.captcha.pow.endpoint}")
-    private String powCaptchaEndpoint;
 
     @Override
     public BtnConfig configAnonymousUserapp() throws UserApplicationNotFoundException {
@@ -43,7 +39,9 @@ public class UserappConfigServiceImpl implements IUserappConfigService {
             ability.put(btnAbility.getConfigKey(), btnAbility);
         }
         btnConfig.setAbility(ability);
-        btnConfig.setProofOfWorkConfig(new BtnConfig.ProofOfWorkConfig(powCaptchaEndpoint));
+        btnConfig.setProofOfWorkConfig(new BtnConfig.ProofOfWorkConfig(
+                configService.text("captchaPow", "endpoint")
+        ));
         return btnConfig;
     }
 

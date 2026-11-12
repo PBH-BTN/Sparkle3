@@ -28,6 +28,9 @@ public class AdminBtnConfigService {
     public BtnConfigView get() {
         ensureEntries();
         Map<String, ConfigEntry> entries = loadEntries();
+        Map<String, String> rawValues = databaseConfigService.getRawValues(
+                BtnConfigCatalog.keys()
+        );
         OffsetDateTime updatedAt = entries.values().stream()
                 .map(ConfigEntry::updatedAt)
                 .filter(value -> value != null)
@@ -35,7 +38,11 @@ public class AdminBtnConfigService {
                 .orElse(null);
 
         List<BtnConfigFieldView> fields = BtnConfigCatalog.definitions().stream()
-                .map(definition -> toView(definition, entries.get(definition.key())))
+                .map(definition -> toView(
+                        definition,
+                        entries.get(definition.key()),
+                        rawValues.get(definition.key())
+                ))
                 .toList();
         return new BtnConfigView(fields, updatedAt);
     }
@@ -47,16 +54,31 @@ public class AdminBtnConfigService {
     ) throws BusinessException {
         ensureEntries();
         Map<String, ConfigEntry> entries = loadEntries();
+        Map<String, String> rawValues = databaseConfigService.getRawValues(
+                BtnConfigCatalog.keys()
+        );
         Map<String, String> currentValues = new LinkedHashMap<>();
         for (Map.Entry<String, ConfigEntry> entry : entries.entrySet()) {
-            currentValues.put(entry.getKey(), entry.getValue().value());
+            currentValues.put(
+                    entry.getKey(),
+                    rawValues.get(entry.getKey())
+            );
         }
         Map<String, String> normalized = BtnConfigValidator.validate(
                 requestedValues,
                 currentValues
         );
         for (Map.Entry<String, String> entry : normalized.entrySet()) {
-            databaseConfigService.update(entry.getKey(), entry.getValue(), operatorId);
+            BtnConfigCatalog.Definition definition = BtnConfigCatalog.definition(entry.getKey());
+            if (definition != null && definition.sensitive()) {
+                databaseConfigService.updateSensitive(
+                        entry.getKey(),
+                        entry.getValue(),
+                        operatorId
+                );
+            } else {
+                databaseConfigService.update(entry.getKey(), entry.getValue(), operatorId);
+            }
         }
         refreshRuntimeAfterCommit();
         return get();
@@ -99,15 +121,18 @@ public class AdminBtnConfigService {
 
     private Map<String, ConfigEntry> loadEntries() {
         Map<String, ConfigEntry> entries = new LinkedHashMap<>();
-        for (ConfigEntry entry : databaseConfigService.list("", "sparkle.ping")) {
-            entries.put(entry.key(), entry);
+        for (ConfigEntry entry : databaseConfigService.list("", "")) {
+            if (BtnConfigCatalog.definition(entry.key()) != null) {
+                entries.put(entry.key(), entry);
+            }
         }
         return entries;
     }
 
     private BtnConfigFieldView toView(
             BtnConfigCatalog.Definition definition,
-            ConfigEntry entry
+            ConfigEntry entry,
+            String rawValue
     ) {
         if (entry == null) {
             return new BtnConfigFieldView(
@@ -115,10 +140,14 @@ public class AdminBtnConfigService {
                     definition.section(),
                     definition.field(),
                     definition.type().name().toLowerCase(),
-                    runtimeConfigService.text(definition.section(), definition.field()),
-                    runtimeConfigService.defaultValue(definition.key()),
+                    definition.sensitive() ? null
+                            : runtimeConfigService.text(definition.section(), definition.field()),
+                    definition.sensitive() ? ""
+                            : runtimeConfigService.defaultValue(definition.key()),
                     definition.min(),
                     definition.max(),
+                    definition.sensitive(),
+                    definition.sensitive() && rawValue != null && !rawValue.isBlank(),
                     true,
                     false,
                     "yaml",
@@ -130,10 +159,12 @@ public class AdminBtnConfigService {
                 definition.section(),
                 definition.field(),
                 definition.type().name().toLowerCase(),
-                entry.value(),
-                runtimeConfigService.defaultValue(definition.key()),
+                definition.sensitive() ? null : entry.value(),
+                definition.sensitive() ? "" : runtimeConfigService.defaultValue(definition.key()),
                 definition.min(),
                 definition.max(),
+                definition.sensitive(),
+                definition.sensitive() && rawValue != null && !rawValue.isBlank(),
                 entry.hotReload(),
                 entry.environmentOverride(),
                 entry.source(),

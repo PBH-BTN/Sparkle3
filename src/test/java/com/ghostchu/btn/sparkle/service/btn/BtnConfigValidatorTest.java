@@ -84,6 +84,40 @@ class BtnConfigValidatorTest {
         );
     }
 
+    @Test
+    void validatesAlgorithmsEmailsAndSecrets() throws Exception {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put(BtnConfigCatalog.key("captchaPow", "algorithm"), "SHA-256");
+        values.put(
+                BtnConfigCatalog.key("versionAlert", "fromAddress"),
+                "sparkle@example.com"
+        );
+        values.put(BtnConfigCatalog.key("measure", "globalpingToken"), "secret-token");
+
+        Map<String, String> normalized = BtnConfigValidator.validate(values, defaults());
+
+        assertEquals("SHA-256", normalized.get(
+                BtnConfigCatalog.key("captchaPow", "algorithm")
+        ));
+        assertEquals("secret-token", normalized.get(
+                BtnConfigCatalog.key("measure", "globalpingToken")
+        ));
+        assertThrows(
+                BusinessException.class,
+                () -> BtnConfigValidator.validate(
+                        Map.of("sparkle.version-alert.from-address", "not-an-email"),
+                        defaults()
+                )
+        );
+        assertThrows(
+                BusinessException.class,
+                () -> BtnConfigValidator.validate(
+                        Map.of("sparkle.captcha.pow.algorithm", "definitely-not-a-digest"),
+                        defaults()
+                )
+        );
+    }
+
     private Map<String, String> defaults() {
         Map<String, String> values = new LinkedHashMap<>();
         for (BtnConfigCatalog.Definition definition : BtnConfigCatalog.definitions()) {

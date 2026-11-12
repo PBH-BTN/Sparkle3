@@ -549,11 +549,25 @@ export interface BtnConfigField {
   key: string
   section: string
   field: string
-  valueType: 'boolean' | 'integer' | 'endpoint' | 'cron'
-  value: string
+  valueType:
+    | 'boolean'
+    | 'integer'
+    | 'decimal'
+    | 'endpoint'
+    | 'url'
+    | 'algorithm'
+    | 'text'
+    | 'list'
+    | 'time_zone'
+    | 'email'
+    | 'secret'
+    | 'cron'
+  value: string | null
   defaultValue: string
   min: number | null
   max: number | null
+  sensitive: boolean
+  valueConfigured: boolean
   hotReload: boolean
   environmentOverride: boolean
   source: string
@@ -563,4 +577,66 @@ export interface BtnConfigField {
 export interface BtnConfigView {
   fields: BtnConfigField[]
   updatedAt: string | null
+}
+
+export interface GithubSyncSource {
+  id: string
+  kind: 'DENY' | 'ALLOW'
+  defaultFileName: string
+  available: boolean
+}
+
+export interface GithubSyncTarget {
+  id: number
+  name: string
+  repositoryOwner: string
+  repositoryName: string
+  branchName: string
+  filePath: string
+  enabled: boolean
+  sourceIds: string[]
+  createdAt: string
+  updatedAt: string
+  lastAttemptAt: string | null
+  lastSuccessAt: string | null
+  lastError: string | null
+  lastCommitSha: string | null
+}
+
+export interface GithubSyncTargetInput {
+  name: string
+  repositoryOwner: string
+  repositoryName: string
+  branchName: string
+  filePath: string
+  enabled: boolean
+  sourceIds: string[]
+}
+
+export interface GithubSyncSettings {
+  schedule: string
+  tokenConfigured: boolean
+  sources: GithubSyncSource[]
+  targets: GithubSyncTarget[]
+}
+
+export interface GithubSyncUpdateSettings {
+  schedule: string
+  personalAccessToken?: string
+  clearToken?: boolean
+}
+
+export interface GithubSyncTargetRunResult {
+  targetId: number
+  targetName: string
+  success: boolean
+  message: string
+  commitSha: string | null
+}
+
+export interface GithubSyncRunResult {
+  total: number
+  succeeded: number
+  failed: number
+  results: GithubSyncTargetRunResult[]
 }

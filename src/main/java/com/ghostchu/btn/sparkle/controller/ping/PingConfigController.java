@@ -7,12 +7,12 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,12 +33,10 @@ public class PingConfigController extends BasePingController {
     private IUserappConfigService userappConfigService;
     @Autowired
     private IPDBManager ipdb;
-    @Value("${sparkle.root-url}")
-    private String rootUrl;
-    @Value("${sparkle.chn-root-url}")
-    private String chnRootUrl;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
     @GetMapping("/ping/config")
     public ResponseEntity<@NotNull String> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
@@ -56,8 +54,8 @@ public class PingConfigController extends BasePingController {
             forceRoute = ""; // go default case
         }
         String routeUrl = switch (forceRoute) {
-            case "chinamainland" -> chnRootUrl;
-            case "global" -> rootUrl;
+            case "chinamainland" -> configService.text("rootUrls", "chnRootUrl");
+            case "global" -> configService.text("rootUrls", "rootUrl");
             default -> detectRoute(InetAddress.ofLiteral(request.getRemoteAddr()));
         };
         return ResponseEntity.ok()
@@ -74,17 +72,17 @@ public class PingConfigController extends BasePingController {
         var geoData = ipdb.queryIPDB(inetAddress).geoData().get();
         if (geoData.getNetwork() != null && geoData.getNetwork().getIsp() != null) {
             if (geoData.getNetwork().getIsp().contains("移动")) {
-                return chnRootUrl;
+                return configService.text("rootUrls", "chnRootUrl");
             }
         }
         if (geoData.getCity() != null && geoData.getCity().getCnProvince() != null) {
             for (String cnOptimizeProvince : cnOptimizeProvinces) {
                 if(geoData.getCity().getCnProvince().contains(cnOptimizeProvince)){
-                    return chnRootUrl;
+                    return configService.text("rootUrls", "chnRootUrl");
                 }
             }
         }
-        return rootUrl;
+        return configService.text("rootUrls", "rootUrl");
     }
 
     @Component

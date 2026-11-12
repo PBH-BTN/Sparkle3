@@ -8,7 +8,15 @@ public final class BtnConfigCatalog {
     public enum ValueType {
         BOOLEAN,
         INTEGER,
+        DECIMAL,
         ENDPOINT,
+        URL,
+        ALGORITHM,
+        TEXT,
+        LIST,
+        TIME_ZONE,
+        EMAIL,
+        SECRET,
         CRON
     }
 
@@ -19,7 +27,8 @@ public final class BtnConfigCatalog {
             ValueType type,
             String defaultValue,
             Long min,
-            Long max
+            Long max,
+            boolean sensitive
     ) {
         public static Definition text(
                 String section,
@@ -33,7 +42,8 @@ public final class BtnConfigCatalog {
                     ValueType.ENDPOINT,
                     defaultValue,
                     null,
-                    null
+                    null,
+                    false
             );
         }
 
@@ -49,7 +59,8 @@ public final class BtnConfigCatalog {
                     ValueType.BOOLEAN,
                     Boolean.toString(defaultValue),
                     null,
-                    null
+                    null,
+                    false
             );
         }
 
@@ -67,7 +78,8 @@ public final class BtnConfigCatalog {
                     ValueType.INTEGER,
                     Long.toString(defaultValue),
                     min,
-                    max
+                    max,
+                    false
             );
         }
 
@@ -83,7 +95,146 @@ public final class BtnConfigCatalog {
                     ValueType.CRON,
                     defaultValue,
                     null,
-                    null
+                    null,
+                    false
+            );
+        }
+
+        public static Definition url(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.URL,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition algorithm(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.ALGORITHM,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition decimal(
+                String section,
+                String field,
+                String defaultValue,
+                long min,
+                long max
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.DECIMAL,
+                    defaultValue,
+                    min,
+                    max,
+                    false
+            );
+        }
+
+        public static Definition freeText(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.TEXT,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition list(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.LIST,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition timeZone(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.TIME_ZONE,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition email(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.EMAIL,
+                    defaultValue,
+                    null,
+                    null,
+                    false
+            );
+        }
+
+        public static Definition secret(
+                String section,
+                String field,
+                String defaultValue
+        ) {
+            return new Definition(
+                    section,
+                    field,
+                    BtnConfigCatalog.key(section, field),
+                    ValueType.SECRET,
+                    defaultValue,
+                    null,
+                    null,
+                    true
             );
         }
     }
@@ -169,7 +320,160 @@ public final class BtnConfigCatalog {
                     "iframeEndpoint",
                     "{rooturl}/ping/queryIp/widget"
             ),
-            Definition.bool("queryIp", "powCaptcha", true)
+            Definition.bool("queryIp", "powCaptcha", true),
+
+            Definition.url("rootUrls", "rootUrl", "https://sparkle.pbh-btn.com"),
+            Definition.url("rootUrls", "chnRootUrl", "https://sparkle.ghostchu.com"),
+
+            Definition.text(
+                    "captchaPow",
+                    "endpoint",
+                    "{rooturl}/ping/captcha/createSession"
+            ),
+            Definition.integer("captchaPow", "difficultyBits", 6, 1, 64),
+            Definition.algorithm("captchaPow", "algorithm", "SHA-256"),
+
+            Definition.list(
+                    "queryIpStatistics",
+                    "includeModules",
+                    "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"
+            ),
+            Definition.integer(
+                    "queryIpStatistics",
+                    "bansCountingDuration",
+                    604_800_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.integer(
+                    "queryIpStatistics",
+                    "swarmsCountingDuration",
+                    604_800_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.integer(
+                    "queryIpStatistics",
+                    "heartbeatQueryDuration",
+                    604_800_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.integer(
+                    "queryIpStatistics",
+                    "trafficMeasureDuration",
+                    604_800_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.integer(
+                    "queryIpStatistics",
+                    "torrentsCountingDuration",
+                    604_800_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+
+            Definition.decimal(
+                    "rankingWeights",
+                    "sentTrafficOtherAck",
+                    "10",
+                    0,
+                    1_000_000
+            ),
+            Definition.decimal(
+                    "rankingWeights",
+                    "sentTrafficSelfReport",
+                    "5",
+                    0,
+                    1_000_000
+            ),
+            Definition.decimal(
+                    "rankingWeights",
+                    "receivedTrafficOtherAck",
+                    "3",
+                    0,
+                    1_000_000
+            ),
+            Definition.decimal(
+                    "rankingWeights",
+                    "receivedTrafficSelfReport",
+                    "5",
+                    0,
+                    1_000_000
+            ),
+
+            Definition.integer(
+                    "userIpWarning",
+                    "duration",
+                    1_209_600_000,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.cron("userIpWarning", "cron", "0 0 * * * *"),
+
+            Definition.bool("measure", "enable", true),
+            Definition.secret("measure", "globalpingToken", ""),
+            Definition.cron(
+                    "measure",
+                    "globalpingResultRetrieveCron",
+                    "0 */10 * * * *"
+            ),
+            Definition.cron(
+                    "measure",
+                    "globalpingStartMeasureCron",
+                    "0 */10 * * * *"
+            ),
+            Definition.integer(
+                    "measure",
+                    "expiredAfter",
+                    31_104_000_000L,
+                    60_000,
+                    315_360_000_000L
+            ),
+            Definition.integer("measurePrefix", "ipv4", 30, 0, 32),
+            Definition.integer("measurePrefix", "ipv6", 48, 0, 128),
+
+            Definition.integer(
+                    "security",
+                    "zipBombThreshold",
+                    33_554_432,
+                    1_024,
+                    1_073_741_824
+            ),
+
+            Definition.bool("userappAutoAccount", "allowRegister", true),
+            Definition.bool("userappAutoAccount", "allowLogin", true),
+            Definition.integer(
+                    "userappAutoAccount",
+                    "holderUid",
+                    16_402,
+                    1,
+                    9_007_199_254_740_991L
+            ),
+
+            Definition.cron(
+                    "banHistory",
+                    "refreshModuleNameCacheCron",
+                    "0 0 */2 * * *"
+            ),
+            Definition.timeZone("points", "timeZone", "Asia/Shanghai"),
+
+            Definition.email("versionAlert", "fromAddress", "sparkle@pbh-btn.com"),
+            Definition.freeText("versionAlert", "fromName", "SparkleBTN 系统通知"),
+
+            Definition.email("userContactEmail", "fromAddress", "sparkle@pbh-btn.com"),
+            Definition.freeText("userContactEmail", "fromName", "Sparkle BTN 用户邮件"),
+
+            Definition.freeText("userAvatar", "cacheDirectory", "data/avatar-cache"),
+            Definition.integer(
+                    "userAvatar",
+                    "cacheDuration",
+                    2_592_000_000L,
+                    60_000,
+                    31_536_000_000L
+            ),
+            Definition.cron("userAvatar", "cleanupCron", "0 30 4 * * *")
     );
 
     private static final Map<String, Definition> BY_KEY;
@@ -214,6 +518,20 @@ public final class BtnConfigCatalog {
             case "heartbeat" -> "sparkle.ping.heartbeat";
             case "heartbeatQueue" -> "sparkle.ping.heartbeat.queue";
             case "queryIp" -> "sparkle.ping.query-ip";
+            case "rootUrls" -> "sparkle";
+            case "captchaPow" -> "sparkle.captcha.pow";
+            case "queryIpStatistics" -> "sparkle.query.query-ip";
+            case "rankingWeights" -> "sparkle.ranking.weight.user-swarm-statistics";
+            case "userIpWarning" -> "sparkle.admin.user-ip-warning";
+            case "measure" -> "sparkle.measure";
+            case "measurePrefix" -> "sparkle.measure.prefix-length";
+            case "security" -> "sparkle.security";
+            case "userappAutoAccount" -> "sparkle.userapp.auto-account";
+            case "banHistory" -> "sparkle.banhistory";
+            case "points" -> "sparkle.points";
+            case "versionAlert" -> "sparkle.version-alert";
+            case "userContactEmail" -> "sparkle.user-contact-email";
+            case "userAvatar" -> "sparkle.user-avatar";
             default -> throw new IllegalArgumentException("Unknown BTN config section: " + section);
         };
         return prefix + "." + fieldToKey(field);

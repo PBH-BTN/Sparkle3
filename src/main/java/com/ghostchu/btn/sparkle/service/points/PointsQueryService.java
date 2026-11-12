@@ -12,9 +12,9 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsLogPage;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsOverview;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -53,12 +53,10 @@ public class PointsQueryService {
     private final PointToggleService pointToggleService;
     private final PointRulesService pointRulesService;
     private final ObjectMapper objectMapper;
-
-    @Value("${sparkle.points.time-zone:Asia/Shanghai}")
-    private String pointTimeZone = "Asia/Shanghai";
+    private final BtnRuntimeConfigService btnConfigService;
 
     public PointsOverview overview(long userId) {
-        ZoneId zone = ZoneId.of(pointTimeZone);
+        ZoneId zone = ZoneId.of(btnConfigService.text("points", "timeZone"));
         ZonedDateTime now = ZonedDateTime.now(zone);
         OffsetDateTime dayStart = now.toLocalDate().atStartOfDay(zone).toOffsetDateTime();
         OffsetDateTime last24Hours = now.minusHours(24).toOffsetDateTime();

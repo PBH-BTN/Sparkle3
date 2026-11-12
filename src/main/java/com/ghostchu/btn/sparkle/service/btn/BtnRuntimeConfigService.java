@@ -98,6 +98,23 @@ public class BtnRuntimeConfigService {
         return Math.toIntExact(longValue(section, field));
     }
 
+    public double doubleValue(String section, String field) {
+        BtnConfigCatalog.Definition definition = definition(section, field);
+        double parsed;
+        try {
+            parsed = Double.parseDouble(text(section, field));
+        } catch (NumberFormatException exception) {
+            parsed = Double.parseDouble(definition.defaultValue());
+        }
+        if (definition.min() != null) {
+            parsed = Math.max(definition.min(), parsed);
+        }
+        if (definition.max() != null) {
+            parsed = Math.min(definition.max(), parsed);
+        }
+        return parsed;
+    }
+
     public String defaultValue(String key) {
         BtnConfigCatalog.Definition definition = BtnConfigCatalog.definition(key);
         return definition == null ? null : defaults.get(definition.key());

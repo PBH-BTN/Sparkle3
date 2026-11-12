@@ -29,6 +29,12 @@ import type {
   GeoIpCityBlacklistEntry,
   GeoIpCityBlacklistGenerationStatus,
   GeoIpCityBlacklistInput,
+  GithubSyncRunResult,
+  GithubSyncSettings,
+  GithubSyncTarget,
+  GithubSyncTargetInput,
+  GithubSyncTargetRunResult,
+  GithubSyncUpdateSettings,
   ManualRule,
   NavigationItemInput,
   RetentionPolicyInput,
@@ -324,5 +330,33 @@ export const adminApi = {
     request<BtnConfigView>('/api/admin/btn', {
       method: 'PUT',
       body: JSON.stringify({ values }),
+    }),
+  githubSync: () => request<GithubSyncSettings>('/api/admin/github-sync'),
+  updateGithubSyncSettings: (body: GithubSyncUpdateSettings) =>
+    request<GithubSyncSettings>('/api/admin/github-sync/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  createGithubSyncTarget: (body: GithubSyncTargetInput) =>
+    request<GithubSyncTarget>('/api/admin/github-sync/targets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateGithubSyncTarget: (id: number, body: GithubSyncTargetInput) =>
+    request<GithubSyncTarget>(`/api/admin/github-sync/targets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteGithubSyncTarget: (id: number) =>
+    request<void>(`/api/admin/github-sync/targets/${id}`, {
+      method: 'DELETE',
+    }),
+  runGithubSync: () =>
+    request<GithubSyncRunResult>('/api/admin/github-sync/run', {
+      method: 'POST',
+    }),
+  runGithubSyncTarget: (id: number) =>
+    request<GithubSyncTargetRunResult>(`/api/admin/github-sync/targets/${id}/run`, {
+      method: 'POST',
     }),
 }

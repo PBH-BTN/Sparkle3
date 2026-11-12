@@ -17,6 +17,8 @@ public final class BtnConfigModels {
             String defaultValue,
             Long min,
             Long max,
+            boolean sensitive,
+            boolean valueConfigured,
             boolean hotReload,
             boolean environmentOverride,
             String source,

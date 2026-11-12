@@ -322,7 +322,7 @@ sparkle:
       heartbeat-query-duration: 604800000
   github-sync:
     schedule: "0 */30 * * * *"
-    personal-access-token: sometoken
+    personal-access-token: ""
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
@@ -381,16 +381,9 @@ sparkle:
     refresh-interval-minutes: 60
     window-days: 7
   ranking:
-      weight:
-        user-swarm-statistics:
-          sent-traffic-other-ack: 10
-          sent-traffic-self-report: 5
-          received-traffic-other-ack: 3
-          received-traffic-self-report: 5
-
-  machine-learning:
-    enabled: true
-    learning-rate: 1.0
-    banhistory-sample-rate: 1.0
-    swarmtracker-sample-rate: 0.005
-    queue-capacity: 10000
+    weight:
+      user-swarm-statistics:
+        sent-traffic-other-ack: 10
+        sent-traffic-self-report: 5
+        received-traffic-other-ack: 3
+        received-traffic-self-report: 5

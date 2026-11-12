@@ -41,6 +41,14 @@ const durationFields = new Set([
   'sparkle.ping.heartbeat.cleanup-before',
   'sparkle.ping.heartbeat.queue.flush-interval-ms',
   'sparkle.ping.heartbeat.queue.initial-delay-ms',
+  'sparkle.query.query-ip.bans-counting-duration',
+  'sparkle.query.query-ip.swarms-counting-duration',
+  'sparkle.query.query-ip.heartbeat-query-duration',
+  'sparkle.query.query-ip.traffic-measure-duration',
+  'sparkle.query.query-ip.torrents-counting-duration',
+  'sparkle.admin.user-ip-warning.duration',
+  'sparkle.measure.expired-after',
+  'sparkle.user-avatar.cache-duration',
 ])
 
 const sections = computed(() => {
@@ -81,7 +89,8 @@ function applyConfig(config: BtnConfigView) {
     delete form[key]
   }
   for (const field of config.fields) {
-    form[field.key] = field.value ?? field.defaultValue
+    form[field.key] = field.sensitive ? '' : (field.value ?? field.defaultValue)
+    form[secretClearKey(field.key)] = 'false'
   }
 }
 
@@ -89,7 +98,18 @@ async function save() {
   saving.value = true
   try {
     const result = await adminApi.updateBtnConfig(
-      Object.fromEntries(fields.value.map((field) => [field.key, form[field.key] ?? ''])),
+      Object.fromEntries(
+        fields.value.flatMap((field) => {
+          if (field.sensitive) {
+            if (form[secretClearKey(field.key)] === 'true') {
+              return [[field.key, '']]
+            }
+            const value = form[field.key]?.trim()
+            return value ? [[field.key, value]] : []
+          }
+          return [[field.key, form[field.key] ?? '']]
+        }),
+      ),
     )
     applyConfig(result)
     Message.success(t('admin.btn.saved'))
@@ -106,6 +126,10 @@ function updateInteger(field: BtnConfigField, value: number | undefined) {
 
 function updateBoolean(field: BtnConfigField, value: boolean | string | number) {
   form[field.key] = Boolean(value) ? 'true' : 'false'
+}
+
+function secretClearKey(key: string) {
+  return `${key}:clear`
 }
 
 function sectionTitle(section: string) {
@@ -204,13 +228,45 @@ function durationHint(field: BtnConfigField) {
                 @change="(value) => updateBoolean(field, value)"
               />
               <a-input-number
-                v-else-if="field.valueType === 'integer'"
+                v-else-if="field.valueType === 'integer' || field.valueType === 'decimal'"
                 :model-value="form[field.key] === '' ? undefined : Number(form[field.key])"
                 :min="field.min ?? undefined"
                 :max="field.max ?? undefined"
-                :precision="0"
+                :precision="field.valueType === 'integer' ? 0 : 6"
+                :step="field.valueType === 'integer' ? 1 : 0.1"
                 hide-button
                 @change="(value) => updateInteger(field, value)"
+              />
+              <template v-else-if="field.valueType === 'secret'">
+                <a-input-password
+                  v-model="form[field.key]"
+                  :placeholder="
+                    field.valueConfigured
+                      ? t('admin.btn.secretKeepPlaceholder')
+                      : t('admin.btn.secretPlaceholder')
+                  "
+                  :max-length="4096"
+                />
+                <div v-if="field.valueConfigured" class="secret-status">
+                  <a-tag color="green" size="small">
+                    {{ t('admin.btn.secretConfigured') }}
+                  </a-tag>
+                  <a-checkbox
+                    :model-value="form[secretClearKey(field.key)] === 'true'"
+                    @change="
+                      (value) =>
+                        (form[secretClearKey(field.key)] = value ? 'true' : 'false')
+                    "
+                  >
+                    {{ t('admin.btn.clearSecret') }}
+                  </a-checkbox>
+                </div>
+              </template>
+              <a-textarea
+                v-else-if="field.valueType === 'text' || field.valueType === 'list'"
+                v-model="form[field.key]"
+                :auto-size="{ minRows: 3, maxRows: 8 }"
+                :max-length="16384"
               />
               <a-input
                 v-else
@@ -321,6 +377,14 @@ function durationHint(field: BtnConfigField) {
 
 .duration-hint {
   color: rgb(var(--primary-6));
+}
+
+.secret-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .last-updated {

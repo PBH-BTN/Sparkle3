@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,12 +31,10 @@ public class PointsService {
     private final PointAwardContext context;
     private final PointToggleService pointToggleService;
     private final PointRulesService pointRulesService;
-
-    @Value("${sparkle.points.time-zone:Asia/Shanghai}")
-    private String pointTimeZone = "Asia/Shanghai";
+    private final BtnRuntimeConfigService btnConfigService;
 
     public LocalDate currentPointDay() {
-        return LocalDate.now(ZoneId.of(pointTimeZone));
+        return LocalDate.now(ZoneId.of(btnConfigService.text("points", "timeZone")));
     }
 
     public void recordAppActivity(long userId, long userappId) {
@@ -91,7 +89,9 @@ public class PointsService {
         }
 
         OffsetDateTime occurredAt = bucket.getOccurredAt();
-        LocalDate pointDay = occurredAt.atZoneSameInstant(ZoneId.of(pointTimeZone)).toLocalDate();
+        LocalDate pointDay = occurredAt.atZoneSameInstant(
+                ZoneId.of(btnConfigService.text("points", "timeZone"))
+        ).toLocalDate();
 
         for (Long userappId : bucket.getAppActivities().keySet()) {
             long onlineHours = jdbcTemplate.queryForObject(

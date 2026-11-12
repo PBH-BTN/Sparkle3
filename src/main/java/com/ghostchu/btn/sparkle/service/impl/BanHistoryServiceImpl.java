@@ -27,9 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,9 +65,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private ObjectMapper objectMapper;
     @Autowired
     private IPDBManager geoIPManager;
-    @Value("${sparkle.machine-learning.banhistory-sample-rate}")
-    private double banHistorySampleRate;
-
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> stringStringRedisTemplate;
@@ -325,7 +320,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         });
     }
 
-    @Scheduled(cron = "${sparkle.banhistory.refresh-module-name-cache-cron}")
     @MonitoredScheduledTask(
             id = "ban-module-name-cache",
             group = TaskGroup.MAINTENANCE,

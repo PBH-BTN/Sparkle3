@@ -6,13 +6,13 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.VersionAlertService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,14 +33,10 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> implements IUserappService {
-    @Value("${sparkle.userapp.auto-account.allow-register}")
-    private boolean autoAccountAllowRegister;
-    @Value("${sparkle.userapp.auto-account.allow-login}")
-    private boolean autoAccountAllowLogin;
-    @Value("${sparkle.userapp.auto-account.holder-uid}")
-    private long autoAccountHolderUid;
     @Autowired
     private VersionAlertService versionAlertService;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
     private final Cache<Long, Boolean> lastSeenUpdateThrottle = CacheBuilder.newBuilder()
             .maximumSize(10000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -49,6 +45,18 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     @Nullable
     @Transactional
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent) {
+        boolean autoAccountAllowRegister = btnConfigService.booleanValue(
+                "userappAutoAccount",
+                "allowRegister"
+        );
+        boolean autoAccountAllowLogin = btnConfigService.booleanValue(
+                "userappAutoAccount",
+                "allowLogin"
+        );
+        long autoAccountHolderUid = btnConfigService.longValue(
+                "userappAutoAccount",
+                "holderUid"
+        );
         Userapp userApp;
         if (("example-app-id".equals(appId) || appId.isBlank())
                 && ("example-app-secret".equals(appSecret) || appSecret.isBlank())

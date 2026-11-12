@@ -180,6 +180,40 @@ public class DatabaseConfigService {
         return values;
     }
 
+    public void updateSensitive(String key, String value, @Nullable Long operatorId)
+            throws BusinessException {
+        if (key == null || key.isBlank()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Config key is required");
+        }
+        if (value == null || value.length() > 4_096) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Sensitive config value is invalid");
+        }
+        if (isExcludedKey(key)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Datasource and schema migration configuration cannot be changed here");
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT sensitive
+                FROM app_config_entries
+                WHERE config_key = ?
+                """, key);
+        if (rows.isEmpty()) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "Config key not found");
+        }
+        if (!Boolean.TRUE.equals(rows.getFirst().get("sensitive"))) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Config key is not marked as sensitive");
+        }
+        jdbcTemplate.update("""
+                UPDATE app_config_entries
+                SET config_value = ?,
+                    source = 'database',
+                    updated_at = now(),
+                    updated_by = ?
+                WHERE config_key = ?
+                """, value, operatorId, key);
+    }
+
     private ConfigEntry toEntry(String key,
                                 String rawValue,
                                 String valueType,
@@ -223,6 +257,20 @@ public class DatabaseConfigService {
     public boolean isHotReload(String key) {
         return HOT_RELOAD_KEYS.contains(key)
                 || key.startsWith("sparkle.ping.")
+                || "sparkle.root-url".equals(key)
+                || "sparkle.chn-root-url".equals(key)
+                || key.startsWith("sparkle.captcha.pow.")
+                || key.startsWith("sparkle.query.query-ip.")
+                || key.startsWith("sparkle.ranking.weight.")
+                || key.startsWith("sparkle.admin.user-ip-warning.")
+                || key.startsWith("sparkle.measure.")
+                || key.startsWith("sparkle.github-sync.")
+                || key.startsWith("sparkle.security.")
+                || key.startsWith("sparkle.userapp.auto-account.")
+                || key.startsWith("sparkle.banhistory.")
+                || key.startsWith("sparkle.points.")
+                || key.startsWith("sparkle.version-alert.")
+                || key.startsWith("sparkle.user-contact-email.")
                 || key.startsWith("sparkle.analyse.")
                 || key.startsWith("sparkle.user-avatar.");
     }
@@ -230,6 +278,15 @@ public class DatabaseConfigService {
     public boolean isExcludedKey(String key) {
         return key.startsWith("spring.datasource.")
                 || key.startsWith("spring.flyway.");
+    }
+
+    public boolean isDeprecatedKey(String key) {
+        return key.startsWith("sparkle.machine-learning.")
+                || key.startsWith("sparkle.tracker.")
+                || key.startsWith("sparkle.statistics.")
+                || "sparkle.ranking.database-type".equals(key)
+                || "sparkle.swarm-statistics-track.cron".equals(key)
+                || "sparkle.swarm-statistics-track.duration".equals(key);
     }
 
     public boolean isSensitiveKey(String key) {
@@ -275,6 +332,36 @@ public class DatabaseConfigService {
                 typeForValue(value),
                 groupForKey(key),
                 source,
+                isSensitiveKey(key),
+                isHotReload(key)
+        );
+    }
+
+    public int upsertYamlValue(String key, String value) {
+        return jdbcTemplate.update("""
+                INSERT INTO app_config_entries
+                    (config_key, config_value, value_type, config_group, source, sensitive, hot_reload)
+                VALUES (?, ?, ?, ?, 'yaml', ?, ?)
+                ON CONFLICT (config_key) DO UPDATE
+                SET config_value = EXCLUDED.config_value,
+                    value_type = EXCLUDED.value_type,
+                    config_group = EXCLUDED.config_group,
+                    sensitive = EXCLUDED.sensitive,
+                    hot_reload = EXCLUDED.hot_reload,
+                    updated_at = now()
+                WHERE app_config_entries.source = 'yaml'
+                  AND (
+                      app_config_entries.config_value IS DISTINCT FROM EXCLUDED.config_value
+                      OR app_config_entries.value_type IS DISTINCT FROM EXCLUDED.value_type
+                      OR app_config_entries.config_group IS DISTINCT FROM EXCLUDED.config_group
+                      OR app_config_entries.sensitive IS DISTINCT FROM EXCLUDED.sensitive
+                      OR app_config_entries.hot_reload IS DISTINCT FROM EXCLUDED.hot_reload
+                  )
+                """,
+                key,
+                value,
+                typeForValue(value),
+                groupForKey(key),
                 isSensitiveKey(key),
                 isHotReload(key)
         );

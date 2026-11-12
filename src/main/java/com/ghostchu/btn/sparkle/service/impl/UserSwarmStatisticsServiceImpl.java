@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserSwarmStatisticMapper;
 import com.ghostchu.btn.sparkle.service.*;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.dto.SwarmStatisticsStatusDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
@@ -20,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -50,14 +50,8 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
     private TaskStatusService taskStatusService;
     @Autowired
     private TaskManualExecutionService taskManualExecutionService;
-    @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack}")
-    private double rankingSentTrafficOtherAckWeight;
-    @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-other-ack}")
-    private double rankingReceivedTrafficOtherAckWeight;
-    @Value("${sparkle.ranking.weight.user-swarm-statistics.sent-traffic-self-report}")
-    private double rankingSentTrafficSelfReportWeight;
-    @Value("${sparkle.ranking.weight.user-swarm-statistics.received-traffic-self-report}")
-    private double rankingReceivedTrafficSelfReportWeight;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
 
     private final AtomicBoolean refreshing = new AtomicBoolean();
     private volatile OffsetDateTime lastStartedAt;
@@ -254,14 +248,25 @@ public class UserSwarmStatisticsServiceImpl extends ServiceImpl<UserSwarmStatist
 
     @Override
     public @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking() {
-        return baseMapper.calcUsersRanking(rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
-                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight, userService.getSystemUids());
+        return baseMapper.calcUsersRanking(
+                btnConfigService.doubleValue("rankingWeights", "sentTrafficOtherAck"),
+                btnConfigService.doubleValue("rankingWeights", "sentTrafficSelfReport"),
+                btnConfigService.doubleValue("rankingWeights", "receivedTrafficOtherAck"),
+                btnConfigService.doubleValue("rankingWeights", "receivedTrafficSelfReport"),
+                userService.getSystemUids()
+        );
     }
 
     @Override
     public @Nullable UserSwarmStatisticTrackRankingDto getUserRanking(long userId) {
-        return baseMapper.calcUserRanking(userId, rankingSentTrafficOtherAckWeight, rankingSentTrafficSelfReportWeight,
-                rankingReceivedTrafficOtherAckWeight, rankingReceivedTrafficSelfReportWeight, userService.getSystemUids());
+        return baseMapper.calcUserRanking(
+                userId,
+                btnConfigService.doubleValue("rankingWeights", "sentTrafficOtherAck"),
+                btnConfigService.doubleValue("rankingWeights", "sentTrafficSelfReport"),
+                btnConfigService.doubleValue("rankingWeights", "receivedTrafficOtherAck"),
+                btnConfigService.doubleValue("rankingWeights", "receivedTrafficSelfReport"),
+                userService.getSystemUids()
+        );
     }
 
     @NotNull

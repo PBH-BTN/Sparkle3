@@ -4,7 +4,13 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.support.CronExpression;
 
+import java.math.BigDecimal;
 import java.net.URI;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -50,13 +56,27 @@ public final class BtnConfigValidator {
             throw invalid(definition, "value is required");
         }
         String value = rawValue.trim();
+        if (definition.type() == BtnConfigCatalog.ValueType.SECRET) {
+            if (value.length() > 4_096) {
+                throw invalid(definition, "value is too long");
+            }
+            return value;
+        }
         if (value.isEmpty()) {
             throw invalid(definition, "value must not be empty");
         }
         return switch (definition.type()) {
             case BOOLEAN -> normalizeBoolean(definition, value);
             case INTEGER -> normalizeInteger(definition, value);
+            case DECIMAL -> normalizeDecimal(definition, value);
             case ENDPOINT -> normalizeEndpoint(definition, value);
+            case URL -> normalizeUrl(definition, value);
+            case ALGORITHM -> normalizeAlgorithm(definition, value);
+            case TEXT -> normalizeText(definition, value);
+            case LIST -> normalizeList(definition, value);
+            case TIME_ZONE -> normalizeTimeZone(definition, value);
+            case EMAIL -> normalizeEmail(definition, value);
+            case SECRET -> value;
             case CRON -> normalizeCron(definition, value);
         };
     }
@@ -89,6 +109,27 @@ public final class BtnConfigValidator {
             throw invalid(definition, "value must be at most " + definition.max());
         }
         return Long.toString(parsed);
+    }
+
+    private static String normalizeDecimal(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        BigDecimal parsed;
+        try {
+            parsed = new BigDecimal(value);
+        } catch (NumberFormatException exception) {
+            throw invalid(definition, "value must be numeric");
+        }
+        if (definition.min() != null
+                && parsed.compareTo(BigDecimal.valueOf(definition.min())) < 0) {
+            throw invalid(definition, "value must be at least " + definition.min());
+        }
+        if (definition.max() != null
+                && parsed.compareTo(BigDecimal.valueOf(definition.max())) > 0) {
+            throw invalid(definition, "value must be at most " + definition.max());
+        }
+        return parsed.stripTrailingZeros().toPlainString();
     }
 
     private static String normalizeEndpoint(
@@ -130,6 +171,94 @@ public final class BtnConfigValidator {
         } catch (IllegalArgumentException exception) {
             throw invalid(definition, "invalid Spring cron expression");
         }
+    }
+
+    private static String normalizeUrl(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        try {
+            URI uri = URI.create(value);
+            if (("http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null
+                    && uri.getQuery() == null
+                    && uri.getFragment() == null) {
+                return value.endsWith("/")
+                        ? value.substring(0, value.length() - 1)
+                        : value;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Report the same domain error for every malformed value.
+        }
+        throw invalid(definition, "value must be an absolute HTTP(S) URL without a query or fragment");
+    }
+
+    private static String normalizeAlgorithm(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        if (value.length() > 64 || value.chars().anyMatch(Character::isWhitespace)) {
+            throw invalid(definition, "algorithm name is invalid");
+        }
+        try {
+            MessageDigest.getInstance(value);
+            return value;
+        } catch (NoSuchAlgorithmException exception) {
+            throw invalid(definition, "algorithm is not supported by this Java runtime");
+        }
+    }
+
+    private static String normalizeText(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        if (value.length() > 16_384) {
+            throw invalid(definition, "value is too long");
+        }
+        return value;
+    }
+
+    private static String normalizeList(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        if (value.length() > 16_384) {
+            throw invalid(definition, "value is too long");
+        }
+        String[] entries = value.replace('\n', ',').split(",");
+        String normalized = Arrays.stream(entries)
+                .map(String::trim)
+                .filter(entry -> !entry.isEmpty())
+                .distinct()
+                .reduce((left, right) -> left + "," + right)
+                .orElse("");
+        if (normalized.isEmpty()) {
+            throw invalid(definition, "value must not be empty");
+        }
+        return normalized;
+    }
+
+    private static String normalizeTimeZone(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        try {
+            return ZoneId.of(value).getId();
+        } catch (DateTimeException exception) {
+            throw invalid(definition, "time zone is invalid");
+        }
+    }
+
+    private static String normalizeEmail(
+            BtnConfigCatalog.Definition definition,
+            String value
+    ) throws BusinessException {
+        if (value.length() > 320
+                || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw invalid(definition, "email address is invalid");
+        }
+        return value;
     }
 
     private static void validateCrossFieldRules(Map<String, String> values)

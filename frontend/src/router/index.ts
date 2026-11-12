@@ -163,6 +163,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminBtnConfigView.vue'),
         },
         {
+          path: 'github-sync',
+          name: 'admin-github-sync',
+          component: () => import('@/views/admin/AdminGithubSyncView.vue'),
+        },
+        {
           path: 'database-config',
           name: 'admin-database-config',
           component: () => import('@/views/admin/AdminDatabaseConfigView.vue'),

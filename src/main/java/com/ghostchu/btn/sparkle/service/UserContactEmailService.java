@@ -5,9 +5,9 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.ContactEmailResult;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import jakarta.mail.internet.InternetAddress;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -30,23 +30,20 @@ public class UserContactEmailService {
     private final UserPublicProfileService publicProfileService;
     private final AdminConfigService adminConfigService;
     private final JavaMailSender mailSender;
-    private final String fromAddress;
-    private final String fromName;
+    private final BtnRuntimeConfigService btnConfigService;
 
     public UserContactEmailService(
             JdbcTemplate jdbcTemplate,
             UserPublicProfileService publicProfileService,
             AdminConfigService adminConfigService,
             JavaMailSender mailSender,
-            @Value("${sparkle.user-contact-email.from-address}") String fromAddress,
-            @Value("${sparkle.user-contact-email.from-name}") String fromName
+            BtnRuntimeConfigService btnConfigService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.publicProfileService = publicProfileService;
         this.adminConfigService = adminConfigService;
         this.mailSender = mailSender;
-        this.fromAddress = fromAddress;
-        this.fromName = fromName;
+        this.btnConfigService = btnConfigService;
     }
 
     @Transactional
@@ -175,7 +172,10 @@ public class UserContactEmailService {
             recipientAddress.validate();
             var mimeMessage = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setFrom(new InternetAddress(
+                    btnConfigService.text("userContactEmail", "fromAddress"),
+                    btnConfigService.text("userContactEmail", "fromName")
+            ));
             helper.setTo(recipientAddress);
             helper.setSubject(subject);
             helper.setText(content, false);

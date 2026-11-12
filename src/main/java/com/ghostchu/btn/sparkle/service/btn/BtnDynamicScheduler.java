@@ -1,6 +1,10 @@
 package com.ghostchu.btn.sparkle.service.btn;
 
+import com.ghostchu.btn.sparkle.service.github.GithubSyncSettingsService;
 import com.ghostchu.btn.sparkle.service.impl.SwarmTrackerServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.GithubSyncServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.BanHistoryServiceImpl;
+import com.ghostchu.btn.sparkle.service.impl.UserIPWarningServiceImpl;
 import com.ghostchu.btn.sparkle.service.impl.UserappsHeartbeatServiceImpl;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
@@ -8,6 +12,7 @@ import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
 import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
+import com.ghostchu.btn.sparkle.util.GlobalpingApiClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -30,11 +35,19 @@ public class BtnDynamicScheduler {
     private static final String HEARTBEAT_FLUSH_TASK = "heartbeat-queue-flush";
     private static final String HEARTBEAT_CLEANUP_TASK = "heartbeat-cleanup";
     private static final String SWARM_CLEANUP_TASK = "swarm-data-retention";
+    private static final String USER_IP_WARNING_TASK = "user-ip-warning";
+    private static final String GITHUB_SYNC_TASK = "github-rule-sync";
+    private static final String BAN_MODULE_CACHE_TASK = "ban-module-name-cache";
 
     private final TaskScheduler taskScheduler;
     private final BtnRuntimeConfigService configService;
     private final UserappsHeartbeatServiceImpl heartbeatService;
     private final SwarmTrackerServiceImpl swarmTrackerService;
+    private final UserIPWarningServiceImpl userIpWarningService;
+    private final GithubSyncServiceImpl githubSyncService;
+    private final GithubSyncSettingsService githubSyncSettingsService;
+    private final BanHistoryServiceImpl banHistoryService;
+    private final GlobalpingApiClient globalpingApiClient;
     private final TaskStatusService taskStatusService;
 
     private final Map<String, ScheduledFuture<?>> futures = new ConcurrentHashMap<>();
@@ -45,12 +58,22 @@ public class BtnDynamicScheduler {
             BtnRuntimeConfigService configService,
             UserappsHeartbeatServiceImpl heartbeatService,
             SwarmTrackerServiceImpl swarmTrackerService,
+            UserIPWarningServiceImpl userIpWarningService,
+            GithubSyncServiceImpl githubSyncService,
+            GithubSyncSettingsService githubSyncSettingsService,
+            BanHistoryServiceImpl banHistoryService,
+            GlobalpingApiClient globalpingApiClient,
             TaskStatusService taskStatusService
     ) {
         this.taskScheduler = taskScheduler;
         this.configService = configService;
         this.heartbeatService = heartbeatService;
         this.swarmTrackerService = swarmTrackerService;
+        this.userIpWarningService = userIpWarningService;
+        this.githubSyncService = githubSyncService;
+        this.githubSyncSettingsService = githubSyncSettingsService;
+        this.banHistoryService = banHistoryService;
+        this.globalpingApiClient = globalpingApiClient;
         this.taskStatusService = taskStatusService;
     }
 
@@ -74,6 +97,9 @@ public class BtnDynamicScheduler {
     }
 
     public synchronized void refreshSchedules() {
+        globalpingApiClient.setAccessToken(
+                configService.text("measure", "globalpingToken")
+        );
         refreshHeartbeatFlush();
         refreshCron(
                 HEARTBEAT_CLEANUP_TASK,
@@ -90,6 +116,30 @@ public class BtnDynamicScheduler {
                 swarmTrackerService::cronDataRetentionCleanup,
                 "admin.tasks.items.swarm-data-retention.name",
                 "admin.tasks.items.swarm-data-retention.description"
+        );
+        refreshCron(
+                USER_IP_WARNING_TASK,
+                "userIpWarning",
+                "cron",
+                userIpWarningService::userIpWarning,
+                "admin.tasks.items.user-ip-warning.name",
+                "admin.tasks.items.user-ip-warning.description"
+        );
+        String githubSchedule = githubSyncSettingsService.schedule();
+        configureCronExpression(
+                GITHUB_SYNC_TASK,
+                githubSchedule,
+                githubSyncService::scheduleSync,
+                "admin.tasks.items.github-rule-sync.name",
+                "admin.tasks.items.github-rule-sync.description"
+        );
+        refreshCron(
+                BAN_MODULE_CACHE_TASK,
+                "banHistory",
+                "refreshModuleNameCacheCron",
+                banHistoryService::refreshDistinctModuleNamesCache,
+                "admin.tasks.items.ban-module-name-cache.name",
+                "admin.tasks.items.ban-module-name-cache.description"
         );
     }
 
@@ -142,7 +192,23 @@ public class BtnDynamicScheduler {
             String nameKey,
             String descriptionKey
     ) {
-        String expression = configService.text(section, field).trim();
+        configureCronExpression(
+                taskId,
+                configService.text(section, field).trim(),
+                task,
+                nameKey,
+                descriptionKey
+        );
+    }
+
+    private void configureCronExpression(
+            String taskId,
+            String expression,
+            Runnable task,
+            String nameKey,
+            String descriptionKey
+    ) {
+        expression = expression == null ? "" : expression.trim();
         boolean disabled = expression.isBlank() || "-".equals(expression);
         if (disabled) {
             cancel(taskId);

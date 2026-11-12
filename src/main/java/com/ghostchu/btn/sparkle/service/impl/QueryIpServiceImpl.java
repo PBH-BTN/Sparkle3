@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -25,18 +24,6 @@ import java.util.*;
 @Slf4j
 @Service
 public class QueryIpServiceImpl {
-    @Value("${sparkle.query.query-ip.include-modules}")
-    private String queryIpIncludeModules;
-    @Value("${sparkle.query.query-ip.bans-counting-duration}")
-    private long bansCountingDuration;
-    @Value("${sparkle.query.query-ip.swarms-counting-duration}")
-    private long swarmsCountingDuration;
-    @Value("${sparkle.query.query-ip.heartbeat-query-duration}")
-    private long heartbeatDuration;
-    @Value("${sparkle.query.query-ip.traffic-measure-duration}")
-    private long trafficMeasureDuration;
-    @Value("${sparkle.query.query-ip.torrents-counting-duration}")
-    private long torrentsCountingDuration;
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
@@ -53,6 +40,30 @@ public class QueryIpServiceImpl {
     private BtnRuntimeConfigService btnConfigService;
 
     public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
+        String queryIpIncludeModules = btnConfigService.text(
+                "queryIpStatistics",
+                "includeModules"
+        );
+        long bansCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "bansCountingDuration"
+        );
+        long swarmsCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "swarmsCountingDuration"
+        );
+        long heartbeatDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "heartbeatQueryDuration"
+        );
+        long trafficMeasureDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "trafficMeasureDuration"
+        );
+        long torrentsCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "torrentsCountingDuration"
+        );
         long syncSwarmInterval = btnConfigService.longValue("syncSwarm", "interval");
         long syncSwarmRandomInitialDelay = btnConfigService.longValue(
                 "syncSwarm",

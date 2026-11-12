@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionA
 import com.ghostchu.btn.sparkle.controller.admin.dto.VersionAlertModels.VersionAlertRuleInput;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -52,8 +52,7 @@ public class VersionAlertService {
     private final JavaMailSender mailSender;
     private final IUserService userService;
     private final TaskStatusService taskStatusService;
-    private final String fromAddress;
-    private final String fromName;
+    private final BtnRuntimeConfigService btnConfigService;
 
     private volatile List<VersionAlertRule> cachedRules;
     private volatile long cacheExpiresAt;
@@ -64,16 +63,14 @@ public class VersionAlertService {
             JavaMailSender mailSender,
             IUserService userService,
             TaskStatusService taskStatusService,
-            @Value("${sparkle.version-alert.from-address}") String fromAddress,
-            @Value("${sparkle.version-alert.from-name}") String fromName
+            BtnRuntimeConfigService btnConfigService
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.mailSender = mailSender;
         this.userService = userService;
         this.taskStatusService = taskStatusService;
-        this.fromAddress = fromAddress;
-        this.fromName = fromName;
+        this.btnConfigService = btnConfigService;
         taskStatusService.ensure(TaskDefinition.event(
                 "version-alert-delivery",
                 TaskGroup.MAINTENANCE,
@@ -325,7 +322,10 @@ public class VersionAlertService {
         try {
             var mimeMessage = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setFrom(new InternetAddress(
+                    btnConfigService.text("versionAlert", "fromAddress"),
+                    btnConfigService.text("versionAlert", "fromName")
+            ));
             helper.setTo(to);
             helper.setSubject(render(rule.subject(), rule, nickname, version, userAgent, operatorId));
             helper.setText(render(rule.body(), rule, nickname, version, userAgent, operatorId), false);
