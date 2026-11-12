@@ -242,6 +242,8 @@ public class DatabaseConfigService {
                 || key.startsWith("sparkle.banhistory.")
                 || key.startsWith("sparkle.points.")
                 || key.startsWith("sparkle.mail.")
+                || key.startsWith("sparkle.ai.")
+                || key.startsWith("sparkle.ip-query.")
                 || key.startsWith("sparkle.version-alert.")
                 || key.startsWith("sparkle.user-contact-email.")
                 || key.startsWith("sparkle.analyse.")
@@ -273,6 +275,8 @@ public class DatabaseConfigService {
                 || normalized.contains("token")
                 || normalized.contains("credential")
                 || normalized.contains("authorization")
+                || normalized.contains("api-key")
+                || normalized.contains("apikey")
                 || normalized.contains("private-key")
                 || normalized.endsWith(".dsn");
     }

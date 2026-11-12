@@ -18,6 +18,8 @@ declare module 'vue' {
     ACard: typeof import('@arco-design/web-vue')['Card']
     ACheckbox: typeof import('@arco-design/web-vue')['Checkbox']
     ACol: typeof import('@arco-design/web-vue')['Col']
+    ACollapse: typeof import('@arco-design/web-vue')['Collapse']
+    ACollapseItem: typeof import('@arco-design/web-vue')['CollapseItem']
     AConfigProvider: typeof import('@arco-design/web-vue')['ConfigProvider']
     ADatePicker: typeof import('@arco-design/web-vue')['DatePicker']
     ADescriptions: typeof import('@arco-design/web-vue')['Descriptions']

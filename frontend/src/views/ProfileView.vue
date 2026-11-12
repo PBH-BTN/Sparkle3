@@ -72,6 +72,42 @@ onMounted(async () => {
             <div class="profile-identity">
               <h2>{{ profile.user.nickname }}</h2>
               <span class="muted">UID {{ profile.user.id }}</span>
+              <a-space v-if="profile.user.nicknameModerationStatus !== 'APPROVED'" wrap>
+                <a-tag
+                  :color="
+                    profile.user.nicknameModerationStatus === 'REJECTED'
+                      || profile.user.nicknameModerationStatus === 'FAILED'
+                      ? 'red'
+                      : 'orange'
+                  "
+                >
+                  {{
+                    t('profile.usernameReview', {
+                      status: t(
+                        `ipQueryPage.moderation.${profile.user.nicknameModerationStatus || 'PENDING'}`,
+                      ),
+                    })
+                  }}
+                </a-tag>
+              </a-space>
+              <a-space v-if="profile.user.avatarModerationStatus !== 'APPROVED'" wrap>
+                <a-tag
+                  :color="
+                    profile.user.avatarModerationStatus === 'REJECTED'
+                      || profile.user.avatarModerationStatus === 'FAILED'
+                      ? 'red'
+                      : 'orange'
+                  "
+                >
+                  {{
+                    t('profile.avatarReview', {
+                      status: t(
+                        `ipQueryPage.moderation.${profile.user.avatarModerationStatus || 'PENDING'}`,
+                      ),
+                    })
+                  }}
+                </a-tag>
+              </a-space>
             </div>
           </div>
 
@@ -95,6 +131,23 @@ onMounted(async () => {
               {{ t('profile.openPoints') }}
             </a-button>
           </div>
+          <a-alert
+            v-if="
+              profile.user.nicknameModerationReason
+                || profile.user.avatarModerationReason
+            "
+            type="warning"
+            show-icon
+            class="profile-review-alert"
+            :title="t('profile.moderationReason')"
+          >
+            <div v-if="profile.user.nicknameModerationReason">
+              {{ t('profile.username') }}：{{ profile.user.nicknameModerationReason }}
+            </div>
+            <div v-if="profile.user.avatarModerationReason">
+              {{ t('profile.avatar') }}：{{ profile.user.avatarModerationReason }}
+            </div>
+          </a-alert>
         </a-card>
 
         <a-card class="surface-card details-card">
@@ -246,6 +299,10 @@ onMounted(async () => {
 }
 
 .details-card {
+  margin-top: 16px;
+}
+
+.profile-review-alert {
   margin-top: 16px;
 }
 

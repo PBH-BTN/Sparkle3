@@ -55,8 +55,15 @@ const navigationIcons: Record<string, Component> = {
   dashboard: IconDashboard,
 }
 
-const navItems = computed(() =>
-  session.navigation.map((item) => ({
+const navItems = computed(() => [
+  {
+    id: 'builtin-ip-query',
+    href: '/ip-query',
+    openInNewTab: false,
+    label: t('nav.ipQuery'),
+    icon: IconSearch,
+  },
+  ...session.navigation.map((item) => ({
     id: item.id,
     href: item.href,
     openInNewTab: item.openInNewTab,
@@ -66,7 +73,10 @@ const navItems = computed(() =>
         : item.labelZh || item.labelEn,
     icon: navigationIcons[item.icon] ?? IconLink,
   })),
-)
+].filter(
+  (item, index, items) =>
+    items.findIndex((candidate) => candidate.href === item.href) === index,
+))
 
 const selectedKey = computed(() => {
   return (

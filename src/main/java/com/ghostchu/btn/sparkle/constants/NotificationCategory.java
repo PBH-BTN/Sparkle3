@@ -10,7 +10,9 @@ public enum NotificationCategory {
     MAJOR_ANNOUNCEMENT(false),
     DAILY_ANNOUNCEMENT(false),
     CHANGELOG(false),
-    DIRECT_MESSAGE(false);
+    DIRECT_MESSAGE(false),
+    SOCIAL_ALERT(false),
+    GENERAL_NOTICE(false);
 
     private final boolean mandatory;
 

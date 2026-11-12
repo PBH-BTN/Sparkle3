@@ -53,6 +53,11 @@ const allItems = computed(() => [
     label: t('admin.nav.flarumIntegration'),
     icon: IconLink,
   },
+  {
+    key: '/admin/ai-moderation',
+    label: t('admin.nav.aiModeration'),
+    icon: IconThunderbolt,
+  },
   { key: '/admin/btn', label: t('admin.nav.btn'), icon: IconThunderbolt },
   { key: '/admin/modules', label: t('admin.nav.modules'), icon: IconCode },
   { key: '/admin/rules', label: t('admin.nav.rules'), icon: IconCode },

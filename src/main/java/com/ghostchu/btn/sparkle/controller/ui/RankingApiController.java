@@ -164,12 +164,14 @@ public class RankingApiController {
                                  UserPrivacySettings privacy) {
         boolean anonymous = !privacy.allowsFullUsername() && !privacy.allowsBlurredUsername();
         String displayName = null;
-        if (privacy.allowsFullUsername()) {
+        if (user.isNicknamePubliclyVisible() && privacy.allowsFullUsername()) {
             displayName = user.getNickname();
-        } else if (privacy.allowsBlurredUsername()) {
+        } else if (user.isNicknamePubliclyVisible()
+                && privacy.allowsBlurredUsername()) {
             displayName = blurNickname(user.getNickname());
         }
-        boolean avatarAvailable = !privacy.hidesAvatar();
+        boolean avatarAvailable = user.isAvatarPubliclyVisible()
+                && !privacy.hidesAvatar();
         return new RankingEntry(
                 ranking.getRank(),
                 ranking.getUserId(),
@@ -209,12 +211,14 @@ public class RankingApiController {
         boolean anonymous = !privacy.allowsFullUsername()
                 && !privacy.allowsBlurredUsername();
         String displayName = null;
-        if (privacy.allowsFullUsername()) {
+        if (user.isNicknamePubliclyVisible() && privacy.allowsFullUsername()) {
             displayName = user.getNickname();
-        } else if (privacy.allowsBlurredUsername()) {
+        } else if (user.isNicknamePubliclyVisible()
+                && privacy.allowsBlurredUsername()) {
             displayName = blurNickname(user.getNickname());
         }
-        boolean avatarAvailable = !privacy.hidesAvatar();
+        boolean avatarAvailable = user.isAvatarPubliclyVisible()
+                && !privacy.hidesAvatar();
         return new PointsRankingEntry(
                 ranking.rank(),
                 user.getId(),

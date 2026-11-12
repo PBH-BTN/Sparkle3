@@ -18,6 +18,8 @@ class SpaControllerTest {
         for (String path : new String[]{
                 "/",
                 "/user/profile/42",
+                "/ip-query",
+                "/admin/ai-moderation",
                 "/ping/queryIp/widget"
         }) {
             mockMvc.perform(get(path))

@@ -25,14 +25,17 @@ public class UserPublicProfileService {
         boolean self = sender.getId().equals(target.getId());
 
         String nickname = null;
-        if (self || privacy.allowsFullUsername()) {
+        if (self || (target.isNicknamePubliclyVisible()
+                && privacy.allowsFullUsername())) {
             nickname = target.getNickname();
-        } else if (privacy.allowsBlurredUsername()) {
+        } else if (target.isNicknamePubliclyVisible()
+                && privacy.allowsBlurredUsername()) {
             nickname = blurNickname(target.getNickname());
         }
 
         String avatarUrl = null;
-        if (self || !privacy.hidesAvatar()) {
+        if (self || (target.isAvatarPubliclyVisible()
+                && !privacy.hidesAvatar())) {
             avatarUrl = target.getAvatarUrl();
         }
 

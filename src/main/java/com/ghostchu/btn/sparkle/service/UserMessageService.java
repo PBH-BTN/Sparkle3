@@ -536,6 +536,9 @@ public class UserMessageService {
     }
 
     private String senderDisplayName(User sender) {
+        if (!sender.isNicknamePubliclyVisible()) {
+            return "***";
+        }
         UserPrivacySettings privacy = publicProfileService.privacySettings(sender);
         if (privacy.allowsFullUsername()) {
             return sender.getNickname();

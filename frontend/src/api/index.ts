@@ -25,6 +25,9 @@ import type {
   InboxPage,
   MemberProviderBinding,
   IpQueryResult,
+  IpQueryLookupResponse,
+  IpCommentPage,
+  IpComment,
   NotificationPreferencesResponse,
   NotificationPreference,
   PageResponse,
@@ -201,6 +204,32 @@ export const uiApi = {
   announcements: (placement: Announcement['placement'] = 'GLOBAL_TOP') =>
     request<Announcement[]>(`/api/ui/notices?placement=${encodeURIComponent(placement)}`),
   ipQueryWidget: (search: string) => request<IpQueryResult>(`/ping/queryIp/widget/data${search}`),
+  ipQueryLookup: (query: string) =>
+    request<IpQueryLookupResponse>(
+      `/api/ui/ip-query/lookup?query=${encodeURIComponent(query)}`,
+    ),
+  ipQueryComments: (scope: string, page: number, size: number) =>
+    request<IpCommentPage>(
+      `/api/ui/ip-query/comments?scope=${encodeURIComponent(scope)}&page=${page}&size=${size}`,
+    ),
+  createIpQueryComment: (
+    scope: string,
+    content: string,
+    parentId: number | null = null,
+  ) =>
+    request<IpComment>('/api/ui/ip-query/comments', {
+      method: 'POST',
+      body: JSON.stringify({ scope, content, parentId }),
+    }),
+  updateIpQueryComment: (id: number, content: string, revision: number) =>
+    request<IpComment>(`/api/ui/ip-query/comments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content, revision }),
+    }),
+  deleteIpQueryComment: (id: number) =>
+    request<void>(`/api/ui/ip-query/comments/${id}`, {
+      method: 'DELETE',
+    }),
 }
 
 export const historyApi = {

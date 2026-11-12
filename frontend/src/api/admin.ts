@@ -2,6 +2,8 @@ import { request } from './http'
 import type {
   Announcement,
   AnnouncementInput,
+  AiModerationAdmin,
+  AiModerationSettingsInput,
   AnalyseModule,
   AfdianSettings,
   AfdianSyncResult,
@@ -34,6 +36,7 @@ import type {
   FlarumIntegrationUpdateSettings,
   HomepageStatisticsAdminResponse,
   HomepageStatisticsConfigUpdate,
+  IpQueryCommentSettings,
   GeoIpCityBlacklistEntry,
   GeoIpCityBlacklistGenerationStatus,
   GeoIpCityBlacklistInput,
@@ -52,6 +55,7 @@ import type {
   MemberPlatformSettings,
   MemberReconciliation,
   MemberTransactionPage,
+  ModerationTestResult,
   NavigationItemInput,
   RetentionPolicyInput,
   RuleInput,
@@ -536,6 +540,37 @@ export const adminApi = {
     })
     return request<MemberReconciliation>(
       `/api/admin/memberships/reconciliation?${search.toString()}`,
+    )
+  },
+  aiModeration: () =>
+    request<AiModerationAdmin>('/api/admin/ai-moderation'),
+  updateAiModeration: (body: AiModerationSettingsInput) =>
+    request<AiModerationAdmin>('/api/admin/ai-moderation/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  updateIpQueryComments: (body: IpQueryCommentSettings) =>
+    request<AiModerationAdmin>('/api/admin/ai-moderation/comments', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  testAiModeration: (content: string) =>
+    request<ModerationTestResult>('/api/admin/ai-moderation/test', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+  requeueAllIpQueryComments: () =>
+    request<{ jobsCreated: number }>(
+      '/api/admin/ai-moderation/comments/requeue',
+      { method: 'POST' },
+    ),
+  retryAiModerationJobs: (contentType?: string) => {
+    const search = contentType
+      ? `?contentType=${encodeURIComponent(contentType)}`
+      : ''
+    return request<{ jobsCreated: number }>(
+      `/api/admin/ai-moderation/jobs/retry${search}`,
+      { method: 'POST' },
     )
   },
 }

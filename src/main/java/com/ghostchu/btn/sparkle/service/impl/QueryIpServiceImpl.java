@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.service.*;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
 import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
+import com.ghostchu.btn.sparkle.service.ipquery.IpScope;
 import com.ghostchu.btn.sparkle.util.TimeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,6 +41,16 @@ public class QueryIpServiceImpl {
     private BtnRuntimeConfigService btnConfigService;
 
     public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
+        try {
+            peerIp = IpScope.parse(peerIp).canonicalCidr();
+        } catch (Exception exception) {
+            throw new IllegalArgumentException(
+                    exception.getMessage() == null
+                            ? "Invalid IP address or CIDR"
+                            : exception.getMessage(),
+                    exception
+            );
+        }
         String queryIpIncludeModules = btnConfigService.text(
                 "queryIpStatistics",
                 "includeModules"

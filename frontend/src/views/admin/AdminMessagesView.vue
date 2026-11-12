@@ -35,6 +35,8 @@ const categories: NotificationCategory[] = [
   'MAJOR_ANNOUNCEMENT',
   'DAILY_ANNOUNCEMENT',
   'CHANGELOG',
+  'SOCIAL_ALERT',
+  'GENERAL_NOTICE',
 ]
 
 const remaining = computed(() => result.value?.remainingToday)

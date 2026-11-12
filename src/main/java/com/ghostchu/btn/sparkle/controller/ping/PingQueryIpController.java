@@ -10,11 +10,13 @@ import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import com.ghostchu.btn.sparkle.service.impl.QueryIpServiceImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class PingQueryIpController extends BasePingController {
@@ -29,14 +31,26 @@ public class PingQueryIpController extends BasePingController {
             throw new PowCaptchaFailureException();
         }
         var userApps = verifyUserApplication();
-        return ResponseEntity.ok(queryIpService.queryIp(ip));
+        return ResponseEntity.ok(safeQuery(ip));
     }
 
     @GetMapping("/ping/queryIp/widget/data")
     public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIpWidget(@RequestParam String ip)
             throws AccessDeniedException, UserApplicationBannedException, UserApplicationNotFoundException {
         verifyUserApplication();
-        return ResponseEntity.ok(queryIpService.queryIp(ip));
+        return ResponseEntity.ok(safeQuery(ip));
+    }
+
+    private QueryIpServiceImpl.IpQueryResult safeQuery(String ip) {
+        try {
+            return queryIpService.queryIp(ip);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     @Component

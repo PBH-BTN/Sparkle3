@@ -82,7 +82,9 @@ public class FlarumIntegrationService {
                 Long.toString(user.getId()),
                 new BasicInfo(
                         Long.toString(user.getId()),
-                        user.getNickname(),
+                        user.isNicknamePubliclyVisible()
+                                ? user.getNickname()
+                                : null,
                         user.getRegisterAt(),
                         user.getLastLoginAt(),
                         user.getBannedAt() != null

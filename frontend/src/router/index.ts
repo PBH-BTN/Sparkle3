@@ -10,6 +10,11 @@ const router = createRouter({
       component: () => import('@/views/HomeView.vue'),
     },
     {
+      path: '/ip-query',
+      name: 'ip-query',
+      component: () => import('@/views/IpQueryView.vue'),
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
@@ -245,6 +250,11 @@ const router = createRouter({
           path: 'flarum-integration',
           name: 'admin-flarum-integration',
           component: () => import('@/views/admin/AdminFlarumIntegrationView.vue'),
+        },
+        {
+          path: 'ai-moderation',
+          name: 'admin-ai-moderation',
+          component: () => import('@/views/admin/AdminAiModerationView.vue'),
         },
         {
           path: 'database-config',

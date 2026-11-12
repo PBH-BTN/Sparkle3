@@ -31,6 +31,7 @@ public class SpaController {
             "/userapp/create",
             "/userapp/created",
             "/banhistory",
+            "/ip-query",
             "/client-discovery",
             "/swarm-tracker",
             "/rules/preview",
@@ -54,6 +55,7 @@ public class SpaController {
             "/admin/storage",
             "/admin/version-alerts",
             "/admin/user-contact-emails",
+            "/admin/ai-moderation",
             "/admin/database-config",
             "/oauth/error",
             "/ping/queryIp/widget"

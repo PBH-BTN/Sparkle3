@@ -41,7 +41,11 @@ public final class UiModels {
             String role,
             boolean admin,
             boolean moderator,
-            PrivacySettingsView privacy
+            PrivacySettingsView privacy,
+            String nicknameModerationStatus,
+            String avatarModerationStatus,
+            String nicknameModerationReason,
+            String avatarModerationReason
     ) {
         public static UserView from(User user, UserPrivacySettings privacy) {
             return new UserView(
@@ -55,7 +59,11 @@ public final class UiModels {
                     user.getRole(),
                     AdminPolicy.isAdmin(user),
                     AdminPolicy.hasModeratorAccess(user),
-                    PrivacySettingsView.from(privacy)
+                    PrivacySettingsView.from(privacy),
+                    user.getNicknameModerationStatus(),
+                    user.getAvatarModerationStatus(),
+                    user.getNicknameModerationReason(),
+                    user.getAvatarModerationReason()
             );
         }
     }

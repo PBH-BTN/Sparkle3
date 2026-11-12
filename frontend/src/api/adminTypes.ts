@@ -977,3 +977,72 @@ export interface MemberReconciliation {
   runs: MemberSyncRun[]
   events: MemberAuditEvent[]
 }
+
+export interface AiModerationSettings {
+  enabled: boolean
+  baseUrl: string
+  apiKeyConfigured: boolean
+  model: string
+  rubric: string
+  timeoutSeconds: number
+  maxAttempts: number
+  moderateAvatars: boolean
+}
+
+export interface IpQueryCommentSettings {
+  commentsEnabled: boolean
+  commentsVisible: boolean
+  maxLength: number
+  hourlyLimit: number
+}
+
+export interface AiModerationMetrics {
+  pending: number
+  running: number
+  approved: number
+  rejected: number
+  failed: number
+}
+
+export interface AiModerationJob {
+  id: number
+  contentType: 'COMMENT' | 'USERNAME' | 'AVATAR'
+  contentRefId: number
+  contentVersion: number
+  subjectUserId: number | null
+  status: string
+  attemptCount: number
+  maxAttempts: number
+  providerModel: string | null
+  rejectionReason: string | null
+  lastError: string | null
+  createdAt: string
+  completedAt: string | null
+}
+
+export interface AiModerationAdmin {
+  settings: AiModerationSettings
+  comments: IpQueryCommentSettings
+  metrics: AiModerationMetrics
+  recentJobs: AiModerationJob[]
+  generatedAt: string
+}
+
+export interface AiModerationSettingsInput {
+  enabled: boolean
+  baseUrl: string
+  apiKey?: string
+  clearApiKey: boolean
+  model: string
+  rubric: string
+  timeoutSeconds: number
+  maxAttempts: number
+  moderateAvatars: boolean
+}
+
+export interface ModerationTestResult {
+  approved: boolean
+  reason: string
+  categories: string[]
+  confidence: number
+}

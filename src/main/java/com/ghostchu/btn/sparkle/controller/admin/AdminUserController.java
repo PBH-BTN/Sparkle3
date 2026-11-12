@@ -116,6 +116,8 @@ public class AdminUserController {
                 .setEmail(email)
                 .setNickname(request.nickname().trim())
                 .setAvatar(blankToDefault(request.avatarUrl(), "/img/anonymous-user.png"))
+                .setNicknameModerationStatus("APPROVED")
+                .setAvatarModerationStatus("APPROVED")
                 .setRole(normalizeRole(request.role()))
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(NEVER);
@@ -153,6 +155,10 @@ public class AdminUserController {
         user.setEmail(email)
                 .setNickname(request.nickname().trim())
                 .setAvatar(blankToDefault(request.avatarUrl(), "/img/anonymous-user.png"))
+                .setNicknameModerationStatus("APPROVED")
+                .setAvatarModerationStatus("APPROVED")
+                .setNicknameModerationReason(null)
+                .setAvatarModerationReason(null)
                 .setRole(role);
         userService.updateById(user);
         UserPrivacySettings privacy = userPrivacyService.update(

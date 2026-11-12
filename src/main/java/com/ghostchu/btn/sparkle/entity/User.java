@@ -66,8 +66,36 @@ public class User implements Serializable {
     @TableField("score_bytes")
     private Long scoreBytes;
 
+    @TableField("nickname_moderation_status")
+    private String nicknameModerationStatus;
+
+    @TableField("avatar_moderation_status")
+    private String avatarModerationStatus;
+
+    @TableField("nickname_moderation_reason")
+    private String nicknameModerationReason;
+
+    @TableField("avatar_moderation_reason")
+    private String avatarModerationReason;
+
+    @TableField("nickname_review_generation")
+    private Long nicknameReviewGeneration;
+
+    @TableField("avatar_review_generation")
+    private Long avatarReviewGeneration;
+
     @NotNull
     public String getAvatarUrl(){
         return "/user/avatar/" + this.id;
+    }
+
+    public boolean isNicknamePubliclyVisible() {
+        return nicknameModerationStatus == null
+                || "APPROVED".equals(nicknameModerationStatus);
+    }
+
+    public boolean isAvatarPubliclyVisible() {
+        return avatarModerationStatus == null
+                || "APPROVED".equals(avatarModerationStatus);
     }
 }

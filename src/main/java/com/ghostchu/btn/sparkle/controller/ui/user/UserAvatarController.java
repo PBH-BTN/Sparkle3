@@ -70,6 +70,9 @@ public class UserAvatarController {
         if (userDetails.getUserId().longValue() == userId) {
             return redirectTo(user.getAvatar()); // 自己永远使用原始头像
         }
+        if (!user.isAvatarPubliclyVisible()) {
+            return redirectTo("/img/anonymous-user.png");
+        }
         UserPrivacySettings privacy = privacyService.get(userId);
         try {
             if (privacy.allowsOriginalAvatar()) {

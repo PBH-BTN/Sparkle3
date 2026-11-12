@@ -20,7 +20,17 @@ export interface SessionUser {
   admin: boolean
   moderator: boolean
   privacy: PrivacySettings
+  nicknameModerationStatus?: ModerationStatus | null
+  avatarModerationStatus?: ModerationStatus | null
+  nicknameModerationReason?: string | null
+  avatarModerationReason?: string | null
 }
+
+export type ModerationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FAILED'
 
 export interface TrafficSummary {
   sentTrafficSelfReport: number
@@ -342,6 +352,8 @@ export type NotificationCategory =
   | 'DAILY_ANNOUNCEMENT'
   | 'CHANGELOG'
   | 'DIRECT_MESSAGE'
+  | 'SOCIAL_ALERT'
+  | 'GENERAL_NOTICE'
 
 export interface NotificationPreference {
   category: NotificationCategory
@@ -788,4 +800,101 @@ export interface IpQueryResult {
     duration: number
     count: number
   } | null
+}
+
+export interface IpGeoView {
+  country: string | null
+  countryIso: string | null
+  province: string | null
+  city: string | null
+  district: string | null
+  asn: string | null
+  asnOrganization: string | null
+  asnNetwork: string | null
+  isp: string | null
+  networkType: string | null
+}
+
+export interface IpCommentAccess {
+  visible: boolean
+  publishingEnabled: boolean
+  moderationEnabled: boolean
+  maxLength: number
+  hourlyLimit: number
+}
+
+export interface IpQueryLookupResponse {
+  input: string
+  normalizedAddress: string
+  canonicalCidr: string
+  networkAddress: string
+  rangeStart: string
+  rangeEnd: string
+  ipVersion: number
+  prefixLength: number
+  totalAddresses: string
+  expandedAddress: string
+  binaryAddress: string
+  decimalAddress: string | null
+  reverseDnsName: string
+  flags: string[]
+  globallyRoutable: boolean
+  defaultCommentScope: string
+  defaultCommentPrefix: number
+  commentScopes: IpCommentScopeOption[]
+  geoStart: IpGeoView | null
+  geoEnd: IpGeoView | null
+  activity: IpQueryResult
+  commentAccess: IpCommentAccess
+  generatedAt: string
+}
+
+export interface IpCommentScopeOption {
+  prefix: number
+  scope: string
+  selected: boolean
+}
+
+export interface IpCommentRevision {
+  revision: number
+  content: string
+  moderationStatus: ModerationStatus
+  moderationReason: string | null
+  editorIp: string | null
+  editorUserAgent: string | null
+  createdAt: string
+}
+
+export interface IpComment {
+  id: number
+  parentId: number | null
+  network: string
+  authorId: string | null
+  authorNickname: string | null
+  authorAvatarUrl: string | null
+  authorAnonymous: boolean
+  authorModerationHidden: boolean
+  content: string
+  revision: number
+  edited: boolean
+  moderationStatus: ModerationStatus
+  moderationReason: string | null
+  authorIp: string | null
+  authorUserAgent: string | null
+  createdAt: string
+  updatedAt: string
+  self: boolean
+  canEdit: boolean
+  canDelete: boolean
+  history: IpCommentRevision[]
+}
+
+export interface IpCommentPage {
+  records: IpComment[]
+  current: number
+  size: number
+  total: number
+  pages: number
+  scope: string
+  access: IpCommentAccess
 }

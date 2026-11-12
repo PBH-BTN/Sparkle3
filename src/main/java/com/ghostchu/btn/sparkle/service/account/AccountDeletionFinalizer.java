@@ -10,6 +10,12 @@ import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.entity.UserContactEmailDelivery;
 import com.ghostchu.btn.sparkle.entity.UserMessage;
 import com.ghostchu.btn.sparkle.entity.UserPrivacySettingsEntity;
+import com.ghostchu.btn.sparkle.entity.IpQueryComment;
+import com.ghostchu.btn.sparkle.entity.IpQueryCommentRevision;
+import com.ghostchu.btn.sparkle.entity.AiModerationJob;
+import com.ghostchu.btn.sparkle.mapper.AiModerationJobMapper;
+import com.ghostchu.btn.sparkle.mapper.IpQueryCommentMapper;
+import com.ghostchu.btn.sparkle.mapper.IpQueryCommentRevisionMapper;
 import com.ghostchu.btn.sparkle.mapper.UserAccountDeletionRequestMapper;
 import com.ghostchu.btn.sparkle.mapper.UserContactEmailDeliveryMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
@@ -40,6 +46,9 @@ public class AccountDeletionFinalizer {
     private final UserContactEmailDeliveryMapper deliveryMapper;
     private final UserMessageMapper messageMapper;
     private final UserPrivacySettingsMapper privacyMapper;
+    private final IpQueryCommentMapper ipQueryCommentMapper;
+    private final IpQueryCommentRevisionMapper ipQueryCommentRevisionMapper;
+    private final AiModerationJobMapper aiModerationJobMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final AccountDeletionPendingRegistry pendingRegistry;
 
@@ -130,9 +139,30 @@ public class AccountDeletionFinalizer {
                     .setSenderUserAgent(null);
             messageMapper.updateById(message);
         });
+        ipQueryCommentMapper.update(null,
+                new LambdaUpdateWrapper<IpQueryComment>()
+                        .set(IpQueryComment::getAuthorIp, null)
+                        .set(IpQueryComment::getAuthorUserAgent, null)
+                        .set(IpQueryComment::getAnonymizedAt, now)
+                        .eq(IpQueryComment::getAuthorUserId, userId));
+        ipQueryCommentRevisionMapper.update(null,
+                new LambdaUpdateWrapper<IpQueryCommentRevision>()
+                        .set(IpQueryCommentRevision::getEditorIp, null)
+                        .set(IpQueryCommentRevision::getEditorUserAgent, null)
+                        .eq(IpQueryCommentRevision::getEditorUserId, userId));
+        aiModerationJobMapper.update(null,
+                new LambdaUpdateWrapper<AiModerationJob>()
+                        .set(AiModerationJob::getTextContent, null)
+                        .set(AiModerationJob::getImageUrl, null)
+                        .in(AiModerationJob::getContentType, "USERNAME", "AVATAR")
+                        .eq(AiModerationJob::getSubjectUserId, userId));
         userEntity.setEmail(anonymousEmail)
                 .setNickname(anonymousNickname)
                 .setAvatar("/img/anonymous-user.png")
+                .setNicknameModerationStatus("APPROVED")
+                .setAvatarModerationStatus("APPROVED")
+                .setNicknameModerationReason(null)
+                .setAvatarModerationReason(null)
                 .setPrivacyLevel(UserPrivacyLevel.HIGH)
                 .setRole("user")
                 .setBannedAt(userEntity.getBannedAt() == null
