@@ -17,7 +17,7 @@ public class MonitoredScheduledTaskAspect {
             ProceedingJoinPoint joinPoint,
             MonitoredScheduledTask monitoredTask
     ) throws Throwable {
-        taskStatusService.configure(monitoredTask);
+        taskStatusService.ensure(monitoredTask);
         TaskStatusService.TaskExecution execution = taskStatusService.begin(
                 monitoredTask.id(),
                 taskStatusService.consumeScheduledTrigger(monitoredTask.id())

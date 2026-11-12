@@ -544,3 +544,23 @@ export interface ConfigMigrationResult {
   skipped: number
   completedAt: string
 }
+
+export interface BtnConfigField {
+  key: string
+  section: string
+  field: string
+  valueType: 'boolean' | 'integer' | 'endpoint' | 'cron'
+  value: string
+  defaultValue: string
+  min: number | null
+  max: number | null
+  hotReload: boolean
+  environmentOverride: boolean
+  source: string
+  updatedAt: string | null
+}
+
+export interface BtnConfigView {
+  fields: BtnConfigField[]
+  updatedAt: string | null
+}

@@ -3,19 +3,19 @@ package com.ghostchu.btn.sparkle.controller.ping;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
+import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,16 +26,16 @@ import java.net.InetAddress;
 @RestController
 @Slf4j
 public class PingHeartbeatController extends BasePingController {
-    @Value("${sparkle.ping.sync-banhistory.pow-captcha}")
-    private boolean powCaptcha;
-
     @Autowired
     private IUserappsHeartbeatService heartbeatService;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
     @PostMapping("/ping/heartbeat")
-    public ResponseEntity<@NotNull ServerResponse> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
-        if (powCaptcha) {
-            validatePowCaptcha();
+    public ResponseEntity<@NotNull ServerResponse> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException, PowCaptchaFailureException {
+        if (configService.booleanValue("heartbeat", "powCaptcha")
+                && !validatePowCaptcha()) {
+            throw new PowCaptchaFailureException();
         }
         Userapp userapp = verifyUserApplicationForBatchedPoints();
         heartbeatService.onHeartBeat(
@@ -63,21 +63,31 @@ public class PingHeartbeatController extends BasePingController {
     }
 
     @Component
-    @Data
-    public static class HeartbeatBtnAbility implements SparkleBtnAbility {
-        @Value("${sparkle.ping.heartbeat.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.heartbeat.interval}")
-        public long interval;
-        @Value("${sparkle.ping.heartbeat.random-initial-delay}")
+    public static class HeartbeatBtnAbility extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("heartbeat", "endpoint");
+        }
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("heartbeat", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
-        @Value("${sparkle.ping.heartbeat.pow-captcha}")
+        public long getRandomInitialDelay() {
+            return longValue("heartbeat", "randomInitialDelay");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
-        @Value("${sparkle.ping.heartbeat.multi-if}")
+        public boolean isPowCaptcha() {
+            return booleanValue("heartbeat", "powCaptcha");
+        }
+
         @JsonProperty("multi_if")
-        public boolean multiIf;
+        public boolean isMultiIf() {
+            return booleanValue("heartbeat", "multiIf");
+        }
 
         @Override
         public String getConfigKey() {

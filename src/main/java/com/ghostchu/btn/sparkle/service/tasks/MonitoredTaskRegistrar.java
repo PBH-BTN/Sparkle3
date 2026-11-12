@@ -39,7 +39,7 @@ public class MonitoredTaskRegistrar {
             ReflectionUtils.doWithMethods(targetClass, method -> {
                 MonitoredScheduledTask annotation = findAnnotation(method);
                 if (annotation != null) {
-                    taskStatusService.configure(annotation);
+                    taskStatusService.ensure(annotation);
                 }
             });
         }

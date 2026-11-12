@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.points.PointAwardBucket;
 import com.ghostchu.btn.sparkle.service.points.PointRulesService;
 import com.ghostchu.btn.sparkle.service.points.PointToggleService;
@@ -21,10 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -75,13 +74,6 @@ public class UserappsHeartbeatServiceImpl
             List.class
     );
 
-    @Value("${sparkle.ping.heartbeat.cleanup-before}")
-    private long deleteBefore;
-    @Value("${sparkle.ping.heartbeat.queue.batch-size:2000}")
-    private int batchSize;
-    @Value("${sparkle.ping.heartbeat.queue.max-size:100000}")
-    private int maxQueueSize;
-
     @Autowired
     private IPDBManager geoIPManager;
     @Autowired
@@ -97,6 +89,8 @@ public class UserappsHeartbeatServiceImpl
     private PointToggleService pointToggleService;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
 
     private final AtomicLong seq = new AtomicLong();
     private final AtomicBoolean flushing = new AtomicBoolean();
@@ -168,10 +162,6 @@ public class UserappsHeartbeatServiceImpl
         }
     }
 
-    @Scheduled(
-            fixedDelayString = "${sparkle.ping.heartbeat.queue.flush-interval-ms:1000}",
-            initialDelayString = "${sparkle.ping.heartbeat.queue.initial-delay-ms:1000}"
-    )
     @MonitoredScheduledTask(
             id = "heartbeat-queue-flush",
             group = TaskGroup.MAINTENANCE,
@@ -221,7 +211,10 @@ public class UserappsHeartbeatServiceImpl
                 ENQUEUE_SCRIPT,
                 List.of(QUEUE_KEY),
                 objectMapper.writeValueAsString(event),
-                Integer.toString(Math.max(1, maxQueueSize))
+                Long.toString(Math.max(
+                        1,
+                        btnConfigService.longValue("heartbeatQueue", "maxSize")
+                ))
         );
     }
 
@@ -230,7 +223,10 @@ public class UserappsHeartbeatServiceImpl
         Object result = redisTemplate.execute(
                 DRAIN_SCRIPT,
                 List.of(QUEUE_KEY),
-                Integer.toString(Math.max(1, batchSize))
+                Long.toString(Math.max(
+                        1,
+                        btnConfigService.longValue("heartbeatQueue", "batchSize")
+                ))
         );
         if (!(result instanceof List<?> values) || values.isEmpty()) {
             return List.of();
@@ -341,7 +337,6 @@ public class UserappsHeartbeatServiceImpl
         return first > Long.MAX_VALUE - second ? Long.MAX_VALUE : first + second;
     }
 
-    @Scheduled(cron = "${sparkle.ping.heartbeat.cleanup-cron}")
     @MonitoredScheduledTask(
             id = "heartbeat-cleanup",
             group = TaskGroup.MAINTENANCE,
@@ -353,6 +348,7 @@ public class UserappsHeartbeatServiceImpl
     public void deleteOldData() {
         long deleted = 0;
         int lastDelete;
+        long deleteBefore = btnConfigService.longValue("heartbeat", "cleanupBefore");
         OffsetDateTime cutoffTime = OffsetDateTime.now()
                 .minus(deleteBefore, ChronoUnit.MILLIS);
         do {

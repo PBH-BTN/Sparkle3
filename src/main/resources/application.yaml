@@ -142,7 +142,7 @@ sparkle:
   banhistory:
     refresh-module-name-cache-cron: "0 0 */2 * * *"
   ping:
-    # Protocol versions and IP query PoW can be hot-overridden in the admin console.
+    # All sparkle.ping settings can be hot-overridden from the BTN Management page.
     config:
       min-protocol-version: 20
       max-protocol-version: 20

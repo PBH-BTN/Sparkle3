@@ -16,6 +16,7 @@ import {
   IconSchedule,
   IconSettings,
   IconStorage,
+  IconThunderbolt,
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon'
 
@@ -54,6 +55,7 @@ const items = computed(() => [
   },
   { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },
   { key: '/admin/navigation', label: t('admin.nav.navigation'), icon: IconMenu },
+  { key: '/admin/btn', label: t('admin.nav.btn'), icon: IconThunderbolt },
   { key: '/admin/database-config', label: t('admin.nav.databaseConfig'), icon: IconFile },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },
 ])

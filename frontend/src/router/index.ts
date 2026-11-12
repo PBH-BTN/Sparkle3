@@ -158,6 +158,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminUserContactEmailsView.vue'),
         },
         {
+          path: 'btn',
+          name: 'admin-btn',
+          component: () => import('@/views/admin/AdminBtnConfigView.vue'),
+        },
+        {
           path: 'database-config',
           name: 'admin-database-config',
           component: () => import('@/views/admin/AdminDatabaseConfigView.vue'),

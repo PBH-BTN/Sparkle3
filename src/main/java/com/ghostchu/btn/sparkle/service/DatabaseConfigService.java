@@ -222,6 +222,7 @@ public class DatabaseConfigService {
 
     public boolean isHotReload(String key) {
         return HOT_RELOAD_KEYS.contains(key)
+                || key.startsWith("sparkle.ping.")
                 || key.startsWith("sparkle.analyse.")
                 || key.startsWith("sparkle.user-avatar.");
     }
@@ -303,7 +304,7 @@ public class DatabaseConfigService {
         return value instanceof Number number ? number.longValue() : 0;
     }
 
-    private boolean hasExternalOverride(String key, String databaseValue) {
+    public boolean hasExternalOverride(String key, String databaseValue) {
         if (!(environment instanceof org.springframework.core.env.ConfigurableEnvironment configurable)) {
             String effectiveValue = environment.getProperty(key);
             return effectiveValue != null && !effectiveValue.equals(databaseValue);

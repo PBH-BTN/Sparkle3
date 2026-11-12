@@ -7,13 +7,9 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,18 +87,24 @@ public class PingConfigController extends BasePingController {
         return rootUrl;
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
     @Component
-    public static class ReconfigureAbility implements SparkleBtnAbility {
-        @Value("${sparkle.ping.reconfigure.interval}")
-        public long interval;
-        @Value("${sparkle.ping.reconfigure.random-initial-delay}")
+    public static class ReconfigureAbility extends DynamicSparkleBtnAbility {
+        private final String version = UUID.randomUUID().toString();
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("reconfigure", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
+        public long getRandomInitialDelay() {
+            return longValue("reconfigure", "randomInitialDelay");
+        }
+
         @JsonProperty("version")
-        public String version = UUID.randomUUID().toString();
+        public String getVersion() {
+            return version;
+        }
 
         @Override
         public String getConfigKey() {

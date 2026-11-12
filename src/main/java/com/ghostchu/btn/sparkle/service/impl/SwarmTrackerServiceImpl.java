@@ -15,6 +15,7 @@ import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficRes
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
@@ -26,8 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,8 +60,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     @Autowired
     private ITorrentService torrentService;
 
-    @Value("${sparkle.ping.sync-swarm.data-retention-time}")
-    private long dataRetentionTime;
     @Autowired
     private IUserappsArchivedStatisticService userappsArchivedStatisticService;
     @Autowired
@@ -73,9 +70,10 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     private PointAwardContext pointAwardContext;
     @Autowired
     private SwarmTrafficDeltaMapper swarmTrafficDeltaMapper;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
 
 
-    @Scheduled(cron = "${sparkle.ping.sync-swarm.data-retention-cron}")
     @MonitoredScheduledTask(
             id = "swarm-data-retention",
             group = TaskGroup.MAINTENANCE,
@@ -85,6 +83,10 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     )
     public void cronDataRetentionCleanup() {
         log.info("Performing scheduled cleanup of expired swarm tracker data...");
+        long dataRetentionTime = btnConfigService.longValue(
+                "syncSwarm",
+                "dataRetentionTime"
+        );
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
         long deleted = 0;
         int lastDeleted;

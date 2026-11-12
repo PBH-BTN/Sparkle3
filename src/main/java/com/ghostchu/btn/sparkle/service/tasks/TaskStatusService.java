@@ -40,7 +40,15 @@ public class TaskStatusService {
     }
 
     public void configure(MonitoredScheduledTask annotation) {
-        configure(new TaskDefinition(
+        configure(definition(annotation));
+    }
+
+    public void ensure(MonitoredScheduledTask annotation) {
+        ensure(definition(annotation));
+    }
+
+    private TaskDefinition definition(MonitoredScheduledTask annotation) {
+        return new TaskDefinition(
                 annotation.id(),
                 annotation.group(),
                 TaskKind.SCHEDULED,
@@ -52,7 +60,7 @@ public class TaskStatusService {
                 annotation.initialDelayMillis(),
                 null,
                 annotation.enabled()
-        ));
+        );
     }
 
     public void configure(TaskDefinition definition) {

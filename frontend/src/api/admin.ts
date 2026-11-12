@@ -19,6 +19,7 @@ import type {
   BackgroundTaskStatusResponse,
   BanHistoryDeletePreview,
   BanHistoryDeleteResult,
+  BtnConfigView,
   CompressionPolicyInput,
   ConfigMigrationResult,
   DatabaseConfigEntry,
@@ -317,5 +318,11 @@ export const adminApi = {
     request<DatabaseConfigEntry>('/api/admin/database-config', {
       method: 'PUT',
       body: JSON.stringify({ key, value }),
+    }),
+  btnConfig: () => request<BtnConfigView>('/api/admin/btn'),
+  updateBtnConfig: (values: Record<string, string>) =>
+    request<BtnConfigView>('/api/admin/btn', {
+      method: 'PUT',
+      body: JSON.stringify({ values }),
     }),
 }

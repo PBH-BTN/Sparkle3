@@ -530,6 +530,7 @@ export default {
       userContactEmails: 'User email audit',
       announcements: 'Announcements',
       navigation: 'Navigation',
+      btn: 'BTN management',
       databaseConfig: 'Config database',
     },
     common: {
@@ -678,6 +679,10 @@ export default {
         'analysis-schedule-poll': {
           name: 'Analysis schedule reconciliation',
           description: 'Checks hot-reloaded module settings and rebuilds changed cron schedules.',
+        },
+        'btn-schedule-poll': {
+          name: 'BTN schedule reconciliation',
+          description: 'Checks BTN hot-reload settings and rebuilds heartbeat queue and cleanup schedules.',
         },
         'homepage-statistics-dispatch': {
           name: 'Homepage statistics dispatcher',
@@ -1398,6 +1403,99 @@ export default {
       updated: 'Rule updated.',
       created: 'Rule created.',
       deleted: 'Rule deleted.',
+    },
+    btn: {
+      title: 'BTN management',
+      description:
+        'Manage BTN protocols, client abilities, heartbeat queues, PoW, and retention policies without editing application.yaml.',
+      hotReloadTitle: 'All BTN settings support hot reload',
+      hotReloadText:
+        'Endpoint, PoW, protocol, and client ability changes apply immediately. Heartbeat queue and cleanup schedules are re-evaluated within 15 seconds. Cron uses the Spring six-field format; use “-” to disable a scheduled task.',
+      environmentOverrideNotice:
+        'Some values are overridden by environment variables, system properties, or command-line arguments. Database values are still saved, but the external override remains effective at runtime.',
+      environmentOverride: 'External override',
+      hotReload: 'Hot reload',
+      saved: 'BTN configuration saved and applied.',
+      updatedAt: 'Configuration updated: {time}',
+      durationHint: 'Currently about {duration}',
+      sections: {
+        protocol: 'Protocol & handshake',
+        reconfigure: 'Reconfigure',
+        syncBanHistory: 'Ban history submission',
+        syncSwarm: 'Swarm submission',
+        ruleIpDenylist: 'IP denylist delivery',
+        ruleIpAllowlist: 'IP allowlist delivery',
+        rulePeerIdentity: 'Peer identity rules',
+        heartbeat: 'Heartbeat',
+        heartbeatQueue: 'Heartbeat queue & cleanup',
+        queryIp: 'IP query',
+      },
+      sectionDescriptions: {
+        protocol: 'Defines the BTN protocol versions accepted by clients.',
+        reconfigure:
+          'Controls how often clients refresh remote configuration and their randomized first delay.',
+        syncBanHistory:
+          'Controls the endpoint, cadence, and proof-of-work requirement for ban submissions.',
+        syncSwarm:
+          'Controls swarm submission plus server-side swarm retention and cleanup.',
+        ruleIpDenylist: 'Controls how clients fetch the delivered IP denylist.',
+        ruleIpAllowlist: 'Controls how clients fetch the delivered IP allowlist.',
+        rulePeerIdentity:
+          'Controls delivery of Peer ID, client name, port, and script rules.',
+        heartbeat:
+          'Controls client heartbeats, endpoint behavior, and stale heartbeat cleanup.',
+        heartbeatQueue:
+          'Controls throughput, capacity, and refresh cadence of the server-side Redis heartbeat queue.',
+        queryIp: 'Controls the client IP query endpoint and embedded query widget URL.',
+      },
+      fields: {
+        minProtocolVersion: 'Minimum protocol version',
+        maxProtocolVersion: 'Maximum protocol version',
+        interval: 'Submission / fetch interval',
+        randomInitialDelay: 'Randomized initial delay',
+        endpoint: 'Endpoint',
+        powCaptcha: 'Require proof of work',
+        dataRetentionTime: 'Swarm retention',
+        dataRetentionCron: 'Swarm cleanup schedule',
+        multiIf: 'Submit multiple interfaces',
+        cleanupBefore: 'Heartbeat retention',
+        cleanupCron: 'Heartbeat cleanup schedule',
+        flushIntervalMs: 'Queue flush interval',
+        initialDelayMs: 'Initial flush delay',
+        batchSize: 'Batch size',
+        maxSize: 'Maximum queue length',
+        iframeEndpoint: 'Embedded query URL',
+      },
+      help: {
+        minProtocolVersion: 'Minimum BTN protocol version accepted from clients.',
+        maxProtocolVersion: 'Must be greater than or equal to the minimum version.',
+        interval:
+          'Milliseconds. Changes are reflected in the abilities delivered to clients.',
+        randomInitialDelay:
+          'Milliseconds. Spreads the first request from a large client fleet.',
+        endpoint:
+          'Supports the rooturl placeholder, an absolute site path, or a complete HTTP(S) URL.',
+        powCaptcha:
+          'When enabled, requests without a valid proof-of-work result are rejected.',
+        dataRetentionTime:
+          'Swarm records older than this duration are cleaned up periodically. Milliseconds.',
+        dataRetentionCron:
+          'Spring six-field cron expression; “-” pauses automatic cleanup.',
+        multiIf:
+          'Allows clients to report multiple network interface addresses in one heartbeat.',
+        cleanupBefore:
+          'Heartbeat records older than this duration are deleted. Milliseconds.',
+        cleanupCron:
+          'Spring six-field cron expression; “-” pauses automatic cleanup.',
+        flushIntervalMs:
+          'Fixed cadence for writing the Redis heartbeat queue to PostgreSQL. Milliseconds.',
+        initialDelayMs:
+          'How long to wait before the first queue flush after startup. Milliseconds.',
+        batchSize:
+          'Maximum number of queued records drained and written per batch.',
+        maxSize: 'Maximum number of pending heartbeat records kept in Redis.',
+        iframeEndpoint: 'Page URL used by the embedded IP query widget.',
+      },
     },
     databaseConfig: {
       title: 'Database configuration center',
