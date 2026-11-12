@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -81,6 +82,8 @@ public class SecurityConfig {
                             response.sendRedirect("/");
                         }))
                 .headers(headers -> headers
+                        .cacheControl(cache -> cache.disable())
+                        .addHeaderWriter(SecurityConfig::writeDefaultCacheHeaders)
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("frame-ancestors *")))
@@ -91,5 +94,20 @@ public class SecurityConfig {
                         httpSecuritySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         return http.build();
+    }
+
+    static void writeDefaultCacheHeaders(
+            jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response
+    ) {
+        if (request.getRequestURI().startsWith("/assets/")) {
+            return;
+        }
+        response.setHeader(
+                HttpHeaders.CACHE_CONTROL,
+                "no-cache, no-store, max-age=0, must-revalidate"
+        );
+        response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+        response.setHeader(HttpHeaders.EXPIRES, "0");
     }
 }
