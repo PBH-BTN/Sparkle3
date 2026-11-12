@@ -14,6 +14,7 @@ import com.ghostchu.btn.sparkle.service.points.PointsService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,7 +47,10 @@ public class HomeApiController {
     }
 
     @GetMapping("/session")
-    public SessionResponse session(@AuthenticationPrincipal SparkleUserDetails userDetails) {
+    public SessionResponse session(@AuthenticationPrincipal SparkleUserDetails userDetails,
+                                   CsrfToken csrfToken) {
+        // Materialize the SPA CSRF token so the XSRF-TOKEN cookie exists before any write request.
+        csrfToken.getToken();
         if (userDetails == null) {
             return SessionResponse.anonymous();
         }

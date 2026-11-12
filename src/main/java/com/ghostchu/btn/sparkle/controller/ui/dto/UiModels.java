@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.NavigationModels.PublicNavi
 import com.ghostchu.btn.sparkle.constants.UserPrivacyLevel;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
+import com.ghostchu.btn.sparkle.security.AdminPolicy;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -60,7 +61,7 @@ public final class UiModels {
                     user.getRegisterAt(),
                     user.getBannedAt(),
                     user.getBannedReason(),
-                    "admin".equalsIgnoreCase(user.getRole()),
+                    AdminPolicy.isAdmin(user),
                     PrivacyLevelView.from(user.getPrivacyLevel())
             );
         }

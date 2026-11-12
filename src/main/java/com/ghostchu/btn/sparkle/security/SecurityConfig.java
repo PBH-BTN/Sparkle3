@@ -8,12 +8,14 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfException;
+
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -26,7 +28,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
-        http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
+        http.csrf(csrf -> csrf
+                        .spa()
+                        .ignoringRequestMatchers("/ping/**"))
+                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
                                 .requestMatchers("/error").permitAll()
                                 .requestMatchers("/", "/index.html", "/login").permitAll()
@@ -41,36 +46,22 @@ public class SecurityConfig {
                                 .requestMatchers("/api/ui/session").permitAll()
                                 .requestMatchers("/api/ui/footer").permitAll()
                                 .requestMatchers("/api/ui/notices").permitAll()
-                                .requestMatchers("/admin", "/admin/**").hasAnyAuthority("admin")
-                                .requestMatchers("/api/admin/**").hasAnyAuthority("admin")
-                                .requestMatchers("/debug/**").hasAnyAuthority("admin")
+                                .requestMatchers("/admin", "/admin/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
+                                .requestMatchers("/api/admin/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
+                                .requestMatchers("/debug/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
                                 .requestMatchers("/api/**").authenticated()
                                 .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) -> {
                             if (request.getRequestURI().startsWith("/api/")) {
-                                response.setStatus(401);
-                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                                response.setCharacterEncoding("UTF-8");
-                                response.getWriter().write(
-                                        "{\"success\":false,\"message\":\"Authentication required\",\"data\":null}"
-                                );
+                                writeJsonError(response, 401, "Authentication required");
                                 return;
                             }
                             response.sendRedirect("/login");
                         })
                         .accessDeniedHandler((request, response, exception) -> {
-                            if (request.getRequestURI().startsWith("/api/")) {
-                                response.setStatus(403);
-                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                                response.setCharacterEncoding("UTF-8");
-                                response.getWriter().write(
-                                        "{\"success\":false,\"message\":\"Administrator access required\",\"data\":null}"
-                                );
-                                return;
-                            }
-                            response.sendRedirect("/");
+                            handleAccessDenied(request, response, exception);
                         }))
                 .headers(headers -> headers
                         .cacheControl(HeadersConfigurer.CacheControlConfig::disable)
@@ -85,6 +76,34 @@ public class SecurityConfig {
                         httpSecuritySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         return http.build();
+    }
+
+    static void handleAccessDenied(
+            jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response,
+            org.springframework.security.access.AccessDeniedException exception
+    ) throws IOException {
+        if (request.getRequestURI().startsWith("/api/")) {
+            String message = exception instanceof CsrfException
+                    ? "CSRF token is missing or invalid"
+                    : "Administrator access required";
+            writeJsonError(response, 403, message);
+            return;
+        }
+        response.sendRedirect("/");
+    }
+
+    private static void writeJsonError(
+            jakarta.servlet.http.HttpServletResponse response,
+            int status,
+            String message
+    ) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(
+                "{\"success\":false,\"message\":\"" + message + "\",\"data\":null}"
+        );
     }
 
     static void writeDefaultCacheHeaders(

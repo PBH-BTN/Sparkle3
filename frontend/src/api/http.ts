@@ -14,11 +14,24 @@ function isJsonResponse(response: Response) {
   return response.headers.get('content-type')?.includes('application/json')
 }
 
+function readCookie(name: string) {
+  const prefix = `${name}=`
+  const entry = document.cookie.split('; ').find((cookie) => cookie.startsWith(prefix))
+  return entry ? entry.slice(prefix.length) : null
+}
+
 export async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
+  }
+  const method = (init.method ?? 'GET').toUpperCase()
+  if (!['GET', 'HEAD', 'TRACE', 'OPTIONS'].includes(method)) {
+    const csrfToken = readCookie('XSRF-TOKEN')
+    if (csrfToken) {
+      headers.set('X-XSRF-TOKEN', decodeURIComponent(csrfToken))
+    }
   }
 
   const response = await fetch(url, {

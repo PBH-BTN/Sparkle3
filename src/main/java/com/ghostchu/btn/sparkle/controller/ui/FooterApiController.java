@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterPerformance
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterResponse;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.HttpResponsePerformanceView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.WorldTimeView;
+import com.ghostchu.btn.sparkle.security.AdminPolicy;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.FooterConfigService;
 import com.ghostchu.btn.sparkle.service.FooterMetricsService;
@@ -41,7 +42,7 @@ public class FooterApiController {
     ) {
         FooterConfigView config = configService.get();
         boolean authenticated = principal != null;
-        boolean admin = authenticated && isAdmin(principal);
+        boolean admin = AdminPolicy.isAdmin(principal);
         Map<String, FooterMetricSetting> metricSettings = metricSettings(config);
 
         boolean disclaimerVisible = canView(config.disclaimerAudience(), authenticated, admin);
@@ -167,14 +168,4 @@ public class FooterApiController {
         };
     }
 
-    private boolean isAdmin(SparkleUserDetails principal) {
-        boolean authorityAdmin = principal.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
-                .anyMatch(authority -> authority != null
-                        && ("admin".equalsIgnoreCase(authority)
-                        || "ROLE_ADMIN".equalsIgnoreCase(authority)));
-        return authorityAdmin
-                || principal.getUser() != null
-                && "admin".equalsIgnoreCase(principal.getUser().getRole());
-    }
 }
