@@ -38,8 +38,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Batches Keepalive requests in Redis before writing heartbeat rows and their
@@ -93,7 +93,8 @@ public class UserappsHeartbeatServiceImpl
     private BtnRuntimeConfigService btnConfigService;
 
     private final AtomicLong seq = new AtomicLong();
-    private final AtomicBoolean flushing = new AtomicBoolean();
+    private final ReentrantLock flushLock = new ReentrantLock();
+    private volatile boolean shuttingDown;
 
     @Override
     public @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdInTimeRange(
@@ -172,10 +173,13 @@ public class UserappsHeartbeatServiceImpl
             initialDelayMillis = 1_000
     )
     public void flushQueuedHeartbeats() {
-        if (!flushing.compareAndSet(false, true)) {
+        if (shuttingDown || !flushLock.tryLock()) {
             return;
         }
         try {
+            if (shuttingDown) {
+                return;
+            }
             List<String> rawEvents = drain();
             if (rawEvents.isEmpty()) {
                 return;
@@ -202,8 +206,18 @@ public class UserappsHeartbeatServiceImpl
         } catch (Exception exception) {
             log.error("Unable to drain Keepalive queue", exception);
         } finally {
-            flushing.set(false);
+            flushLock.unlock();
         }
+    }
+
+    /**
+     * Stops new queue flushes and waits for an in-flight flush to finish before
+     * Spring closes the Redis connection factories.
+     */
+    public void stopQueueFlush() {
+        shuttingDown = true;
+        flushLock.lock();
+        flushLock.unlock();
     }
 
     private void enqueue(@NotNull HeartbeatEvent event) throws Exception {

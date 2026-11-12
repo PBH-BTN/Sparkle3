@@ -16,6 +16,7 @@ import com.ghostchu.btn.sparkle.util.GlobalpingApiClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -52,6 +53,7 @@ public class BtnDynamicScheduler {
 
     private final Map<String, ScheduledFuture<?>> futures = new ConcurrentHashMap<>();
     private final Map<String, String> signatures = new ConcurrentHashMap<>();
+    private boolean shuttingDown;
 
     public BtnDynamicScheduler(
             @Qualifier("taskScheduler") TaskScheduler taskScheduler,
@@ -82,6 +84,19 @@ public class BtnDynamicScheduler {
         refreshSchedules();
     }
 
+    @EventListener(ContextClosedEvent.class)
+    public void stopSchedules() {
+        stopDynamicSchedules();
+        heartbeatService.stopQueueFlush();
+    }
+
+    private synchronized void stopDynamicSchedules() {
+        shuttingDown = true;
+        futures.values().forEach(future -> future.cancel(false));
+        futures.clear();
+        signatures.clear();
+    }
+
     @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
     @MonitoredScheduledTask(
             id = "btn-schedule-poll",
@@ -97,6 +112,9 @@ public class BtnDynamicScheduler {
     }
 
     public synchronized void refreshSchedules() {
+        if (shuttingDown) {
+            return;
+        }
         globalpingApiClient.setAccessToken(
                 configService.text("measure", "globalpingToken")
         );
