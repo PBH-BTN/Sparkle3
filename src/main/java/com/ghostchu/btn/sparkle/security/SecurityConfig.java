@@ -37,8 +37,6 @@ public class SecurityConfig {
                                 .requestMatchers("/oauth2/**").permitAll()
                                 .requestMatchers("/oauth/error").permitAll()
                                 .requestMatchers("/proxy/**").permitAll()
-                                .requestMatchers("/announce").permitAll()
-                                .requestMatchers("/tracker/announce").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/api/ui/session").permitAll()
                                 .requestMatchers("/api/ui/footer").permitAll()
