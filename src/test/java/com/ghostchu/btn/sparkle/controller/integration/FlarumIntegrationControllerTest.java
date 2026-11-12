@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.controller.integration;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.UserDataResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.FlarumIntegrationService;
+import com.ghostchu.btn.sparkle.service.FlarumIntegrationSettingsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -18,7 +19,9 @@ class FlarumIntegrationControllerTest {
     @Test
     void rejectsInvalidTokenBeforeQueryingData() {
         FlarumIntegrationService service = mock(FlarumIntegrationService.class);
-        FlarumIntegrationController controller = new FlarumIntegrationController(service, "secret-token");
+        FlarumIntegrationSettingsService settings = mock(FlarumIntegrationSettingsService.class);
+        when(settings.token()).thenReturn("secret-token");
+        FlarumIntegrationController controller = new FlarumIntegrationController(service, settings);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -32,7 +35,9 @@ class FlarumIntegrationControllerTest {
     @Test
     void rejectsRequestsWhenTokenIsNotConfigured() {
         FlarumIntegrationService service = mock(FlarumIntegrationService.class);
-        FlarumIntegrationController controller = new FlarumIntegrationController(service, " ");
+        FlarumIntegrationSettingsService settings = mock(FlarumIntegrationSettingsService.class);
+        when(settings.token()).thenReturn("");
+        FlarumIntegrationController controller = new FlarumIntegrationController(service, settings);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -46,10 +51,12 @@ class FlarumIntegrationControllerTest {
     @Test
     void delegatesValidRequestToIntegrationService() throws BusinessException {
         FlarumIntegrationService service = mock(FlarumIntegrationService.class);
+        FlarumIntegrationSettingsService settings = mock(FlarumIntegrationSettingsService.class);
         UserDataResponse response = UserDataResponse.unbound("12345");
         when(service.findByGithubUid("12345")).thenReturn(response);
+        when(settings.token()).thenReturn("secret-token");
 
-        FlarumIntegrationController controller = new FlarumIntegrationController(service, "secret-token");
+        FlarumIntegrationController controller = new FlarumIntegrationController(service, settings);
         UserDataResponse result = controller.userByGithub("12345", "secret-token");
 
         assertTrue(result.githubUid().equals("12345"));

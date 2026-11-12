@@ -27,13 +27,10 @@ GET /api/integrations/flarum/user-by-github?githubUid=<GitHub numeric UID>
 X-Sparkle-Token: <secret>
 ```
 
-在 Sparkle 运行环境设置：
+登录 Sparkle 管理后台，进入“Flarum 集成”页面，填写并保存集成密钥。密钥会作为
+敏感配置写入数据库，只允许写入，不会在后台回显，保存后立即生效。
 
-```bash
-SPARKLE_FLARUM_INTEGRATION_TOKEN="replace-with-a-long-random-secret"
-```
-
-也可以在外部 `application.yaml` 中设置：
+可选地，也可以在环境变量或外部 `application.yaml` 中提供默认值：
 
 ```yaml
 sparkle:
@@ -42,7 +39,7 @@ sparkle:
 ```
 
 token 为空时接口返回 `503`；token 不匹配时返回 `401`。接口不会返回邮箱、GitHub access token 或其他私密字段。
-该 token 由 Sparkle 启动时注入，修改后需要重启 Sparkle 服务。
+后台保存的数据库值优先于环境默认值，不需要重启 Sparkle。
 
 ## 安装扩展
 
@@ -60,7 +57,7 @@ php flarum cache:clear
 启用后在扩展设置页填写：
 
 - Sparkle BTN API endpoint：`https://<sparkle-host>/api/integrations/flarum/user-by-github`
-- Integration token：与 Sparkle 的 `SPARKLE_FLARUM_INTEGRATION_TOKEN` 一致
+- Integration token：与 Sparkle 后台“Flarum 集成”页面中保存的密钥一致
 - 后台刷新间隔、单批用户数和请求超时
 
 扩展会自动创建或复用名为 `Sparkle BTN Users` 的系统组，并将 BTN 绑定用户自动加入。BTN 绑定解除时用户会自动移出该组。扩展不会自动授予这个组任何权限，管理员可在 Flarum 权限页为它分配 `查看其他用户的 Sparkle BTN 资料数据` 权限。

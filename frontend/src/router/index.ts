@@ -242,6 +242,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminGithubSyncView.vue'),
         },
         {
+          path: 'flarum-integration',
+          name: 'admin-flarum-integration',
+          component: () => import('@/views/admin/AdminFlarumIntegrationView.vue'),
+        },
+        {
           path: 'database-config',
           name: 'admin-database-config',
           component: () => import('@/views/admin/AdminDatabaseConfigView.vue'),

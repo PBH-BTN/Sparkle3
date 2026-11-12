@@ -3,7 +3,7 @@ package com.ghostchu.btn.sparkle.controller.integration;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.UserDataResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.FlarumIntegrationService;
-import org.springframework.beans.factory.annotation.Value;
+import com.ghostchu.btn.sparkle.service.FlarumIntegrationSettingsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -18,14 +18,14 @@ import java.security.MessageDigest;
 @RequestMapping("/api/integrations/flarum")
 public class FlarumIntegrationController {
     private final FlarumIntegrationService integrationService;
-    private final String expectedToken;
+    private final FlarumIntegrationSettingsService settingsService;
 
     public FlarumIntegrationController(
             FlarumIntegrationService integrationService,
-            @Value("${sparkle.flarum-integration.token:}") String expectedToken
+            FlarumIntegrationSettingsService settingsService
     ) {
         this.integrationService = integrationService;
-        this.expectedToken = expectedToken == null ? "" : expectedToken.trim();
+        this.settingsService = settingsService;
     }
 
     @GetMapping("/user-by-github")
@@ -38,6 +38,7 @@ public class FlarumIntegrationController {
     }
 
     private void verifyToken(String providedToken) throws BusinessException {
+        String expectedToken = settingsService.token();
         if (expectedToken.isBlank()) {
             throw new BusinessException(
                     HttpStatus.SERVICE_UNAVAILABLE,

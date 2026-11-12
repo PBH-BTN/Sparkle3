@@ -100,13 +100,7 @@ chunk 删除历史数据，因此手动 cutoff 的实际边界可能早于所选
 GitHub 登录和计划任务中缓存 BTN UID、7 日流量、Bytes 积分及两类排行榜，并按权限
 在 Flarum 用户资料页和头像悬浮卡中展示；绑定用户同时自动加入专用权限组。
 
-Sparkle 端需配置：
-
-```yaml
-sparkle:
-  flarum-integration:
-    token: "replace-with-a-long-random-secret"
-```
+在 Sparkle 后台“Flarum 集成”页面保存集成密钥即可；配置会写入数据库敏感项并立即生效。
 
 邮件发件人和显示名可通过以下配置修改：
 
