@@ -68,6 +68,7 @@ class BusinessConfigMigrationTest {
         ));
         assertFalse(sql.contains("github_pat_"));
         assertFalse(sql.contains("glsa_"));
+        assertFalse(sql.contains("${"), "Flyway SQL must not contain Spring-style placeholders");
     }
 
     @Test

@@ -145,7 +145,7 @@ WITH defaults(config_key, config_value, value_type, config_group, sensitive, hot
         ('sparkle.ping.heartbeat.queue.max-size', '100000', 'number', 'sparkle.ping', false, true, false),
         ('sparkle.ping.heartbeat.random-initial-delay', '3000', 'number', 'sparkle.ping', false, true, true),
         ('sparkle.ping.query-ip.endpoint', '{rooturl}/ping/queryIp', 'string', 'sparkle.ping', false, true, true),
-        ('sparkle.ping.query-ip.iframe-endpoint', '${sparkle.root-url}/ping/queryIp/widget', 'string', 'sparkle.ping', false, true, true),
+        ('sparkle.ping.query-ip.iframe-endpoint', '{rooturl}/ping/queryIp/widget', 'string', 'sparkle.ping', false, true, true),
         ('sparkle.ping.query-ip.pow-captcha', 'false', 'boolean', 'sparkle.ping', false, true, true),
         ('sparkle.ping.reconfigure.interval', '3600000', 'number', 'sparkle.ping', false, true, true),
         ('sparkle.ping.reconfigure.random-initial-delay', '600000', 'number', 'sparkle.ping', false, true, true),

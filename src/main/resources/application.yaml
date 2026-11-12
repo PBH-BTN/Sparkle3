@@ -11,6 +11,7 @@ spring:
     validate-on-migrate: true
     validate-migration-naming: true
     fail-on-missing-locations: true
+    placeholder-replacement: false
     clean-disabled: true
     connect-retries: 30
     connect-retries-interval: 2
