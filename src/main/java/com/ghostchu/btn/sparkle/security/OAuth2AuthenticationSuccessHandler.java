@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.security;
 
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.service.BlurredAvatarDiskCache;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +40,7 @@ import java.util.Map;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final IUserService userService;
+    private final BlurredAvatarDiskCache blurredAvatarDiskCache;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final PointsService pointsService;
     private final RestClient restClient = RestClient.create();
@@ -77,6 +79,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             if (name == null || name.isBlank()) name = login;
             log.info("GitHub OAuth 鉴权成功: login={}, githubId={}, email={}", login, githubId, email);
             User user = userService.userGithubOAuthLogin(authentication, InetAddress.ofLiteral(request.getRemoteAddr()), githubId.longValue(), login, avatarUrl, name, email);
+            blurredAvatarDiskCache.refreshOnLogin(user.getId());
             log.info("GitHub OAuth 登录成功: login={}, githubId={}, email={}", login, githubId, email);
             try {
                 pointsService.awardDailyLogin(user.getId());
