@@ -5,11 +5,12 @@ import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.util.ImageBlurUtil;
+import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.WebRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -32,20 +34,34 @@ import java.time.Duration;
 @Slf4j
 @Controller
 public class UserAvatarController {
-    @Autowired
-    private IUserService userService;
-    @Autowired
-    @Qualifier("stringStringRedisTemplate")
-    private RedisTemplate<String, String> stringStringRedisTemplate;
+    private static final CacheControl AVATAR_CACHE_CONTROL =
+            CacheControl.noCache().cachePrivate();
+    private static final RestTemplate REST_TEMPLATE = new RestTemplate();
+
+    private final IUserService userService;
+    private final RedisTemplate<String, String> stringStringRedisTemplate;
+
+    public UserAvatarController(
+            IUserService userService,
+            @Qualifier("stringStringRedisTemplate")
+            RedisTemplate<String, String> stringStringRedisTemplate
+    ) {
+        this.userService = userService;
+        this.stringStringRedisTemplate = stringStringRedisTemplate;
+    }
 
     @NotNull
     @GetMapping("/user/avatar/{uid}")
     public ResponseEntity<?> proxyUserAvatar(@AuthenticationPrincipal SparkleUserDetails userDetails,
-                                             @PathVariable("uid") Long userId) throws IOException {
+                                             @PathVariable("uid") Long userId,
+                                             WebRequest webRequest) throws IOException {
         if (userId == null) {
             return ResponseEntity.badRequest().build();
         }
         User user = userService.getById(userId);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
         if (userDetails.getUserId().longValue() == userId) {
             return redirectTo(user.getAvatar()); // 自己永远使用原始头像
         }
@@ -54,7 +70,7 @@ public class UserAvatarController {
             if (privacyLevel.isAllowOriginalAvatar()) {
                 return redirectTo(user.getAvatar());
             } else if (privacyLevel.isAllowBlurredAvatar()) {
-                return handleBlurAvatar(user);
+                return handleBlurAvatar(user, webRequest);
             } else {
                 return redirectTo("/img/anonymous-user.png");
             }
@@ -64,16 +80,18 @@ public class UserAvatarController {
         }
     }
 
-    private @NotNull ResponseEntity<?> handleBlurAvatar(User user) throws IOException {
+    private @NotNull ResponseEntity<?> handleBlurAvatar(User user, WebRequest webRequest)
+            throws IOException {
         byte[] avatarData;
-        String avatarRedisKey = "user:avatar:blur:" + user.getId();
+        String avatarRedisKey = blurAvatarCacheKey(user);
         var redisCachedData = stringStringRedisTemplate.opsForValue().get(avatarRedisKey);
         if (redisCachedData != null) {
             avatarData = redisCachedData.getBytes(StandardCharsets.ISO_8859_1);
-            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(avatarData);
+            return avatarResponse(avatarData, webRequest);
         }
         // HTTP代理头像，隐藏原始地址
-        ResponseEntity<byte @NotNull []> response = new RestTemplate().getForEntity(user.getAvatar(), byte[].class);
+        ResponseEntity<byte @NotNull []> response =
+                REST_TEMPLATE.getForEntity(user.getAvatar(), byte[].class);
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             avatarData = response.getBody();
         } else {
@@ -86,9 +104,35 @@ public class UserAvatarController {
                 ImageIO.write(blurredImage, "jpeg", os);
                 avatarData = os.toByteArray();
             }
-            stringStringRedisTemplate.opsForValue().set("user:avatar:blur:" + user.getId(), new String(avatarData, StandardCharsets.ISO_8859_1), Duration.ofHours(1));
-            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(avatarData);
+            stringStringRedisTemplate.opsForValue().set(
+                    avatarRedisKey,
+                    new String(avatarData, StandardCharsets.ISO_8859_1),
+                    Duration.ofHours(1)
+            );
+            return avatarResponse(avatarData, webRequest);
         }
+    }
+
+    private ResponseEntity<byte[]> avatarResponse(byte[] avatarData, WebRequest webRequest) {
+        String etag = "\"" + Hashing.sha256().hashBytes(avatarData) + "\"";
+        if (webRequest.checkNotModified(etag)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .eTag(etag)
+                    .cacheControl(AVATAR_CACHE_CONTROL)
+                    .build();
+        }
+        return ResponseEntity.ok()
+                .eTag(etag)
+                .cacheControl(AVATAR_CACHE_CONTROL)
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(avatarData);
+    }
+
+    private String blurAvatarCacheKey(User user) {
+        String sourceUrlHash = Hashing.sha256()
+                .hashString(user.getAvatar() == null ? "" : user.getAvatar(), StandardCharsets.UTF_8)
+                .toString();
+        return "user:avatar:blur:" + user.getId() + ":" + sourceUrlHash;
     }
 
     private @NotNull ResponseEntity<?> redirectTo(@NotNull String url) {
