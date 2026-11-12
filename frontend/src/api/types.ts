@@ -340,7 +340,7 @@ export interface UserApplication {
   bannedAt: string | null
   bannedReason: string | null
   btnBypass: boolean | null
-  statusText: string | null
+  exemptIps: string[]
 }
 
 export interface ApplicationCredentials {

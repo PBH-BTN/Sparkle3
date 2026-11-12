@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,6 +109,23 @@ public class UserappsHeartbeatServiceImpl
     ) {
         return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
                 .eq("userapp_id", userAppId)
+                .ge("last_seen_at", startAt)
+                .le("first_seen_at", endAt)
+                .orderByDesc("last_seen_at")
+        );
+    }
+
+    @Override
+    public @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdsInTimeRange(
+            @NotNull Collection<Long> userAppIds,
+            @NotNull OffsetDateTime startAt,
+            @NotNull OffsetDateTime endAt
+    ) {
+        if (userAppIds.isEmpty()) {
+            return List.of();
+        }
+        return this.baseMapper.selectList(new QueryWrapper<UserappsHeartbeat>()
+                .in("userapp_id", userAppIds)
                 .ge("last_seen_at", startAt)
                 .le("first_seen_at", endAt)
                 .orderByDesc("last_seen_at")

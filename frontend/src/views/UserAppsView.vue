@@ -25,6 +25,12 @@ const actionLoading = ref<string | null>(null)
 const columns = computed<TableColumnData[]>(() => [
   { title: t('userApps.appId'), dataIndex: 'appId', slotName: 'appId', width: 250 },
   { title: t('userApps.comment'), dataIndex: 'comment', slotName: 'comment', width: 240 },
+  {
+    title: t('userApps.exemptIps'),
+    dataIndex: 'exemptIps',
+    slotName: 'exemptIps',
+    width: 260,
+  },
   { title: t('common.lastSeenAt'), dataIndex: 'lastSeenAt', slotName: 'lastSeenAt', width: 190 },
   { title: t('userApps.status'), dataIndex: 'bannedAt', slotName: 'status', width: 110 },
   { title: t('common.actions'), slotName: 'actions', width: 220, fixed: 'right' },
@@ -99,7 +105,7 @@ onMounted(loadApplications)
           :data="applications"
           :loading="loading"
           :pagination="false"
-          :scroll="{ x: 1050 }"
+          :scroll="{ x: 1280 }"
           row-key="appId"
           stripe
         >
@@ -124,6 +130,47 @@ onMounted(loadApplications)
 
           <template #lastSeenAt="{ record }">
             {{ formatDate(record.lastSeenAt) }}
+          </template>
+
+          <template #exemptIps="{ record }">
+            <div v-if="record.exemptIps.length" class="exempt-ip-cell">
+              <a-tooltip
+                v-for="ip in record.exemptIps.slice(0, 2)"
+                :key="ip"
+                :content="ip"
+              >
+                <a-tag color="arcoblue" class="exempt-ip-tag">
+                  {{ ip }}
+                </a-tag>
+              </a-tooltip>
+              <a-popover
+                v-if="record.exemptIps.length > 2"
+                trigger="click"
+                position="br"
+              >
+                <a-tag color="gray" class="exempt-ip-more">
+                  +{{ record.exemptIps.length - 2 }}
+                </a-tag>
+                <template #content>
+                  <div class="exempt-ip-popover">
+                    <a-tag
+                      v-for="ip in record.exemptIps"
+                      :key="ip"
+                      color="arcoblue"
+                    >
+                      {{ ip }}
+                    </a-tag>
+                  </div>
+                </template>
+              </a-popover>
+            </div>
+            <span v-else class="exempt-ip-empty">
+              {{
+                record.btnBypass
+                  ? t('userApps.noExemptIps')
+                  : t('userApps.bypassNotEnabled')
+              }}
+            </span>
           </template>
 
           <template #status="{ record }">
@@ -219,6 +266,26 @@ onMounted(loadApplications)
                 <strong>{{ formatDate(application.lastSeenAt) }}</strong>
               </div>
 
+              <div class="mobile-field">
+                <span>{{ t('userApps.exemptIps') }}</span>
+                <div v-if="application.exemptIps.length" class="mobile-exempt-ips">
+                  <a-tag
+                    v-for="ip in application.exemptIps"
+                    :key="ip"
+                    color="arcoblue"
+                  >
+                    {{ ip }}
+                  </a-tag>
+                </div>
+                <strong v-else class="exempt-ip-empty">
+                  {{
+                    application.btnBypass
+                      ? t('userApps.noExemptIps')
+                      : t('userApps.bypassNotEnabled')
+                  }}
+                </strong>
+              </div>
+
               <a-alert
                 v-if="application.bannedAt"
                 type="error"
@@ -281,6 +348,38 @@ onMounted(loadApplications)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.exempt-ip-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.exempt-ip-tag {
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exempt-ip-more {
+  cursor: pointer;
+}
+
+.exempt-ip-popover {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-width: 440px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.exempt-ip-empty {
+  color: var(--color-text-3);
+  font-size: 12px;
 }
 
 .mobile-applications {
@@ -362,6 +461,12 @@ onMounted(loadApplications)
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.mobile-exempt-ips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .mobile-ban-reason {

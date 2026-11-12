@@ -22,9 +22,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.StringJoiner;
 
 @RestController
 @RequestMapping("/api/ui/userapps")
@@ -36,25 +39,40 @@ public class UserApplicationApiController {
     @GetMapping
     public List<UserApplicationDto> list(@AuthenticationPrincipal SparkleUserDetails userDetails) {
         requirePrincipal(userDetails);
-        return userappService.getUserAppsByUserId(userDetails.getUserId())
+        var applications = userappService.getUserAppsByUserId(userDetails.getUserId())
                 .stream()
                 .sorted((a, b) -> {
                     if (a.getCreatedAt() == null) return 1;
                     if (b.getCreatedAt() == null) return -1;
                     return b.getCreatedAt().compareTo(a.getCreatedAt());
                 })
-                .map(entity -> {
-                    var heartbeats = heartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(
-                            entity.getId(),
-                            OffsetDateTime.now().minusHours(2),
-                            OffsetDateTime.now()
-                    );
-                    var ips = heartbeats.stream().map(heartbeat -> heartbeat.getIp()).distinct().toList();
-                    StringJoiner joiner = new StringJoiner("\n");
-                    joiner.add("Active IP addresses (last 2 hours):");
-                    ips.forEach(ip -> joiner.add(ip.getHostAddress()));
-                    return new UserApplicationDto(entity, joiner.toString());
-                })
+                .toList();
+        var exemptAppIds = applications.stream()
+                .filter(application -> Boolean.TRUE.equals(application.getBtnBypass()))
+                .filter(application -> application.getBannedAt() == null)
+                .map(application -> application.getId())
+                .toList();
+        Map<Long, LinkedHashSet<String>> ipsByApp = new HashMap<>();
+        if (!exemptAppIds.isEmpty()) {
+            OffsetDateTime endAt = OffsetDateTime.now();
+            var heartbeats = heartbeatService.fetchHeartBeatsByUserAppIdsInTimeRange(
+                    exemptAppIds,
+                    endAt.minusHours(1),
+                    endAt
+            );
+            for (var heartbeat : heartbeats) {
+                ipsByApp.computeIfAbsent(heartbeat.getUserappId(), ignored -> new LinkedHashSet<>())
+                        .add(heartbeat.getIp().getHostAddress());
+            }
+        }
+        return applications.stream()
+                .map(application -> new UserApplicationDto(
+                        application,
+                        new ArrayList<>(ipsByApp.getOrDefault(
+                                application.getId(),
+                                new LinkedHashSet<>()
+                        ))
+                ))
                 .toList();
     }
 
@@ -118,7 +136,7 @@ public class UserApplicationApiController {
 
     private ApplicationCredentials credentials(com.ghostchu.btn.sparkle.entity.Userapp application) {
         return new ApplicationCredentials(
-                new UserApplicationDto(application, null),
+                new UserApplicationDto(application, List.of()),
                 application.getAppId(),
                 application.getAppSecret()
         );

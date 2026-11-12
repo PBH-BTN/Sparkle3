@@ -40,6 +40,8 @@ declare module 'vue' {
     AOption: typeof import('@arco-design/web-vue')['Option']
     APagination: typeof import('@arco-design/web-vue')['Pagination']
     APopconfirm: typeof import('@arco-design/web-vue')['Popconfirm']
+    APopover: typeof import('@arco-design/web-vue')['Popover']
+    AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppLayout: typeof import('./components/AppLayout.vue')['default']
     AProgress: typeof import('@arco-design/web-vue')['Progress']
     ARadio: typeof import('@arco-design/web-vue')['Radio']
