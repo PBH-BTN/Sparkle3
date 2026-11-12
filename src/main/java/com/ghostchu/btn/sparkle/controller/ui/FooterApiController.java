@@ -41,8 +41,7 @@ public class FooterApiController {
     ) {
         FooterConfigView config = configService.get();
         boolean authenticated = principal != null;
-        boolean admin = authenticated
-                && "admin".equalsIgnoreCase(principal.getUser().getRole());
+        boolean admin = authenticated && isAdmin(principal);
         Map<String, FooterMetricSetting> metricSettings = metricSettings(config);
 
         boolean disclaimerVisible = canView(config.disclaimerAudience(), authenticated, admin);
@@ -166,5 +165,16 @@ public class FooterApiController {
             case AUTHENTICATED -> authenticated;
             case ADMIN -> admin;
         };
+    }
+
+    private boolean isAdmin(SparkleUserDetails principal) {
+        boolean authorityAdmin = principal.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .anyMatch(authority -> authority != null
+                        && ("admin".equalsIgnoreCase(authority)
+                        || "ROLE_ADMIN".equalsIgnoreCase(authority)));
+        return authorityAdmin
+                || principal.getUser() != null
+                && "admin".equalsIgnoreCase(principal.getUser().getRole());
     }
 }
