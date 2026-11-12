@@ -9,13 +9,9 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -77,38 +73,36 @@ public class GithubSyncTargetService {
     public TargetView create(TargetInput input, @Nullable Long operatorId)
             throws BusinessException {
         NormalizedTarget target = normalize(input);
-        KeyHolder keyHolder = new GeneratedKeyHolder();
+        Long key;
         try {
-            jdbcTemplate.update(connection -> {
-                PreparedStatement statement = connection.prepareStatement("""
-                        INSERT INTO github_sync_targets
-                            (name, repository_owner, repository_name, branch_name, file_path,
-                             enabled, created_by, updated_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """, Statement.RETURN_GENERATED_KEYS);
-                statement.setString(1, target.name());
-                statement.setString(2, target.owner());
-                statement.setString(3, target.repository());
-                statement.setString(4, target.branch());
-                statement.setString(5, target.filePath());
-                statement.setBoolean(6, target.enabled());
-                statement.setObject(7, operatorId);
-                statement.setObject(8, operatorId);
-                return statement;
-            }, keyHolder);
+            key = jdbcTemplate.queryForObject("""
+                    INSERT INTO github_sync_targets
+                        (name, repository_owner, repository_name, branch_name, file_path,
+                         enabled, created_by, updated_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING id
+                    """, Long.class,
+                    target.name(),
+                    target.owner(),
+                    target.repository(),
+                    target.branch(),
+                    target.filePath(),
+                    target.enabled(),
+                    operatorId,
+                    operatorId
+            );
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "A target already writes to this repository, branch, and file"
             );
         }
-        Number key = keyHolder.getKey();
         if (key == null) {
             throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Unable to create GitHub sync target");
         }
-        replaceSources(key.longValue(), target.sourceIds());
-        return Objects.requireNonNull(find(key.longValue()));
+        replaceSources(key, target.sourceIds());
+        return Objects.requireNonNull(find(key));
     }
 
     @Transactional(rollbackFor = Exception.class)

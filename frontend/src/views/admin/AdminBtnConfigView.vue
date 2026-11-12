@@ -21,6 +21,7 @@ const form = reactive<Record<string, string>>({})
 const loading = ref(true)
 const saving = ref(false)
 const updatedAt = ref<string | null>(null)
+const loadError = ref('')
 
 const durationFields = new Set([
   'sparkle.ping.reconfigure.interval',
@@ -73,10 +74,12 @@ const hasEnvironmentOverrides = computed(() =>
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     applyConfig(await adminApi.btnConfig())
   } catch (error) {
-    Message.error(errorMessage(error, t('common.loadFailed')))
+    loadError.value = errorMessage(error, t('common.loadFailed'))
+    Message.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -158,6 +161,8 @@ function durationHint(field: BtnConfigField) {
     duration: formatDuration(Math.max(0, milliseconds)),
   })
 }
+
+onMounted(load)
 </script>
 
 <template>
@@ -168,7 +173,12 @@ function durationHint(field: BtnConfigField) {
           <template #icon><IconRefresh /></template>
           {{ t('admin.common.refresh') }}
         </a-button>
-        <a-button type="primary" :loading="saving" :disabled="loading" @click="save">
+        <a-button
+          type="primary"
+          :loading="saving"
+          :disabled="loading || Boolean(loadError) || fields.length === 0"
+          @click="save"
+        >
           <template #icon><IconSave /></template>
           {{ t('admin.common.save') }}
         </a-button>
@@ -181,6 +191,10 @@ function durationHint(field: BtnConfigField) {
         {{ t('admin.btn.hotReloadTitle') }}
       </template>
       {{ t('admin.btn.hotReloadText') }}
+    </a-alert>
+
+    <a-alert v-if="loadError" type="error" show-icon>
+      {{ loadError }}
     </a-alert>
 
     <a-alert v-if="hasEnvironmentOverrides" type="warning" show-icon>

@@ -26,6 +26,7 @@ const savingSettings = ref(false)
 const runningAll = ref(false)
 const runningTargetId = ref<number | null>(null)
 const settingsData = ref<GithubSyncSettings | null>(null)
+const loadError = ref('')
 const settingsForm = reactive({
   schedule: '',
   personalAccessToken: '',
@@ -51,10 +52,12 @@ const availableSources = computed(
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     applySettings(await adminApi.githubSync())
   } catch (error) {
-    Message.error(errorMessage(error, t('common.loadFailed')))
+    loadError.value = errorMessage(error, t('common.loadFailed'))
+    Message.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -244,9 +247,14 @@ onMounted(load)
       <template #actions>
         <a-button :loading="loading" @click="load">
           <template #icon><IconRefresh /></template>
-          {{ t('common.refresh') }}
+          {{ t('admin.common.refresh') }}
         </a-button>
-        <a-button type="primary" :loading="runningAll" @click="runAll">
+        <a-button
+          type="primary"
+          :loading="runningAll"
+          :disabled="loading || Boolean(loadError) || !settingsData"
+          @click="runAll"
+        >
           <template #icon><IconRefresh /></template>
           {{ t('admin.githubSync.runAll') }}
         </a-button>
@@ -255,6 +263,10 @@ onMounted(load)
 
     <a-alert type="info" show-icon>
       {{ t('admin.githubSync.alert') }}
+    </a-alert>
+
+    <a-alert v-if="loadError" type="error" show-icon>
+      {{ loadError }}
     </a-alert>
 
     <a-spin :loading="loading" class="github-sync-spin">
@@ -295,7 +307,12 @@ onMounted(load)
               </template>
             </a-form-item>
           </div>
-          <a-button type="primary" :loading="savingSettings" @click="saveSettings">
+          <a-button
+            type="primary"
+            :loading="savingSettings"
+            :disabled="Boolean(loadError) || !settingsData"
+            @click="saveSettings"
+          >
             <template #icon><IconSave /></template>
             {{ t('admin.common.save') }}
           </a-button>
@@ -305,7 +322,11 @@ onMounted(load)
       <a-card class="surface-card">
         <template #title>{{ t('admin.githubSync.targetsTitle') }}</template>
         <template #extra>
-          <a-button type="outline" @click="openCreate">
+          <a-button
+            type="outline"
+            :disabled="Boolean(loadError) || !settingsData"
+            @click="openCreate"
+          >
             <template #icon><IconPlus /></template>
             {{ t('admin.githubSync.createTarget') }}
           </a-button>
