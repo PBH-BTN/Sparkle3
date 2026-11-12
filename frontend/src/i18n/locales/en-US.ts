@@ -522,7 +522,7 @@ export default {
       userApps: 'Applications',
       rules: 'Manual rules',
       geoIpCityBlacklist: 'GeoIP city blacklist',
-      modules: 'Ban module configuration',
+      modules: 'Ban module management',
       pointsModules: 'Point modules',
       settings: 'Runtime settings',
       storage: 'Storage & policies',

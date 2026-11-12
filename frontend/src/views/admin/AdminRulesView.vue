@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { Message, type TableColumnData } from '@arco-design/web-vue'
 import {
   IconCode,
@@ -13,12 +14,27 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import TablePager from '@/components/TablePager.vue'
+import AdminGeoIpCityBlacklistView from '@/views/admin/AdminGeoIpCityBlacklistView.vue'
 import { adminApi } from '@/api/admin'
 import type { ManualRule, RuleInput, RuleSummary, RuleType } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
 const { formatNumber } = useFormatters()
+const route = useRoute()
+const router = useRouter()
+const activeTab = computed({
+  get: () => (route.query.tab === 'geoip' ? 'geoip' : 'manual'),
+  set: (value: string) => {
+    const query = { ...route.query }
+    if (value === 'geoip') {
+      query.tab = 'geoip'
+    } else {
+      delete query.tab
+    }
+    router.replace({ path: route.path, query })
+  },
+})
 const ruleTypes: RuleType[] = ['ip_denylist', 'peer_id', 'client_name', 'port', 'script']
 const records = ref<ManualRule[]>([])
 const summary = ref<RuleSummary[]>([])
@@ -168,9 +184,20 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-stack">
-    <PageHeader :title="t('admin.rules.title')" :description="t('admin.rules.description')">
-      <template #actions>
+  <div class="page-stack rules-page">
+    <PageHeader
+      :title="
+        activeTab === 'geoip'
+          ? t('admin.geoIpCityBlacklist.title')
+          : t('admin.rules.title')
+      "
+      :description="
+        activeTab === 'geoip'
+          ? t('admin.geoIpCityBlacklist.description')
+          : t('admin.rules.description')
+      "
+    >
+      <template v-if="activeTab === 'manual'" #actions>
         <a-button @click="openPreview">
           <template #icon><IconEye /></template>
           {{ t('admin.rules.preview') }}
@@ -182,7 +209,15 @@ onMounted(load)
       </template>
     </PageHeader>
 
-    <div class="summary-grid">
+    <a-tabs
+      v-model:active-key="activeTab"
+      type="rounded"
+      lazy-load
+      class="rules-tabs"
+    >
+      <a-tab-pane key="manual" :title="t('admin.rules.title')">
+        <div class="page-stack">
+          <div class="summary-grid">
       <button
         v-for="type in ruleTypes"
         :key="type"
@@ -330,6 +365,15 @@ onMounted(load)
         <pre class="generated-preview">{{ generatedContent || t('common.noData') }}</pre>
       </a-spin>
     </a-drawer>
+        </div>
+      </a-tab-pane>
+      <a-tab-pane
+        key="geoip"
+        :title="t('admin.geoIpCityBlacklist.title')"
+      >
+        <AdminGeoIpCityBlacklistView embedded />
+      </a-tab-pane>
+    </a-tabs>
   </div>
 </template>
 

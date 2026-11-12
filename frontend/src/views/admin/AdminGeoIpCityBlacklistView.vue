@@ -20,6 +20,9 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
 const { formatDate, formatDuration, formatNumber } = useFormatters()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false,
+})
 const loading = ref(true)
 const saving = ref(false)
 const refreshing = ref(false)
@@ -228,8 +231,12 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 </script>
 
 <template>
-  <div class="page-stack geoip-page">
+  <div
+    class="page-stack geoip-page"
+    :class="{ 'geoip-page--embedded': props.embedded }"
+  >
     <PageHeader
+      v-if="!props.embedded"
       :title="t('admin.geoIpCityBlacklist.title')"
       :description="t('admin.geoIpCityBlacklist.description')"
     >
@@ -244,6 +251,19 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
         </a-button>
       </template>
     </PageHeader>
+    <div v-else class="embedded-toolbar">
+      <p>{{ t('admin.geoIpCityBlacklist.description') }}</p>
+      <a-space>
+        <a-button type="primary" @click="openCreate">
+          <template #icon><IconPlus /></template>
+          {{ t('admin.geoIpCityBlacklist.create') }}
+        </a-button>
+        <a-button :loading="refreshing || status?.running" @click="refreshNow">
+          <template #icon><IconRefresh /></template>
+          {{ t('admin.geoIpCityBlacklist.regenerate') }}
+        </a-button>
+      </a-space>
+    </div>
 
     <a-alert type="info" show-icon>
       {{ t('admin.geoIpCityBlacklist.generationHint') }}
@@ -398,6 +418,25 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   width: min(1180px, 100%);
 }
 
+.geoip-page--embedded {
+  width: 100%;
+}
+
+.embedded-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.embedded-toolbar p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .status-row {
   display: flex;
   flex-wrap: wrap;
@@ -445,6 +484,11 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 }
 
 @media (max-width: 640px) {
+  .embedded-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .status-row {
     align-items: flex-start;
     flex-direction: column;

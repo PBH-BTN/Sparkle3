@@ -505,7 +505,7 @@ export default {
       userApps: '应用管理',
       rules: '手动规则',
       geoIpCityBlacklist: 'GeoIP 城市黑名单',
-      modules: '封禁模块配置',
+      modules: '封禁模块管理',
       pointsModules: '积分模块管理',
       settings: '运行设置',
       storage: '存储与策略',

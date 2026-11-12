@@ -115,7 +115,7 @@ const router = createRouter({
         {
           path: 'geoip-city-blacklist',
           name: 'admin-geoip-city-blacklist',
-          component: () => import('@/views/admin/AdminGeoIpCityBlacklistView.vue'),
+          redirect: '/admin/rules?tab=geoip',
         },
         {
           path: 'modules',
