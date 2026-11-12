@@ -3,7 +3,6 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconCheckCircle,
   IconRefresh,
   IconSave,
   IconSettings,
@@ -187,7 +186,6 @@ onMounted(load)
 
     <a-alert type="info" show-icon>
       <template #title>
-        <IconCheckCircle />
         {{ t('admin.btn.hotReloadTitle') }}
       </template>
       {{ t('admin.btn.hotReloadText') }}

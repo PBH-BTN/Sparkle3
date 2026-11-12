@@ -6,7 +6,6 @@ import {
   IconDelete,
   IconEdit,
   IconEmail,
-  IconNotification,
   IconPlus,
   IconRefresh,
   IconSend,
@@ -247,7 +246,6 @@ onMounted(load)
 
     <a-alert type="info" show-icon>
       <template #title>
-        <IconNotification />
         {{ t('admin.versionAlerts.triggerHint') }}
       </template>
     </a-alert>

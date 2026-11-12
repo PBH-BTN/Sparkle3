@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconCheckCircle,
   IconCode,
   IconInfoCircle,
   IconRefresh,
@@ -150,7 +149,6 @@ onMounted(load)
 
     <a-alert type="info" show-icon>
       <template #title>
-        <IconCheckCircle />
         {{ t('admin.modules.hotReloadTitle') }}
       </template>
       {{ t('admin.modules.hotReloadText') }}

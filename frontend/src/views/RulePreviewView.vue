@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
-import { IconCopy, IconRefresh, IconSafe } from '@arco-design/web-vue/es/icon'
+import { IconCopy, IconRefresh } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import { uiApi } from '@/api'
 import type {
@@ -87,7 +87,6 @@ onMounted(load)
 
     <a-alert type="warning" show-icon>
       <template #title>
-        <IconSafe />
         {{ t('rulePreview.noticeTitle') }}
       </template>
       {{ t('rulePreview.notice') }}

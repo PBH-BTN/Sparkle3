@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconCheckCircle,
   IconRefresh,
   IconSave,
   IconThunderbolt,
@@ -154,7 +153,6 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 
     <a-alert type="info" show-icon>
       <template #title>
-        <IconCheckCircle />
         {{ t('admin.homepageStatistics.hotReloadTitle') }}
       </template>
       {{ t('admin.homepageStatistics.hotReloadText') }}

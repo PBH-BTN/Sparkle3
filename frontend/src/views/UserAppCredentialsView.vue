@@ -6,7 +6,6 @@ import { Message } from '@arco-design/web-vue'
 import {
   IconCheckCircle,
   IconCopy,
-  IconExclamationCircle,
   IconSafe,
   IconList,
   IconPlus,
@@ -66,7 +65,6 @@ async function copy(value: string) {
 
       <a-alert type="warning" show-icon class="credential-warning">
         <template #title>
-          <IconExclamationCircle />
           {{ t('userApps.credentialsWarning') }}
         </template>
       </a-alert>
