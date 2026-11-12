@@ -208,7 +208,16 @@ WITH defaults(config_key, config_value, value_type, config_group, sensitive, hot
 )
 INSERT INTO public.app_config_entries
     (config_key, config_value, value_type, config_group, source, sensitive, hot_reload)
-SELECT config_key, config_value, value_type, config_group, 'sql-default', sensitive, hot_reload
+SELECT config_key,
+       config_value,
+       value_type,
+       config_group,
+       CASE
+           WHEN overwrite_existing THEN 'sql-default-overwrite'
+           ELSE 'sql-default'
+       END,
+       sensitive,
+       hot_reload
 FROM defaults
 ON CONFLICT (config_key) DO UPDATE
 SET config_value = EXCLUDED.config_value,
@@ -218,8 +227,8 @@ SET config_value = EXCLUDED.config_value,
     hot_reload = EXCLUDED.hot_reload,
     source = 'sql-default',
     updated_at = now()
-WHERE defaults.overwrite_existing = true
-  AND defaults.sensitive = false
+WHERE EXCLUDED.source = 'sql-default-overwrite'
+  AND EXCLUDED.sensitive = false
   AND app_config_entries.sensitive = false
   AND app_config_entries.config_key NOT IN (
       'sparkle.github-sync.org-name',
@@ -236,6 +245,10 @@ WHERE defaults.overwrite_existing = true
       OR app_config_entries.hot_reload IS DISTINCT FROM EXCLUDED.hot_reload
       OR app_config_entries.source IS DISTINCT FROM 'sql-default'
   );
+
+UPDATE public.app_config_entries
+SET source = 'sql-default'
+WHERE source = 'sql-default-overwrite';
 
 DELETE FROM public.app_config_entries
 WHERE config_key NOT LIKE 'sparkle.%';

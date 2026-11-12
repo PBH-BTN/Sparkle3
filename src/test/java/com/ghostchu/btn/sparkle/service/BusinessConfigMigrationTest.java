@@ -89,6 +89,7 @@ class BusinessConfigMigrationTest {
                 "('sparkle.analyse.mass-download-monitor.threshold-download', "
                         + "'10737418240', 'number', 'sparkle.analyse', false, true, false)"
         ));
-        assertTrue(sql.contains("WHERE defaults.overwrite_existing = true"));
+        assertTrue(sql.contains("WHERE EXCLUDED.source = 'sql-default-overwrite'"));
+        assertFalse(sql.contains("WHERE defaults.overwrite_existing"));
     }
 }
