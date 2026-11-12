@@ -14,31 +14,15 @@ class SpaControllerTest {
             .build();
 
     @Test
-    void servesTheVueDocumentForEveryAdminRoute() throws Exception {
+    void servesTheVueDocumentForExplicitApplicationRoutes() throws Exception {
         for (String path : new String[]{
-                "/admin",
-                "/admin/btn",
-                "/admin/github-sync",
-                "/admin/future-admin-page",
-                "/future-public-page",
+                "/",
+                "/user/profile/42",
                 "/ping/queryIp/widget"
         }) {
             mockMvc.perform(get(path))
                     .andExpect(status().isOk())
                     .andExpect(forwardedUrl("/index.html"));
-        }
-    }
-
-    @Test
-    void doesNotTurnMissingApisOrStaticResourcesIntoTheVueDocument() throws Exception {
-        for (String path : new String[]{
-                "/api/admin/missing",
-                "/assets/missing.js",
-                "/ping/missing",
-                "/ping/queryIp"
-        }) {
-            mockMvc.perform(get(path))
-                    .andExpect(status().isNotFound());
         }
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +45,38 @@ class StaticResourceConfigTest {
                                     containsString("immutable")
                             )
                     ));
+        }
+    }
+
+    @Test
+    void servesIndexWithoutInterceptingTheSpaFallback() throws Exception {
+        try (var context = new AnnotationConfigWebApplicationContext()) {
+            context.setServletContext(new MockServletContext());
+            context.register(WebTestConfig.class);
+            context.refresh();
+            MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+            mockMvc.perform(get("/index.html"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("spa-test-index")));
+            mockMvc.perform(get("/admin/future-admin-page"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("spa-test-index")))
+                    .andExpect(header().string("Cache-Control", containsString("no-cache")));
+        }
+    }
+
+    @Test
+    void missingApisAndUnknownAssetsStay404() throws Exception {
+        try (var context = new AnnotationConfigWebApplicationContext()) {
+            context.setServletContext(new MockServletContext());
+            context.register(WebTestConfig.class);
+            context.refresh();
+            MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+            mockMvc.perform(get("/api/admin/missing")).andExpect(status().isNotFound());
+            mockMvc.perform(get("/assets/missing.js")).andExpect(status().isNotFound());
+            mockMvc.perform(get("/ping/missing")).andExpect(status().isNotFound());
         }
     }
 

@@ -13,6 +13,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.ghostchu.btn.sparkle.exception.BusinessException;
@@ -45,6 +46,47 @@ public class GlobalExceptionHandler {
     public ResponseEntity<@NotNull StdResp<String>> noResourceFoundException(Exception e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new StdResp<>(false, "404 Not Found - 资源未找到", null));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<@NotNull StdResp<String>> responseStatusException(
+            ResponseStatusException e,
+            HttpServletRequest request
+    ) {
+        if (e.getStatusCode().is5xxServerError()) {
+            var sentryId = Sentry.captureException(e);
+            log.error(
+                    "Request failed with status {}, tracing id: {}, method: {}, uri: {}",
+                    e.getStatusCode().value(),
+                    sentryId,
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    e
+            );
+            return ResponseEntity.status(e.getStatusCode())
+                    .headers(e.getHeaders())
+                    .body(new StdResp<>(
+                            false,
+                            "很抱歉，由于服务器内部错误，您的请求未能完成。此错误我们已收悉，错误跟踪ID："
+                                    + sentryId,
+                            null
+                    ));
+        }
+
+        log.debug(
+                "Request rejected with status {}, method: {}, uri: {}",
+                e.getStatusCode().value(),
+                request.getMethod(),
+                request.getRequestURI()
+        );
+        String message = e.getReason();
+        if (message == null || message.isBlank()) {
+            HttpStatus resolved = HttpStatus.resolve(e.getStatusCode().value());
+            message = resolved != null ? resolved.getReasonPhrase() : "Request failed";
+        }
+        return ResponseEntity.status(e.getStatusCode())
+                .headers(e.getHeaders())
+                .body(new StdResp<>(false, message, null));
     }
 
 //    @ExceptionHandler(ClientAbortException.class)
