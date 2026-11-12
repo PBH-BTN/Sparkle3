@@ -121,6 +121,10 @@ mybatis-plus:
 sparkle:
   root-url: "http://localhost:7799"
   chn-root-url: "http://chn.sparkle.local:7799"
+  flarum-integration:
+    # Set SPARKLE_FLARUM_INTEGRATION_TOKEN in production. Requests are rejected
+    # while this value is empty.
+    token: ""
   security:
     zip-bomb-threshold: 33554432
   captcha:

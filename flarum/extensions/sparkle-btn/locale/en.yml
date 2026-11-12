@@ -1,0 +1,33 @@
+sparkle-btn-flarum:
+  admin:
+    permissions:
+      view_user_data_label: View other users' Sparkle BTN profile data
+    settings:
+      endpoint_label: Sparkle BTN API endpoint
+      endpoint_help: Full URL of the Sparkle BTN user lookup endpoint. The GitHub UID is appended as githubUid unless the URL contains {githubUid}.
+      token_label: Integration token
+      token_help: Sent as the X-Sparkle-Token header. This value is never exposed to the forum frontend.
+      sync_interval_label: Background refresh interval (minutes)
+      sync_interval_help: The scheduled task checks every 15 minutes and refreshes users whose cache is older than this interval.
+      batch_size_label: Users per scheduled batch
+      batch_size_help: Maximum number of users processed by one scheduled command run (1-500).
+      timeout_label: API request timeout (seconds)
+      timeout_help: Maximum time to wait for Sparkle BTN (1-60 seconds).
+  forum:
+    card:
+      title: Sparkle BTN
+      uid: "UID {uid}"
+      registered: "Registered {date}"
+      banned: Banned
+      traffic: "{days}-day traffic"
+      sent_self: Reported upload
+      received_self: Reported download
+      sent_ack: Confirmed upload
+      received_ack: Confirmed download
+      traffic_disabled: Traffic statistics are disabled
+      no_traffic: No traffic data
+      points: Bytes points
+      traffic_rank: Traffic rank
+      points_rank: Bytes rank
+      unranked: Not ranked
+      updated: "Updated {time}"

@@ -1,0 +1,33 @@
+sparkle-btn-flarum:
+  admin:
+    permissions:
+      view_user_data_label: 查看其他用户的 Sparkle BTN 资料数据
+    settings:
+      endpoint_label: Sparkle BTN API 端点
+      endpoint_help: Sparkle BTN 用户查询接口的完整 URL。除非 URL 包含 {githubUid}，否则插件会附加 githubUid 查询参数。
+      token_label: 集成密钥
+      token_help: 通过 X-Sparkle-Token 请求头发送，不会暴露给论坛前端。
+      sync_interval_label: 后台刷新间隔（分钟）
+      sync_interval_help: 计划任务每 15 分钟检查一次，只刷新缓存超过此间隔的用户。
+      batch_size_label: 每批同步用户数
+      batch_size_help: 单次计划任务最多处理的用户数（1-500）。
+      timeout_label: API 请求超时（秒）
+      timeout_help: 等待 Sparkle BTN 响应的最长时间（1-60 秒）。
+  forum:
+    card:
+      title: Sparkle BTN
+      uid: "UID {uid}"
+      registered: "注册于 {date}"
+      banned: 已停用
+      traffic: "最近 {days} 天流量"
+      sent_self: 上报上传
+      received_self: 上报下载
+      sent_ack: 确认上传
+      received_ack: 确认下载
+      traffic_disabled: 流量统计已关闭
+      no_traffic: 暂无流量数据
+      points: Bytes 积分
+      traffic_rank: 流量排行
+      points_rank: Bytes 排行
+      unranked: 未上榜
+      updated: "更新于 {time}"

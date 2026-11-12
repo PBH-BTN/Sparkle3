@@ -93,6 +93,21 @@ chunk 删除历史数据，因此手动 cutoff 的实际边界可能早于所选
 `sparkle:admin:version-alerts:rules`，发送记录保存在
 `sparkle:admin:version-alerts:deliveries`。
 
+## Flarum 2 集成
+
+仓库内的 [`flarum/extensions/sparkle-btn`](flarum/extensions/sparkle-btn/README.md)
+提供 Flarum 2 + FoF OAuth 插件，以及 Sparkle 端的 GitHub UID 查询接口。插件会在
+GitHub 登录和计划任务中缓存 BTN UID、7 日流量、Bytes 积分及两类排行榜，并按权限
+在 Flarum 用户资料页和头像悬浮卡中展示；绑定用户同时自动加入专用权限组。
+
+Sparkle 端需配置：
+
+```yaml
+sparkle:
+  flarum-integration:
+    token: "replace-with-a-long-random-secret"
+```
+
 邮件发件人和显示名可通过以下配置修改：
 
 ```yaml

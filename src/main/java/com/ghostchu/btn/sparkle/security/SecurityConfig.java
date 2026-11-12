@@ -47,6 +47,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/ui/session").permitAll()
                                 .requestMatchers("/api/ui/footer").permitAll()
                                 .requestMatchers("/api/ui/notices").permitAll()
+                                .requestMatchers("/api/integrations/flarum/**").permitAll()
                                 .requestMatchers("/admin", "/admin/**")
                                 .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
                                 .requestMatchers("/api/admin/**")
