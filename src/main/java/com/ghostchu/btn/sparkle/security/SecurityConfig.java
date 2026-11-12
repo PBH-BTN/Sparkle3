@@ -26,8 +26,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
+        http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
                                 .requestMatchers("/error").permitAll()
                                 .requestMatchers("/", "/index.html", "/login").permitAll()
@@ -48,12 +47,6 @@ public class SecurityConfig {
                                 .requestMatchers("/api/admin/**").hasAnyAuthority("admin")
                                 .requestMatchers("/debug/**").hasAnyAuthority("admin")
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
-//                                .requestMatchers("/banhistory/**").authenticated()
-//                                .requestMatchers("/api/banhistory/**").authenticated()
-//                                .requestMatchers("/swarm-tracker/**").authenticated()
-//                                .requestMatchers("/api/swarmtracker/**").authenticated()
-//                                .requestMatchers("/client-discovery/**").authenticated()
-//                                .requestMatchers("/api/clientdiscovery/**").authenticated()
                                 .requestMatchers("/api/**").authenticated()
                                 .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
@@ -82,7 +75,7 @@ public class SecurityConfig {
                             response.sendRedirect("/");
                         }))
                 .headers(headers -> headers
-                        .cacheControl(cache -> cache.disable())
+                        .cacheControl(HeadersConfigurer.CacheControlConfig::disable)
                         .addHeaderWriter(SecurityConfig::writeDefaultCacheHeaders)
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                         .contentSecurityPolicy(csp -> csp
