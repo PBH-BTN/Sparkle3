@@ -176,7 +176,7 @@ public class AdminUserApplicationController {
     public void delete(@PathVariable long id) {
         requireApplication(id);
         try {
-            if (!userappService.removeById(id)) {
+            if (!userappService.deleteUserAppById(id)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Unable to delete this application");
             }
         } catch (RuntimeException exception) {
