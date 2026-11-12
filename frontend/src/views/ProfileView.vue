@@ -61,7 +61,7 @@ onMounted(async () => {
   <div class="profile-page">
     <PageHeader :title="t('profile.title')">
       <template #actions>
-        <a-button @click="router.push('/user/privacy-mode')">
+        <a-button @click="router.push('/user/settings')">
           <template #icon><IconSettings /></template>
           {{ t('profile.settings') }}
         </a-button>
@@ -132,7 +132,7 @@ onMounted(async () => {
                 type="text"
                 size="small"
                 class="privacy-settings-button"
-                @click="router.push('/user/privacy-mode')"
+                @click="router.push('/user/settings/privacy')"
               >
                 {{ t('profile.settings') }}
               </a-button>

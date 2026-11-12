@@ -15,7 +15,6 @@ import {
   IconList,
   IconMenu,
   IconSearch,
-  IconSettings,
   IconCode,
   IconTrophy,
   IconUser,
@@ -144,10 +143,6 @@ function navigate(id: string) {
               <a-doption v-if="session.user?.admin" @click="navigate('/admin/dashboard')">
                 <template #icon><IconDashboard /></template>
                 {{ t('admin.title') }}
-              </a-doption>
-              <a-doption @click="navigate('/user/privacy-mode')">
-                <template #icon><IconSettings /></template>
-                {{ t('nav.privacy') }}
               </a-doption>
             </template>
           </a-dropdown>

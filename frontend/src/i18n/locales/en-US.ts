@@ -52,7 +52,66 @@ export default {
     ranking: 'Ranking',
     profile: 'Profile',
     points: 'Points',
-    privacy: 'Privacy',
+  },
+  settings: {
+    title: 'Settings',
+    description: 'Manage account security, deletion requests, and public profile privacy.',
+    backToProfile: 'Back to profile',
+    menu: {
+      account: 'Delete account',
+      privacy: 'Privacy settings',
+    },
+  },
+  accountSettings: {
+    title: 'Delete account',
+    description: 'Review your sign-in method and manage high-risk account actions.',
+    profileTitle: 'Account information',
+    uid: 'User UID',
+    loginMethod: 'Sign-in method',
+    dangerTitle: 'Danger zone',
+    dangerDescription:
+      'Deleting your account starts a seven-day cooling-off period. Any sign-in attempt or user application activity before it ends cancels the request and sends a notification.',
+    deleteAccount: 'Delete account',
+    deleteHint: 'Deletion cannot be undone, and all user applications will be disabled.',
+    deleteAction: 'Delete account',
+    warningTitle: 'Warning: delete account',
+    warningHeading: 'This permanently removes your account identity',
+    warningIntro:
+      'Deletion requires another GitHub authorization. Your current session will be signed out after confirmation.',
+    warningCooling:
+      'There is a seven-day cooling-off period. You cannot sign in, and user applications must not be active.',
+    warningCancellation:
+      'A sign-in attempt or user application activity during the cooling-off period cancels the request.',
+    warningAnonymize:
+      'After the cooling-off period, all user applications are disabled with the reason and comment “用户已注销”, and your profile is anonymized.',
+    warningReauth:
+      'The second GitHub authorization only verifies identity and does not bypass the cooling-off period.',
+    confirmCheckbox:
+      'I have read and understand these consequences and still want to request account deletion.',
+    reauthAction: 'Authorize and request deletion',
+    pendingTitle: 'Deletion request is cooling off',
+    pendingText:
+      'Expected completion: {time}. Signing in or using a user application will cancel the request.',
+    completedText: 'This account has been deleted.',
+  },
+  accountDeletionResult: {
+    startedTitle: 'Deletion request started',
+    startedDescription:
+      'GitHub reauthorization succeeded. Your account is now in the seven-day cooling-off period, and all signed-in sessions have been revoked.',
+    startedWarning:
+      'Do not sign in or use any user application during the cooling-off period, or the request will be cancelled. Start, cancellation, and completion notices are sent to the original account email.',
+    completedTitle: 'Account deletion completed',
+    completedDescription:
+      'The cooling-off period has ended. Your profile has been anonymized and all user applications are disabled. This account can no longer be used to sign in.',
+    cancelledTitle: 'Deletion request cancelled',
+    cancelledByLogin:
+      'A sign-in attempt during the cooling-off period cancelled the deletion request, and this sign-in was not completed. Sign in again; the account will remain active.',
+    cancelledDescription: 'The deletion request was cancelled and the account remains active.',
+    errorTitle: 'Unable to delete the account',
+    errorDescription:
+      'Reauthorization did not complete or this request is no longer valid. Return to account settings and try again.',
+    loginAgain: 'Sign in again',
+    backHome: 'Back to home',
   },
   auth: {
     badge: 'BTN threat intelligence network',
@@ -63,6 +122,20 @@ export default {
     signIn: 'Continue with GitHub',
     securityNote:
       'Authentication is handled securely by GitHub OAuth. Sparkle never receives your GitHub password.',
+  },
+  registration: {
+    badge: 'GitHub OAuth registration',
+    githubVerified: 'GitHub identity verified',
+    title: 'Create your Sparkle BTN account',
+    description:
+      'Your GitHub identity is not linked to a BTN account yet. Review the profile below and register with one click.',
+    oneClickHint:
+      'Registration creates your BTN profile and links the current GitHub account. Your nickname, avatar, and email come from GitHub and remain manageable after registration.',
+    registerAction: 'Register with one click',
+    logoutAction: 'Sign out',
+    failed: 'Registration failed. Please try again.',
+    pendingExpired: 'This GitHub authorization has expired',
+    backToLogin: 'Back to sign in',
   },
   home: {
     accountPaused: 'Account suspended',
@@ -665,6 +738,11 @@ export default {
         AFTER_DELETE: 'Post-delete refresh',
       },
       items: {
+        'account-deletion-finalize': {
+          name: 'Account deletion finalization',
+          description:
+            'Finalizes due deletion requests, disables applications, and anonymizes account data.',
+        },
         'admin-metrics-sample': {
           name: 'Host metrics sampling',
           description: 'Samples CPU, memory, and disk utilization for dashboard trends.',

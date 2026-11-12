@@ -39,6 +39,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .eq("bind_user_id", btnUserId));
     }
 
+    @Override
+    public boolean isGithubAccountRegistered(long githubUid) {
+        return userRelMapper.findUserRelByPlatformUserId(
+                "github",
+                String.valueOf(githubUid)
+        ) != null;
+    }
+
     /**
      * 用户使用 Github 登录，自动注册或更新用户信息
      *

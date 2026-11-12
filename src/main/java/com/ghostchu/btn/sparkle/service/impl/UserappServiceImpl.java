@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.VersionAlertService;
+import com.ghostchu.btn.sparkle.service.account.UserAccountDeletionService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -37,6 +38,8 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     private VersionAlertService versionAlertService;
     @Autowired
     private BtnRuntimeConfigService btnConfigService;
+    @Autowired
+    private UserAccountDeletionService accountDeletionService;
     private final Cache<Long, Boolean> lastSeenUpdateThrottle = CacheBuilder.newBuilder()
             .maximumSize(10000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -86,6 +89,19 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
             userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
         }
         if (userApp != null) {
+            try {
+                var deletionActivity = accountDeletionService.recordApplicationActivity(
+                        userApp.getOwner(),
+                        userApp.getId()
+                );
+                if (deletionActivity
+                        == UserAccountDeletionService.ApplicationActivityDecision.ACCOUNT_DELETED) {
+                    return null;
+                }
+            } catch (Exception exception) {
+                log.warn("Unable to inspect account deletion activity for user {}: {}",
+                        userApp.getOwner(), exception.getMessage());
+            }
             if (lastSeenUpdateThrottle.getIfPresent(userApp.getId()) == null) {
                 lastSeenUpdateThrottle.put(userApp.getId(), Boolean.TRUE);
                 this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);

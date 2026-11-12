@@ -333,6 +333,30 @@ export interface PrivacyResponse {
   levels: PrivacyLevel[]
 }
 
+export interface AccountDeletionStatus {
+  state: 'NONE' | 'PENDING' | 'CANCELLED' | 'COMPLETED'
+  requestedAt: string | null
+  coolingEndsAt: string | null
+  completedAt: string | null
+  cancellationReason: string | null
+}
+
+export interface AccountDeletionReauthenticationResponse {
+  redirectUrl: string
+}
+
+export interface PendingGithubRegistration {
+  githubLogin: string
+  nickname: string
+  avatarUrl: string
+  email: string
+}
+
+export interface GithubRegistrationResult {
+  registered: boolean
+  userId: string
+}
+
 export interface UserApplication {
   id: number
   appId: string

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconArrowLeft,
   IconCheckCircleFill,
   IconCloseCircleFill,
 } from '@arco-design/web-vue/es/icon'
@@ -13,7 +11,6 @@ import { uiApi } from '@/api'
 import type { PrivacyLevel } from '@/api/types'
 import { errorMessage } from '@/utils/format'
 
-const router = useRouter()
 const { t } = useI18n()
 const levels = ref<PrivacyLevel[]>([])
 const selected = ref<PrivacyLevel['name']>('HIGH')
@@ -68,14 +65,7 @@ async function save() {
 
 <template>
   <div class="privacy-page">
-    <PageHeader :title="t('privacy.title')" :description="t('privacy.description')">
-      <template #actions>
-        <a-button @click="router.push('/user/profile')">
-          <template #icon><IconArrowLeft /></template>
-          {{ t('common.back') }}
-        </a-button>
-      </template>
-    </PageHeader>
+    <PageHeader :title="t('privacy.title')" :description="t('privacy.description')" />
 
     <a-spin :loading="loading" class="privacy-spin">
       <a-radio-group v-model="selected" direction="vertical" class="level-group">
@@ -129,8 +119,7 @@ async function save() {
 
 <style scoped>
 .privacy-page {
-  width: min(820px, 100%);
-  margin: 0 auto;
+  width: 100%;
 }
 
 .privacy-spin {

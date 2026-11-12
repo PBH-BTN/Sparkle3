@@ -34,13 +34,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
                                 .requestMatchers("/error").permitAll()
-                                .requestMatchers("/", "/index.html", "/login").permitAll()
+                                .requestMatchers("/", "/index.html", "/login", "/register").permitAll()
                                 .requestMatchers("/assets/**").permitAll()
                                 .requestMatchers("/favicon.ico").permitAll()
                                 .requestMatchers("/ping/**").permitAll()
                                 .requestMatchers("/login/**").permitAll()
                                 .requestMatchers("/oauth2/**").permitAll()
                                 .requestMatchers("/oauth/error").permitAll()
+                                .requestMatchers("/account-deletion", "/account-deletion/**").permitAll()
                                 .requestMatchers("/proxy/**").permitAll()
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/api/ui/session").permitAll()
@@ -69,6 +70,11 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("frame-ancestors *")))
+                .logout(logout -> logout
+                        .logoutUrl("/api/ui/logout")
+                        .logoutSuccessUrl("/login")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true))
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2AuthenticationSuccessHandler))
                 .oauth2Client(Customizer.withDefaults())

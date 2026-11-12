@@ -51,7 +51,60 @@ export default {
     ranking: '排行榜',
     profile: '个人资料',
     points: '积分',
-    privacy: '隐私设置',
+  },
+  settings: {
+    title: '设置',
+    description: '管理账户安全、注销申请与公开资料隐私。',
+    backToProfile: '返回个人资料',
+    menu: {
+      account: '账户注销',
+      privacy: '隐私设置',
+    },
+  },
+  accountSettings: {
+    title: '账户注销',
+    description: '查看当前登录方式并管理高风险账户操作。',
+    profileTitle: '账户信息',
+    uid: '用户 UID',
+    loginMethod: '登录方式',
+    dangerTitle: '危险操作',
+    dangerDescription:
+      '注销账号进入 7 天冷静期。冷静期结束前，任何登录尝试或用户应用活动都会取消申请并通知你。',
+    deleteAccount: '注销账号',
+    deleteHint: '注销后无法恢复，所有用户应用将自动停用。',
+    deleteAction: '注销账号',
+    warningTitle: '警告：注销账号',
+    warningHeading: '此操作将永久移除你的账户身份',
+    warningIntro:
+      '注销申请需要再次通过 GitHub 登录授权验证。确认后你的当前会话会立即退出。',
+    warningCooling: '注销有 7 天冷静期，期间不能登录，也不能有任何用户应用活动。',
+    warningCancellation: '冷静期内发生登录尝试或用户应用活动，申请会自动取消。',
+    warningAnonymize:
+      '冷静期结束后，所有用户应用将停用，原因和备注均改为“用户已注销”，个人资料将匿名化。',
+    warningReauth: '再次 GitHub 授权仅用于验证身份，不会绕过冷静期。',
+    confirmCheckbox: '我已阅读并理解上述后果，仍要申请注销账号。',
+    reauthAction: '再次授权并申请注销',
+    pendingTitle: '注销申请正在冷静期',
+    pendingText: '预计完成时间：{time}。期间登录或使用用户应用会取消申请。',
+    completedText: '该账户已完成注销。',
+  },
+  accountDeletionResult: {
+    startedTitle: '注销申请已开始',
+    startedDescription:
+      '你已通过 GitHub 再次授权验证。账户已进入 7 天冷静期，并已退出所有登录会话。',
+    startedWarning:
+      '冷静期内请勿登录账号或使用任何用户应用，否则本次注销将被取消。开始、取消和完成状态都会发送到原账户邮箱。',
+    completedTitle: '账号注销已完成',
+    completedDescription:
+      '冷静期已经结束，账号个人资料已匿名化，所有用户应用均已停用。你无法再使用此账户登录。',
+    cancelledTitle: '注销申请已取消',
+    cancelledByLogin:
+      '检测到冷静期内的登录尝试，注销申请已取消，本次登录未完成。请重新登录；当前账户不会继续注销。',
+    cancelledDescription: '注销申请已取消，当前账户仍可正常使用。',
+    errorTitle: '无法完成账号注销',
+    errorDescription: '再次授权验证未完成或当前操作已失效，请返回账户设置后重试。',
+    loginAgain: '重新登录',
+    backHome: '返回首页',
   },
   auth: {
     badge: 'BTN 威胁情报网络',
@@ -60,6 +113,20 @@ export default {
     description: '登录后即可管理用户应用、查询威胁情报并共享网络数据。',
     signIn: '使用 GitHub 登录',
     securityNote: '登录授权由 GitHub OAuth 安全处理，Sparkle 不会接触您的 GitHub 密码。',
+  },
+  registration: {
+    badge: 'GitHub OAuth 注册',
+    githubVerified: 'GitHub 身份已验证',
+    title: '创建 Sparkle BTN 账户',
+    description:
+      '你的 GitHub 身份尚未绑定 BTN 账户。确认下方资料后，点击一次即可完成注册并登录。',
+    oneClickHint:
+      '注册会创建 BTN 用户资料并绑定当前 GitHub 账户。昵称、头像和邮箱来自 GitHub，可在注册后继续管理。',
+    registerAction: '一键注册',
+    logoutAction: '登出',
+    failed: '注册失败，请稍后重试。',
+    pendingExpired: '本次 GitHub 授权已失效',
+    backToLogin: '返回登录',
   },
   home: {
     accountPaused: '账户暂停',
@@ -648,6 +715,10 @@ export default {
         AFTER_DELETE: '删除后刷新',
       },
       items: {
+        'account-deletion-finalize': {
+          name: '账号注销冷静期处理',
+          description: '处理已到期的账号注销申请，停用应用并匿名化账户资料。',
+        },
         'admin-metrics-sample': {
           name: '主机指标采样',
           description: '定期采样 CPU、内存和磁盘使用率，用于后台仪表盘趋势。',

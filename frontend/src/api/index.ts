@@ -1,5 +1,7 @@
 import { request } from './http'
 import type {
+  AccountDeletionReauthenticationResponse,
+  AccountDeletionStatus,
   Announcement,
   ApplicationCredentials,
   BanHistoryQuery,
@@ -10,6 +12,7 @@ import type {
   ContactEmailRequest,
   ContactEmailResult,
   FilterOptions,
+  GithubRegistrationResult,
   HomeBittorrentTrafficResponse,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
@@ -21,6 +24,7 @@ import type {
   PointsRankingResponse,
   PrivacyLevel,
   PrivacyResponse,
+  PendingGithubRegistration,
   PublicUserProfileResponse,
   RankingResponse,
   RulePreviewResponse,
@@ -74,6 +78,22 @@ export const uiApi = {
     request<PrivacyResponse>('/api/ui/user/privacy', {
       method: 'PUT',
       body: JSON.stringify({ level }),
+    }),
+  accountDeletionStatus: () =>
+    request<AccountDeletionStatus>('/api/ui/account-deletion'),
+  beginAccountDeletionReauthentication: () =>
+    request<AccountDeletionReauthenticationResponse>('/api/ui/account-deletion/reauthorize', {
+      method: 'POST',
+    }),
+  pendingGithubRegistration: () =>
+    request<PendingGithubRegistration>('/api/ui/registration'),
+  completeGithubRegistration: () =>
+    request<GithubRegistrationResult>('/api/ui/registration', {
+      method: 'POST',
+    }),
+  logout: () =>
+    request<void>('/api/ui/logout', {
+      method: 'POST',
     }),
   userApps: () => request<UserApplication[]>('/api/ui/userapps'),
   createUserApp: (comment: string) =>

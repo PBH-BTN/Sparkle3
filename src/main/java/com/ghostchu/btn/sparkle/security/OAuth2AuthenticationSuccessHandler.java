@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.security;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.service.BlurredAvatarDiskCache;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.account.UserAccountDeletionService;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,6 +44,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private final BlurredAvatarDiskCache blurredAvatarDiskCache;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final PointsService pointsService;
+    private final UserAccountDeletionService accountDeletionService;
     private final RestClient restClient = RestClient.create();
 
     @Override
@@ -62,6 +64,62 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             if (login == null || login.isBlank())
                 throw new IllegalArgumentException("GitHub OAuth 登录失败，无法获取用户名");
 
+            HttpSession oauthSession = request.getSession(false);
+            var deletionIntent = accountDeletionService.reauthenticationIntent(oauthSession);
+            if (deletionIntent != null) {
+                oauthSession.removeAttribute(
+                        UserAccountDeletionService.REAUTH_SESSION_ATTRIBUTE
+                );
+                if (!accountDeletionService.githubAccountMatches(
+                        deletionIntent.userId(),
+                        githubId.longValue()
+                )) {
+                    throw new IllegalArgumentException(
+                            "再次授权的 GitHub 账户与当前登录账户不一致，注销申请未开始"
+                    );
+                }
+                User user = userService.getById(deletionIntent.userId());
+                if (user == null) {
+                    throw new IllegalArgumentException("当前账户不存在，注销申请未开始");
+                }
+                accountDeletionService.startAfterReauthentication(
+                        user.getId(),
+                        githubId.longValue()
+                );
+                accountDeletionService.revokeSessions(user.getNickname());
+                logoutAndInvalidate(request, response, authentication);
+                response.sendRedirect("/account-deletion?state=started");
+                return;
+            }
+
+            Long pendingDeletionUserId =
+                    accountDeletionService.pendingUserIdForGithubAccount(githubId.longValue());
+            if (pendingDeletionUserId != null) {
+                boolean cancelled = accountDeletionService.cancelPendingDeletion(
+                        pendingDeletionUserId,
+                        "LOGIN_ATTEMPT",
+                        "检测到冷静期内的账号登录尝试"
+                );
+                logoutAndInvalidate(request, response, authentication);
+                if (cancelled) {
+                    response.sendRedirect("/account-deletion?state=cancelled&reason=login");
+                } else {
+                    boolean finalized = accountDeletionService.finalizeIfDue(
+                            pendingDeletionUserId
+                    );
+                    boolean completed = finalized
+                            || "COMPLETED".equals(accountDeletionService
+                            .status(pendingDeletionUserId)
+                            .state());
+                    response.sendRedirect(
+                            completed
+                                    ? "/account-deletion?state=completed"
+                                    : "/account-deletion?state=error"
+                    );
+                }
+                return;
+            }
+
             // 如果 email 为 null，尝试从 GitHub API 获取
             if (email == null || email.isBlank()) {
                 email = fetchPrimaryEmailFromGitHub(authentication);
@@ -78,6 +136,23 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 avatarUrl = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
             if (name == null || name.isBlank()) name = login;
             log.info("GitHub OAuth 鉴权成功: login={}, githubId={}, email={}", login, githubId, email);
+            if (!userService.isGithubAccountRegistered(githubId.longValue())) {
+                HttpSession registrationSession = request.getSession();
+                registrationSession.setAttribute(
+                        PendingGithubRegistration.SESSION_ATTRIBUTE,
+                        new PendingGithubRegistration(
+                                githubId.longValue(),
+                                login,
+                                avatarUrl,
+                                name,
+                                email
+                        )
+                );
+                saveAuthentication(request, authentication);
+                response.sendRedirect("/register");
+                return;
+            }
+
             User user = userService.userGithubOAuthLogin(authentication, InetAddress.ofLiteral(request.getRemoteAddr()), githubId.longValue(), login, avatarUrl, name, email);
             blurredAvatarDiskCache.refreshOnLogin(user.getId());
             log.info("GitHub OAuth 登录成功: login={}, githubId={}, email={}", login, githubId, email);
@@ -99,16 +174,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             );
             newAuth.setDetails(authentication.getDetails());
 
-            // 更新 SecurityContext
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(newAuth);
-            SecurityContextHolder.setContext(context);
-
-            // 将 SecurityContext 保存到 Session
-            request.getSession().setAttribute(
-                    HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                    context
-            );
+            saveAuthentication(request, newAuth);
 
             // 重定向到首页
             response.sendRedirect("/");
@@ -128,6 +194,32 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                     + URLEncoder.encode(message, StandardCharsets.UTF_8)
                     + "&retryable=true");
         }
+    }
+
+    private void logoutAndInvalidate(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) {
+        SecurityContextHolder.clearContext();
+        new SecurityContextLogoutHandler().logout(request, response, authentication);
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+    }
+
+    private void saveAuthentication(
+            HttpServletRequest request,
+            Authentication authentication
+    ) {
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        request.getSession().setAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                context
+        );
     }
 
     /**

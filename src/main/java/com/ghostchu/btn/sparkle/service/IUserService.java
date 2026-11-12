@@ -24,6 +24,8 @@ public interface IUserService extends IService<User> {
 
     @Nullable UserRel getUserRelByBindUserId(long btnUserId);
 
+    boolean isGithubAccountRegistered(long githubUid);
+
     @Transactional
     User userGithubOAuthLogin(@NotNull Authentication authentication, @NotNull InetAddress loginIp, @NotNull Long githubUid,
                               @NotNull String githubLogin, @NotNull String githubAvatarUrl, @NotNull String githubName, @NotNull String githubEmail);

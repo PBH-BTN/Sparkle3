@@ -16,6 +16,12 @@ const router = createRouter({
       meta: { public: true, standalone: true },
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegistrationView.vue'),
+      meta: { public: true, standalone: true },
+    },
+    {
       path: '/userapp',
       name: 'user-apps',
       component: () => import('@/views/UserAppsView.vue'),
@@ -49,7 +55,30 @@ const router = createRouter({
     {
       path: '/user/privacy-mode',
       name: 'privacy',
-      component: () => import('@/views/PrivacyView.vue'),
+      redirect: '/user/settings/privacy',
+    },
+    {
+      path: '/user/settings',
+      component: () => import('@/layouts/AccountSettingsLayout.vue'),
+      redirect: '/user/settings/account',
+      children: [
+        {
+          path: 'account',
+          name: 'account-settings',
+          component: () => import('@/views/AccountSettingsView.vue'),
+        },
+        {
+          path: 'privacy',
+          name: 'privacy-settings',
+          component: () => import('@/views/PrivacyView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/account-deletion',
+      name: 'account-deletion-result',
+      component: () => import('@/views/AccountDeletionResultView.vue'),
+      meta: { public: true, standalone: true },
     },
     {
       path: '/banhistory',
