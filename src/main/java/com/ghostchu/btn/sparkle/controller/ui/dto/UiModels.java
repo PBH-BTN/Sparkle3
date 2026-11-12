@@ -21,7 +21,9 @@ public final class UiModels {
             boolean allowBlurredUsername,
             boolean allowFullUsername,
             boolean allowBlurredAvatar,
-            boolean allowOriginalAvatar
+            boolean allowOriginalAvatar,
+            boolean allowPublicPoints,
+            boolean allowContactEmail
     ) {
         public static PrivacyLevelView from(UserPrivacyLevel privacyLevel) {
             UserPrivacyLevel resolved = privacyLevel == null ? UserPrivacyLevel.MEDIUM : privacyLevel;
@@ -31,7 +33,9 @@ public final class UiModels {
                     resolved.isAllowBlurredUsername(),
                     resolved.isAllowFullUserName(),
                     resolved.isAllowBlurredAvatar(),
-                    resolved.isAllowOriginalAvatar()
+                    resolved.isAllowOriginalAvatar(),
+                    resolved.isAllowPublicPoints(),
+                    resolved.isAllowContactEmail()
             );
         }
     }

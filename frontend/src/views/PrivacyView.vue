@@ -33,6 +33,8 @@ const features = computed(
           { label: t('privacy.blurredUsername'), allowed: level.allowBlurredUsername },
           { label: t('privacy.originalAvatar'), allowed: level.allowOriginalAvatar },
           { label: t('privacy.blurredAvatar'), allowed: level.allowBlurredAvatar },
+          { label: t('privacy.publicPoints'), allowed: level.allowPublicPoints },
+          { label: t('privacy.contactEmail'), allowed: level.allowContactEmail },
         ],
       ]),
     ),

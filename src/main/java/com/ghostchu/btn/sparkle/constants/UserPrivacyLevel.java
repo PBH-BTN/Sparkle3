@@ -7,10 +7,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum UserPrivacyLevel {
-    DISABLED(0, true, true, true, true, true),
+    DISABLED(0, false, true, false, true, true),
     LOW(1, true, false, true, false, true),
-    MEDIUM(2, true, false, false, false, false),
-    HIGH(3, false, false, false, false, false);
+    MEDIUM(2, true, false, true, false, true),
+    HIGH(3, true, false, false, false, false);
 
     @EnumValue
     private final int level;
@@ -21,7 +21,7 @@ public enum UserPrivacyLevel {
     private final boolean allowContactEmail;
 
     public boolean isAllowPublicPoints() {
-        return level <= MEDIUM.level;
+        return level <= LOW.level;
     }
 
 }

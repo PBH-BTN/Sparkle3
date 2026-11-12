@@ -12,7 +12,21 @@ import static org.mockito.Mockito.when;
 
 class UserPublicProfileServiceTest {
     @Test
-    void mediumPrivacyIncludesPointBalance() throws Exception {
+    void lowPrivacyIncludesPointBalance() throws Exception {
+        IUserService userService = mock(IUserService.class);
+        User viewer = user(1L, UserPrivacyLevel.LOW, 0L);
+        User target = user(2L, UserPrivacyLevel.LOW, 4_096L);
+        when(userService.getById(1L)).thenReturn(viewer);
+        when(userService.getById(2L)).thenReturn(target);
+
+        var profile = new UserPublicProfileService(userService).profile(1L, 2L);
+
+        assertEquals("4096", profile.scoreBytesRaw());
+        assertNotNull(profile.scoreBytesDisplay());
+    }
+
+    @Test
+    void mediumPrivacyHidesOtherUsersPointBalance() throws Exception {
         IUserService userService = mock(IUserService.class);
         User viewer = user(1L, UserPrivacyLevel.LOW, 0L);
         User target = user(2L, UserPrivacyLevel.MEDIUM, 4_096L);
@@ -21,8 +35,8 @@ class UserPublicProfileServiceTest {
 
         var profile = new UserPublicProfileService(userService).profile(1L, 2L);
 
-        assertEquals("4096", profile.scoreBytesRaw());
-        assertNotNull(profile.scoreBytesDisplay());
+        assertNull(profile.scoreBytesRaw());
+        assertNull(profile.scoreBytesDisplay());
     }
 
     @Test

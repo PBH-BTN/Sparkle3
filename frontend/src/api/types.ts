@@ -5,6 +5,8 @@ export interface PrivacyLevel {
   allowFullUsername: boolean
   allowBlurredAvatar: boolean
   allowOriginalAvatar: boolean
+  allowPublicPoints: boolean
+  allowContactEmail: boolean
 }
 
 export interface SessionUser {

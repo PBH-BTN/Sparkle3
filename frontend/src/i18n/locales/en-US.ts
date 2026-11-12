@@ -218,15 +218,21 @@ export default {
       HIGH: 'High privacy',
     },
     levelDescriptions: {
-      DISABLED: 'Show your full username, original avatar, and points.',
-      LOW: 'Show a blurred username, blurred avatar, and points.',
-      MEDIUM: 'Show a blurred username and points without an avatar.',
-      HIGH: 'Hide your username, avatar, and points.',
+      DISABLED:
+        'Show your full username, original avatar, and points, and allow contact by email.',
+      LOW:
+        'Show a blurred username, blurred avatar, and points, and allow contact by email.',
+      MEDIUM:
+        'Show a blurred username and blurred avatar, hide points, and allow contact by email.',
+      HIGH:
+        'Show a blurred username, hide avatar and points, and disallow contact by email.',
     },
     fullUsername: 'Full username',
     blurredUsername: 'Blurred username',
     originalAvatar: 'Original avatar',
     blurredAvatar: 'Blurred avatar',
+    publicPoints: 'Show points',
+    contactEmail: 'Allow contact by email',
     saveSuccess: 'Privacy settings saved.',
   },
   banHistory: {
