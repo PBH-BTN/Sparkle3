@@ -222,7 +222,8 @@ public class DatabaseConfigService {
 
     public boolean isHotReload(String key) {
         return HOT_RELOAD_KEYS.contains(key)
-                || key.startsWith("sparkle.analyse.");
+                || key.startsWith("sparkle.analyse.")
+                || key.startsWith("sparkle.user-avatar.");
     }
 
     public boolean isExcludedKey(String key) {
