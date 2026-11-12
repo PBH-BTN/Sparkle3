@@ -63,6 +63,7 @@ const credentialsVisible = ref(false)
 const credentials = ref<AdminApplicationCredentials | null>(null)
 
 const columns = computed<TableColumnData[]>(() => [
+  { title: t('admin.apps.id'), slotName: 'id', width: 90, align: 'center' },
   { title: t('admin.apps.appId'), slotName: 'appId', width: 180 },
   { title: t('admin.apps.comment'), slotName: 'comment', width: 190 },
   { title: t('admin.apps.owner'), slotName: 'owner', width: 170 },
@@ -294,11 +295,14 @@ onMounted(load)
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1100 }"
+        :scroll="{ x: 1190 }"
         row-key="id"
         stripe
       >
         <template #empty><a-empty :description="t('common.noData')" /></template>
+        <template #id="{ record }">
+          <code class="primary-id">{{ record.id }}</code>
+        </template>
         <template #appId="{ record }">
           <div class="app-id">
             <code>{{ record.appId }}</code>
@@ -466,6 +470,11 @@ onMounted(load)
 </template>
 
 <style scoped>
+.primary-id {
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
 .app-id {
   display: flex;
   align-items: center;

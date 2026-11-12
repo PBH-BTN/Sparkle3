@@ -830,6 +830,7 @@ export default {
       description: 'Inspect, transfer, suspend, reset, or delete any user application.',
       create: 'Create application',
       edit: 'Edit application',
+      id: 'Primary ID',
       appId: 'App ID',
       comment: 'Application name',
       owner: 'Owner',

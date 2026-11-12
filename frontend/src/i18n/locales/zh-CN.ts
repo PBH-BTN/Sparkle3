@@ -810,6 +810,7 @@ export default {
       description: '查看、转移、停用、重置或删除所有用户应用。',
       create: '新建应用',
       edit: '编辑应用',
+      id: '主键 ID',
       appId: 'App ID',
       comment: '应用名称',
       owner: '所有者',
