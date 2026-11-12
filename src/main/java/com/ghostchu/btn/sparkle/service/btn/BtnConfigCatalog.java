@@ -243,7 +243,7 @@ public final class BtnConfigCatalog {
             Definition.integer("protocol", "minProtocolVersion", 20, 1, 10_000),
             Definition.integer("protocol", "maxProtocolVersion", 20, 1, 10_000),
 
-            Definition.integer("reconfigure", "interval", 10_800_000, 100, 86_400_000),
+            Definition.integer("reconfigure", "interval", 3_600_000, 100, 86_400_000),
             Definition.integer("reconfigure", "randomInitialDelay", 600_000, 0, 86_400_000),
 
             Definition.text(
@@ -251,30 +251,30 @@ public final class BtnConfigCatalog {
                     "endpoint",
                     "{rooturl}/ping/syncBanHistory"
             ),
-            Definition.integer("syncBanHistory", "interval", 10_000, 100, 86_400_000),
-            Definition.integer("syncBanHistory", "randomInitialDelay", 3_000, 0, 86_400_000),
+            Definition.integer("syncBanHistory", "interval", 900_000, 100, 86_400_000),
+            Definition.integer("syncBanHistory", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("syncBanHistory", "powCaptcha", false),
 
             Definition.text("syncSwarm", "endpoint", "{rooturl}/ping/syncSwarm"),
-            Definition.integer("syncSwarm", "interval", 10_000, 100, 86_400_000),
-            Definition.integer("syncSwarm", "randomInitialDelay", 3_000, 0, 86_400_000),
+            Definition.integer("syncSwarm", "interval", 900_000, 100, 86_400_000),
+            Definition.integer("syncSwarm", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("syncSwarm", "powCaptcha", false),
             Definition.integer(
                     "syncSwarm",
                     "dataRetentionTime",
-                    604_800_000,
+                    259_200_000,
                     60_000,
                     31_536_000_000L
             ),
-            Definition.cron("syncSwarm", "dataRetentionCron", "0 10 * * * *"),
+            Definition.cron("syncSwarm", "dataRetentionCron", "0 0 */2 * * *"),
 
             Definition.text(
                     "ruleIpDenylist",
                     "endpoint",
                     "{rooturl}/ping/ruleIpDenylist"
             ),
-            Definition.integer("ruleIpDenylist", "interval", 10_000, 100, 86_400_000),
-            Definition.integer("ruleIpDenylist", "randomInitialDelay", 3_000, 0, 86_400_000),
+            Definition.integer("ruleIpDenylist", "interval", 600_000, 100, 86_400_000),
+            Definition.integer("ruleIpDenylist", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("ruleIpDenylist", "powCaptcha", false),
 
             Definition.text(
@@ -282,8 +282,8 @@ public final class BtnConfigCatalog {
                     "endpoint",
                     "{rooturl}/ping/ruleIpAllowlist"
             ),
-            Definition.integer("ruleIpAllowlist", "interval", 10_000, 100, 86_400_000),
-            Definition.integer("ruleIpAllowlist", "randomInitialDelay", 3_000, 0, 86_400_000),
+            Definition.integer("ruleIpAllowlist", "interval", 600_000, 100, 86_400_000),
+            Definition.integer("ruleIpAllowlist", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("ruleIpAllowlist", "powCaptcha", false),
 
             Definition.text(
@@ -291,14 +291,14 @@ public final class BtnConfigCatalog {
                     "endpoint",
                     "{rooturl}/ping/rulePeerIdentity"
             ),
-            Definition.integer("rulePeerIdentity", "interval", 10_000, 100, 86_400_000),
-            Definition.integer("rulePeerIdentity", "randomInitialDelay", 3_000, 0, 86_400_000),
+            Definition.integer("rulePeerIdentity", "interval", 2_700_000, 100, 86_400_000),
+            Definition.integer("rulePeerIdentity", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("rulePeerIdentity", "powCaptcha", false),
 
             Definition.text("heartbeat", "endpoint", "{rooturl}/ping/heartbeat"),
-            Definition.integer("heartbeat", "interval", 10_000, 100, 86_400_000),
+            Definition.integer("heartbeat", "interval", 1_800_000, 100, 86_400_000),
             Definition.integer("heartbeat", "randomInitialDelay", 3_000, 0, 86_400_000),
-            Definition.bool("heartbeat", "powCaptcha", true),
+            Definition.bool("heartbeat", "powCaptcha", false),
             Definition.bool("heartbeat", "multiIf", true),
             Definition.integer(
                     "heartbeat",
@@ -320,7 +320,7 @@ public final class BtnConfigCatalog {
                     "iframeEndpoint",
                     "{rooturl}/ping/queryIp/widget"
             ),
-            Definition.bool("queryIp", "powCaptcha", true),
+            Definition.bool("queryIp", "powCaptcha", false),
 
             Definition.url("rootUrls", "rootUrl", "https://sparkle.pbh-btn.com"),
             Definition.url("rootUrls", "chnRootUrl", "https://sparkle.ghostchu.com"),
@@ -336,7 +336,10 @@ public final class BtnConfigCatalog {
             Definition.list(
                     "queryIpStatistics",
                     "includeModules",
-                    "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"
+                    "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,"
+                            + "com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,"
+                            + "com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan,"
+                            + "com.ghostchu.peerbanhelper.module.impl.rule.BtnNetworkOnline"
             ),
             Definition.integer(
                     "queryIpStatistics",
@@ -377,28 +380,28 @@ public final class BtnConfigCatalog {
             Definition.decimal(
                     "rankingWeights",
                     "sentTrafficOtherAck",
-                    "10",
+                    "20",
                     0,
                     1_000_000
             ),
             Definition.decimal(
                     "rankingWeights",
                     "sentTrafficSelfReport",
-                    "5",
+                    "10",
                     0,
                     1_000_000
             ),
             Definition.decimal(
                     "rankingWeights",
                     "receivedTrafficOtherAck",
-                    "3",
+                    "5",
                     0,
                     1_000_000
             ),
             Definition.decimal(
                     "rankingWeights",
                     "receivedTrafficSelfReport",
-                    "5",
+                    "1",
                     0,
                     1_000_000
             ),
@@ -410,19 +413,19 @@ public final class BtnConfigCatalog {
                     60_000,
                     31_536_000_000L
             ),
-            Definition.cron("userIpWarning", "cron", "0 0 * * * *"),
+            Definition.cron("userIpWarning", "cron", "-"),
 
-            Definition.bool("measure", "enable", true),
-            Definition.secret("measure", "globalpingToken", ""),
+            Definition.bool("measure", "enable", false),
+            Definition.secret("measure", "globalpingToken", "foobar"),
             Definition.cron(
                     "measure",
                     "globalpingResultRetrieveCron",
-                    "0 */10 * * * *"
+                    "0 */5 * * * *"
             ),
             Definition.cron(
                     "measure",
                     "globalpingStartMeasureCron",
-                    "0 */10 * * * *"
+                    "0 49 * * * *"
             ),
             Definition.integer(
                     "measure",
@@ -431,7 +434,7 @@ public final class BtnConfigCatalog {
                     60_000,
                     315_360_000_000L
             ),
-            Definition.integer("measurePrefix", "ipv4", 30, 0, 32),
+            Definition.integer("measurePrefix", "ipv4", 24, 0, 32),
             Definition.integer("measurePrefix", "ipv6", 48, 0, 128),
 
             Definition.integer(

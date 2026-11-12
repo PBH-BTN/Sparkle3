@@ -33,31 +33,32 @@ public class AnalyseModuleConfigService {
     private static final List<ModuleDefinition> MODULES = List.of(
             module("untrusted-vote", "untrusted-vote",
                     bool("enabled", "enabled", true),
-                    cron("schedule", "schedule", "0 0 * * * *"),
-                    durationHours("duration", "duration", 1_209_600_000L),
+                    cron("schedule", "schedule", "0 */40 * * * *"),
+                    durationHours("duration", "duration", 604_800_000L),
                     text("include-modules", "include-modules",
-                            "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"),
+                            "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,"
+                                    + "com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker"),
                     bool("ipv4-enable", "ipv4.enable", true),
-                    integer("ipv4-min-userapps-vote", "ipv4.min-userapps-vote", 3),
+                    integer("ipv4-min-userapps-vote", "ipv4.min-userapps-vote", 5),
                     integer("ipv4-min-ban-count", "ipv4.min-ban-count", 5),
                     bool("ipv6-enable", "ipv6.enable", true),
-                    integer("ipv6-min-userapps-vote", "ipv6.min-userapps-vote", 3),
+                    integer("ipv6-min-userapps-vote", "ipv6.min-userapps-vote", 5),
                     integer("ipv6-min-ban-count", "ipv6.min-ban-count", 5)
             ),
             module("overdownload-analyse", "overdownload-analyse",
                     bool("enabled", "enabled", true),
-                    cron("schedule", "schedule", "0 0 * * * *"),
-                    durationHours("duration", "duration", 604_800_000L),
+                    cron("schedule", "schedule", "0 23 */2 * * *"),
+                    durationHours("duration", "duration", 432_000_000L),
                     decimal("threshold-ratio", "threshold-ratio", "3.2"),
                     bytesGib("threshold-traffic", "threshold-traffic", 15_000_000_000L),
                     bool("use-materialized-view", "use-materialized-view", false),
-                    bool("materialized-view-refresh", "materialized-view-refresh", true)
+                    bool("materialized-view-refresh", "materialized-view-refresh", false)
             ),
             module("concurrent-download-analyse", "concurrent-download-analyse",
                     bool("enabled", "enabled", true),
-                    cron("schedule", "schedule", "0 0 * * * *"),
-                    durationHours("duration", "duration", 3_600_000L),
-                    decimal("threshold-concurrent", "threshold-concurrent", "150"),
+                    cron("schedule", "schedule", "0 10 */3 * * *"),
+                    durationHours("duration", "duration", 28_800_000L),
+                    decimal("threshold-concurrent", "threshold-concurrent", "80"),
                     decimal("threshold-userapps", "threshold-userapps", "3")
             ),
             module("mass-download-monitor", "mass-download-monitor",
@@ -66,12 +67,12 @@ public class AnalyseModuleConfigService {
                     durationHours("duration", "duration", 86_400_000L),
                     integer("ipv4-prefix", "ipv4-prefix", 32),
                     integer("ipv6-prefix", "ipv6-prefix", 56),
-                    bytesGb("threshold-download", "threshold-download", 3_072L)
+                    bytesGb("threshold-download", "threshold-download", 10L)
             ),
-            simpleIdentityModule("random-identity-analyse"),
-            simpleIdentityModule("rain000-identity-analyse"),
-            simpleIdentityModule("gopeeddev-identity-analyse"),
-            simpleIdentityModule("datacenter-highrisk-analyse"),
+            disabledSimpleIdentityModule("random-identity-analyse"),
+            disabledSimpleIdentityModule("rain000-identity-analyse"),
+            disabledSimpleIdentityModule("gopeeddev-identity-analyse"),
+            disabledSimpleIdentityModule("datacenter-highrisk-analyse"),
             module("geoip-city-blacklist", "geoip-city-blacklist",
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 0 4 * * *")
@@ -490,6 +491,14 @@ public class AnalyseModuleConfigService {
         return module(id, id,
                 bool("enabled", "enabled", true),
                 cron("schedule", "schedule", "0 0 * * * *"),
+                durationHours("duration", "duration", 1_209_600_000L)
+        );
+    }
+
+    private static ModuleDefinition disabledSimpleIdentityModule(String id) {
+        return module(id, id,
+                bool("enabled", "enabled", false),
+                cron("schedule", "schedule", "-"),
                 durationHours("duration", "duration", 1_209_600_000L)
         );
     }

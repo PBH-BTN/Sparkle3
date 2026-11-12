@@ -276,14 +276,18 @@ public class DatabaseConfigService {
     }
 
     public boolean isExcludedKey(String key) {
-        return key.startsWith("spring.datasource.")
-                || key.startsWith("spring.flyway.");
+        return !isManagedKey(key);
+    }
+
+    public static boolean isManagedKey(String key) {
+        return key != null && key.startsWith("sparkle.");
     }
 
     public boolean isDeprecatedKey(String key) {
         return key.startsWith("sparkle.machine-learning.")
                 || key.startsWith("sparkle.tracker.")
                 || key.startsWith("sparkle.statistics.")
+                || "sparkle.analyse.overdownload-analyse.threshold".equals(key)
                 || "sparkle.ranking.database-type".equals(key)
                 || "sparkle.swarm-statistics-track.cron".equals(key)
                 || "sparkle.swarm-statistics-track.duration".equals(key);
@@ -349,7 +353,7 @@ public class DatabaseConfigService {
                     sensitive = EXCLUDED.sensitive,
                     hot_reload = EXCLUDED.hot_reload,
                     updated_at = now()
-                WHERE app_config_entries.source = 'yaml'
+                WHERE app_config_entries.source IN ('yaml', 'sql-default')
                   AND (
                       app_config_entries.config_value IS DISTINCT FROM EXCLUDED.config_value
                       OR app_config_entries.value_type IS DISTINCT FROM EXCLUDED.value_type
@@ -383,7 +387,7 @@ public class DatabaseConfigService {
                     source = 'redis-migration',
                     updated_at = now()
                 WHERE config_key = ?
-                  AND source = 'yaml'
+                  AND source IN ('yaml', 'sql-default')
                 """, value, key);
     }
 

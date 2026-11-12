@@ -1590,11 +1590,11 @@ export default {
       description: '自动从 application.yaml 迁移配置键，并在后续启动时以数据库值覆盖 YAML。',
       envPriority: '环境变量和命令行参数仍然优先于数据库；数据源连接配置不会迁移。',
       migrationHint:
-        '扫描会补充缺失键，并用最新 YAML 更新仍标记为 YAML 来源的值；后台修改过的数据库值不会被覆盖。',
+        '扫描仅处理 sparkle.* 业务配置：补充缺失键，并用生效中的 YAML 更新 SQL/YAML 默认值；后台修改过的数据库值不会被覆盖。',
       restartHint: '普通配置修改在应用重启后生效；标记为热更新的配置会立即或数秒内生效。',
       total: '配置项',
       yamlEntries: '来自 YAML',
-      databaseEntries: '已修改',
+      databaseEntries: '数据库托管',
       sensitiveEntries: '敏感项',
       hotReloadEntries: '热更新项',
       migrate: '立即扫描 YAML',
@@ -1626,6 +1626,7 @@ export default {
       lastUpdated: '最后更新：{time}',
       sourceLabels: {
         yaml: 'YAML 迁移',
+        'sql-default': 'SQL 默认值',
         database: '后台修改',
         'redis-migration': '旧 Redis 迁移',
       },

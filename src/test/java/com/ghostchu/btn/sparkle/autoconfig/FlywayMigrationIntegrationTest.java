@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.autoconfig;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -246,7 +247,9 @@ class FlywayMigrationIntegrationTest {
             statement.execute("DROP TABLE public.flyway_schema_history");
         }
 
-        new FlywayMigrationConfig().sparkleFlywayMigrationStrategy().migrate(flyway);
+        new FlywayMigrationConfig(new MockEnvironment())
+                .sparkleFlywayMigrationStrategy()
+                .migrate(flyway);
         flyway.validate();
 
         try (var connection = DriverManager.getConnection(url, username, password);

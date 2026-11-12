@@ -230,7 +230,7 @@ sparkle:
       duration: 86400000
       ipv4-prefix: 32
       ipv6-prefix: 56
-      threshold-download: 3298534883328
+      threshold-download: 10737418240
     random-identity-analyse:
       enabled: true
       schedule: "0 0 * * * *"

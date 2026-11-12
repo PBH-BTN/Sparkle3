@@ -56,15 +56,14 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
         LoadedYamlValues loaded = loadYamlValues();
         Map<String, String> values = new LinkedHashMap<>(loaded.bundled());
         values.putAll(loaded.external());
+        values.entrySet().removeIf(entry ->
+                !DatabaseConfigService.isManagedKey(entry.getKey())
+                        || configService.isDeprecatedKey(entry.getKey())
+        );
         int inserted = 0;
         int updated = 0;
         int skipped = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            if (configService.isExcludedKey(entry.getKey())
-                    || configService.isDeprecatedKey(entry.getKey())) {
-                skipped++;
-                continue;
-            }
             boolean external = loaded.external().containsKey(entry.getKey());
             boolean exists = configService.exists(entry.getKey());
             int changed = external

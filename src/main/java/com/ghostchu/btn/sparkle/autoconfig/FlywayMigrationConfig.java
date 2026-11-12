@@ -6,6 +6,7 @@ import org.flywaydb.core.api.FlywayException;
 import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -25,6 +26,11 @@ public class FlywayMigrationConfig {
             "dashboard_ban_daily_client",
             "dashboard_ban_daily_geo"
     );
+    private final ConfigurableEnvironment environment;
+
+    public FlywayMigrationConfig(ConfigurableEnvironment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public FlywayMigrationStrategy sparkleFlywayMigrationStrategy() {
@@ -36,6 +42,7 @@ public class FlywayMigrationConfig {
                 try {
                     adoptLegacySchemaIfNeeded(flyway, connection, schema);
                     flyway.migrate();
+                    DatabaseConfigEnvironmentPostProcessor.refresh(environment, dataSource);
                 } finally {
                     releaseMigrationLockQuietly(connection);
                 }

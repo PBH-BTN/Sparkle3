@@ -68,6 +68,34 @@ class BtnConfigCatalogTest {
     }
 
     @Test
+    void matchesTheProductionYamlDefaults() {
+        assertEquals(
+                "900000",
+                BtnConfigCatalog.definition("sparkle.ping.sync-banhistory.interval").defaultValue()
+        );
+        assertEquals(
+                "15000",
+                BtnConfigCatalog.definition("sparkle.ping.sync-banhistory.random-initial-delay").defaultValue()
+        );
+        assertEquals(
+                "false",
+                BtnConfigCatalog.definition("sparkle.ping.query-ip.pow-captcha").defaultValue()
+        );
+        assertEquals(
+                "20",
+                BtnConfigCatalog.definition(
+                        "sparkle.ranking.weight.user-swarm-statistics.sent-traffic-other-ack"
+                ).defaultValue()
+        );
+        assertEquals(
+                "1",
+                BtnConfigCatalog.definition(
+                        "sparkle.ranking.weight.user-swarm-statistics.received-traffic-self-report"
+                ).defaultValue()
+        );
+    }
+
+    @Test
     void everyBusinessSettingHasABtnFieldOrDedicatedUi() throws Exception {
         List<String> dedicatedPrefixes = List.of(
                 "sparkle.analyse.",

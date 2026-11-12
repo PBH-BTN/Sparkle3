@@ -1656,12 +1656,12 @@ export default {
       envPriority:
         'Environment variables and command-line arguments still take precedence over the database. Datasource connection settings are never migrated.',
       migrationHint:
-        'Scanning adds missing keys and refreshes values still sourced from YAML. Values changed in the admin UI are not overwritten.',
+        'Scanning only handles sparkle.* business settings: it adds missing keys and refreshes SQL/YAML defaults from active YAML. Values changed in the admin UI are not overwritten.',
       restartHint:
         'Normal configuration changes apply after restart; keys marked hot-reload take effect immediately or within seconds.',
       total: 'Entries',
       yamlEntries: 'From YAML',
-      databaseEntries: 'Changed',
+      databaseEntries: 'Database-managed',
       sensitiveEntries: 'Sensitive',
       hotReloadEntries: 'Hot reload',
       migrate: 'Scan YAML now',
@@ -1694,6 +1694,7 @@ export default {
       lastUpdated: 'Last updated: {time}',
       sourceLabels: {
         yaml: 'Imported from YAML',
+        'sql-default': 'SQL default',
         database: 'Admin update',
         'redis-migration': 'Legacy Redis migration',
       },
