@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers("/api/ui/session").permitAll()
                                 .requestMatchers("/api/ui/footer").permitAll()
+                                .requestMatchers("/mail-unsubscribe", "/api/ui/mail-unsubscribe").permitAll()
                                 .requestMatchers("/api/ui/notices").permitAll()
                                 .requestMatchers("/api/integrations/flarum/**").permitAll()
                                 .requestMatchers("/api/integrations/memberships/**").permitAll()

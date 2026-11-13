@@ -30,6 +30,11 @@ public class SmtpMailService {
             String text,
             UUID replyToken
     ) throws MailDeliveryException {
+        return send(senderIdentity, recipient, subject, text, replyToken, null);
+    }
+
+    public String send(SenderIdentity senderIdentity, String recipient, String subject, String text,
+                       UUID replyToken, String unsubscribeUrl) throws MailDeliveryException {
         MailRuntimeSettings settings = settingsService.get();
         if (!settingsService.smtpConfigured(settings)) {
             throw new MailDeliveryException("SMTP is disabled or not fully configured");
@@ -53,7 +58,7 @@ public class SmtpMailService {
             var mimeMessage = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(
                     mimeMessage,
-                    false,
+                    unsubscribeUrl != null,
                     StandardCharsets.UTF_8.name()
             );
             helper.setFrom(new InternetAddress(
@@ -63,7 +68,17 @@ public class SmtpMailService {
             ));
             helper.setTo(recipientAddress);
             helper.setSubject(safeHeader(subject));
-            helper.setText(text == null ? "" : text, false);
+            String body = text == null ? "" : text;
+            if (unsubscribeUrl == null) {
+                helper.setText(body, false);
+            } else {
+                String prompt = "未来不想继续接收此类邮件？点击 ";
+                helper.setText(body + "\n\n" + prompt + "退订(Unsubscribe)：" + unsubscribeUrl,
+                        "<div style=\"white-space:pre-wrap\">" + org.springframework.web.util.HtmlUtils.htmlEscape(body)
+                                + "</div><p>" + prompt + "<a href=\""
+                                + org.springframework.web.util.HtmlUtils.htmlEscape(unsubscribeUrl)
+                                + "\">退订(Unsubscribe)</a>。</p>");
+            }
             mimeMessage.setHeader("X-Mailer", "Sparkle BTN");
 
             String messageId = null;

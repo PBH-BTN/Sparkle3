@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserMessage;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class MessageMailService {
+    private final MailUnsubscribeService unsubscribeService;
     private final UserMessageMapper messageMapper;
     private final IUserService userService;
     private final SmtpMailService smtpMailService;
@@ -38,6 +40,7 @@ public class MessageMailService {
             User recipient = userService.getById(message.getRecipientUserId());
             deliver(new MailRow(
                     message.getId(),
+                    message.getRecipientUserId(),
                     message.getSenderKind(),
                     message.getSenderUserId(),
                     message.getCategory(),
@@ -78,7 +81,9 @@ public class MessageMailService {
                     recipient,
                     "[Sparkle BTN] " + stripLineBreaks(row.subject()),
                     body(row, canReply),
-                    canReply ? row.replyToken() : null
+                    canReply ? row.replyToken() : null,
+                    NotificationCategory.parse(row.category()).map(category ->
+                            unsubscribeService.link(row.recipientUserId(), recipient, category)).orElse(null)
             );
             mark(row.id(), "SENT", null, true);
         } catch (MailDeliveryException exception) {
@@ -150,6 +155,7 @@ public class MessageMailService {
 
     private record MailRow(
             long id,
+            long recipientUserId,
             String senderKind,
             Long senderUserId,
             String category,

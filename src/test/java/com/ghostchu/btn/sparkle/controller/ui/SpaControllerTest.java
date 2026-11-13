@@ -17,6 +17,7 @@ class SpaControllerTest {
     void servesTheVueDocumentForExplicitApplicationRoutes() throws Exception {
         for (String path : new String[]{
                 "/",
+                "/mail-unsubscribe",
                 "/user/profile/42",
                 "/user/submissions",
                 "/ip-query",

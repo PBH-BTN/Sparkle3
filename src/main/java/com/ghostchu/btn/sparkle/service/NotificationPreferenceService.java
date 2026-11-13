@@ -116,6 +116,14 @@ public class NotificationPreferenceService {
         return list(userId);
     }
 
+    @Transactional
+    public void disableEmail(long userId, List<NotificationCategory> categories) {
+        if (categories.stream().anyMatch(NotificationCategory::isMandatory)) {
+            throw new IllegalArgumentException("Mandatory categories cannot be disabled");
+        }
+        categories.stream().distinct().forEach(category -> preferenceMapper.disableEmail(userId, category.name()));
+    }
+
     private NotificationCategory parse(String value) {
         return NotificationCategory.parse(value).orElse(null);
     }

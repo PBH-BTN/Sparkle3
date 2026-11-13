@@ -50,6 +50,7 @@ public class VersionAlertService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final MailUnsubscribeService unsubscribeService;
     private final SmtpMailService smtpMailService;
     private final MailSettingsService mailSettingsService;
     private final IUserService userService;
@@ -68,8 +69,10 @@ public class VersionAlertService {
             IUserService userService,
             TaskStatusService taskStatusService,
             UserMessageService messageService,
-            NotificationPreferenceService notificationPreferenceService
+            NotificationPreferenceService notificationPreferenceService,
+            MailUnsubscribeService unsubscribeService
     ) {
+        this.unsubscribeService = unsubscribeService;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.smtpMailService = smtpMailService;
@@ -353,7 +356,8 @@ public class VersionAlertService {
                     to,
                     render(rule.subject(), rule, nickname, version, userAgent, operatorId),
                     render(rule.body(), rule, nickname, version, userAgent, operatorId),
-                    null
+                    null,
+                    userId == null ? null : unsubscribeService.link(userId, to, NotificationCategory.CLIENT_SECURITY)
             );
             recordDelivery(delivery);
             return delivery;

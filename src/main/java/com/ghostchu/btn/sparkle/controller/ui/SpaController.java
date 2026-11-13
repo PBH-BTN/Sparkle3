@@ -28,6 +28,7 @@ public class SpaController {
             "/user/settings/community-groups",
             "/user/settings/afdian",
             "/account-deletion",
+            "/mail-unsubscribe",
             "/userapp",
             "/userapp/create",
             "/userapp/created",

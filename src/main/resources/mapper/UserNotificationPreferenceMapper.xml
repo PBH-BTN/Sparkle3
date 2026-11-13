@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.UserNotificationPreferenceMapper">
+    <insert id="disableEmail">
+        INSERT INTO user_notification_preferences (user_id, category, inbox_enabled, email_enabled, updated_at)
+        VALUES (#{userId}, #{category}, true, false, now())
+        ON CONFLICT (user_id, category) DO UPDATE SET email_enabled = false, updated_at = now()
+    </insert>
+</mapper>
