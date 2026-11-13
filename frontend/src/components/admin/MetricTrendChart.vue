@@ -89,6 +89,11 @@ const endLabel = computed(() =>
   min-height: 116px;
 }
 
+.trend-chart:has(> .arco-empty) {
+  display: grid;
+  align-items: center;
+}
+
 svg {
   display: block;
   width: 100%;
@@ -105,6 +110,7 @@ svg {
 }
 
 :deep(.arco-empty) {
+  min-height: 116px;
   padding: 18px 0;
 }
 </style>
