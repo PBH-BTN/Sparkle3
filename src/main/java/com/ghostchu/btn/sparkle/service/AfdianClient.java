@@ -141,6 +141,9 @@ public class AfdianClient {
         if (planTitle.isBlank()) {
             planTitle = node.path("plan").path("title").asText("");
         }
+        if (planTitle.isBlank()) {
+            planTitle = firstText(node, "title");
+        }
         BigDecimal totalAmount = decimal(node, "total_amount");
         BigDecimal showAmount = decimal(node, "show_amount");
         long createTimestamp = node.path("create_time").asLong(0);
@@ -159,6 +162,10 @@ public class AfdianClient {
                 node.path("status").asInt(0),
                 firstText(node, "remark"),
                 createdAt,
+                node.path("product_type").asInt(
+                        node.path("productType").asInt(0)
+                ),
+                node.path("sku_detail"),
                 node.deepCopy()
         );
     }
@@ -207,6 +214,12 @@ public class AfdianClient {
     ) {
     }
 
+    /**
+     * Afdian order as returned by {@code /query-order}.
+     *
+     * @param productType 0 for a regular sponsorship plan, 1 for a sold product
+     * @param skuDetail   variant list for sold products, empty for sponsorships
+     */
     public record AfdianOrder(
             String outTradeNo,
             String afdianUserId,
@@ -219,7 +232,31 @@ public class AfdianClient {
             int status,
             String remark,
             OffsetDateTime createdAt,
+            int productType,
+            JsonNode skuDetail,
             JsonNode raw
     ) {
+        /**
+         * Afdian sets {@code product_type = 1} for sold products and 0 for
+         * sponsorship plans. Orders with variant rows are product orders too.
+         */
+        public boolean isProduct() {
+            return productType == 1
+                    || skuDetail != null && skuDetail.isArray() && !skuDetail.isEmpty();
+        }
+
+        public String skuId() {
+            if (skuDetail != null && skuDetail.isArray()) {
+                for (JsonNode item : skuDetail) {
+                    for (String field : List.of("sku_id", "skuId", "id")) {
+                        String value = item.path(field).asText("");
+                        if (!value.isBlank()) {
+                            return value.trim();
+                        }
+                    }
+                }
+            }
+            return planId;
+        }
     }
 }

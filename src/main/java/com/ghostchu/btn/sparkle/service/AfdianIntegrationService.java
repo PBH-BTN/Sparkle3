@@ -75,7 +75,6 @@ public class AfdianIntegrationService {
                 settingsService.configured(),
                 settingsService.apiBaseUrl(),
                 settingsService.syncEnabled(),
-                settingsService.licensePlanIdsRaw(),
                 settingsService.donationLicenseAmount().toPlainString(),
                 settingsService.licenseValidYears(),
                 settingsService.licensePrivateKeyConfigured(),
@@ -94,7 +93,6 @@ public class AfdianIntegrationService {
             boolean clearToken,
             String apiBaseUrl,
             boolean syncEnabled,
-            String licensePlanIds,
             String licenseDonationAmount,
             int licenseValidYears,
             @Nullable String licensePrivateKey,
@@ -107,7 +105,6 @@ public class AfdianIntegrationService {
                 clearToken,
                 apiBaseUrl,
                 syncEnabled,
-                licensePlanIds,
                 licenseDonationAmount,
                 licenseValidYears,
                 licensePrivateKey,
@@ -363,6 +360,13 @@ public class AfdianIntegrationService {
                 // The typed columns are sufficient when legacy raw data is malformed.
             }
         }
+        int productType = canonical != null
+                && "PRODUCT".equals(canonical.getTransactionType())
+                ? 1
+                : raw == null ? 0 : raw.path("product_type").asInt(0);
+        JsonNode skuDetail = raw == null
+                ? com.fasterxml.jackson.databind.node.MissingNode.getInstance()
+                : raw.path("sku_detail");
         return new AfdianOrder(
                 cached.getOutTradeNo(),
                 cached.getAfdianUserId(),
@@ -375,6 +379,8 @@ public class AfdianIntegrationService {
                 cached.getOrderStatus() == null ? 0 : cached.getOrderStatus(),
                 cached.getRemark(),
                 cached.getCreatedAt(),
+                productType,
+                skuDetail,
                 raw
         );
     }
@@ -446,10 +452,8 @@ public class AfdianIntegrationService {
             @Nullable MemberTransactionLedgerService.SyncSession session
     )
             throws BusinessException {
-        boolean product = order.planId() != null
-                && !order.planId().isBlank()
-                && settingsService.licensePlanIds()
-                .contains(order.planId().trim());
+        boolean product = order.isProduct();
+        String sku = product ? order.skuId() : order.planId();
         BigDecimal baseAmount = exchangeRateService.convert(
                 order.showAmount(),
                 "CNY"
@@ -461,7 +465,7 @@ public class AfdianIntegrationService {
                     .setExternalUserId(order.afdianUserId())
                     .setExternalUserName(blankToNull(order.afdianName()))
                     .setTransactionType(product ? "PRODUCT" : "DONATION")
-                    .setSku(blankToNull(order.planId()))
+                    .setSku(blankToNull(sku))
                     .setProductName(blankToNull(order.planTitle()))
                     .setAmount(order.totalAmount())
                     .setCurrency("CNY")

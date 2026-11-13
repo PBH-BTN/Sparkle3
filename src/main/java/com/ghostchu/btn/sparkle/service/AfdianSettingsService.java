@@ -8,10 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.math.BigDecimal;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class AfdianSettingsService {
@@ -19,7 +17,6 @@ public class AfdianSettingsService {
     public static final String USER_ID_KEY = "sparkle.afdian.user-id";
     public static final String ACCESS_TOKEN_KEY = "sparkle.afdian.access-token";
     public static final String SYNC_ENABLED_KEY = "sparkle.afdian.sync-enabled";
-    public static final String LICENSE_PLAN_IDS_KEY = "sparkle.afdian.license-plan-ids";
     public static final String LICENSE_DONATION_AMOUNT_KEY =
             "sparkle.afdian.license-donation-amount";
     public static final String LICENSE_VALID_YEARS_KEY =
@@ -62,20 +59,6 @@ public class AfdianSettingsService {
         return Boolean.parseBoolean(raw(SYNC_ENABLED_KEY, "true"));
     }
 
-    public String licensePlanIdsRaw() {
-        return raw(LICENSE_PLAN_IDS_KEY, "");
-    }
-
-    public Set<String> licensePlanIds() {
-        Set<String> ids = new LinkedHashSet<>();
-        for (String value : licensePlanIdsRaw().split("[,;\\s]+")) {
-            if (!value.isBlank()) {
-                ids.add(value.trim());
-            }
-        }
-        return Set.copyOf(ids);
-    }
-
     public BigDecimal donationLicenseAmount() {
         try {
             return new BigDecimal(raw(LICENSE_DONATION_AMOUNT_KEY, "50").trim());
@@ -106,7 +89,6 @@ public class AfdianSettingsService {
             boolean clearToken,
             String apiBaseUrl,
             boolean syncEnabled,
-            String licensePlanIds,
             String licenseDonationAmount,
             int licenseValidYears,
             @Nullable String licensePrivateKey,
@@ -119,7 +101,6 @@ public class AfdianSettingsService {
                     "Afdian user ID is too long");
         }
         String normalizedBaseUrl = validateApiBaseUrl(apiBaseUrl);
-        String normalizedPlanIds = normalizePlanIds(licensePlanIds);
         BigDecimal donationAmount;
         try {
             donationAmount = new BigDecimal(
@@ -143,11 +124,6 @@ public class AfdianSettingsService {
         databaseConfigService.update(
                 SYNC_ENABLED_KEY,
                 Boolean.toString(syncEnabled),
-                operatorId
-        );
-        databaseConfigService.update(
-                LICENSE_PLAN_IDS_KEY,
-                normalizedPlanIds,
                 operatorId
         );
         databaseConfigService.update(
@@ -220,21 +196,6 @@ public class AfdianSettingsService {
 
     private String normalizeBaseUrl(String value) {
         return value.trim().replaceAll("/+$", "");
-    }
-
-    private String normalizePlanIds(String value) {
-        if (value == null) return "";
-        return String.join(",", licensePlanIdsFrom(value));
-    }
-
-    private Set<String> licensePlanIdsFrom(String value) {
-        Set<String> ids = new LinkedHashSet<>();
-        for (String item : value.split("[,;\\s]+")) {
-            if (!item.isBlank()) {
-                ids.add(item.trim());
-            }
-        }
-        return ids;
     }
 
     private String raw(String key, String fallback) {
