@@ -1148,7 +1148,7 @@ export default {
       refreshAll: '刷新全部',
       hotReloadTitle: '配置即时生效',
       hotReloadText:
-        '启用状态和刷新间隔保存后立即生效，后台调度器每 30 秒检查一次到期任务。BitTorrent 流量模块关闭后停止更新并在前台隐藏；其他模块仍可手动刷新。',
+        '开关和刷新间隔保存后立即生效。关闭模块后停止自动刷新，并在重新加载首页时隐藏对应统计；BitTorrent 流量模块同时停止手动更新，其他模块仍可手动刷新。',
       tasks: '刷新任务',
       runningCount: '正在刷新 {count} 项',
       allIdle: '当前空闲',
