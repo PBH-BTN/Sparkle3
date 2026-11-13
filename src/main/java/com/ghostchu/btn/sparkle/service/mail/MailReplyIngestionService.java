@@ -145,7 +145,7 @@ public class MailReplyIngestionService {
             lastError = result.lastError();
             nextAutomaticScanAt = OffsetDateTime.now()
                     .plusSeconds(settings.pop3().pollIntervalSeconds());
-            log.info("POP3 mail scan finished: imported={}, skipped={}, failed={}",
+            log.debug("POP3 mail scan finished: imported={}, skipped={}, failed={}",
                     imported, skipped, failed);
             status.set(new MailIngestionStatus(
                     false,
