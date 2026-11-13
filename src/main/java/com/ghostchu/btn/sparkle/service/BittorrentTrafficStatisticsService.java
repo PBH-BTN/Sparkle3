@@ -44,6 +44,7 @@ public class BittorrentTrafficStatisticsService {
     private final BittorrentTrafficMapper trafficMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final BittorrentTrafficFeatureService featureService;
     private final ConcurrentMap<String, Object> cacheLocks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, LocalCacheEntry> localCache = new ConcurrentHashMap<>();
 
@@ -56,13 +57,15 @@ public class BittorrentTrafficStatisticsService {
             BittorrentTrafficSnapshotService snapshotService,
             BittorrentTrafficMapper trafficMapper,
             @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            BittorrentTrafficFeatureService featureService
     ) {
         this.mapper = mapper;
         this.snapshotService = snapshotService;
         this.trafficMapper = trafficMapper;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.featureService = featureService;
     }
 
     public @NotNull HomeBittorrentTrafficResponse getStatistics(int days)
@@ -71,6 +74,12 @@ public class BittorrentTrafficStatisticsService {
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "Unsupported BitTorrent traffic statistics range"
+            );
+        }
+        if (!featureService.isEnabled()) {
+            throw new BusinessException(
+                    HttpStatus.NOT_FOUND,
+                    "BitTorrent traffic statistics are disabled"
             );
         }
 
@@ -93,6 +102,10 @@ public class BittorrentTrafficStatisticsService {
     }
 
     public void refresh() throws BusinessException {
+        if (!featureService.isEnabled()) {
+            log.info("Skipping BitTorrent traffic statistics refresh because the module is disabled");
+            return;
+        }
         snapshotService.refresh();
         String defaultKey = cacheKey(7);
         synchronized (cacheLocks.computeIfAbsent(defaultKey, ignored -> new Object())) {

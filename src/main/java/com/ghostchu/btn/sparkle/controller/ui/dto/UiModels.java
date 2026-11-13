@@ -113,7 +113,8 @@ public final class UiModels {
     public record HomeStats(
             Map<String, Long> banHistory,
             Map<String, Long> userApps,
-            Map<String, Long> swarmTracker
+            Map<String, Long> swarmTracker,
+            boolean bittorrentTrafficEnabled
     ) {
     }
 
