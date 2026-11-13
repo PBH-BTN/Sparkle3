@@ -12,7 +12,10 @@ public record NotificationPreference(
         return new NotificationPreference(
                 category,
                 true,
-                true,
+                switch (category) {
+                    case GENERAL_NOTICE, CHANGELOG, DAILY_ANNOUNCEMENT -> false;
+                    default -> true;
+                },
                 category.isMandatory()
         );
     }
