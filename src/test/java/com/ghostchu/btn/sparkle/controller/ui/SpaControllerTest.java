@@ -18,6 +18,7 @@ class SpaControllerTest {
         for (String path : new String[]{
                 "/",
                 "/user/profile/42",
+                "/user/submissions",
                 "/ip-query",
                 "/admin/ai-moderation",
                 "/ping/queryIp/widget"

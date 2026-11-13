@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.SubmissionMapper">
+    <select id="query" resultType="com.ghostchu.btn.sparkle.controller.ui.dto.SubmissionModels$SubmissionRecord">
+        SELECT r.id, a.comment AS application, r.submitted_at, r.peer_id, r.client_name,
+               r.module_name, r.client_type, r.client_version, r.torrent_id, r.uploaded, r.downloaded
+        FROM (
+        <choose>
+            <when test="type == 'bans'">
+                SELECT id::text, userapps_id AS app, insert_time AS submitted_at, peer_id,
+                       peer_client_name AS client_name, module_name, NULL::text AS client_type,
+                       NULL::text AS client_version, torrent_id::text,
+                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded
+                FROM ban_history WHERE insert_time &gt;= #{start} AND insert_time &lt;= #{end}
+            </when>
+            <when test="type == 'clients'">
+                SELECT hash::text AS id, found_userapps_id AS app, found_at AS submitted_at, peer_id,
+                       peer_client_name AS client_name, NULL::text AS module_name, client_type,
+                       client_semver AS client_version, NULL::text AS torrent_id,
+                       NULL::text AS uploaded, NULL::text AS downloaded
+                FROM client_discovery WHERE found_at &gt;= #{start} AND found_at &lt;= #{end}
+            </when>
+            <otherwise>
+                SELECT id::text, userapps_id AS app, last_time_seen AS submitted_at, peer_id,
+                       peer_client_name AS client_name, NULL::text AS module_name, NULL::text AS client_type,
+                       NULL::text AS client_version, torrent_id::text,
+                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded
+                FROM swarm_tracker WHERE last_time_seen &gt;= #{start} AND last_time_seen &lt;= #{end}
+            </otherwise>
+        </choose>
+        ) r JOIN userapp a ON a.id = r.app AND a.owner = #{owner}
+        ORDER BY r.submitted_at DESC, r.id DESC
+    </select>
+</mapper>
