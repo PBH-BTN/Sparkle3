@@ -15,7 +15,6 @@ import jakarta.mail.Folder;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.Store;
-import jakarta.mail.UIDFolder;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -222,9 +221,6 @@ public class MailReplyIngestionService {
         try {
             folder = store.getFolder("INBOX");
             folder.open(Folder.READ_ONLY);
-            if (!(folder instanceof UIDFolder uidFolder)) {
-                throw new IllegalStateException("POP3 server does not expose message UIDs");
-            }
             Set<String> processedUids = new HashSet<>(safeSet(inboundMapper.selectUids(mailbox)));
             Message[] messages = folder.getMessages();
             int examined = 0;
@@ -235,7 +231,7 @@ public class MailReplyIngestionService {
                 if (!(message instanceof MimeMessage mimeMessage)) {
                     continue;
                 }
-                String uid = uid(mimeMessage, uidFolder);
+                String uid = Pop3MessageUid.of(folder, mimeMessage);
                 if (processedUids.contains(uid)) {
                     continue;
                 }
@@ -391,26 +387,6 @@ public class MailReplyIngestionService {
         Store store = session.getStore(ssl ? "pop3s" : "pop3");
         store.connect(pop3.host(), pop3.port(), pop3.username(), pop3.password());
         return store;
-    }
-
-    private String uid(MimeMessage message, UIDFolder folder) {
-        try {
-            long value = folder.getUID(message);
-            if (value >= 0) {
-                return "uid:" + value;
-            }
-        } catch (Exception ignored) {
-            // Some POP3 servers omit UIDL. Fall back to stable message metadata.
-        }
-        try {
-            String messageId = message.getMessageID();
-            String received = String.valueOf(message.getReceivedDate());
-            String subject = String.valueOf(message.getSubject());
-            return "sha256:" + sha256(messageId + "|" + received + "|" + subject
-                    + "|" + message.getSize());
-        } catch (Exception exception) {
-            return "number:" + message.getMessageNumber();
-        }
     }
 
     private String mailboxKey(Pop3 pop3) {
