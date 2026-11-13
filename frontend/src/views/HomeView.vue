@@ -7,6 +7,7 @@ import type { EChartsCoreOption } from 'echarts/core'
 import { Message } from '@arco-design/web-vue'
 import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
+import TrafficRankings from '@/components/TrafficRankings.vue'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
 import { uiApi } from '@/api'
 import type {
@@ -572,6 +573,7 @@ onMounted(() => {
           </a-col>
         </a-row>
       </a-spin>
+      <TrafficRankings :days="trafficDays" />
     </section>
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">

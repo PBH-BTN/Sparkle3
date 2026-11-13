@@ -238,3 +238,9 @@ export const historyApi = {
   banPeerInsights: (days: number) =>
     request<BanPeerInsightsResponse>(`/api/ui/peer-insights/ban?days=${days}`),
 }
+
+export function homeTrafficRankings(days: number) {
+  return request<import('./types').TrafficRankingsResponse>(
+    '/api/ui/statistics/bittorrent-traffic-rankings?days=' + days,
+  )
+}

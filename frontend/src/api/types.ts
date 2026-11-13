@@ -885,3 +885,15 @@ export interface SubmissionRecord {
   uploaded: string | null
   downloaded: string | null
 }
+
+export interface TrafficRankingDatum {
+  name: string
+  uploadBytes: string
+  downloadBytes: string
+}
+export interface TrafficRankingsResponse {
+  days: number
+  peerIds: TrafficRankingDatum[]
+  clientNames: TrafficRankingDatum[]
+  generatedAt: string | null
+}

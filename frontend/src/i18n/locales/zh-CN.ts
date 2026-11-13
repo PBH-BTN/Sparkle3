@@ -387,6 +387,11 @@ export default {
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
+      trafficPeerIds: 'Top 50 PeerID 流量',
+      trafficClients: 'Top 50 客户端名称流量',
+      trafficToPeer: 'BTN 用户 → Peer',
+      trafficFromPeer: 'Peer → BTN 用户',
+      trafficRankingsNote: '合并封禁记录与种群检视，按双向总流量排序，每 12 小时更新。',
       trafficTitle: 'BitTorrent 流量承载',
       trafficDescription: 'BTN 网络监视的流量承载情况。',
       trafficGeoUnknownNote:
@@ -1216,6 +1221,10 @@ export default {
         'companion-charts': {
           name: '同伴统计图表',
           description: '刷新 BTN 客户端版本、地址栈和 GeoIP 分布。',
+        },
+        'bittorrent-traffic-rankings': {
+          name: 'Peer 流量排行',
+          description: '每 12 小时刷新最近 1、3、7 天的 PeerID 和客户端流量前 50 名。',
         },
         'bittorrent-traffic': {
           name: 'BitTorrent 流量统计',
