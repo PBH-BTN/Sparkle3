@@ -263,10 +263,16 @@ async function syncProvider(provider: MemberPlatformConfig) {
   try {
     const result = await adminApi.syncMemberPlatform(provider.provider)
     Message.success(
-      t('admin.memberships.syncOneDone', {
-        provider: providerLabel(provider.provider),
-        count: result.records,
-      }),
+      result.remoteCount >= 0
+        ? t('admin.memberships.syncOneDoneWithRemote', {
+            provider: providerLabel(provider.provider),
+            count: result.records,
+            remote: result.remoteCount,
+          })
+        : t('admin.memberships.syncOneDone', {
+            provider: providerLabel(provider.provider),
+            count: result.records,
+          }),
     )
     await Promise.all([loadTransactions(), loadReconciliation()])
   } catch (error) {

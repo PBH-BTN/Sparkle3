@@ -1352,6 +1352,8 @@ export default {
       runNever: 'Never synced',
       syncNow: 'Sync now',
       syncOneDone: '{provider} synchronized with {count} transactions read.',
+      syncOneDoneWithRemote:
+        '{provider} synchronized with {count} transactions read; the provider reports {remote} remotely.',
       syncOneFailed: 'Unable to synchronize {provider}.',
       fields: {
         PATREON: {

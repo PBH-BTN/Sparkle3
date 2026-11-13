@@ -1324,6 +1324,8 @@ export default {
       runNever: '尚未同步',
       syncNow: '立即同步',
       syncOneDone: '{provider} 同步完成，共读取 {count} 笔交易。',
+      syncOneDoneWithRemote:
+        '{provider} 同步完成，共读取 {count} 笔交易；平台报告远端共 {remote} 笔。',
       syncOneFailed: '{provider} 同步失败。',
       fields: {
         PATREON: {

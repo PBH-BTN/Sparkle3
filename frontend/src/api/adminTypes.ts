@@ -925,6 +925,7 @@ export interface MemberPlatformSyncOutcome {
   provider: MemberPlatformCode
   success: boolean
   records: number
+  remoteCount: number
   message: string | null
 }
 
