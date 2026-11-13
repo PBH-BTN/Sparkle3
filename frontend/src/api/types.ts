@@ -912,3 +912,8 @@ export interface TrafficRankingsResponse {
   clientNames: TrafficRankingDatum[]
   generatedAt: string | null
 }
+
+export interface MailUnsubscribeOption {
+  category: string
+  emailEnabled: boolean
+}

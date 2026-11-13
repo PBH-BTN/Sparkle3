@@ -100,6 +100,16 @@ export default {
     system: '系统消息',
     forcedEmail: '已强制邮件提醒',
   },
+  mailUnsubscribe: {
+    title: '退订邮件通知',
+    description: '勾选不再接收邮件的通知分类。站内信设置不受影响。',
+    confirm: '确定退订',
+    saved: '已更新邮件通知设置。',
+    invalid: '无法读取通知设置，链接可能已失效。请使用最近收到的邮件重试。',
+    failed: '保存失败，请稍后重试。',
+    empty: '请选择要退订的通知分类。',
+    retry: '重试',
+  },
   notifications: {
     title: '通知与提醒',
     description: '按通知类别分别管理站内信与邮件提醒。',

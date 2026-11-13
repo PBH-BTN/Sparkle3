@@ -101,6 +101,16 @@ export default {
     system: 'System message',
     forcedEmail: 'Forced email reminder',
   },
+  mailUnsubscribe: {
+    title: 'Unsubscribe from emails',
+    description: 'Select the categories you no longer want to receive by email. Inbox settings will stay the same.',
+    confirm: 'Confirm unsubscribe',
+    saved: 'Email notification settings updated.',
+    invalid: 'Unable to load notification settings. This link may have expired. Please try a recent email.',
+    failed: 'Unable to save. Please try again later.',
+    empty: 'Select the categories to unsubscribe from.',
+    retry: 'Retry',
+  },
   notifications: {
     title: 'Notifications & reminders',
     description: 'Manage in-app and email reminders separately for each notification category.',

@@ -5,6 +5,12 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
   routes: [
     {
+      path: '/mail-unsubscribe',
+      name: 'mail-unsubscribe',
+      component: () => import('@/views/MailUnsubscribeView.vue'),
+      meta: { public: true, standalone: true },
+    },
+    {
       path: '/',
       name: 'home',
       component: () => import('@/views/HomeView.vue'),

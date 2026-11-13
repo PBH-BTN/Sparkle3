@@ -27,6 +27,7 @@ import type {
   IpQueryLookupResponse,
   IpCommentPage,
   IpComment,
+  MailUnsubscribeOption,
   NotificationPreferencesResponse,
   NotificationPreference,
   PageResponse,
@@ -243,4 +244,12 @@ export function homeTrafficRankings(days: number) {
   return request<import('./types').TrafficRankingsResponse>(
     '/api/ui/statistics/bittorrent-traffic-rankings?days=' + days,
   )
+}
+
+export const mailUnsubscribeApi = {
+  options: (token: string) => request<MailUnsubscribeOption[]>(
+    '/api/ui/mail-unsubscribe', { headers: { 'X-Unsubscribe-Token': token } }),
+  save: (token: string, categories: string[]) => request<void>('/api/ui/mail-unsubscribe', {
+    method: 'POST', headers: { 'X-Unsubscribe-Token': token }, body: JSON.stringify({ categories }),
+  }),
 }
