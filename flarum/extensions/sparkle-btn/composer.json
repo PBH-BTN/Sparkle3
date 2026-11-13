@@ -15,6 +15,20 @@
             "Sparkle\\Flarum\\": "src/"
         }
     },
+    "archive": {
+        "exclude": [
+            "/js/node_modules",
+            "/js/src",
+            "/js/admin.js",
+            "/js/forum.js",
+            "/js/package.json",
+            "/js/pnpm-lock.yaml",
+            "/js/tsconfig.json",
+            "/js/webpack.config.js",
+            "/js/.gitignore",
+            "/.gitignore"
+        ]
+    },
     "extra": {
         "flarum-extension": {
             "title": "Sparkle BTN Profile",

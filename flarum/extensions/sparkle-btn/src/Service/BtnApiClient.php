@@ -145,6 +145,7 @@ class BtnApiClient
                 'traffic7d' => null,
                 'points' => null,
                 'rankings' => null,
+                'privacy' => null,
             ];
         }
 
@@ -161,6 +162,27 @@ class BtnApiClient
             ),
             'rankings' => $this->normalizeRankings(
                 $this->arrayValue($payload, ['rankings'])
+            ),
+            'privacy' => $this->normalizePrivacy(
+                $this->arrayValue($payload, ['privacy'])
+            ),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed>|null $privacy
+     * @return array<string, mixed>|null
+     */
+    private function normalizePrivacy(?array $privacy): ?array
+    {
+        if ($privacy === null) {
+            return null;
+        }
+
+        return [
+            'pointsVisible' => filter_var(
+                $privacy['pointsVisible'] ?? $privacy['points_visible'] ?? true,
+                FILTER_VALIDATE_BOOLEAN
             ),
         ];
     }

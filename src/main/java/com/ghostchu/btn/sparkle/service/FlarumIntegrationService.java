@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.BasicInfo;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.Points;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.PointsRanking;
+import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.Privacy;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.Rankings;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.Traffic7d;
 import com.ghostchu.btn.sparkle.controller.integration.dto.FlarumIntegrationModels.TrafficRanking;
@@ -30,6 +31,7 @@ public class FlarumIntegrationService {
     private final IUserService userService;
     private final IUserSwarmStatisticsService swarmStatisticsService;
     private final AdminConfigService adminConfigService;
+    private final UserPublicProfileService userPublicProfileService;
 
     public UserDataResponse findByGithubUid(String githubUid) throws BusinessException {
         String normalizedGithubUid = githubUid == null ? "" : githubUid.trim();
@@ -70,8 +72,10 @@ public class FlarumIntegrationService {
         );
 
         long scoreBytes = user.getScoreBytes() == null ? 0L : user.getScoreBytes();
-        Points points = new Points(Long.toString(scoreBytes));
-        PointsRanking pointsRanking = pointsRanking(user, scoreBytes);
+        UserPrivacySettings privacy = userPublicProfileService.privacySettings(user);
+        boolean pointsVisible = privacy.showsPoints();
+        Points points = pointsVisible ? new Points(Long.toString(scoreBytes)) : null;
+        PointsRanking pointsRanking = pointsVisible ? pointsRanking(user, scoreBytes) : null;
         TrafficRanking trafficRanking = statisticsEnabled
                 ? trafficRanking(swarmStatisticsService.getUserRanking(user.getId()))
                 : null;
@@ -82,18 +86,34 @@ public class FlarumIntegrationService {
                 Long.toString(user.getId()),
                 new BasicInfo(
                         Long.toString(user.getId()),
-                        user.isNicknamePubliclyVisible()
-                                ? user.getNickname()
-                                : null,
+                        nickname(user, privacy),
                         user.getRegisterAt(),
-                        user.getLastLoginAt(),
                         user.getBannedAt() != null
                 ),
                 traffic7d,
                 points,
                 new Rankings(trafficRanking, pointsRanking),
+                new Privacy(pointsVisible),
                 OffsetDateTime.now()
         );
+    }
+
+    /**
+     * The receiver has no viewer context, so the payload must look like the
+     * profile a stranger would see on Sparkle: the moderation state and the
+     * username visibility settings both apply.
+     */
+    private String nickname(User user, UserPrivacySettings privacy) {
+        if (!user.isNicknamePubliclyVisible()) {
+            return null;
+        }
+        if (privacy.allowsFullUsername()) {
+            return user.getNickname();
+        }
+        if (privacy.allowsBlurredUsername()) {
+            return userPublicProfileService.blurNickname(user.getNickname());
+        }
+        return null;
     }
 
     private TrafficRanking trafficRanking(UserSwarmStatisticTrackRankingDto ranking) {

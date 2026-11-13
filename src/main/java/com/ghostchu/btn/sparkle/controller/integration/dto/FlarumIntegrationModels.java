@@ -14,6 +14,7 @@ public final class FlarumIntegrationModels {
             Traffic7d traffic7d,
             Points points,
             Rankings rankings,
+            Privacy privacy,
             OffsetDateTime generatedAt
     ) {
         public static UserDataResponse unbound(String githubUid) {
@@ -25,16 +26,24 @@ public final class FlarumIntegrationModels {
                     null,
                     null,
                     null,
+                    null,
                     OffsetDateTime.now()
             );
         }
+    }
+
+    /**
+     * Privacy flags that the receiver must honour when rendering the response.
+     * Values that the user hides are omitted from the payload entirely; these
+     * flags let the client tell "hidden" apart from "not available yet".
+     */
+    public record Privacy(boolean pointsVisible) {
     }
 
     public record BasicInfo(
             String id,
             String nickname,
             OffsetDateTime registeredAt,
-            OffsetDateTime lastLoginAt,
             boolean banned
     ) {
     }

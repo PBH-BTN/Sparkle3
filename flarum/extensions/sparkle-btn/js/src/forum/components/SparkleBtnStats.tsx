@@ -41,6 +41,12 @@ export default class SparkleBtnStats extends Component<IAttrs> {
           </span>
         </header>
 
+        {this.onlyVisibleToSelf(user) && (
+          <div className="SparkleBtnStats-private">
+            {app.translator.trans("sparkle-btn-flarum.forum.card.only_self")}
+          </div>
+        )}
+
         {this.identity(data)}
         {this.traffic(data)}
 
@@ -49,8 +55,16 @@ export default class SparkleBtnStats extends Component<IAttrs> {
             <span>
               {app.translator.trans("sparkle-btn-flarum.forum.card.points")}
             </span>
-            <strong title={this.rawBytes(data.points?.balanceBytes)}>
-              {this.formatBytes(data.points?.balanceBytes)}
+            <strong
+              title={
+                this.pointsVisible(data)
+                  ? this.rawBytes(data.points?.balanceBytes)
+                  : undefined
+              }
+            >
+              {this.pointsVisible(data)
+                ? this.formatBytes(data.points?.balanceBytes)
+                : this.hiddenLabel(data)}
             </strong>
           </div>
           <div className="SparkleBtnStats-summaryItem">
@@ -67,7 +81,11 @@ export default class SparkleBtnStats extends Component<IAttrs> {
                 "sparkle-btn-flarum.forum.card.points_rank",
               )}
             </span>
-            <strong>{this.formatRank(data.rankings?.points?.rank)}</strong>
+            <strong>
+              {this.pointsVisible(data)
+                ? this.formatRank(data.rankings?.points?.rank)
+                : this.hiddenLabel(data)}
+            </strong>
           </div>
         </div>
 
@@ -174,6 +192,23 @@ export default class SparkleBtnStats extends Component<IAttrs> {
         <strong title={this.rawBytes(value)}>{this.formatBytes(value)}</strong>
       </div>
     );
+  }
+
+  private onlyVisibleToSelf(user: UserWithSparkle): boolean {
+    return (
+      app.session.user?.id() === user.id() &&
+      user.preferences()?.sparkleBtnShowCard === false
+    );
+  }
+
+  private pointsVisible(data: SparkleBtnData): boolean {
+    return data.privacy?.pointsVisible !== false && data.points != null;
+  }
+
+  private hiddenLabel(data: SparkleBtnData) {
+    return data.privacy?.pointsVisible === false
+      ? app.translator.trans("sparkle-btn-flarum.forum.card.hidden")
+      : "—";
   }
 
   private toBigInt(value: unknown): bigint {

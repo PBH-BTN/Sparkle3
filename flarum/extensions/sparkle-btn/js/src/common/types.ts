@@ -38,6 +38,10 @@ export interface SparkleBtnRankings {
   points?: SparkleBtnPointsRanking | null;
 }
 
+export interface SparkleBtnPrivacy {
+  pointsVisible?: boolean;
+}
+
 export interface SparkleBtnData {
   githubUid?: string | null;
   btnUserId: string;
@@ -45,5 +49,6 @@ export interface SparkleBtnData {
   traffic7d?: SparkleBtnTraffic7d | null;
   points?: SparkleBtnPoints | null;
   rankings?: SparkleBtnRankings | null;
+  privacy?: SparkleBtnPrivacy | null;
   syncedAt?: string | null;
 }

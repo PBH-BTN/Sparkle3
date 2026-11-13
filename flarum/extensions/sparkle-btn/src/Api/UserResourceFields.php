@@ -9,6 +9,13 @@ use Flarum\User\User;
 class UserResourceFields
 {
     public const VIEW_PERMISSION = 'sparkleBtn.viewUserData';
+    public const VIEW_HIDDEN_PERMISSION = 'sparkleBtn.viewHiddenUserData';
+
+    /**
+     * User preference that decides whether other people may see this user's
+     * cached Sparkle BTN card. The owner always sees their own card.
+     */
+    public const SHOW_CARD_PREFERENCE = 'sparkleBtnShowCard';
 
     public function __invoke(): array
     {
@@ -24,8 +31,22 @@ class UserResourceFields
     {
         $actor = $context->getActor();
 
-        return $actor->id === $user->id
-            || $actor->hasPermission(self::VIEW_PERMISSION);
+        if ($actor->id === $user->id) {
+            return true;
+        }
+
+        // This is deliberately stronger than VIEW_PERMISSION: it also ignores
+        // the owner's "show my card" preference. Sparkle's own privacy rules
+        // still apply to the cached payload.
+        if ($actor->hasPermission(self::VIEW_HIDDEN_PERMISSION)) {
+            return true;
+        }
+
+        if (! $actor->hasPermission(self::VIEW_PERMISSION)) {
+            return false;
+        }
+
+        return (bool) $user->getPreference(self::SHOW_CARD_PREFERENCE, true);
     }
 
     private function serialize(User $user): ?array

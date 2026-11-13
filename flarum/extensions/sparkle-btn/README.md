@@ -8,7 +8,9 @@
 - 流量排行榜和 Bytes 排行榜名次
 - 自动维护的 `Sparkle BTN Users` 权限组
 
-只有用户本人、管理员或拥有 `sparkleBtn.viewUserData` 权限的用户能获得缓存字段。权限由 Flarum 管理后台的权限页控制。
+默认只有用户本人、管理员或拥有 `sparkleBtn.viewUserData` 权限的成员能看到缓存字段；用户还可以在
+“设置 → 隐私”里关闭“向其他成员显示我的 Sparkle BTN 资料卡”。拥有 `sparkleBtn.viewHiddenUserData`
+权限的成员可以忽略这个开关，但仍受 Sparkle 侧隐私设置限制。权限由 Flarum 管理后台的权限页控制。
 
 ## 环境要求
 
@@ -93,6 +95,7 @@ Sparkle 3 已实现该响应格式。未绑定时仍返回 HTTP 200：
   "traffic7d": null,
   "points": null,
   "rankings": null,
+  "privacy": null,
   "generatedAt": "2026-11-13T12:00:00+08:00"
 }
 ```
@@ -108,7 +111,6 @@ Sparkle 3 已实现该响应格式。未绑定时仍返回 HTTP 200：
     "id": "42",
     "nickname": "example",
     "registeredAt": "2025-01-01T00:00:00+08:00",
-    "lastLoginAt": "2026-11-13T12:00:00+08:00",
     "banned": false
   },
   "traffic7d": {
@@ -136,11 +138,34 @@ Sparkle 3 已实现该响应格式。未绑定时仍返回 HTTP 200：
       "balanceBytes": "998877"
     }
   },
+  "privacy": {
+    "pointsVisible": true
+  },
   "generatedAt": "2026-11-13T12:00:00+08:00"
 }
 ```
 
 字节值使用十进制字符串，避免 JavaScript 大整数精度丢失。客户端也兼容 `traffic_7d`、`btn_user_id` 等下划线字段名，以及 `{ "data": ... }` 包装。
+
+## 隐私设置
+
+接口按 Sparkle 的公开资料规则返回数据，Flarum 端不应绕过这些规则：
+
+- 用户名：昵称审核未通过或未完成时不返回；用户把用户名可见性设为模糊时返回模糊后的昵称，设为完整时才返回原文。
+- 积分：用户关闭积分可见性后，`points`、`rankings.points` 均不返回，`privacy.pointsVisible` 为 `false`。Flarum 卡片会显示“已隐藏”，不会用 0 代替。
+- 头像：卡片本来就不展示 Sparkle 头像，因此不涉及。
+- 资料审核状态：昵称处于待审核或已拒绝状态时不返回昵称。
+
+同步是缓存的，隐私设置的修改要等该用户下一次同步（最长一个 `refresh interval`）才会反映到 Flarum；需要立即生效时可在 Flarum 侧手动执行 `php flarum sparkle-btn:sync --force --github-uid=<uid>`。
+
+### Flarum 侧的卡片可见性
+
+除了 Sparkle 的数据隐私，Flarum 还有两层独立控制：
+
+- 用户偏好 `sparkleBtnShowCard`（设置 → 隐私 → “向其他成员显示我的 Sparkle BTN 资料卡”，默认开启）：关闭后，其他成员在资料页和头像卡中看不到该用户的 BTN 卡片，本人仍然可见，卡片上会标注“仅自己可见”。
+- 权限 `sparkleBtn.viewUserData`：控制成员是否能看到其他人的 BTN 数据；`sparkleBtn.viewHiddenUserData` 则可以忽略上面的用户偏好强制查看，但它不能绕过 Sparkle 返回数据时的隐私过滤（例如隐藏的积分仍然显示“已隐藏”）。
+
+这两个开关只影响 Flarum 的展示，不会修改 Sparkle 侧的任何设置。
 
 ## 构建前端
 
@@ -152,6 +177,25 @@ pnpm install
 pnpm run typecheck
 pnpm run build
 ```
+
+## 打包发布
+
+发布包只需要 PHP 服务端文件、语言包和已构建的 `js/dist`，不需要 `js/node_modules`、`js/src`
+或前端构建配置。在仓库根目录用 `git archive` 生成（会应用 `.gitattributes` 的导出规则）：
+
+```bash
+git archive --format=zip --prefix=sparkle-btn/ \
+  -o flarum/extensions/sparkle-btn.zip HEAD:flarum/extensions/sparkle-btn
+```
+
+也可以在 `flarum/extensions/sparkle-btn` 目录内运行 `composer archive`，`composer.json` 的
+`archive.exclude` 已排除这些开发文件。
+
+手工打包时只收集：`extend.php`、`composer.json`、`README.md`、`.gitattributes`、`src/`、
+`migrations/`、`locale/`、`less/`、`js/dist/`。
+
+正常发布包在 100 KB 以内；如果明显更大，通常是误把 `js/node_modules` 打了进去。用
+Composer path repository 安装时如果采用复制而不是符号链接，也应先移除 `js/node_modules`。
 
 ## 隐私与部署提示
 

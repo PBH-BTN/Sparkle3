@@ -87,5 +87,16 @@ export default [
       }),
       "view",
       80,
+    )
+    .permission(
+      () => ({
+        icon: "fas fa-user-shield",
+        label: app.translator.trans(
+          "sparkle-btn-flarum.admin.permissions.view_hidden_user_data_label",
+        ),
+        permission: "sparkleBtn.viewHiddenUserData",
+      }),
+      "view",
+      70,
     ),
 ];

@@ -3,7 +3,7 @@
 namespace Sparkle\Flarum\Service;
 
 use Flarum\User\User;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Carbon;
 use JsonException;
 use Psr\Log\LoggerInterface;
@@ -14,7 +14,8 @@ class BtnSyncService
     public function __construct(
         private readonly BtnApiClient $client,
         private readonly BoundGroupService $groups,
-        private readonly LoggerInterface $log
+        private readonly LoggerInterface $log,
+        private readonly ConnectionInterface $db
     ) {
     }
 
@@ -45,8 +46,8 @@ class BtnSyncService
 
     public function forget(User $user): void
     {
-        DB::transaction(function () use ($user) {
-            DB::table('users')->where('id', $user->id)->update([
+        $this->db->transaction(function () use ($user) {
+            $this->db->table('users')->where('id', $user->id)->update([
                 'sparkle_github_uid' => null,
                 'sparkle_btn_user_id' => null,
                 'sparkle_btn_data' => null,
@@ -72,10 +73,11 @@ class BtnSyncService
                 'traffic7d' => $payload['traffic7d'] ?? null,
                 'points' => $payload['points'] ?? null,
                 'rankings' => $payload['rankings'] ?? null,
+                'privacy' => $payload['privacy'] ?? null,
             ]
             : null;
 
-        DB::transaction(function () use (
+        $this->db->transaction(function () use (
             $userId,
             $githubUid,
             $payload,
@@ -83,7 +85,7 @@ class BtnSyncService
             $data,
             $now
         ) {
-            DB::table('users')->where('id', $userId)->update([
+            $this->db->table('users')->where('id', $userId)->update([
                 'sparkle_github_uid' => $githubUid,
                 'sparkle_btn_user_id' => $bound ? $payload['btnUserId'] : null,
                 'sparkle_btn_data' => $this->encode($data),
@@ -107,13 +109,13 @@ class BtnSyncService
         $now = Carbon::now();
 
         if ($githubUid !== '' && preg_match('/^[0-9]{1,32}$/', $githubUid)) {
-            DB::table('users')->where('id', $userId)->update([
+            $this->db->table('users')->where('id', $userId)->update([
                 'sparkle_github_uid' => $githubUid,
                 'sparkle_btn_attempted_at' => $now,
                 'sparkle_btn_error' => $message,
             ]);
         } else {
-            DB::table('users')->where('id', $userId)->update([
+            $this->db->table('users')->where('id', $userId)->update([
                 'sparkle_btn_attempted_at' => $now,
                 'sparkle_btn_error' => $message,
             ]);

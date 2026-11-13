@@ -1,3 +1,8 @@
+// Flarum exposes Mithril's static API as a global (`window.m`).
+declare const m: {
+  redraw(): void;
+};
+
 declare module "flarum/common/Component" {
   import type Mithril from "mithril";
 
@@ -18,9 +23,9 @@ declare module "flarum/common/Component" {
 
 declare module "flarum/common/extend" {
   export function extend(
-    object: Record<string, unknown>,
+    object: Record<string, unknown> | string,
     methods: string | string[],
-    callback: (...args: any[]) => void,
+    callback: (this: any, ...args: any[]) => void,
   ): void;
 }
 
@@ -54,6 +59,30 @@ declare module "flarum/common/extenders" {
 declare module "flarum/common/models/User" {
   export default class User {
     id(): string;
+    exists: boolean;
+    preferences(): Record<string, any> | null | undefined;
+    savePreferences(preferences: Record<string, unknown>): Promise<this>;
+  }
+}
+
+declare module "flarum/common/components/Switch" {
+  import type Mithril from "mithril";
+  import Component, { ComponentAttrs } from "flarum/common/Component";
+
+  export interface SwitchAttrs extends ComponentAttrs {
+    state?: boolean;
+    loading?: boolean;
+    onchange?: (value: boolean) => void;
+  }
+
+  export default class Switch extends Component<SwitchAttrs> {}
+}
+
+declare module "flarum/forum/components/SettingsPage" {
+  import type User from "flarum/common/models/User";
+
+  export default class SettingsPage {
+    user: User | null;
   }
 }
 

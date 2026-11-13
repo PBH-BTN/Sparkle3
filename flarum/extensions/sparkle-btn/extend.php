@@ -32,6 +32,9 @@ return [
         ->default('sparkle-btn.batch_size', 25)
         ->default('sparkle-btn.request_timeout', 10),
 
+    (new Extend\User())
+        ->registerPreference('sparkleBtnShowCard', null, true),
+
     (new Extend\Model(User::class))
         ->cast('sparkle_github_uid', 'string')
         ->cast('sparkle_btn_user_id', 'string')

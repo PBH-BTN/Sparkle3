@@ -2,6 +2,7 @@ sparkle-btn-flarum:
   admin:
     permissions:
       view_user_data_label: 查看其他用户的 Sparkle BTN 资料数据
+      view_hidden_user_data_label: 查看用户已对其他成员隐藏的 Sparkle BTN 资料卡
     settings:
       endpoint_label: Sparkle BTN API 端点
       endpoint_help: Sparkle BTN 用户查询接口的完整 URL。除非 URL 包含 {githubUid}，否则插件会附加 githubUid 查询参数。
@@ -14,11 +15,15 @@ sparkle-btn-flarum:
       timeout_label: API 请求超时（秒）
       timeout_help: 等待 Sparkle BTN 响应的最长时间（1-60 秒）。
   forum:
+    settings:
+      show_card_label: 向其他成员显示我的 Sparkle BTN 资料卡
+      show_card_help: 关闭后，只有你自己和拥有“查看用户已隐藏的资料卡”权限的成员能看到这张卡片。
     card:
       title: Sparkle BTN
       uid: "UID {uid}"
       registered: "注册于 {date}"
       banned: 已停用
+      only_self: 仅自己可见
       traffic: "最近 {days} 天流量"
       sent_self: 上报上传
       received_self: 上报下载
@@ -30,4 +35,5 @@ sparkle-btn-flarum:
       traffic_rank: 流量排行
       points_rank: Bytes 排行
       unranked: 未上榜
+      hidden: 已隐藏
       updated: "更新于 {time}"

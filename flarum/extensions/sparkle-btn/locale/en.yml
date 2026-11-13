@@ -2,6 +2,7 @@ sparkle-btn-flarum:
   admin:
     permissions:
       view_user_data_label: View other users' Sparkle BTN profile data
+      view_hidden_user_data_label: View Sparkle BTN cards that users hid from other members
     settings:
       endpoint_label: Sparkle BTN API endpoint
       endpoint_help: Full URL of the Sparkle BTN user lookup endpoint. The GitHub UID is appended as githubUid unless the URL contains {githubUid}.
@@ -14,11 +15,15 @@ sparkle-btn-flarum:
       timeout_label: API request timeout (seconds)
       timeout_help: Maximum time to wait for Sparkle BTN (1-60 seconds).
   forum:
+    settings:
+      show_card_label: Show my Sparkle BTN card to other members
+      show_card_help: When disabled, only you and members with the "view hidden cards" permission can see this card.
     card:
       title: Sparkle BTN
       uid: "UID {uid}"
       registered: "Registered {date}"
       banned: Banned
+      only_self: Only visible to you
       traffic: "{days}-day traffic"
       sent_self: Reported upload
       received_self: Reported download
@@ -30,4 +35,5 @@ sparkle-btn-flarum:
       traffic_rank: Traffic rank
       points_rank: Bytes rank
       unranked: Not ranked
+      hidden: Hidden
       updated: "Updated {time}"
