@@ -2,7 +2,6 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
-import com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +15,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class CareerIngestionService {
-    private final CareerIngestionMapper mapper;
+    @org.springframework.beans.factory.annotation.Autowired
+    private CareerRedisCache cache;
+    private final com.ghostchu.btn.sparkle.mapper.CareerBatchMapper batchMapper;
 
     private String key(String value) {
         return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8)).toString();
@@ -32,50 +33,66 @@ public class CareerIngestionService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public void swarmBatch(long uid, java.util.List<SwarmTracker> rows) {
+        for (int offset=0; offset<rows.size(); offset+=500) {
+            var values = new java.util.ArrayList<Map<String,Object>>();
+            var identities = new java.util.ArrayList<String>();
+            for (var row : rows.subList(offset,Math.min(offset+500,rows.size()))) {
+                var p = event(uid,"swarm",row.getUserappsId()+":"+row.getUserDownloader()+":"+row.getTorrentId()+":"+row.getPeerIp().getHostAddress()+":"+row.getPeerPort()+":"+row.getFirstTimeSeen().toInstant(),row.getLastTimeSeen());
+                long upload=Math.max(0,row.getToPeerTraffic()), download=Math.max(0,row.getFromPeerTraffic());
+                p.put("upload",upload); p.put("download",download);
+                p.put("initialUpload",Math.min(upload,Math.max(0,row.getToPeerTrafficOffset())));
+                p.put("initialDownload",Math.min(download,Math.max(0,row.getFromPeerTrafficOffset())));
+                p.put("at",row.getLastTimeSeen()); p.put("ip",row.getPeerIp().getHostAddress());
+                p.put("torrentId",row.getTorrentId()); p.put("seeding",row.getUserProgress()>=1);
+                p.put("observationKey",key(p.get("key")+":"+row.getLastTimeSeen().toInstant()));
+                identities.add(p.get("key")+":"+row.getLastTimeSeen().toInstant()+":"+upload+":"+download+":"+row.getUserProgress()+":"+p.get("initialUpload")+":"+p.get("initialDownload"));
+                values.add(p);
+            }
+            java.util.Collections.sort(identities);
+            String delivery=key(uid+":"+String.join(";",identities));
+            if (cache != null && cache.alreadyCommitted(delivery)) continue;
+            batchMapper.swarm(uid,values);
+            if (cache != null) cache.markAfterCommit(delivery);
+        }
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void swarm(long uid, SwarmTracker row) {
-        var p = event(uid, "swarm", row.getUserappsId() + ":" + row.getUserDownloader()
-                + ":" + row.getTorrentId() + ":" + row.getPeerIp().getHostAddress()
-                + ":" + row.getPeerPort() + ":" + row.getFirstTimeSeen().toInstant(), row.getLastTimeSeen());
-        long upload = Math.max(0, row.getToPeerTraffic());
-        long download = Math.max(0, row.getFromPeerTraffic());
-        p.put("upload", upload);
-        p.put("download", download);
-        // First observation establishes a baseline; only the reported latest delta is counted.
-        p.put("baselineUpload", Math.max(0, upload - Math.max(0, row.getToPeerTrafficOffset())));
-        p.put("baselineDownload", Math.max(0, download - Math.max(0, row.getFromPeerTrafficOffset())));
-        mapper.init(p);
-        var previous = mapper.checkpoint(p);
-        p.put("uploadDelta", Math.max(0, upload - previous.get("uploaded")));
-        p.put("downloadDelta", Math.max(0, download - previous.get("downloaded")));
-        p.put("started", row.getLastTimeSeen().minusMinutes(5));
-        p.put("ip", row.getPeerIp().getHostAddress());
-        mapper.advance(p);
-        mapper.traffic(p);
-        mapper.event(p);
-        p.put("observationKey", key(p.get("key") + ":" + row.getLastTimeSeen().toInstant()));
-        mapper.observations(p);
-        p.put("torrentId", row.getTorrentId());
-        p.put("seeding", row.getUserProgress() >= 1);
-        mapper.activity(p);
+        swarmBatch(uid,java.util.List.of(row));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void ban(long uid, BanHistory row) {
-        var p = event(uid, "ban", row.getUserappsId() + ":" + row.getTorrentId()
-                + ":" + row.getPeerIp().getHostAddress() + ":" + row.getPeerPort()
-                + ":" + row.getPopulateTime().toInstant() + ":" + row.getModuleName()
-                + ":" + row.getRule(), row.getPopulateTime());
-        mapper.event(p);
-        p.put("ip", row.getPeerIp().getHostAddress());
-        p.put("started", row.getPopulateTime());
-        p.put("observationKey", p.get("key"));
-        mapper.observations(p);
+    public void bans(long uid,java.util.List<BanHistory> rows) {
+        var values = new java.util.ArrayList<Map<String,Object>>();
+        for (var row : rows) {
+            var p=event(uid,"ban",row.getUserappsId()+":"+row.getTorrentId()+":"+row.getPeerIp().getHostAddress()+":"+row.getPeerPort()+":"+row.getPopulateTime().toInstant()+":"+row.getModuleName()+":"+row.getRule(),row.getPopulateTime());
+            p.put("ip",row.getPeerIp().getHostAddress()); values.add(p);
+        }
+        submit(uid,values,false);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void featureByApp(long appId, long hash, OffsetDateTime at) {
-        var p = event(0, "feature", Long.toString(hash), at);
-        p.put("appId",appId);
-        mapper.feature(p);
+    public void ban(long uid,BanHistory row) { bans(uid,java.util.List.of(row)); }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void featuresByApp(long appId,java.util.List<com.ghostchu.btn.sparkle.entity.ClientDiscovery> rows) {
+        submit(appId,rows.stream().map(row -> event(0,"feature",row.getHash().toString(),row.getFoundAt())).toList(),true);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void featureByApp(long appId,long hash,OffsetDateTime at) {
+        submit(appId,java.util.List.of(event(0,"feature",Long.toString(hash),at)),true);
+    }
+
+    private void submit(long uid,java.util.List<Map<String,Object>> rows,boolean feature) {
+        for (int offset=0;offset<rows.size();offset+=500) {
+            var chunk=rows.subList(offset,Math.min(offset+500,rows.size()));
+            var keys=chunk.stream().map(p -> p.get("key").toString()).sorted().toList();
+            String delivery=key(uid+":"+feature+":"+String.join(";",keys));
+            if (cache != null && cache.alreadyCommitted(delivery)) continue;
+            if (feature) batchMapper.features(uid,chunk); else batchMapper.bans(uid,chunk);
+            if (cache != null) cache.markAfterCommit(delivery);
+        }
     }
 }

@@ -13,11 +13,12 @@ public interface UserCareerMapper {
     List<Map<String, String>> counts(@Param("uid") long uid);
 
     @Select("""
-            SELECT COALESCE(SUM((SELECT SUM(extract(epoch FROM upper(r)-lower(r)))
-                       FROM unnest(seeding) r)),0)::text AS seeding,
-                   COALESCE(SUM((SELECT SUM(extract(epoch FROM upper(r)-lower(r)))
-                       FROM unnest(downloading - seeding) r)),0)::text AS downloading
-            FROM user_career_torrent_time WHERE user_id = #{uid}
+            SELECT COALESCE(SUM(extract(epoch FROM upper(period)-lower(period))) FILTER (WHERE mode.seed),0)::text AS seeding,
+                   COALESCE(SUM(extract(epoch FROM upper(period)-lower(period))) FILTER (WHERE NOT mode.seed),0)::text AS downloading
+            FROM user_career_torrent_time t
+            CROSS JOIN LATERAL (VALUES (TRUE,t.seeding),(FALSE,t.downloading-t.seeding)) mode(seed,ranges)
+            CROSS JOIN LATERAL unnest(mode.ranges) period
+            WHERE t.user_id = #{uid}
             """)
     Map<String, String> durations(@Param("uid") long uid);
 

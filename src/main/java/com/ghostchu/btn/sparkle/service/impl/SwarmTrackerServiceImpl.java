@@ -242,7 +242,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
-            swarmMap.values().forEach(row -> careerIngestionService.swarm(userId, row));
+            careerIngestionService.swarmBatch(userId, new ArrayList<>(swarmMap.values()));
             pointAwardContext.recordConfigured(
                     userId,
                     PointCategory.SWARM_TRACKER,

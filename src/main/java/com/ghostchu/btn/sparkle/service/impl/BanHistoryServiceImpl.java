@@ -137,7 +137,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
-        list.forEach(row -> careerIngestionService.ban(userId, row));
+        careerIngestionService.bans(userId,list);
         pointAwardContext.recordConfigured(
                 userId,
                 PointCategory.BAN_HISTORY,

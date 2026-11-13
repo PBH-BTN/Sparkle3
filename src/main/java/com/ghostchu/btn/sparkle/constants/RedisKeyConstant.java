@@ -4,6 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum RedisKeyConstant {
+    CAREER_SNAPSHOT("sparkle:career:snapshot:v1"),
+    CAREER_REPORTED("sparkle:career:reported:v1"),
     MAIL_UNSUBSCRIBE("sparkle:mail:unsubscribe"),
     APP_CONFIG_VALUES("sparkle:config:values"),
     RULE_IP_DENYLIST_VERSION("sparkle:rule:ip_denylist:version"),

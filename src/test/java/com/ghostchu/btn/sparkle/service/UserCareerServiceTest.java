@@ -12,6 +12,26 @@ import static org.mockito.Mockito.*;
 
 class UserCareerServiceTest {
     @Test
+    void snapshotCacheAvoidsAggregateQueriesButStillChecksPrivacy() throws Exception {
+        var profiles = mock(UserPublicProfileService.class);
+        var mapper = mock(UserCareerMapper.class);
+        var traffic = mock(UserLifetimeTrafficMapper.class);
+        var cache = mock(CareerRedisCache.class);
+        var target = new User().setId(2L).setRegisterAt(OffsetDateTime.now().minusDays(10));
+        when(profiles.requireUser(2)).thenReturn(target);
+        when(profiles.privacySettings(target)).thenReturn(UserPrivacySettings.defaults(2));
+        when(cache.snapshotKey(2)).thenReturn("snapshot");
+        when(cache.get("snapshot",UserCareerService.Snapshot.class)).thenReturn(
+                new UserCareerService.Snapshot(Map.of("ban","42"),null,null));
+        var service = new UserCareerService(profiles,mapper,traffic);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"cache",cache);
+        assertEquals("42",service.read(2,2).metrics().get("ban"));
+        verifyNoInteractions(mapper,traffic);
+        assertNull(service.read(1,2));
+        verify(profiles).privacySettings(target);
+    }
+
+    @Test
     void hiddenCareerNeverQueriesStatisticsForAnotherUser() throws Exception {
         var profiles = mock(UserPublicProfileService.class);
         var mapper = mock(UserCareerMapper.class);

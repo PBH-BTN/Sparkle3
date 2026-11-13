@@ -87,8 +87,8 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
         }
         if (!clientDiscoveryList.isEmpty()) {
             var inserted = new java.util.HashSet<>(this.baseMapper.batchInsertReturning(clientDiscoveryList));
-            clientDiscoveryList.stream().filter(row -> inserted.remove(row.getHash()))
-                    .forEach(row -> careerIngestionService.featureByApp(userAppId, row.getHash(), row.getFoundAt()));
+            var discovered = clientDiscoveryList.stream().filter(row -> inserted.remove(row.getHash())).toList();
+            careerIngestionService.featuresByApp(userAppId,discovered);
         }
     }
 

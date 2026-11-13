@@ -59,19 +59,19 @@ class UserLifetimeTrafficIntegrationTest {
                 var dataSource = new UnpooledDataSource("org.postgresql.Driver", url, username, password);
                 var config = new Configuration(new Environment("test",new JdbcTransactionFactory(),dataSource));
                 config.setMapUnderscoreToCamelCase(true);
-                config.addMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class);
                 config.addMapper(UserLifetimeTrafficMapper.class);
-                config.addMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
-                try (var resource = getClass().getResourceAsStream("/mapper/CareerIngestionMapper.xml")) {
-                    new org.apache.ibatis.builder.xml.XMLMapperBuilder(resource,config,
-                            "mapper/CareerIngestionMapper.xml",config.getSqlFragments()).parse();
+                config.addMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class);
+                try (var resource = getClass().getResourceAsStream("/mapper/CareerBatchMapper.xml")) {
+                    new org.apache.ibatis.builder.xml.XMLMapperBuilder(resource,config,"mapper/CareerBatchMapper.xml",config.getSqlFragments()).parse();
                 }
+                config.addMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
                 var factory = new SqlSessionFactoryBuilder().build(config);
                 try (var session = factory.openSession()) {
                     var connection=session.getConnection();
                     var totals=session.getMapper(UserLifetimeTrafficMapper.class);
                     var career=session.getMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
-                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class));
+                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class));
+
                     assertTotals(connection,1,"0","0","0","0");
                     assertTrue(career.counts(1).isEmpty());
                     try(var sql=connection.createStatement(); var result=sql.executeQuery(
@@ -110,7 +110,9 @@ class UserLifetimeTrafficIntegrationTest {
                     try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
                         var futures = java.util.stream.IntStream.range(0,3).mapToObj(i -> executor.submit(() -> {
                             try (var concurrent = factory.openSession()) {
-                                new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class)).swarm(1,row);
+                                var worker=new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class));
+
+                                worker.swarm(1,row);
                                 concurrent.commit();
                             }
                             return true;
@@ -131,6 +133,18 @@ class UserLifetimeTrafficIntegrationTest {
                     ingestion.ban(1,ban);
                     ingestion.ban(1,ban);
                     assertEquals("1",career.counts(1).stream().filter(r -> "ban".equals(r.get("kind"))).findFirst().orElseThrow().get("total"));
+                    var second = new com.ghostchu.btn.sparkle.entity.SwarmTracker();
+                    var third = new com.ghostchu.btn.sparkle.entity.SwarmTracker();
+                    org.springframework.beans.BeanUtils.copyProperties(row,second);
+                    org.springframework.beans.BeanUtils.copyProperties(row,third);
+                    second.setPeerPort(6882); third.setPeerPort(6883);
+                    ingestion.swarmBatch(1,java.util.List.of(second,third));
+                    session.clearCache();
+                    assertEquals("9223372036854775828",totals.selectByUserId(1).sentTrafficSelfReport());
+                    try(var sql=connection.createStatement(); var result=sql.executeQuery("SELECT COUNT(*) FROM pg_constraint WHERE contype IN ('f','c') AND conrelid IN ('user_lifetime_traffic'::regclass,'user_lifetime_traffic_checkpoint'::regclass,'user_career_events'::regclass,'user_career_daily'::regclass,'user_career_torrent_time'::regclass)")) {
+                        assertTrue(result.next()); assertEquals(0,result.getLong(1));
+                    }
+
                 }
             } finally {
                 statement.execute("DROP DATABASE " + database + " WITH (FORCE)");

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.CareerBatchMapper">
+    <update id="swarm">
+        WITH input(user_id,session_key,upload,download,initial_upload,initial_download,at,ip,torrent_id,seeding,observation_key) AS MATERIALIZED (
+            VALUES
+            <foreach collection="rows" item="r" separator=",">
+                (#{uid}::bigint,#{r.key}::uuid,#{r.upload}::bigint,#{r.download}::bigint,
+                 #{r.initialUpload}::bigint,#{r.initialDownload}::bigint,#{r.at}::timestamptz,
+                 #{r.ip}::inet,#{r.torrentId}::bigint,#{r.seeding}::boolean,#{r.observationKey}::uuid)
+            </foreach>
+        ), checkpoint AS (
+            INSERT INTO user_lifetime_traffic_checkpoint AS c
+                (user_id,session_key,uploaded,downloaded,upload_delta,download_delta)
+            SELECT user_id,session_key,upload,download,initial_upload,initial_download FROM input ORDER BY session_key
+            ON CONFLICT(user_id,session_key) DO UPDATE SET
+                upload_delta=GREATEST(EXCLUDED.uploaded-c.uploaded,0),
+                download_delta=GREATEST(EXCLUDED.downloaded-c.downloaded,0),
+                uploaded=GREATEST(c.uploaded,EXCLUDED.uploaded),
+                downloaded=GREATEST(c.downloaded,EXCLUDED.downloaded)
+            RETURNING user_id,session_key,upload_delta,download_delta
+        ), peers AS MATERIALIZED (
+            SELECT DISTINCT ua.owner,i.session_key,i.at,i.observation_key
+            FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip
+                AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-interval '5 minutes'
+            JOIN userapp ua ON ua.id=hb.userapp_id
+            WHERE NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
+        ), contributions AS (
+            SELECT user_id,upload_delta::numeric AS sent,download_delta::numeric AS received,0::numeric AS sent_ack,0::numeric AS received_ack FROM checkpoint
+            UNION ALL
+            SELECT p.owner,0::numeric,0::numeric,c.download_delta::numeric,c.upload_delta::numeric
+            FROM peers p JOIN checkpoint c USING(session_key)
+        ), totals AS (
+            INSERT INTO user_lifetime_traffic AS t(user_id,sent_self,received_self,sent_ack,received_ack,tracked_since,history_partial,updated_at)
+            SELECT user_id,SUM(sent),SUM(received),SUM(sent_ack),SUM(received_ack),now(),TRUE,now()
+            FROM contributions GROUP BY user_id HAVING SUM(sent+received+sent_ack+received_ack)>0 ORDER BY user_id
+            ON CONFLICT(user_id) DO UPDATE SET sent_self=t.sent_self+EXCLUDED.sent_self,
+                received_self=t.received_self+EXCLUDED.received_self,sent_ack=t.sent_ack+EXCLUDED.sent_ack,
+                received_ack=t.received_ack+EXCLUDED.received_ack,updated_at=EXCLUDED.updated_at
+        ), events AS (
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,reporter_id)
+            SELECT user_id,'swarm',session_key,at,NULL::bigint FROM input
+            UNION ALL
+            SELECT owner,'observation',observation_key,at,#{uid}::bigint FROM peers WHERE owner &lt;> #{uid}
+            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+        ), daily AS (
+            INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
+            SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM events GROUP BY 1,2,3 ORDER BY 1,3,2
+            ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
+        ), latest AS (
+            SELECT DISTINCT ON (user_id,torrent_id) user_id,torrent_id,at,seeding FROM input
+            ORDER BY user_id,torrent_id,at DESC,session_key
+        )
+        INSERT INTO user_career_torrent_time AS a(user_id,torrent_id,last_seen,was_seeding)
+        SELECT user_id,torrent_id,at,seeding FROM latest ORDER BY user_id,torrent_id
+        ON CONFLICT(user_id,torrent_id) DO UPDATE SET
+            seeding=a.seeding+CASE WHEN a.was_seeding AND EXCLUDED.last_seen>a.last_seen
+                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+interval '5 minutes'),'[)')) ELSE '{}'::tstzmultirange END,
+            downloading=a.downloading+CASE WHEN NOT a.was_seeding AND EXCLUDED.last_seen>a.last_seen
+                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+interval '5 minutes'),'[)')) ELSE '{}'::tstzmultirange END,
+            was_seeding=CASE WHEN EXCLUDED.last_seen>a.last_seen THEN EXCLUDED.was_seeding ELSE a.was_seeding END,
+            last_seen=GREATEST(a.last_seen,EXCLUDED.last_seen)
+    </update>
+    <update id="bans">
+        WITH input(user_id,fingerprint,at,ip) AS MATERIALIZED (
+            VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet)</foreach>
+        ), observed AS (
+            SELECT DISTINCT ua.owner,i.fingerprint,i.at,i.user_id AS reporter
+            FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at
+            JOIN userapp ua ON ua.id=hb.userapp_id WHERE ua.owner &lt;> i.user_id
+              AND NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
+        ), added AS (
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,reporter_id)
+            SELECT user_id,'ban',fingerprint,at,NULL::bigint FROM input
+            UNION ALL SELECT owner,'observation',fingerprint,at,reporter FROM observed
+            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+        )
+        INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
+        SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
+        ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
+    </update>
+    <update id="features">
+        WITH input(fingerprint,at) AS (VALUES <foreach collection="rows" item="r" separator=",">(#{r.key}::uuid,#{r.moment}::timestamptz)</foreach>), added AS (
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
+            SELECT a.owner,'feature',i.fingerprint,i.at FROM userapp a CROSS JOIN input i WHERE a.id=#{uid}
+            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+        )
+        INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
+        SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
+        ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
+    </update>
+</mapper>
