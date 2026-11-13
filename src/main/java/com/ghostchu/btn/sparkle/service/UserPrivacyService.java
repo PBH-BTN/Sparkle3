@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility;
 import com.ghostchu.btn.sparkle.constants.PointsVisibility;
 import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 import com.ghostchu.btn.sparkle.entity.UserPrivacySettingsEntity;
@@ -50,7 +51,20 @@ public class UserPrivacyService {
             UsernameVisibility usernameVisibility,
             PointsVisibility pointsVisibility
     ) {
+        return update(userId, avatarVisibility, usernameVisibility, pointsVisibility, null);
+    }
+
+    @Transactional
+    public UserPrivacySettings update(
+            long userId,
+            AvatarVisibility avatarVisibility,
+            UsernameVisibility usernameVisibility,
+            PointsVisibility pointsVisibility,
+            LifetimeTrafficVisibility lifetimeTrafficVisibility
+    ) {
         UserPrivacySettings current = get(userId);
+        LifetimeTrafficVisibility visibility = lifetimeTrafficVisibility == null
+                ? current.lifetimeTrafficVisibility() : lifetimeTrafficVisibility;
         settingsMapper.update(null,
                 new com.baomidou.mybatisplus.core.conditions.update
                         .LambdaUpdateWrapper<UserPrivacySettingsEntity>()
@@ -60,6 +74,7 @@ public class UserPrivacyService {
                                 usernameVisibility.name())
                         .set(UserPrivacySettingsEntity::getPointsVisibility,
                                 pointsVisibility.name())
+                        .set(UserPrivacySettingsEntity::getLifetimeTrafficVisibility, visibility.name())
                         .set(UserPrivacySettingsEntity::getUpdatedAt,
                                 java.time.OffsetDateTime.now())
                         .eq(UserPrivacySettingsEntity::getUserId, userId)
@@ -69,7 +84,8 @@ public class UserPrivacyService {
                 avatarVisibility,
                 usernameVisibility,
                 pointsVisibility,
-                current.receiveUserMessages()
+                current.receiveUserMessages(),
+                visibility
         );
     }
 
@@ -80,6 +96,7 @@ public class UserPrivacyService {
                     .setAvatarVisibility("BLURRED")
                     .setUsernameVisibility("BLURRED")
                     .setPointsVisibility("SHOW")
+                    .setLifetimeTrafficVisibility("HIDDEN")
                     .setReceiveUserMessages(true)
                     .setUpdatedAt(java.time.OffsetDateTime.now()));
         }
@@ -91,7 +108,9 @@ public class UserPrivacyService {
                 AvatarVisibility.valueOf(row.getAvatarVisibility()),
                 UsernameVisibility.valueOf(row.getUsernameVisibility()),
                 PointsVisibility.valueOf(row.getPointsVisibility()),
-                Boolean.TRUE.equals(row.getReceiveUserMessages())
+                Boolean.TRUE.equals(row.getReceiveUserMessages()),
+                row.getLifetimeTrafficVisibility() == null ? LifetimeTrafficVisibility.HIDDEN
+                        : LifetimeTrafficVisibility.valueOf(row.getLifetimeTrafficVisibility())
         );
     }
 }

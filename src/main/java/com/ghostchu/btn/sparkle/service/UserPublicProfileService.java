@@ -3,6 +3,8 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacySettingsView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PublicUserProfileResponse;
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility;
+import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.util.UnitConverter;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class UserPublicProfileService {
     private final IUserService userService;
+    private final UserLifetimeTrafficMapper lifetimeTrafficMapper;
     private final UserPrivacyService privacyService;
 
     public PublicUserProfileResponse profile(long currentUserId, long targetUserId)
@@ -55,7 +58,9 @@ public class UserPublicProfileService {
                 target.getBannedAt() != null,
                 self,
                 canSendMessage(sender, target),
-                canContactEmail(sender, target)
+                canContactEmail(sender, target),
+                self || privacy.lifetimeTrafficVisibility() == LifetimeTrafficVisibility.SHOW
+                        ? lifetimeTrafficMapper.selectByUserId(targetUserId) : null
         );
     }
 

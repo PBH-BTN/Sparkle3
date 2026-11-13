@@ -24,7 +24,8 @@ class UserPublicProfileServiceTest {
         when(privacyService.get(1L)).thenReturn(settings(1L, PointsVisibility.SHOW));
         when(privacyService.get(2L)).thenReturn(settings(2L, PointsVisibility.SHOW));
 
-        var profile = new UserPublicProfileService(userService, privacyService).profile(1L, 2L);
+        var profile = new UserPublicProfileService(userService,
+                mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class), privacyService).profile(1L, 2L);
 
         assertEquals("4096", profile.scoreBytesRaw());
         assertNotNull(profile.scoreBytesDisplay());
@@ -41,7 +42,8 @@ class UserPublicProfileServiceTest {
         when(privacyService.get(1L)).thenReturn(settings(1L, PointsVisibility.SHOW));
         when(privacyService.get(2L)).thenReturn(settings(2L, PointsVisibility.HIDDEN));
 
-        var profile = new UserPublicProfileService(userService, privacyService).profile(1L, 2L);
+        var profile = new UserPublicProfileService(userService,
+                mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class), privacyService).profile(1L, 2L);
 
         assertNull(profile.scoreBytesRaw());
         assertNull(profile.scoreBytesDisplay());
@@ -61,10 +63,12 @@ class UserPublicProfileServiceTest {
                 AvatarVisibility.HIDDEN,
                 UsernameVisibility.BLURRED,
                 PointsVisibility.HIDDEN,
-                false
+                false,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
 
-        var profile = new UserPublicProfileService(userService, privacyService).profile(1L, 2L);
+        var profile = new UserPublicProfileService(userService,
+                mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class), privacyService).profile(1L, 2L);
 
         assertNull(profile.scoreBytesRaw());
         assertNull(profile.scoreBytesDisplay());
@@ -81,9 +85,45 @@ class UserPublicProfileServiceTest {
         when(userService.getById(3L)).thenReturn(target);
         when(privacyService.get(3L)).thenReturn(settings(3L, PointsVisibility.HIDDEN));
 
-        var profile = new UserPublicProfileService(userService, privacyService).profile(3L, 3L);
+        var profile = new UserPublicProfileService(userService,
+                mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class), privacyService).profile(3L, 3L);
 
         assertEquals("4096", profile.scoreBytesRaw());
+    }
+
+    @Test
+    void lifetimeTrafficIsNeverReadForOtherUsersWhenHidden() throws Exception {
+        var users = mock(IUserService.class);
+        var privacy = mock(UserPrivacyService.class);
+        var traffic = mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class);
+        when(users.getById(1L)).thenReturn(user(1L, 0L));
+        when(users.getById(2L)).thenReturn(user(2L, 0L));
+        when(privacy.get(2L)).thenReturn(settings(2L, PointsVisibility.SHOW));
+
+        var profile = new UserPublicProfileService(users, traffic, privacy).profile(1L, 2L);
+
+        assertNull(profile.lifetimeTraffic());
+        org.mockito.Mockito.verifyNoInteractions(traffic);
+    }
+
+    @Test
+    void lifetimeTrafficIsVisibleToOwnerAndWhenExplicitlyShared() throws Exception {
+        var users = mock(IUserService.class);
+        var privacy = mock(UserPrivacyService.class);
+        var traffic = mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class);
+        var totals = new com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.LifetimeTraffic(
+                "9007199254740993", "0", "42", "0", null, true, null);
+        when(users.getById(1L)).thenReturn(user(1L, 0L));
+        when(users.getById(2L)).thenReturn(user(2L, 0L));
+        when(traffic.selectByUserId(2L)).thenReturn(totals);
+        when(privacy.get(2L)).thenReturn(settings(2L, PointsVisibility.HIDDEN));
+        var service = new UserPublicProfileService(users, traffic, privacy);
+        assertEquals(totals, service.profile(2L, 2L).lifetimeTraffic());
+
+        when(privacy.get(2L)).thenReturn(new UserPrivacySettings(2L,
+                AvatarVisibility.BLURRED, UsernameVisibility.BLURRED, PointsVisibility.HIDDEN,
+                true, com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.SHOW));
+        assertEquals(totals, service.profile(1L, 2L).lifetimeTraffic());
     }
 
     private User user(long id, long scoreBytes) {
@@ -99,7 +139,8 @@ class UserPublicProfileServiceTest {
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.BLURRED,
                 points,
-                true
+                true,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         );
     }
 }

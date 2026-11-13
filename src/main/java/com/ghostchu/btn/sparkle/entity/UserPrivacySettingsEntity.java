@@ -23,6 +23,8 @@ public class UserPrivacySettingsEntity {
     private String usernameVisibility;
     @TableField("points_visibility")
     private String pointsVisibility;
+    @TableField("lifetime_traffic_visibility")
+    private String lifetimeTrafficVisibility;
     @TableField("receive_user_messages")
     private Boolean receiveUserMessages;
     @TableField("updated_at")

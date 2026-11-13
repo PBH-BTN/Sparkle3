@@ -19,6 +19,7 @@ import com.ghostchu.btn.sparkle.mapper.IpQueryCommentRevisionMapper;
 import com.ghostchu.btn.sparkle.mapper.UserAccountDeletionRequestMapper;
 import com.ghostchu.btn.sparkle.mapper.UserContactEmailDeliveryMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
+import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
 import com.ghostchu.btn.sparkle.mapper.UserPrivacySettingsMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
@@ -41,6 +42,7 @@ import java.util.List;
 public class AccountDeletionFinalizer {
     private final UserAccountDeletionRequestMapper requestMapper;
     private final UserMapper userMapper;
+    private final UserLifetimeTrafficMapper lifetimeTrafficMapper;
     private final UserappMapper userappMapper;
     private final UserRelMapper userRelMapper;
     private final UserContactEmailDeliveryMapper deliveryMapper;
@@ -169,6 +171,8 @@ public class AccountDeletionFinalizer {
                         ? now : userEntity.getBannedAt())
                 .setBannedReason(UserAccountDeletionService.DELETED_APP_REASON);
         userMapper.updateById(userEntity);
+        lifetimeTrafficMapper.deleteCheckpoints(userId);
+        lifetimeTrafficMapper.deleteTotals(userId);
         UserPrivacySettingsEntity privacy = privacyMapper.selectById(userId);
         if (privacy == null) {
             privacyMapper.insert(new UserPrivacySettingsEntity()
@@ -176,12 +180,14 @@ public class AccountDeletionFinalizer {
                     .setAvatarVisibility("HIDDEN")
                     .setUsernameVisibility("BLURRED")
                     .setPointsVisibility("HIDDEN")
+                    .setLifetimeTrafficVisibility("HIDDEN")
                     .setReceiveUserMessages(false)
                     .setUpdatedAt(now));
         } else {
             privacy.setAvatarVisibility("HIDDEN")
                     .setUsernameVisibility("BLURRED")
                     .setPointsVisibility("HIDDEN")
+                    .setLifetimeTrafficVisibility("HIDDEN")
                     .setReceiveUserMessages(false)
                     .setUpdatedAt(now);
             privacyMapper.updateById(privacy);

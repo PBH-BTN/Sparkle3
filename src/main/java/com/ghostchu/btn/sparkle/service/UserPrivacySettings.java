@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility;
 import com.ghostchu.btn.sparkle.constants.PointsVisibility;
 import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 
@@ -9,7 +10,8 @@ public record UserPrivacySettings(
         AvatarVisibility avatarVisibility,
         UsernameVisibility usernameVisibility,
         PointsVisibility pointsVisibility,
-        boolean receiveUserMessages
+        boolean receiveUserMessages,
+        LifetimeTrafficVisibility lifetimeTrafficVisibility
 ) {
     public static UserPrivacySettings defaults(long userId) {
         return new UserPrivacySettings(
@@ -17,7 +19,8 @@ public record UserPrivacySettings(
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.BLURRED,
                 PointsVisibility.SHOW,
-                true
+                true,
+                LifetimeTrafficVisibility.HIDDEN
         );
     }
 

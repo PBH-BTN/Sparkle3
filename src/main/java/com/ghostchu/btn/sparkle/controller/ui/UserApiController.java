@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.controller.ui;
 
 import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
+import com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility;
+import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
 import com.ghostchu.btn.sparkle.constants.PointsVisibility;
 import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.PrivacySettingsView;
@@ -38,6 +40,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UserApiController {
     private final IUserService userService;
+    private final UserLifetimeTrafficMapper lifetimeTrafficMapper;
     private final UserPublicProfileService publicProfileService;
     private final UserContactEmailService contactEmailService;
     private final UserPrivacyService privacyService;
@@ -52,7 +55,8 @@ public class UserApiController {
                 UserView.from(user, privacyService.get(user.getId())),
                 relation == null ? null : new UserRelDto(relation),
                 UnitConverter.autoUnit(scoreBytes),
-                Long.toString(scoreBytes)
+                Long.toString(scoreBytes),
+                lifetimeTrafficMapper.selectByUserId(user.getId())
         );
     }
 
@@ -124,7 +128,8 @@ public class UserApiController {
                 user.getId(),
                 request.avatarVisibility(),
                 request.usernameVisibility(),
-                request.pointsVisibility()
+                request.pointsVisibility(),
+                request.lifetimeTrafficVisibility()
         );
         return privacy(userDetails);
     }
@@ -143,7 +148,8 @@ public class UserApiController {
     public record PrivacyUpdateRequest(
             AvatarVisibility avatarVisibility,
             UsernameVisibility usernameVisibility,
-            PointsVisibility pointsVisibility
+            PointsVisibility pointsVisibility,
+            LifetimeTrafficVisibility lifetimeTrafficVisibility
     ) {
     }
 }

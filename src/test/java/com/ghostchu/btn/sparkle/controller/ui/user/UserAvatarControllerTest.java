@@ -44,7 +44,8 @@ class UserAvatarControllerTest {
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.BLURRED,
                 PointsVisibility.SHOW,
-                true
+                true,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
         UserAvatarController controller =
                 new UserAvatarController(userService, diskCache, privacyService);

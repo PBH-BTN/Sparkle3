@@ -19,13 +19,15 @@ public final class UiModels {
     public record PrivacySettingsView(
             String avatarVisibility,
             String usernameVisibility,
-            String pointsVisibility
+            String pointsVisibility,
+            String lifetimeTrafficVisibility
     ) {
         public static PrivacySettingsView from(UserPrivacySettings settings) {
             return new PrivacySettingsView(
                     settings.avatarVisibility().name(),
                     settings.usernameVisibility().name(),
-                    settings.pointsVisibility().name()
+                    settings.pointsVisibility().name(),
+                    settings.lifetimeTrafficVisibility().name()
             );
         }
     }
@@ -119,11 +121,23 @@ public final class UiModels {
     ) {
     }
 
+    public record LifetimeTraffic(
+            String sentTrafficSelfReport,
+            String receivedTrafficSelfReport,
+            String sentTrafficOtherAck,
+            String receivedTrafficOtherAck,
+            OffsetDateTime trackedSince,
+            boolean historyPartial,
+            OffsetDateTime updatedAt
+    ) {
+    }
+
     public record UserProfileResponse(
             UserView user,
             UserRelDto relation,
             String scoreBytesDisplay,
-            String scoreBytesRaw
+            String scoreBytesRaw,
+            LifetimeTraffic lifetimeTraffic
     ) {
     }
 
@@ -138,7 +152,8 @@ public final class UiModels {
             boolean banned,
             boolean self,
             boolean canSendMessage,
-            boolean canSendEmail
+            boolean canSendEmail,
+            LifetimeTraffic lifetimeTraffic
     ) {
     }
 

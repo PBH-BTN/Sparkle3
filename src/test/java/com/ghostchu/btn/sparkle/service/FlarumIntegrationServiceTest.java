@@ -32,7 +32,8 @@ class FlarumIntegrationServiceTest {
     private final AdminConfigService adminConfigService = mock(AdminConfigService.class);
     private final UserPrivacyService privacyService = mock(UserPrivacyService.class);
     private final UserPublicProfileService profileService =
-            new UserPublicProfileService(userService, privacyService);
+            new UserPublicProfileService(userService,
+                mock(com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper.class), privacyService);
     private final FlarumIntegrationService service = new FlarumIntegrationService(
             userRelMapper,
             userService,
@@ -81,7 +82,8 @@ class FlarumIntegrationServiceTest {
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.FULL,
                 PointsVisibility.SHOW,
-                true
+                true,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
         when(adminConfigService.get()).thenReturn(new RuntimeConfigView(
                 1,
@@ -124,7 +126,8 @@ class FlarumIntegrationServiceTest {
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.FULL,
                 PointsVisibility.HIDDEN,
-                true
+                true,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
         when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, "{{title}}", "{{content}}"));
 
@@ -149,7 +152,8 @@ class FlarumIntegrationServiceTest {
                 AvatarVisibility.BLURRED,
                 UsernameVisibility.BLURRED,
                 PointsVisibility.SHOW,
-                true
+                true,
+                com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
         when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, "{{title}}", "{{content}}"));
 
