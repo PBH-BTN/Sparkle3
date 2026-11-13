@@ -168,7 +168,7 @@ export default {
   memberships: {
     title: '捐赠支持与许可证',
     description:
-      '绑定爱发电、Patreon、Ko-fi 或面包多账号，查看各平台的交易与累计捐赠，并统一使用商品槽位或捐赠累计生成 PBHLicense。',
+      '绑定捐赠平台账号，同步捐赠信息到 BTN 服务器。您也可以在此管理 PBH 许可证。',
     empty: '后台尚未配置任何可用的会员平台。',
     bindTitle: '绑定 {provider} 账号',
     bindHint:
@@ -221,7 +221,7 @@ export default {
     availableSlots: '可生成许可证',
     licenseTitle: 'PBHLicense v2',
     licenseHint:
-      '商品 SKU 交易每个产生一个槽位；捐赠按结算货币 {currency} 累计。当前额度每达到配置金额产生一个槽位，许可证有效期 {years} 年。',
+      '直接购买的 PBH 许可证将自动解锁一个许可证签发槽位；捐赠/订阅/会员支持将按照 CNY 货币结算，按照具体捐赠金额解锁槽位。',
     generate: '生成 PBHLicense',
     generateTitle: '生成 PBHLicense v2',
     generateConfirm:

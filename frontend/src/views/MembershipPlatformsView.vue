@@ -190,12 +190,7 @@ onMounted(load)
           </div>
         </div>
         <a-alert type="info" show-icon class="license-hint">
-          {{
-            t('memberships.licenseHint', {
-              currency: licenses?.baseCurrency,
-              years: licenses?.validYears,
-            })
-          }}
+          {{ t('memberships.licenseHint') }}
         </a-alert>
         <a-button
           type="primary"

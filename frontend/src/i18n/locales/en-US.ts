@@ -172,7 +172,7 @@ export default {
   memberships: {
     title: 'Donations & licenses',
     description:
-      'Link Afdian, Patreon, Ko-fi, or Mianbaoduo, review each platform’s transactions and cumulative donations, and generate PBHLicense from product slots or donation credit.',
+      'Link your donation platform accounts to sync donation data to the BTN server. You can also manage your PBH licenses here.',
     empty: 'No membership platform has been configured yet.',
     bindTitle: 'Link {provider} account',
     bindHint:
@@ -225,7 +225,7 @@ export default {
     availableSlots: 'Licenses available',
     licenseTitle: 'PBHLicense v2',
     licenseHint:
-      'Each product SKU purchase grants one slot. Donations accumulate in the settlement currency {currency}; every configured amount grants one slot. Licenses are valid for {years} years.',
+      'A directly purchased PBH license automatically unlocks one license issuance slot. Donations, subscriptions, and membership support settle in CNY, with slots unlocked according to the donated amount.',
     generate: 'Generate PBHLicense',
     generateTitle: 'Generate PBHLicense v2',
     generateConfirm:
