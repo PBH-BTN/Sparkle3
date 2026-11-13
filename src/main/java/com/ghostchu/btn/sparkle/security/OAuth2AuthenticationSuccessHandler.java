@@ -149,7 +149,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                         )
                 );
                 saveAuthentication(request, authentication);
-                response.sendRedirect("/register");
+                response.sendRedirect(OAuthOriginFilter.successTarget(request, "/register"));
                 return;
             }
 
@@ -177,7 +177,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             saveAuthentication(request, newAuth);
 
             // 重定向到首页
-            response.sendRedirect("/");
+            response.sendRedirect(OAuthOriginFilter.successTarget(request, "/"));
         } catch (Exception e) {
             log.error("GitHub OAuth 登录处理失败，注销用户会话", e);
             // 清除 SecurityContext

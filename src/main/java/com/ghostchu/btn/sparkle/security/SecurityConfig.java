@@ -27,7 +27,13 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+            org.springframework.security.oauth2.client.registration.ClientRegistrationRepository clients,
+            org.springframework.core.env.Environment environment,
+            @org.springframework.beans.factory.annotation.Qualifier("stringStringRedisTemplate") org.springframework.data.redis.core.RedisTemplate<String, String> redis,
+            org.springframework.session.FindByIndexNameSessionRepository<? extends org.springframework.session.Session> sessions) {
+        http.addFilterBefore(new OAuthOriginFilter(redis, clients, environment, sessions),
+                org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class);
         http.csrf(csrf -> csrf
                         .spa()
                         .ignoringRequestMatchers(
