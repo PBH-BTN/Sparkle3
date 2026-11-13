@@ -79,7 +79,11 @@ public class IpQueryCommentService {
                         size,
                         (long) (page - 1) * size
                 );
-        List<CommentView> records = mapComments(comments, viewerUserId);
+        List<CommentView> records = mapComments(
+                comments,
+                viewerUserId,
+                canViewCommentMetadata(viewerUserId)
+        );
         long pages = total == 0 ? 0 : (total + size - 1) / size;
         return new CommentPage(
                 records,
@@ -253,6 +257,17 @@ public class IpQueryCommentService {
         return AdminPolicy.isAdmin(user);
     }
 
+    /**
+     * Posting IP and user agent stay visible to administrators and moderators
+     * only; regular users and the comment author never receive them.
+     */
+    private boolean canViewCommentMetadata(long userId) {
+        if (userId <= 0) {
+            return false;
+        }
+        return AdminPolicy.hasModeratorAccess(userService.getById(userId));
+    }
+
     private IpQueryComment requireOwnedComment(long userId, long commentId)
             throws BusinessException {
         IpQueryComment comment = commentMapper.selectById(commentId);
@@ -268,7 +283,8 @@ public class IpQueryCommentService {
 
     private List<CommentView> mapComments(
             List<IpQueryComment> comments,
-            long viewerUserId
+            long viewerUserId,
+            boolean canViewMetadata
     ) {
         if (comments.isEmpty()) {
             return List.of();
@@ -302,7 +318,8 @@ public class IpQueryCommentService {
                         viewerUserId,
                         users.get(comment.getAuthorUserId()),
                         privacy.get(comment.getAuthorUserId()),
-                        histories.getOrDefault(comment.getId(), List.of())
+                        histories.getOrDefault(comment.getId(), List.of()),
+                        canViewMetadata
                 ))
                 .toList();
     }
@@ -318,7 +335,14 @@ public class IpQueryCommentService {
                 revisionMapper.selectList(new QueryWrapper<IpQueryCommentRevision>()
                         .eq("comment_id", comment.getId())
                         .orderByAsc("revision"));
-        return mapComment(comment, viewerUserId, user, privacy, history);
+        return mapComment(
+                comment,
+                viewerUserId,
+                user,
+                privacy,
+                history,
+                canViewCommentMetadata(viewerUserId)
+        );
     }
 
     private CommentView mapComment(
@@ -326,7 +350,8 @@ public class IpQueryCommentService {
             long viewerUserId,
             User author,
             UserPrivacySettings privacy,
-            List<IpQueryCommentRevision> history
+            List<IpQueryCommentRevision> history,
+            boolean canViewMetadata
     ) {
         boolean self = Objects.equals(comment.getAuthorUserId(), viewerUserId);
         boolean authorModerationHidden = author != null
@@ -364,8 +389,12 @@ public class IpQueryCommentService {
                                 : "",
                         item.getModerationStatus(),
                         self ? item.getModerationReason() : null,
-                        anonymized(comment) ? null : ipText(item.getEditorIp()),
-                        anonymized(comment) ? null : item.getEditorUserAgent(),
+                        canViewMetadata && !anonymized(comment)
+                                ? ipText(item.getEditorIp())
+                                : null,
+                        canViewMetadata && !anonymized(comment)
+                                ? item.getEditorUserAgent()
+                                : null,
                         item.getCreatedAt()
                 ))
                 .toList();
@@ -385,8 +414,12 @@ public class IpQueryCommentService {
                 comment.getRevision() > 1,
                 comment.getModerationStatus(),
                 self ? comment.getModerationReason() : null,
-                anonymized(comment) ? null : ipText(comment.getAuthorIp()),
-                anonymized(comment) ? null : comment.getAuthorUserAgent(),
+                canViewMetadata && !anonymized(comment)
+                        ? ipText(comment.getAuthorIp())
+                        : null,
+                canViewMetadata && !anonymized(comment)
+                        ? comment.getAuthorUserAgent()
+                        : null,
                 comment.getCreatedAt(),
                 comment.getUpdatedAt(),
                 self,
