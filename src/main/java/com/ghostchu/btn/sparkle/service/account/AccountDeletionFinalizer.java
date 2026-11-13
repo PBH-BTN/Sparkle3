@@ -42,6 +42,7 @@ import java.util.List;
 public class AccountDeletionFinalizer {
     private final UserAccountDeletionRequestMapper requestMapper;
     private final UserMapper userMapper;
+    private final com.ghostchu.btn.sparkle.mapper.UserCareerMapper careerMapper;
     private final UserLifetimeTrafficMapper lifetimeTrafficMapper;
     private final UserappMapper userappMapper;
     private final UserRelMapper userRelMapper;
@@ -171,6 +172,9 @@ public class AccountDeletionFinalizer {
                         ? now : userEntity.getBannedAt())
                 .setBannedReason(UserAccountDeletionService.DELETED_APP_REASON);
         userMapper.updateById(userEntity);
+        careerMapper.deleteEvents(userId);
+        careerMapper.deleteDaily(userId);
+        careerMapper.deleteTime(userId);
         lifetimeTrafficMapper.deleteCheckpoints(userId);
         lifetimeTrafficMapper.deleteTotals(userId);
         UserPrivacySettingsEntity privacy = privacyMapper.selectById(userId);

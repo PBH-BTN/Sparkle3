@@ -96,6 +96,19 @@ class UserLifetimeTrafficIntegrationTest {
                     }
                     assertTotals(connection, 1, "350", "50", "0", "0");
                     assertTotals(connection, 2, "0", "0", "50", "350");
+                    sql.execute("INSERT INTO client_discovery(hash,peer_id,peer_client_name,found_at,found_userapps_id) VALUES (991,'test','Test',now(),1)");
+                    try (var result = sql.executeQuery("SELECT amount FROM user_career_daily WHERE user_id=1 AND kind='feature'")) {
+                        assertTrue(result.next());
+                        assertEquals(1, result.getLong(1));
+                    }
+                    try (var result = sql.executeQuery("SELECT SUM(amount) FROM user_career_daily WHERE user_id=1 AND kind='swarm'")) {
+                        assertTrue(result.next());
+                        assertEquals(2, result.getLong(1));
+                    }
+                    try (var result = sql.executeQuery("SELECT SUM(amount) FROM user_career_daily WHERE user_id=2 AND kind='observation'")) {
+                        assertTrue(result.next());
+                        assertEquals(2, result.getLong(1));
+                    }
                     sql.execute("DELETE FROM userapp WHERE id = 1");
                     assertTotals(connection, 1, "350", "50", "0", "0");
                     sql.execute("""
