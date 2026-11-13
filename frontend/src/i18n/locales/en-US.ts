@@ -539,9 +539,29 @@ export default {
     messageSent: 'Message sent. You can send {remaining} more messages today.',
     messageSendFailed: 'Unable to send the message.',
   },
+  lifetimeTraffic: {
+    title: 'Lifetime traffic',
+    since: 'Since registration · {time}',
+    partialSince: 'Tracking since {time}',
+    partialHistory: 'Some early records are no longer available. Totals include recoverable history and traffic recorded since then.',
+    updatedAt: 'Last updated: {time}',
+    empty: 'No traffic recorded yet.',
+    hidden: 'Only this user can view their lifetime traffic.',
+    unavailable: 'Lifetime traffic is unavailable. Please try again later.',
+  },
   privacy: {
     title: 'Privacy settings',
-    description: 'Choose separate visibility options for your avatar, username, and points.',
+    description: 'Choose separate visibility options for your avatar, username, points, and lifetime traffic.',
+    lifetimeTrafficTitle: 'Lifetime traffic',
+    lifetimeTrafficDescription: 'Choose whether other users can see your four lifetime traffic totals on your profile.',
+    lifetimeTrafficOptions: {
+      SHOW: 'Show lifetime traffic',
+      HIDDEN: 'Lifetime traffic visible only to you',
+    },
+    lifetimeTrafficHelp: {
+      SHOW: 'Let other users view your reported and confirmed upload and download totals.',
+      HIDDEN: 'Hide lifetime traffic from other users. You can still view it. This is the default.',
+    },
     avatarTitle: 'Avatar',
     avatarDescription: 'Choose what other users see when they view your profile.',
     avatarOptions: {

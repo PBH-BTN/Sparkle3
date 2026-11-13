@@ -20,6 +20,7 @@ const form = reactive<PrivacySettings>({
   avatarVisibility: 'BLURRED',
   usernameVisibility: 'BLURRED',
   pointsVisibility: 'SHOW',
+  lifetimeTrafficVisibility: 'HIDDEN',
 })
 
 onMounted(async () => {
@@ -107,6 +108,22 @@ async function save() {
             </a-radio>
           </a-radio-group>
         </a-card>
+        <a-card class="surface-card privacy-card">
+          <template #title>
+            <span class="card-title"><IconLock />{{ t('privacy.lifetimeTrafficTitle') }}</span>
+          </template>
+          <p class="option-description">{{ t('privacy.lifetimeTrafficDescription') }}</p>
+          <a-radio-group v-model="form.lifetimeTrafficVisibility" direction="vertical">
+            <a-radio value="SHOW">
+              <span class="option-label">{{ t('privacy.lifetimeTrafficOptions.SHOW') }}</span>
+              <span class="option-help">{{ t('privacy.lifetimeTrafficHelp.SHOW') }}</span>
+            </a-radio>
+            <a-radio value="HIDDEN">
+              <span class="option-label">{{ t('privacy.lifetimeTrafficOptions.HIDDEN') }}</span>
+              <span class="option-help">{{ t('privacy.lifetimeTrafficHelp.HIDDEN') }}</span>
+            </a-radio>
+          </a-radio-group>
+        </a-card>
       </div>
 
       <div class="save-row">
@@ -129,10 +146,6 @@ async function save() {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-}
-
-.privacy-card:last-child {
-  grid-column: 1 / -1;
 }
 
 .card-title,

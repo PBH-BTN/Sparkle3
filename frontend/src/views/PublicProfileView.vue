@@ -11,6 +11,7 @@ import {
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import LifetimeTrafficCard from '@/components/LifetimeTrafficCard.vue'
 import { uiApi } from '@/api'
 import type { PublicUserProfileResponse } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
@@ -41,6 +42,7 @@ const privacyTags = computed(() => {
     t(`privacy.avatarOptions.${privacy.avatarVisibility}`),
     t(`privacy.usernameOptions.${privacy.usernameVisibility}`),
     t(`privacy.pointsOptions.${privacy.pointsVisibility}`),
+    t(`privacy.lifetimeTrafficOptions.${privacy.lifetimeTrafficVisibility}`),
   ]
 })
 
@@ -171,6 +173,11 @@ onMounted(load)
             </div>
           </div>
         </a-card>
+
+        <LifetimeTrafficCard
+          :traffic="profile.lifetimeTraffic"
+          :hidden="!profile.self && profile.privacy.lifetimeTrafficVisibility === 'HIDDEN'"
+        />
 
         <a-alert
           v-if="!profile.self && !profile.canSendMessage && !profile.banned"

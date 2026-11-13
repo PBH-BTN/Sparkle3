@@ -10,6 +10,7 @@ import {
   IconUser,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import LifetimeTrafficCard from '@/components/LifetimeTrafficCard.vue'
 import { uiApi } from '@/api'
 import type { UserProfileResponse } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
@@ -27,6 +28,7 @@ const privacyItems = computed(() => {
     t(`privacy.avatarOptions.${privacy.avatarVisibility}`),
     t(`privacy.usernameOptions.${privacy.usernameVisibility}`),
     t(`privacy.pointsOptions.${privacy.pointsVisibility}`),
+    t(`privacy.lifetimeTrafficOptions.${privacy.lifetimeTrafficVisibility}`),
   ]
 })
 
@@ -150,6 +152,8 @@ onMounted(async () => {
           </a-alert>
         </a-card>
 
+        <LifetimeTrafficCard :traffic="profile.lifetimeTraffic" class="profile-traffic" />
+
         <a-card class="surface-card details-card">
           <a-descriptions :column="1" layout="horizontal" bordered>
             <a-descriptions-item :label="t('profile.email')">
@@ -211,6 +215,10 @@ onMounted(async () => {
 .profile-page {
   width: min(960px, 100%);
   margin: 0 auto;
+}
+
+.profile-traffic {
+  margin: 20px 0;
 }
 
 .profile-spin {

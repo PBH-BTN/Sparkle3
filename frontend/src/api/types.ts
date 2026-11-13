@@ -1,11 +1,13 @@
 export type AvatarVisibility = 'ORIGINAL' | 'BLURRED' | 'HIDDEN'
 export type UsernameVisibility = 'FULL' | 'BLURRED'
 export type PointsVisibility = 'SHOW' | 'HIDDEN'
+export type LifetimeTrafficVisibility = 'SHOW' | 'HIDDEN'
 
 export interface PrivacySettings {
   avatarVisibility: AvatarVisibility
   usernameVisibility: UsernameVisibility
   pointsVisibility: PointsVisibility
+  lifetimeTrafficVisibility: LifetimeTrafficVisibility
 }
 
 export interface SessionUser {
@@ -196,11 +198,22 @@ export interface UserRelation {
   platformUserLogin: string
 }
 
+export interface LifetimeTraffic {
+  sentTrafficSelfReport: string
+  receivedTrafficSelfReport: string
+  sentTrafficOtherAck: string
+  receivedTrafficOtherAck: string
+  trackedSince: string
+  historyPartial: boolean
+  updatedAt: string
+}
+
 export interface UserProfileResponse {
   user: SessionUser
   relation: UserRelation | null
   scoreBytesDisplay: string
   scoreBytesRaw: string
+  lifetimeTraffic: LifetimeTraffic | null
 }
 
 export interface PointCategoryPoints {
@@ -320,6 +333,7 @@ export interface PublicUserProfileResponse {
   self: boolean
   canSendMessage: boolean
   canSendEmail: boolean
+  lifetimeTraffic: LifetimeTraffic | null
 }
 
 export interface ContactEmailRequest {

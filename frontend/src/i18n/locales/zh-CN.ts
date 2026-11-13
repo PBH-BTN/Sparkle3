@@ -521,9 +521,29 @@ export default {
     messageSent: '站内信已发送，今天还可发送 {remaining} 条。',
     messageSendFailed: '站内信发送失败。',
   },
+  lifetimeTraffic: {
+    title: '累计流量',
+    since: '自注册以来 · {time}',
+    partialSince: '统计起点：{time}',
+    partialHistory: '部分早期记录已不再保留，累计值仅包含可恢复的历史记录及此后的流量。',
+    updatedAt: '最近更新：{time}',
+    empty: '暂无流量记录。',
+    hidden: '该用户的累计流量仅自己可见。',
+    unavailable: '累计流量暂不可用，请稍后重试。',
+  },
   privacy: {
     title: '隐私设置',
-    description: '分别设置头像、用户名与积分的公开方式，不再使用笼统的隐私等级。',
+    description: '分别设置头像、用户名、积分和累计流量的公开方式。',
+    lifetimeTrafficTitle: '累计流量',
+    lifetimeTrafficDescription: '设置其他用户能否在个人资料页看到您的四项累计流量。',
+    lifetimeTrafficOptions: {
+      SHOW: '显示累计流量',
+      HIDDEN: '累计流量仅自己可见',
+    },
+    lifetimeTrafficHelp: {
+      SHOW: '允许其他用户查看累计汇报上传、汇报下载、确认上传和确认下载。',
+      HIDDEN: '对其他用户隐藏累计流量，您仍可查看。这是默认选项。',
+    },
     avatarTitle: '头像',
     avatarDescription: '选择其他用户查看您的资料时看到的头像形式。',
     avatarOptions: {
