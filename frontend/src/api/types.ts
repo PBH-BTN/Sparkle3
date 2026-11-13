@@ -521,7 +521,7 @@ export interface AfdianBinding {
   boundAt: string | null
   lastSyncedAt: string | null
   totalAmount: string
-  donationCount: number
+  transactionCount: number
   donations: AfdianDonation[]
 }
 

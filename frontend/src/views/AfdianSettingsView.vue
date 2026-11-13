@@ -186,7 +186,7 @@ onMounted(load)
                 <small>CNY</small>
                 {{ binding.totalAmount }}
               </strong>
-              <span>{{ t('afdian.donationCount', { count: binding.donationCount }) }}</span>
+              <span>{{ t('afdian.transactionCount', { count: binding.transactionCount }) }}</span>
             </div>
           </div>
           <div class="account-actions">
