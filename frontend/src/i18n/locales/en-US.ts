@@ -1942,6 +1942,8 @@ export default {
       deleteConfirm: 'Delete this announcement? This action cannot be undone.',
       noData: 'No announcements yet.',
       publishNow: 'Publish immediately',
+      sendInbox: 'Also send an inbox message',
+      sendInboxHint: 'Off by default. When enabled, saving an enabled announcement sends one inbox message immediately, regardless of its display schedule.',
       dismissible: 'Allow visitors to dismiss',
       chinese: 'Chinese content',
       english: 'English content',

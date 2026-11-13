@@ -417,6 +417,7 @@ export interface Announcement {
 }
 
 export interface AnnouncementInput {
+  sendInbox: boolean
   level: AnnouncementLevel
   placement: AnnouncementPlacement
   titleZh: string

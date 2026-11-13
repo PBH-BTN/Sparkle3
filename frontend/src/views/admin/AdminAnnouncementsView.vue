@@ -29,6 +29,7 @@ const editorVisible = ref(false)
 const announcements = ref<Announcement[]>([])
 
 const emptyEditor = (): AnnouncementInput => ({
+  sendInbox: false,
   level: 'BLUE',
   placement: 'GLOBAL_TOP',
   titleZh: '',
@@ -148,6 +149,7 @@ function scheduleText(announcement: Announcement) {
 
 function toInput(announcement: Announcement): AnnouncementInput {
   return {
+    sendInbox: false,
     level: announcement.level,
     placement: announcement.placement,
     titleZh: announcement.titleZh,
@@ -376,6 +378,13 @@ onMounted(load)
             <a-switch v-model="editor.dismissible" />
           </a-form-item>
         </div>
+
+        <a-form-item
+          :label="t('admin.announcements.sendInbox')"
+          :extra="t('admin.announcements.sendInboxHint')"
+        >
+          <a-switch v-model="editor.sendInbox" :disabled="!editor.enabled" />
+        </a-form-item>
 
         <a-divider orientation="left">{{ t('admin.announcements.chinese') }}</a-divider>
         <a-form-item :label="t('admin.announcements.titleZh')">

@@ -1890,6 +1890,8 @@ export default {
       deleteConfirm: '确定删除这条公告吗？此操作无法撤销。',
       noData: '暂无公告。',
       publishNow: '立即发布',
+      sendInbox: '同时发送站内信',
+      sendInboxHint: '默认不发送。开启后，保存已启用的公告时会立即发送一次站内信，不随公告展示时间延后。',
       dismissible: '允许用户关闭',
       chinese: '中文内容',
       english: '英文内容',
