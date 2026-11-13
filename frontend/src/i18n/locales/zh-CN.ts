@@ -1295,6 +1295,7 @@ export default {
       syncDone: '同步完成：{pages} 页、{orders} 笔订单、{bindings} 个绑定。',
       syncFailed: '爱发电同步失败。',
       bindings: '已绑定用户',
+      donations: '交易记录',
       btnUser: 'Sparkle 用户',
       afdianUser: '爱发电用户',
       total: '累计金额',

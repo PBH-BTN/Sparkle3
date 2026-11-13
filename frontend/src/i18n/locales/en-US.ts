@@ -1327,6 +1327,7 @@ export default {
         'Sync complete: {pages} pages, {orders} orders, {bindings} linked users.',
       syncFailed: 'Afdian synchronization failed.',
       bindings: 'Linked users',
+      donations: 'Transactions',
       btnUser: 'Sparkle user',
       afdianUser: 'Afdian user',
       total: 'Total',
