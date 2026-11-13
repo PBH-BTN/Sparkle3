@@ -40,8 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.ArrayList;
-import java.util.HashSet;
 
 /**
  * <p>
@@ -83,9 +81,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             @NotNull List<BtnBan> bans
     ) {
         var nowTime = OffsetDateTime.now();
-        List<TorrentRegistration> registrations = new ArrayList<>();
-        Set<String> ruleMatchedIps = new HashSet<>();
-        Set<String> allSubmittedIps = new HashSet<>();
         var list = bans.stream().map(btnBan -> {
             Map<String, Object> structuredDataMap = Map.of();
             if (btnBan.getStructuredData() != null && !btnBan.getStructuredData().isBlank()) {
@@ -118,11 +113,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     null,
                     null
             );
-            registrations.add(registration);
-            if (btnBan.getRule() != null && !btnBan.getRule().isBlank()) {
-                ruleMatchedIps.add(btnBan.getPeerIp());
-            }
-            allSubmittedIps.add(btnBan.getPeerIp());
             return new BanHistory()
                     .setInsertTime(nowTime)
                     .setPopulateTime(banAtTime)
@@ -151,15 +141,14 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 list.size(),
                 0
         );
-
-        long newTorrents = registrations.stream()
-                .filter(TorrentRegistration::created)
+        long ruleHitCount = list.stream()
+                .filter(ban -> ban.getRule() != null && !ban.getRule().isBlank())
                 .count();
-        if (newTorrents > 0) {
+        if (ruleHitCount > 0) {
             pointAwardContext.recordConfigured(
                     userId,
-                    PointCategory.NEW_TORRENT,
-                    newTorrents,
+                    PointCategory.RULE_HIT_IP,
+                    ruleHitCount,
                     0
             );
         }
@@ -192,8 +181,6 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     wastedUploadBytes
             );
         }
-        pointAwardContext.submitRuleMatchedIps(userId, ruleMatchedIps);
-        pointAwardContext.submitIps(userId, allSubmittedIps);
     }
 
     @Override

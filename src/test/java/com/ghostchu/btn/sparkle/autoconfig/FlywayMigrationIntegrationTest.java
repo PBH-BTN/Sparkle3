@@ -195,6 +195,9 @@ class FlywayMigrationIntegrationTest {
             try (var result = statement.executeQuery("""
                     SELECT
                         to_regclass('public.points_ledger') IS NOT NULL
+                        AND to_regclass('public.point_claims') IS NOT NULL
+                        AND to_regclass('public.point_daily_ips') IS NULL
+                        AND to_regclass('public.point_known_ips') IS NULL
                         AND to_regclass('public.swarm_traffic_delta') IS NOT NULL
                         AND to_regclass('public.swarm_hot_torrent_snapshot') IS NOT NULL
                         AND to_regclass('public.peer_version_snapshot') IS NOT NULL
@@ -278,6 +281,19 @@ class FlywayMigrationIntegrationTest {
                     """)) {
                 assertTrue(result.next());
                 assertEquals(1, result.getInt(1));
+            }
+
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*) = 0
+                    FROM pg_proc
+                    WHERE pronamespace = 'public'::regnamespace
+                      AND proname IN (
+                          'sparkle_mark_rule_hit_ips',
+                          'sparkle_mark_submitted_ips'
+                      )
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
             }
         }
     }

@@ -5,8 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,7 +19,8 @@ class PointAwardBucketTest {
 
         bucket.addContribution(PointCategory.BAN_HISTORY, 3, 1, 0);
         bucket.addContribution(PointCategory.BAN_HISTORY, 6, 2, 0);
-        bucket.addContribution(PointCategory.NEW_TORRENT, 500, 1, 0);
+        bucket.addContribution(PointCategory.RULE_HIT_IP, 10, 1, 0);
+        bucket.addContribution(PointCategory.RULE_HIT_IP, 10, 1, 0);
         bucket.addClaim(
                 "ACTIVE_APP_DAILY",
                 "2026-11-12:7",
@@ -34,8 +33,6 @@ class PointAwardBucketTest {
                 PointCategory.ACTIVE_APP,
                 5_000
         );
-        bucket.addRuleMatchedIps(List.of("203.0.113.10"));
-        bucket.addSubmittedIps(List.of("203.0.113.10", "2001:db8::1"));
 
         assertEquals(9, bucket.getContributions()
                 .get(PointCategory.BAN_HISTORY)
@@ -43,9 +40,13 @@ class PointAwardBucketTest {
         assertEquals(3, bucket.getContributions()
                 .get(PointCategory.BAN_HISTORY)
                 .getItemCount());
+        assertEquals(20, bucket.getContributions()
+                .get(PointCategory.RULE_HIT_IP)
+                .getPoints());
+        assertEquals(2, bucket.getContributions()
+                .get(PointCategory.RULE_HIT_IP)
+                .getItemCount());
         assertEquals(1, bucket.getClaims().size());
-        assertEquals(1, bucket.getRuleMatchedIps().size());
-        assertEquals(2, bucket.getSubmittedIps().size());
         assertTrue(bucket.hasWork());
     }
 }

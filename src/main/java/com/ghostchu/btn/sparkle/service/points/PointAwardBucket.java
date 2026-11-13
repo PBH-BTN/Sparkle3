@@ -7,10 +7,8 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -23,8 +21,6 @@ public final class PointAwardBucket {
             new EnumMap<>(PointCategory.class);
     private final List<Claim> claims = new ArrayList<>();
     private final Map<Long, Long> appActivities = new LinkedHashMap<>();
-    private final Set<String> ruleMatchedIps = new LinkedHashSet<>();
-    private final Set<String> submittedIps = new LinkedHashSet<>();
 
     public PointAwardBucket(
             long userId,
@@ -76,28 +72,10 @@ public final class PointAwardBucket {
         appActivities.put(userappId, userId);
     }
 
-    public synchronized void addRuleMatchedIps(Iterable<String> ips) {
-        for (String ip : ips) {
-            if (ip != null && !ip.isBlank()) {
-                ruleMatchedIps.add(ip.trim());
-            }
-        }
-    }
-
-    public synchronized void addSubmittedIps(Iterable<String> ips) {
-        for (String ip : ips) {
-            if (ip != null && !ip.isBlank()) {
-                submittedIps.add(ip.trim());
-            }
-        }
-    }
-
     public synchronized boolean hasWork() {
         return !contributions.isEmpty()
                 || !claims.isEmpty()
-                || !appActivities.isEmpty()
-                || !ruleMatchedIps.isEmpty()
-                || !submittedIps.isEmpty();
+                || !appActivities.isEmpty();
     }
 
     private static long safeAdd(long first, long second) {

@@ -25,16 +25,6 @@ public final class PointsModels {
     ) {
     }
 
-    public record OneTimePointsSummary(
-            String pointsTodayRaw,
-            long averagePerHourRaw,
-            long newTorrentsToday,
-            long clientDiscoveriesToday,
-            boolean newTorrentEnabled,
-            boolean clientDiscoveryEnabled
-    ) {
-    }
-
     public record DynamicPointsSummary(
             String pointsTodayRaw,
             long averagePerHourRaw,
@@ -57,7 +47,6 @@ public final class PointsModels {
     public record PointsOverview(
             String balanceRaw,
             FixedPointsSummary fixed,
-            OneTimePointsSummary oneTime,
             DynamicPointsSummary dynamic,
             FeatureFlags features,
             OffsetDateTime generatedAt
@@ -70,7 +59,6 @@ public final class PointsModels {
             String eventType,
             String pointsRaw,
             String fixedPointsRaw,
-            String oneTimePointsRaw,
             String dynamicPointsRaw,
             String manualPointsRaw,
             Map<String, Object> details

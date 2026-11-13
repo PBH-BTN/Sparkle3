@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Collection;
 
 @Component
 @RequiredArgsConstructor
@@ -99,26 +98,6 @@ public class PointAwardContext {
         PointAwardBucket bucket = ensureUser(userId);
         if (bucket != null) {
             bucket.addAppActivity(userappId);
-        }
-    }
-
-    public void submitIps(long userId, Collection<String> ips) {
-        if (!pointToggleService.isEnabled(PointCategory.NEW_IP)) {
-            return;
-        }
-        PointAwardBucket bucket = ensureUser(userId);
-        if (bucket != null) {
-            bucket.addSubmittedIps(ips);
-        }
-    }
-
-    public void submitRuleMatchedIps(long userId, Collection<String> ips) {
-        if (!pointToggleService.isEnabled(PointCategory.RULE_HIT_IP)) {
-            return;
-        }
-        PointAwardBucket bucket = ensureUser(userId);
-        if (bucket != null) {
-            bucket.addRuleMatchedIps(ips);
         }
     }
 

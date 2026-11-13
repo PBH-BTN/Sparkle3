@@ -25,10 +25,7 @@ public class PointToggleService {
         fields.put(PointCategory.RULES_FETCH, "rules-fetch-enabled");
         fields.put(PointCategory.KEEPALIVE, "keepalive-enabled");
         fields.put(PointCategory.RULE_HIT_IP, "rule-hit-ip-enabled");
-        fields.put(PointCategory.NEW_IP, "new-ip-enabled");
         fields.put(PointCategory.WASTED_UPLOAD, "wasted-upload-enabled");
-        fields.put(PointCategory.NEW_TORRENT, "new-torrent-enabled");
-        fields.put(PointCategory.CLIENT_DISCOVERY, "client-discovery-enabled");
         fields.put(PointCategory.DYNAMIC_SEED_UPLOAD, "dynamic-seed-upload-enabled");
         fields.put(PointCategory.DYNAMIC_DOWNLOAD, "dynamic-download-enabled");
         fields.put(PointCategory.DYNAMIC_HOT_PEER, "dynamic-hot-peer-enabled");

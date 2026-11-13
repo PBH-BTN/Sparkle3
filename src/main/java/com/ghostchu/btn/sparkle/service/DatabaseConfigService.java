@@ -298,7 +298,19 @@ public class DatabaseConfigService {
                 || "sparkle.analyse.overdownload-analyse.threshold".equals(key)
                 || "sparkle.ranking.database-type".equals(key)
                 || "sparkle.swarm-statistics-track.cron".equals(key)
-                || "sparkle.swarm-statistics-track.duration".equals(key);
+                || "sparkle.swarm-statistics-track.duration".equals(key)
+                || isRemovedPointConfigKey(key);
+    }
+
+    public static boolean isRemovedPointConfigKey(String key) {
+        return key.startsWith("sparkle.analyse.points-once-rules.")
+                || Set.of(
+                        "sparkle.analyse.points-settings.new-ip-enabled",
+                        "sparkle.analyse.points-settings.new-torrent-enabled",
+                        "sparkle.analyse.points-settings.client-discovery-enabled",
+                        "sparkle.analyse.points-fixed-rules.new-ip-points",
+                        "sparkle.analyse.points-fixed-rules.new-ip-daily-cap"
+                ).contains(key);
     }
 
     public boolean isSensitiveKey(String key) {

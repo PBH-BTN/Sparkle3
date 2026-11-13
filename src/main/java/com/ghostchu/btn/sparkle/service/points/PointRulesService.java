@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PointRulesService {
     public static final String FIXED_RULES_MODULE_ID = "points-fixed-rules";
-    public static final String ONCE_RULES_MODULE_ID = "points-once-rules";
     public static final String DYNAMIC_RULES_MODULE_ID = "points-dynamic-rules";
 
     private final AnalyseModuleConfigService configService;
@@ -24,10 +23,7 @@ public class PointRulesService {
             case RULES_FETCH -> fixed("rules-fetch-points", 2L);
             case KEEPALIVE -> fixed("keepalive-points", 1L);
             case RULE_HIT_IP -> fixed("rule-hit-ip-points", 10L);
-            case NEW_IP -> fixed("new-ip-points", 20L);
             case WASTED_UPLOAD -> fixed("wasted-upload-points-per-mib", 10L);
-            case NEW_TORRENT -> once("new-torrent-points", 500L);
-            case CLIENT_DISCOVERY -> once("client-discovery-points", 4L);
             case DYNAMIC_SEED_UPLOAD -> dynamic("dynamic-seed-upload-points", 180L);
             case DYNAMIC_DOWNLOAD -> dynamic("dynamic-download-points", 50L);
             case DYNAMIC_HOT_PEER -> dynamic("dynamic-hot-peer-points", 100L);
@@ -42,9 +38,8 @@ public class PointRulesService {
             case RULES_FETCH -> fixedCap("rules-fetch-daily-cap", 2_000L);
             case KEEPALIVE -> fixedCap("keepalive-daily-cap", 2_000L);
             case RULE_HIT_IP -> fixedCap("rule-hit-ip-daily-cap", 2_000L);
-            case NEW_IP -> fixedCap("new-ip-daily-cap", 2_000L);
             case WASTED_UPLOAD -> fixedCap("wasted-upload-daily-cap", 3_000L);
-            case ACTIVE_APP, APP_ONLINE, NEW_TORRENT, CLIENT_DISCOVERY,
+            case ACTIVE_APP, APP_ONLINE,
                     DYNAMIC_SEED_UPLOAD, DYNAMIC_DOWNLOAD, DYNAMIC_HOT_PEER -> null;
         };
     }
@@ -90,10 +85,6 @@ public class PointRulesService {
                 field,
                 fallback
         ));
-    }
-
-    private long once(String field, long fallback) {
-        return positive(configService.longValue(ONCE_RULES_MODULE_ID, field, fallback));
     }
 
     private long dynamic(String field, long fallback) {

@@ -70,8 +70,7 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
         torrentIdRedisTemplate.opsForValue().set("sparkle:torrent:" + identifier, torrentId, 30, TimeUnit.MINUTES);
         TorrentRegistration registration = new TorrentRegistration(
                 torrentId,
-                createNewTorrent.getSize() == null ? 0 : createNewTorrent.getSize(),
-                Boolean.TRUE.equals(createNewTorrent.getCreated())
+                createNewTorrent.getSize() == null ? 0 : createNewTorrent.getSize()
         );
         torrentLocalCache.put(identifier, registration);
         return registration;
@@ -84,8 +83,7 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
             Torrent torrent = baseMapper.findTorrentByIdentifier(identifier);
             return new TorrentRegistration(
                     cachedTorrentId,
-                    torrent == null || torrent.getSize() == null ? 0 : torrent.getSize(),
-                    false
+                    torrent == null || torrent.getSize() == null ? 0 : torrent.getSize()
             );
         }
 
@@ -96,8 +94,7 @@ public class TorrentServiceImpl extends ServiceImpl<TorrentMapper, Torrent> impl
             torrentIdRedisTemplate.opsForValue().set("sparkle:torrent:" + identifier, torrentId, 30, TimeUnit.MINUTES);
             return new TorrentRegistration(
                     torrentId,
-                    torrent.getSize() == null ? 0 : torrent.getSize(),
-                    false
+                    torrent.getSize() == null ? 0 : torrent.getSize()
             );
         }
 

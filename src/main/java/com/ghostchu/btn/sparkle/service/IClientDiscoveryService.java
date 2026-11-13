@@ -20,7 +20,7 @@ import java.util.List;
  */
 public interface IClientDiscoveryService extends IService<ClientDiscovery> {
 
-    void handleClientDiscovery(long userAppId, long userId, List<Pair<String, String>> data);
+    void handleClientDiscovery(long userAppId, List<Pair<String, String>> data);
 
     /**
      * 查询客户端发现记录

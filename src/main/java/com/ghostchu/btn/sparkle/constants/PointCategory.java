@@ -12,10 +12,7 @@ public enum PointCategory {
     RULES_FETCH(PointComponent.FIXED),
     KEEPALIVE(PointComponent.FIXED),
     RULE_HIT_IP(PointComponent.FIXED),
-    NEW_IP(PointComponent.FIXED),
     WASTED_UPLOAD(PointComponent.FIXED),
-    NEW_TORRENT(PointComponent.ONE_TIME),
-    CLIENT_DISCOVERY(PointComponent.ONE_TIME),
     DYNAMIC_SEED_UPLOAD(PointComponent.DYNAMIC),
     DYNAMIC_DOWNLOAD(PointComponent.DYNAMIC),
     DYNAMIC_HOT_PEER(PointComponent.DYNAMIC);

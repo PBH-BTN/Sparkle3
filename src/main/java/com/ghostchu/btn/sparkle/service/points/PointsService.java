@@ -113,38 +113,6 @@ public class PointsService {
             }
         }
 
-        if (!bucket.getRuleMatchedIps().isEmpty()
-                || !bucket.getSubmittedIps().isEmpty()) {
-            SubmittedIpResult ipResult = markSubmittedIps(
-                    bucket.getUserId(),
-                    pointDay,
-                    List.copyOf(bucket.getRuleMatchedIps()),
-                    List.copyOf(bucket.getSubmittedIps())
-            );
-            if (ipResult.dailyUnique() > 0) {
-                bucket.addContribution(
-                        PointCategory.RULE_HIT_IP,
-                        safeMultiply(
-                                ipResult.dailyUnique(),
-                                pointRulesService.points(PointCategory.RULE_HIT_IP)
-                        ),
-                        ipResult.dailyUnique(),
-                        0
-                );
-            }
-            if (ipResult.newUnique() > 0) {
-                bucket.addContribution(
-                        PointCategory.NEW_IP,
-                        safeMultiply(
-                                ipResult.newUnique(),
-                                pointRulesService.points(PointCategory.NEW_IP)
-                        ),
-                        ipResult.newUnique(),
-                        0
-                );
-            }
-        }
-
         if (!bucket.getClaims().isEmpty()) {
             for (ClaimResult claim : claimAwards(bucket.getUserId(), bucket.getClaims())) {
                 PointCategory category = parseCategory(claim.category());
@@ -164,7 +132,6 @@ public class PointsService {
                 bucket.getContributions()
         );
         long fixedPoints = 0;
-        long oneTimePoints = 0;
         long dynamicPoints = 0;
         List<Map<String, Object>> breakdown = new ArrayList<>();
 
@@ -178,7 +145,6 @@ public class PointsService {
             }
             switch (category.getComponent()) {
                 case FIXED -> fixedPoints = safeAdd(fixedPoints, categoryAwarded);
-                case ONE_TIME -> oneTimePoints = safeAdd(oneTimePoints, categoryAwarded);
                 case DYNAMIC -> dynamicPoints = safeAdd(dynamicPoints, categoryAwarded);
             }
             Map<String, Object> item = new LinkedHashMap<>();
@@ -191,7 +157,7 @@ public class PointsService {
             breakdown.add(item);
         }
 
-        long total = safeAdd(safeAdd(fixedPoints, oneTimePoints), dynamicPoints);
+        long total = safeAdd(fixedPoints, dynamicPoints);
         if (total <= 0) {
             return;
         }
@@ -214,7 +180,6 @@ public class PointsService {
                 bucket.getEventType(),
                 total,
                 fixedPoints,
-                oneTimePoints,
                 dynamicPoints,
                 0,
                 toJson(details)
@@ -281,31 +246,10 @@ public class PointsService {
                 delta,
                 0,
                 0,
-                0,
                 delta,
                 toJson(details)
         );
         return balanceAfter;
-    }
-
-    private SubmittedIpResult markSubmittedIps(
-            long userId,
-            LocalDate pointDay,
-            List<String> ruleMatchedIps,
-            List<String> allIps
-    ) {
-        var rows = pointsMapper.markSubmittedIps(
-                userId,
-                pointDay,
-                toJson(ruleMatchedIps),
-                toJson(allIps)
-        );
-        if (rows.isEmpty()) return new SubmittedIpResult(0, 0);
-        Map<String, Object> row = rows.getFirst();
-        return new SubmittedIpResult(
-                ((Number) row.get("daily_unique")).longValue(),
-                ((Number) row.get("new_unique")).longValue()
-        );
     }
 
     private List<ClaimResult> claimAwards(
@@ -390,9 +334,6 @@ public class PointsService {
         return first > Long.MAX_VALUE / second
                 ? Long.MAX_VALUE
                 : first * second;
-    }
-
-    private record SubmittedIpResult(long dailyUnique, long newUnique) {
     }
 
     private record ClaimResult(String category, long points) {

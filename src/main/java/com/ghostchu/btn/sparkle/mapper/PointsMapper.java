@@ -25,20 +25,6 @@ public interface PointsMapper {
     );
 
     @Select("""
-            SELECT daily_unique, new_unique
-            FROM public.sparkle_mark_submitted_ips(
-                #{userId}, #{pointDay}, CAST(#{ruleMatchedIps} AS jsonb),
-                CAST(#{allIps} AS jsonb)
-            )
-            """)
-    List<Map<String, Object>> markSubmittedIps(
-            @Param("userId") long userId,
-            @Param("pointDay") LocalDate pointDay,
-            @Param("ruleMatchedIps") String ruleMatchedIps,
-            @Param("allIps") String allIps
-    );
-
-    @Select("""
             SELECT result_category AS category, result_points AS points
             FROM public.sparkle_claim_point_awards(
                 #{userId}, CAST(#{payload} AS jsonb)
@@ -90,12 +76,12 @@ public interface PointsMapper {
     @Insert("""
             INSERT INTO public.points_ledger (
                 user_id, event_id, occurred_at, event_type, points,
-                fixed_points, one_time_points, dynamic_points,
+                fixed_points, dynamic_points,
                 manual_points, details
             )
             VALUES (
                 #{userId}, #{eventId}, #{occurredAt}, #{eventType}, #{points},
-                #{fixedPoints}, #{oneTimePoints}, #{dynamicPoints},
+                #{fixedPoints}, #{dynamicPoints},
                 #{manualPoints}, CAST(#{details} AS jsonb)
             )
             """)
@@ -106,7 +92,6 @@ public interface PointsMapper {
             @Param("eventType") String eventType,
             @Param("points") long points,
             @Param("fixedPoints") long fixedPoints,
-            @Param("oneTimePoints") long oneTimePoints,
             @Param("dynamicPoints") long dynamicPoints,
             @Param("manualPoints") long manualPoints,
             @Param("details") String details
@@ -116,14 +101,10 @@ public interface PointsMapper {
             SELECT
                 COALESCE(SUM(fixed_points) FILTER (WHERE occurred_at >= #{dayStart}), 0)
                     AS fixed_today,
-                COALESCE(SUM(one_time_points) FILTER (WHERE occurred_at >= #{dayStart}), 0)
-                    AS once_today,
                 COALESCE(SUM(dynamic_points) FILTER (WHERE occurred_at >= #{dayStart}), 0)
                     AS dynamic_today,
                 COALESCE(SUM(fixed_points) FILTER (WHERE occurred_at >= #{last24Hours}), 0)
                     AS fixed_24h,
-                COALESCE(SUM(one_time_points) FILTER (WHERE occurred_at >= #{last24Hours}), 0)
-                    AS once_24h,
                 COALESCE(SUM(dynamic_points) FILTER (WHERE occurred_at >= #{last24Hours}), 0)
                     AS dynamic_24h
             FROM public.points_ledger
@@ -158,7 +139,7 @@ public interface PointsMapper {
                        WHEN 'KEEPALIVE_BATCH' THEN 'KEEPALIVE'
                        ELSE event_type
                    END AS event_type,
-                   points, fixed_points, one_time_points, dynamic_points,
+                   points, fixed_points, dynamic_points,
                    manual_points, details::text AS details
             FROM public.points_ledger
             WHERE user_id = #{userId}

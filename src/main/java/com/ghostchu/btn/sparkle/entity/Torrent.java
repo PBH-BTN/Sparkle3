@@ -52,6 +52,4 @@ public class Torrent implements Serializable {
     @TableField("last_seen_at")
     private OffsetDateTime lastSeenAt;
 
-    @TableField(exist = false)
-    private Boolean created;
 }

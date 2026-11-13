@@ -102,10 +102,7 @@ public class AnalyseModuleConfigService {
                     bool("rules-fetch-enabled", "rules-fetch-enabled", true),
                     bool("keepalive-enabled", "keepalive-enabled", true),
                     bool("rule-hit-ip-enabled", "rule-hit-ip-enabled", true),
-                    bool("new-ip-enabled", "new-ip-enabled", true),
                     bool("wasted-upload-enabled", "wasted-upload-enabled", true),
-                    bool("new-torrent-enabled", "new-torrent-enabled", true),
-                    bool("client-discovery-enabled", "client-discovery-enabled", true),
                     bool("dynamic-seed-upload-enabled", "dynamic-seed-upload-enabled", true),
                     bool("dynamic-download-enabled", "dynamic-download-enabled", true),
                     bool("dynamic-hot-peer-enabled", "dynamic-hot-peer-enabled", true)
@@ -126,15 +123,9 @@ public class AnalyseModuleConfigService {
                     longField("keepalive-daily-cap", "keepalive-daily-cap", 2000L),
                     longField("rule-hit-ip-points", "rule-hit-ip-points", 10L),
                     longField("rule-hit-ip-daily-cap", "rule-hit-ip-daily-cap", 2000L),
-                    longField("new-ip-points", "new-ip-points", 20L),
-                    longField("new-ip-daily-cap", "new-ip-daily-cap", 2000L),
                     longField("wasted-upload-points-per-mib", "wasted-upload-points-per-mib", 10L),
                     longField("wasted-upload-mib", "wasted-upload-mib", 1L),
                     longField("wasted-upload-daily-cap", "wasted-upload-daily-cap", 3000L)
-            ),
-            module("points-once-rules", "points-once-rules",
-                    longField("new-torrent-points", "new-torrent-points", 500L),
-                    longField("client-discovery-points", "client-discovery-points", 4L)
             ),
             module("points-dynamic-rules", "points-dynamic-rules",
                     longField("dynamic-seed-upload-points", "dynamic-seed-upload-points", 180L),

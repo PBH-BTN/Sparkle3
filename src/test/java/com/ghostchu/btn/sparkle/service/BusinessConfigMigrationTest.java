@@ -61,6 +61,7 @@ class BusinessConfigMigrationTest {
         while (matcher.find()) {
             assertTrue(sqlKeys.add(matcher.group(1)), "Duplicate SQL default: " + matcher.group(1));
         }
+        sqlKeys.removeIf(DatabaseConfigService::isRemovedPointConfigKey);
 
         assertEquals(yamlKeys, sqlKeys);
     }

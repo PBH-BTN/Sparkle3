@@ -6,7 +6,6 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.CategoryPoints;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.DynamicPointsSummary;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.FeatureFlags;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.FixedPointsSummary;
-import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.OneTimePointsSummary;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsLogEntry;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsLogPage;
 import com.ghostchu.btn.sparkle.controller.ui.dto.PointsModels.PointsOverview;
@@ -43,7 +42,6 @@ public class PointsQueryService {
             PointCategory.RULES_FETCH,
             PointCategory.KEEPALIVE,
             PointCategory.RULE_HIT_IP,
-            PointCategory.NEW_IP,
             PointCategory.WASTED_UPLOAD
     );
 
@@ -74,10 +72,8 @@ public class PointsQueryService {
         );
         PointAggregate aggregate = new PointAggregate(
                 longValue(aggregateRow, "fixed_today"),
-                longValue(aggregateRow, "once_today"),
                 longValue(aggregateRow, "dynamic_today"),
                 longValue(aggregateRow, "fixed_24h"),
-                longValue(aggregateRow, "once_24h"),
                 longValue(aggregateRow, "dynamic_24h")
         );
 
@@ -101,34 +97,18 @@ public class PointsQueryService {
                 + categories.getOrDefault(PointCategory.RULES_FETCH, 0L)
                 + categories.getOrDefault(PointCategory.KEEPALIVE, 0L)
                 + categories.getOrDefault(PointCategory.RULE_HIT_IP, 0L)
-                + categories.getOrDefault(PointCategory.NEW_IP, 0L)
                 + categories.getOrDefault(PointCategory.WASTED_UPLOAD, 0L);
         long fixedDailyCap = FIXED_CATEGORIES.stream()
                 .map(pointRulesService::dailyCap)
                 .filter(java.util.Objects::nonNull)
                 .mapToLong(Long::longValue)
                 .sum();
-        long newTorrentPoints = pointRulesService.points(PointCategory.NEW_TORRENT);
-        long discoveryPoints = pointRulesService.points(PointCategory.CLIENT_DISCOVERY);
-        long newTorrents = categories.getOrDefault(PointCategory.NEW_TORRENT, 0L)
-                / newTorrentPoints;
-        long discoveries = categories.getOrDefault(PointCategory.CLIENT_DISCOVERY, 0L)
-                / discoveryPoints;
-
         var fixed = new FixedPointsSummary(
                 Long.toString(aggregate.fixedToday()),
                 Long.toString(cappedPoints),
                 Long.toString(fixedDailyCap),
                 averagePerHour(aggregate.fixed24h()),
                 fixedCategories
-        );
-        var oneTime = new OneTimePointsSummary(
-                Long.toString(aggregate.onceToday()),
-                averagePerHour(aggregate.once24h()),
-                newTorrents,
-                discoveries,
-                pointToggleService.isEnabled(PointCategory.NEW_TORRENT),
-                pointToggleService.isEnabled(PointCategory.CLIENT_DISCOVERY)
         );
         DynamicPointsSummary dynamic = dynamicEnabled
                 && pointToggleService.isAnyDynamicEnabled()
@@ -150,7 +130,6 @@ public class PointsQueryService {
         return new PointsOverview(
                 Long.toString(balance),
                 fixed,
-                oneTime,
                 dynamic,
                 new FeatureFlags(
                         dynamicEnabled && pointToggleService.isAnyDynamicEnabled(),
@@ -175,7 +154,6 @@ public class PointsQueryService {
                 String.valueOf(row.get("event_type")),
                 Long.toString(longValue(row, "points")),
                 Long.toString(longValue(row, "fixed_points")),
-                Long.toString(longValue(row, "one_time_points")),
                 Long.toString(longValue(row, "dynamic_points")),
                 Long.toString(longValue(row, "manual_points")),
                 readDetails(String.valueOf(row.get("details")))
@@ -222,10 +200,8 @@ public class PointsQueryService {
 
     private record PointAggregate(
             long fixedToday,
-            long onceToday,
             long dynamicToday,
             long fixed24h,
-            long once24h,
             long dynamic24h
     ) {
     }

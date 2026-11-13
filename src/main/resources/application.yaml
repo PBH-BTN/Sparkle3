@@ -263,10 +263,7 @@ sparkle:
       rules-fetch-enabled: true
       keepalive-enabled: true
       rule-hit-ip-enabled: true
-      new-ip-enabled: true
       wasted-upload-enabled: true
-      new-torrent-enabled: true
-      client-discovery-enabled: true
       dynamic-seed-upload-enabled: true
       dynamic-download-enabled: true
       dynamic-hot-peer-enabled: true
@@ -286,14 +283,9 @@ sparkle:
       keepalive-daily-cap: 2000
       rule-hit-ip-points: 10
       rule-hit-ip-daily-cap: 2000
-      new-ip-points: 20
-      new-ip-daily-cap: 2000
       wasted-upload-points-per-mib: 10
       wasted-upload-mib: 1
       wasted-upload-daily-cap: 3000
-    points-once-rules:
-      new-torrent-points: 500
-      client-discovery-points: 4
     points-dynamic-rules:
       dynamic-seed-upload-points: 180
       dynamic-seed-upload-mib: 200

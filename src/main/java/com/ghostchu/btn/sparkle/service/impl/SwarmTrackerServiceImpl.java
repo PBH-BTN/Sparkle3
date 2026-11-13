@@ -248,18 +248,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             );
         }
 
-        long newTorrents = torrents.values().stream()
-                .filter(TorrentRegistration::created)
-                .count();
-        if (newTorrents > 0) {
-            pointAwardContext.recordConfigured(
-                    userId,
-                    PointCategory.NEW_TORRENT,
-                    newTorrents,
-                    0
-            );
-        }
-
         Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
         for (SwarmTracker tracker : swarmMap.values()) {
             TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
@@ -267,7 +255,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     ignored -> new TrafficDeltaAccumulator(
                             torrents.getOrDefault(
                                     tracker.getTorrentId(),
-                                    new TorrentRegistration(tracker.getTorrentId(), 0, false)
+                                    new TorrentRegistration(tracker.getTorrentId(), 0)
                             ).size()
                     )
             );

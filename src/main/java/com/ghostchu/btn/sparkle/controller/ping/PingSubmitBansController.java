@@ -57,7 +57,6 @@ public class PingSubmitBansController extends BasePingController {
         }
         clientDiscoveryService.handleClientDiscovery(
                 userapp.getId(),
-                userapp.getOwner(),
                 bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList()
         );
         banHistoryService.syncBanHistory(
