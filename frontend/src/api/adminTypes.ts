@@ -965,6 +965,31 @@ export interface MemberTransactionPage {
   size: number
 }
 
+export interface MemberLicenseAdmin {
+  licenseId: string
+  btnUserId: string | null
+  btnNickname: string | null
+  provider: MemberPlatformCode | 'AFDIAN'
+  sourceType: 'PRODUCT' | 'DONATION'
+  sourceOrderNo: string | null
+  planId: string | null
+  consumedAmount: string
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED'
+  issuedAt: string
+  startAt: string
+  expireAt: string
+  revokedAt: string | null
+  revokedReason: string | null
+}
+
+export interface MemberLicensePage {
+  items: MemberLicenseAdmin[]
+  total: number
+  page: number
+  size: number
+  baseCurrency: string
+}
+
 export interface MemberSyncRun {
   id: number
   provider: MemberPlatformCode | 'AFDIAN'

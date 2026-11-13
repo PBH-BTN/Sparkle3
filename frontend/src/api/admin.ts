@@ -60,6 +60,7 @@ import type {
   MemberPlatformConfig,
   MemberPlatformSettings,
   MemberPlatformSyncOutcome,
+  MemberLicensePage,
   MemberReconciliation,
   MemberTransactionPage,
   ModerationTestResult,
@@ -556,6 +557,24 @@ export const adminApi = {
     })
     return request<MemberReconciliation>(
       `/api/admin/memberships/reconciliation?${search.toString()}`,
+    )
+  },
+  memberPlatformLicenses: (params: {
+    provider?: string
+    keyword?: string
+    status?: string
+    sourceType?: string
+    page?: number
+    size?: number
+  }) => {
+    const search = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, String(value))
+      }
+    })
+    return request<MemberLicensePage>(
+      `/api/admin/memberships/licenses?${search.toString()}`,
     )
   },
   aiModeration: () =>

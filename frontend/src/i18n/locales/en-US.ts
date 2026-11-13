@@ -1408,6 +1408,21 @@ export default {
       event: 'Event',
       changedFields: 'Changed fields',
       detectedAt: 'Detected',
+      licensesTitle: 'Issued licenses',
+      licenseKeywordPlaceholder:
+        'License ID, order number, user ID, platform user or SKU',
+      licenseId: 'License ID',
+      licenseUser: 'User',
+      licenseSource: 'Source',
+      licenseStatus: 'License status',
+      licenseStates: {
+        ACTIVE: 'Active',
+        EXPIRED: 'Expired',
+        REVOKED: 'Revoked',
+      },
+      issuedAt: 'Issued at',
+      expireAt: 'Expires at',
+      revoked: 'Revocation',
     },
     messages: {
       title: 'Broadcast messages',

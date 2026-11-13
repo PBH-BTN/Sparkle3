@@ -13,6 +13,8 @@ import { adminApi } from '@/api/admin'
 import type {
   AfdianSettings,
   LicenseSettings,
+  MemberLicenseAdmin,
+  MemberLicensePage,
   MemberPlatformConfig,
   MemberPlatformSettings,
   MemberReconciliation,
@@ -43,6 +45,7 @@ const settings = ref<MemberPlatformSettings | null>(null)
 const afdianData = ref<AfdianSettings | null>(null)
 const licenseData = ref<LicenseSettings | null>(null)
 const transactionPage = ref<MemberTransactionPage | null>(null)
+const licensePage = ref<MemberLicensePage | null>(null)
 const reconciliation = ref<MemberReconciliation>({ runs: [], events: [] })
 const providerForms = reactive<Record<string, ProviderForm>>({})
 const afdianForm = reactive({
@@ -71,6 +74,12 @@ const filterStatus = ref('')
 const filterRemotePresent = ref<'' | 'true' | 'false'>('')
 const filterPage = ref(1)
 const filterSize = ref(20)
+const licenseFilterProvider = ref('')
+const licenseFilterKeyword = ref('')
+const licenseFilterStatus = ref('')
+const licenseFilterSourceType = ref('')
+const licenseFilterPage = ref(1)
+const licenseFilterSize = ref(20)
 
 const providerOptions = computed(() => [
   { label: t('memberships.providers.AFDIAN'), value: 'AFDIAN' },
@@ -93,6 +102,18 @@ const transactionColumns = (): TableColumnData[] => [
   { title: t('admin.memberships.remote'), slotName: 'remote', width: 120 },
   { title: t('admin.memberships.occurredAt'), slotName: 'occurredAt', width: 165 },
   { title: t('admin.memberships.lastReconciled'), slotName: 'lastReconciledAt', width: 165 },
+]
+
+const licenseColumns = (): TableColumnData[] => [
+  { title: t('admin.memberships.licenseId'), dataIndex: 'licenseId', width: 300, ellipsis: true },
+  { title: t('admin.memberships.licenseUser'), slotName: 'licenseUser', width: 170 },
+  { title: t('admin.memberships.provider'), slotName: 'licenseProvider', width: 110 },
+  { title: t('admin.memberships.licenseSource'), slotName: 'licenseSource', width: 220 },
+  { title: t('admin.memberships.amount'), slotName: 'licenseAmount', width: 140 },
+  { title: t('admin.memberships.licenseStatus'), slotName: 'licenseStatus', width: 120 },
+  { title: t('admin.memberships.issuedAt'), slotName: 'licenseIssuedAt', width: 165 },
+  { title: t('admin.memberships.expireAt'), slotName: 'licenseExpireAt', width: 165 },
+  { title: t('admin.memberships.revoked'), slotName: 'licenseRevoked', width: 210 },
 ]
 
 const runColumns = (): TableColumnData[] => [
@@ -132,7 +153,7 @@ async function load() {
     currencyForm.baseCurrency = data.baseCurrency
     currencyForm.exchangeRateApiUrl = data.exchangeRateApiUrl
     data.providers.forEach(applyProvider)
-    await loadTransactions()
+    await Promise.all([loadTransactions(), loadLicenses()])
   } catch (error) {
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
@@ -305,7 +326,7 @@ async function saveCurrency() {
         count: result.recalculatedTransactions,
       }),
     )
-    await loadTransactions()
+    await Promise.all([loadTransactions(), loadLicenses()])
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
@@ -383,6 +404,40 @@ async function loadReconciliation() {
   })
 }
 
+async function loadLicenses() {
+  licensePage.value = await adminApi.memberPlatformLicenses({
+    provider: licenseFilterProvider.value || undefined,
+    keyword: licenseFilterKeyword.value.trim() || undefined,
+    status: licenseFilterStatus.value || undefined,
+    sourceType: licenseFilterSourceType.value || undefined,
+    page: licenseFilterPage.value,
+    size: licenseFilterSize.value,
+  })
+}
+
+async function searchLicenses() {
+  licenseFilterPage.value = 1
+  try {
+    await loadLicenses()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  }
+}
+
+async function changeLicensePage(page: number) {
+  licenseFilterPage.value = page
+  try {
+    await loadLicenses()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  }
+}
+
+async function changeLicenseProvider(value: unknown) {
+  licenseFilterProvider.value = value ? String(value) : ''
+  await searchLicenses()
+}
+
 async function changeProviderFilter(value: unknown) {
   filterProvider.value = value ? String(value) : ''
   filterPage.value = 1
@@ -421,6 +476,23 @@ function runStatusColor(status: string | null) {
   if (status === 'FAILED') return 'red'
   if (status === 'INCOMPLETE') return 'orange'
   return 'gray'
+}
+
+function licenseStatusColor(status: MemberLicenseAdmin['status']) {
+  if (status === 'ACTIVE') return 'green'
+  if (status === 'EXPIRED') return 'orange'
+  if (status === 'REVOKED') return 'red'
+  return 'gray'
+}
+
+function licenseStatusLabel(status: MemberLicenseAdmin['status']) {
+  return t(`admin.memberships.licenseStates.${status}`)
+}
+
+function licenseSourceLabel(sourceType: MemberLicenseAdmin['sourceType']) {
+  return sourceType === 'PRODUCT'
+    ? t('admin.memberships.productType')
+    : t('admin.memberships.donationType')
 }
 
 function transactionRowClass(record: MemberTransactionAdmin) {
@@ -889,6 +961,112 @@ onMounted(load)
       </a-card>
 
       <a-card class="surface-card">
+        <template #title>{{ t('admin.memberships.licensesTitle') }}</template>
+        <div class="query-bar license-query-bar">
+          <a-select
+            :model-value="licenseFilterProvider"
+            :options="[{ label: t('admin.common.all'), value: '' }, ...providerOptions]"
+            :placeholder="t('admin.memberships.provider')"
+            allow-clear
+            @change="changeLicenseProvider"
+          />
+          <a-input
+            v-model="licenseFilterKeyword"
+            :placeholder="t('admin.memberships.licenseKeywordPlaceholder')"
+            allow-clear
+            @press-enter="searchLicenses"
+          />
+          <a-select
+            v-model="licenseFilterStatus"
+            :placeholder="t('admin.memberships.licenseStatus')"
+            allow-clear
+          >
+            <a-option value="ACTIVE">
+              {{ t('admin.memberships.licenseStates.ACTIVE') }}
+            </a-option>
+            <a-option value="EXPIRED">
+              {{ t('admin.memberships.licenseStates.EXPIRED') }}
+            </a-option>
+            <a-option value="REVOKED">
+              {{ t('admin.memberships.licenseStates.REVOKED') }}
+            </a-option>
+          </a-select>
+          <a-select
+            v-model="licenseFilterSourceType"
+            :placeholder="t('admin.memberships.type')"
+            allow-clear
+          >
+            <a-option value="PRODUCT">
+              {{ t('admin.memberships.productType') }}
+            </a-option>
+            <a-option value="DONATION">
+              {{ t('admin.memberships.donationType') }}
+            </a-option>
+          </a-select>
+          <a-button type="primary" @click="searchLicenses">
+            {{ t('admin.common.search') }}
+          </a-button>
+        </div>
+        <a-table
+          :columns="licenseColumns()"
+          :data="licensePage?.items ?? []"
+          :pagination="false"
+          :scroll="{ x: 1500 }"
+          row-key="licenseId"
+        >
+          <template #empty><a-empty :description="t('common.noData')" /></template>
+          <template #licenseUser="{ record }">
+            <div class="stack-cell">
+              <strong>{{ record.btnNickname || '-' }}</strong>
+              <span>UID {{ record.btnUserId || '-' }}</span>
+            </div>
+          </template>
+          <template #licenseProvider="{ record }">
+            {{ providerLabel(record.provider) }}
+          </template>
+          <template #licenseSource="{ record }">
+            <div class="stack-cell">
+              <a-tag color="arcoblue">
+                {{ licenseSourceLabel(record.sourceType) }}
+              </a-tag>
+              <span>{{ record.sourceOrderNo || record.planId || '-' }}</span>
+            </div>
+          </template>
+          <template #licenseAmount="{ record }">
+            <strong>
+              {{ licensePage?.baseCurrency }} {{ record.consumedAmount }}
+            </strong>
+          </template>
+          <template #licenseStatus="{ record }">
+            <a-tag :color="licenseStatusColor(record.status)">
+              {{ licenseStatusLabel(record.status) }}
+            </a-tag>
+          </template>
+          <template #licenseIssuedAt="{ record }">
+            {{ formatDate(record.issuedAt) }}
+          </template>
+          <template #licenseExpireAt="{ record }">
+            {{ formatDate(record.expireAt) }}
+          </template>
+          <template #licenseRevoked="{ record }">
+            <div v-if="record.revokedAt" class="stack-cell">
+              <strong>{{ formatDate(record.revokedAt) }}</strong>
+              <span>{{ record.revokedReason || '-' }}</span>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </a-table>
+        <a-pagination
+          class="pager"
+          :current="licensePage?.page ?? 1"
+          :page-size="licensePage?.size ?? licenseFilterSize"
+          :total="licensePage?.total ?? 0"
+          show-total
+          @change="changeLicensePage"
+        />
+      </a-card>
+
+      <a-card class="surface-card">
         <template #title>{{ t('admin.memberships.reconciliationTitle') }}</template>
         <a-table
           :columns="runColumns()"
@@ -1013,6 +1191,10 @@ onMounted(load)
   grid-template-columns: 150px minmax(180px, 1fr) 140px 150px minmax(130px, 0.7fr) auto;
   gap: 9px;
   margin-bottom: 14px;
+}
+
+.license-query-bar {
+  grid-template-columns: 150px minmax(220px, 1fr) 140px 140px auto;
 }
 
 .stack-cell {
