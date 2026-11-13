@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +48,7 @@ public class MailReplyIngestionService {
     private final UserMessageService messageService;
     private final IUserService userService;
     @Qualifier("stringStringRedisTemplate")
-    private final StringRedisTemplate redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
     private final AtomicReference<MailIngestionStatus> status =
             new AtomicReference<>(MailIngestionStatus.initial());
     private volatile OffsetDateTime nextAutomaticScanAt;
@@ -60,7 +60,7 @@ public class MailReplyIngestionService {
             UserMessageMapper messageMapper,
             UserMessageService messageService,
             IUserService userService,
-            @Qualifier("stringStringRedisTemplate") StringRedisTemplate redisTemplate
+            @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate
     ) {
         this.settingsService = settingsService;
         this.parser = parser;
