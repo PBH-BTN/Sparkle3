@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import type { EChartsCoreOption } from 'echarts/core'
 import { Message, type TableColumnData } from '@arco-design/web-vue'
@@ -28,6 +29,7 @@ import { errorMessage, useFormatters } from '@/utils/format'
 import { geoIp, shortModuleName } from '@/utils/peerRecords'
 
 const { t } = useI18n()
+const router = useRouter()
 const session = useSessionStore()
 const {
   formatDate,
@@ -428,9 +430,21 @@ onMounted(async () => {
         </template>
         <template #torrentId="{ record }">{{ record.torrentId ?? 'N/A' }}</template>
         <template #peerIp="{ record }">
-          <code class="mono table-cell-ellipsis" :title="record.peerIp || ''">
-            {{ record.peerIp || 'N/A' }}
-          </code>
+          <div class="peer-ip-cell">
+            <code class="mono table-cell-ellipsis" :title="record.peerIp || ''">
+              {{ record.peerIp || 'N/A' }}
+            </code>
+            <a-tooltip v-if="record.peerIp" :content="t('ipQueryPage.search')">
+              <a-button
+                type="text"
+                size="mini"
+                :aria-label="t('ipQueryPage.search')"
+                @click="router.push({ name: 'ip-query', query: { q: record.peerIp } })"
+              >
+                <template #icon><IconSearch /></template>
+              </a-button>
+            </a-tooltip>
+          </div>
         </template>
         <template #peerPort="{ record }">{{ record.peerPort ?? 'N/A' }}</template>
         <template #peerId="{ record }">
@@ -529,6 +543,22 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.peer-ip-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.peer-ip-cell code {
+  flex: 1;
+  min-width: 0;
+}
+
+.peer-ip-cell :deep(.arco-btn) {
+  flex-shrink: 0;
+}
+
 .module-tag {
   display: inline-flex;
   max-width: 100%;
