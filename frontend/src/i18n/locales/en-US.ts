@@ -80,7 +80,7 @@ export default {
     title: 'Notifications & reminders',
     description: 'Manage in-app and email reminders separately for each notification category.',
     hint:
-      'All categories are enabled by default. Legal/compliance and account security notifications cannot be disabled; the system may force an email reminder when necessary.',
+      'Email reminders for general notices, changelogs, and daily announcements are off by default; in-app notifications remain on. Legal/compliance and account security notifications cannot be disabled; an email reminder may still be required when necessary.',
     category: 'Notification category',
     mandatory: 'Required',
     saved: 'Notification preferences saved.',
