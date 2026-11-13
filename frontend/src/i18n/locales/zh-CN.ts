@@ -1274,7 +1274,7 @@ export default {
       deleteConfirm: '确定删除“{name}”吗？该群组将从用户设置页面移除。',
     },
     afdian: {
-      title: '会员平台与 PBHLicense',
+      title: '爱发电与 PBHLicense',
       description:
         '配置爱发电 API、定时同步全部历史交易，并管理商品 SKU 槽位与捐赠金额换许可证规则。',
       cacheHint:
@@ -1328,6 +1328,9 @@ export default {
         'Patreon 使用官方 API 同步会员与累计支持金额，Ko-fi 使用官方 Webhook 接收实时支付，面包多使用开发者 Key 同步作品订单。链动小铺没有公开的订单 API，暂不提供自动同步。',
       integrationHint:
         '平台凭据只保存在服务端。Patreon 与面包多支持完整历史同步与远端缺失对账；Ko-fi 没有历史查询接口，只能接收启用 Webhook 之后的新交易。所有平台的商品与捐赠统一进入本地账本，并按同一套规则生成 PBHLicense 槽位。',
+      licenseSharedHint:
+        'PBHLicense 的私钥、有效期限和捐赠额度规则由所有平台共用，在“爱发电与 PBHLicense”页统一配置。',
+      licenseSharedLink: '前往配置',
       currencySettings: '结算货币与实时汇率',
       baseCurrency: '许可证与捐赠结算货币',
       rateApi: '汇率 API（必须包含 {currency}）',

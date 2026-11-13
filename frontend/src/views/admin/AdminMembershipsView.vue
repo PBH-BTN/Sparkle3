@@ -343,7 +343,13 @@ onMounted(load)
     </PageHeader>
 
     <a-alert type="info" show-icon>
-      {{ t('admin.memberships.integrationHint') }}
+      <div>{{ t('admin.memberships.integrationHint') }}</div>
+      <div class="license-link-row">
+        {{ t('admin.memberships.licenseSharedHint') }}
+        <router-link to="/admin/afdian">
+          {{ t('admin.memberships.licenseSharedLink') }}
+        </router-link>
+      </div>
     </a-alert>
 
     <a-spin :loading="loading" class="admin-spin">
@@ -716,6 +722,14 @@ onMounted(load)
 
 .inline-alert {
   margin-bottom: 14px;
+}
+
+.license-link-row {
+  margin-top: 6px;
+}
+
+.license-link-row a {
+  color: rgb(var(--arcoblue-6));
 }
 
 .provider-grid {

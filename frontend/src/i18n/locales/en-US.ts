@@ -1302,7 +1302,7 @@ export default {
         'Delete “{name}”? It will disappear from the user settings page.',
     },
     afdian: {
-      title: 'Membership platforms & PBHLicense',
+      title: 'Afdian & PBHLicense',
       description:
         'Configure the Afdian API, periodically cache all historical transactions, and manage product SKU slots and donation-based license rules.',
       cacheHint:
@@ -1358,6 +1358,9 @@ export default {
         'Patreon syncs members and lifetime support through its official API. Ko-fi delivers real-time payments through its official webhook. Mianbaoduo syncs product orders with a developer key. Liandong publishes no order API, so it is not synced automatically.',
       integrationHint:
         'Platform credentials stay on the server. Patreon and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
+      licenseSharedHint:
+        'PBHLicense private key, validity, and donation thresholds are shared by every platform and configured on the “Afdian & PBHLicense” page.',
+      licenseSharedLink: 'Configure licences',
       currencySettings: 'Settlement currency & live exchange rates',
       baseCurrency: 'License and donation settlement currency',
       rateApi: 'Exchange-rate API (must contain {currency})',
