@@ -57,6 +57,7 @@ public final class MemberPlatformModels {
             String provider,
             boolean success,
             int records,
+            int remoteCount,
             String message
     ) {
     }

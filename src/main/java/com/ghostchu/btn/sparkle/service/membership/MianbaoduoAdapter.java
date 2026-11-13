@@ -123,7 +123,7 @@ public class MianbaoduoAdapter implements MemberPlatformAdapter {
         }
         log.info("Mianbaoduo order sync fetched {} orders (remote count {})",
                 transactions.size(), total);
-        return new MemberPlatformSnapshot(transactions, null);
+        return new MemberPlatformSnapshot(transactions, null, total);
     }
 
     @Override

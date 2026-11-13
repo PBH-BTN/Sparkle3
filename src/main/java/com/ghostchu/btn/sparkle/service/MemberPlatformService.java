@@ -365,6 +365,7 @@ public class MemberPlatformService {
                     provider.name(),
                     true,
                     session.recordsSeen(),
+                    snapshot.remoteCount(),
                     null
             );
         } catch (BusinessException exception) {
