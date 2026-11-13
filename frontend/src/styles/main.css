@@ -35,7 +35,7 @@ a {
   color: rgb(var(--primary-6));
 }
 
-.app-loading {
+.arco-spin.app-loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,6 +48,33 @@ a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Content spinners must cover the entire section, including its empty state. */
+.arco-spin:has(> :not(.arco-spin-icon, .arco-spin-tip)) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.arco-spin-loading:has(> .arco-spin-mask) {
+  min-height: 160px;
+}
+
+.arco-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  text-align: center;
+}
+
+/* Use the available card/section height rather than centering within the text alone. */
+:where(.arco-card-body, .arco-tab-pane):has(> .arco-empty:only-child),
+.arco-spin:has(> .arco-empty) {
+  display: grid;
+  align-items: center;
 }
 
 .surface-card {
