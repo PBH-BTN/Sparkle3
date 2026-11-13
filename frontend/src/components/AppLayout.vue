@@ -383,8 +383,16 @@ onBeforeUnmount(() => {
   border-bottom: 0;
 }
 
+.desktop-navigation :deep(.arco-menu-inner) {
+  padding: 14px 0;
+}
+
 .desktop-navigation :deep(.arco-menu-item) {
   padding: 0 8px;
+}
+
+.desktop-navigation :deep(.arco-menu-item .arco-menu-icon) {
+  margin-right: 6px;
 }
 
 .header-actions {
