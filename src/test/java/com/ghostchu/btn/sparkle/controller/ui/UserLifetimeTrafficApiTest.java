@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.*;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,7 @@ class UserLifetimeTrafficApiTest {
             .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver()).build();
 
     @AfterEach
+    @BeforeEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
     }
