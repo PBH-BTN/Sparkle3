@@ -292,3 +292,5 @@ GitHub 的固定 redirect-uri 指向统一回调域名。其他域名会先跳�
 链接使用 90 天有效的随机凭据，通过 Redis 保存摘要并绑定账户和收件邮箱；账户删除、邮箱变更、凭据过期或 Redis 数据清除后失效。凭据只允许关闭邮件提醒，打开页面不会自动退订。链接地址使用现有主站地址设置（BTN 配置的 rootUrls/rootUrl），部署时应确保其为可访问的 HTTPS 地址。
 
 公开页面为 /mail-unsubscribe；GET /api/ui/mail-unsubscribe 返回可退订分类及邮件开关状态，POST 同路径接收 categories 字符串数组。两者均要求 X-Unsubscribe-Token 请求头；POST 保留 SPA CSRF 校验。凭据通过邮件链接的 fragment 传递，避免进入 HTTP URL 和访问日志。
+
+退订接口不返回账号身份资料，也不能开启任何通知；重复确认同一分类不会影响其他偏好。已关闭邮件的分类在退订页中不可重复勾选，仍可登录账户设置重新开启。
