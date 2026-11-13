@@ -30,7 +30,7 @@
         GROUP BY city
         HAVING SUM(upload) + SUM(download) &gt; 0
         ORDER BY SUM(upload) + SUM(download) DESC, city
-        LIMIT 50
+        LIMIT 100
     </select>
 
     <select id="selectBanTraffic" resultMap="trafficRowResult">
