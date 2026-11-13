@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.mapper.PointsMapper;
+import com.ghostchu.btn.sparkle.util.JdbcTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -150,7 +151,7 @@ public class PointsQueryService {
                 (long) (current - 1) * size
         ).stream().map(row -> new PointsLogEntry(
                 longValue(row, "id"),
-                (OffsetDateTime) row.get("occurred_at"),
+                JdbcTime.toOffsetDateTime(row.get("occurred_at")),
                 String.valueOf(row.get("event_type")),
                 Long.toString(longValue(row, "points")),
                 Long.toString(longValue(row, "fixed_points")),

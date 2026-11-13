@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.points;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.mapper.PointsDynamicMapper;
+import com.ghostchu.btn.sparkle.util.JdbcTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -119,7 +120,7 @@ public class PointsDynamicService {
                 torrentSizeGib
         ).forEach(row -> {
             EventKey key = new EventKey(
-                    (OffsetDateTime) row.get("bucket"),
+                    JdbcTime.toOffsetDateTime(row.get("bucket")),
                     ((Number) row.get("user_id")).longValue()
             );
             DynamicEvent event = events.computeIfAbsent(
@@ -154,7 +155,7 @@ public class PointsDynamicService {
                 hotPeerPoints
         ).forEach(row -> {
             EventKey key = new EventKey(
-                    (OffsetDateTime) row.get("bucket"),
+                    JdbcTime.toOffsetDateTime(row.get("bucket")),
                     ((Number) row.get("user_id")).longValue()
             );
             DynamicEvent event = events.computeIfAbsent(
