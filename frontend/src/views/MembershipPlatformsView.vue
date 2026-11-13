@@ -598,7 +598,6 @@ onMounted(load)
 }
 
 .bind-form {
-  max-width: 620px;
   margin-top: 18px;
 }
 
