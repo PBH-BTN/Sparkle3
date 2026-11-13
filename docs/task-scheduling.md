@@ -59,6 +59,8 @@
 
 固定频率、固定延迟、事件任务和启动任务通常不能从任务页直接改写时间，因为它们的调度方式不是可热更新的模块 Cron。
 
+Sparkle 不配置 misfire 或补跑策略。应用停机、线程池排队，或上一次执行尚未结束时错过的计划会直接跳过，不会在恢复后补执行。固定延迟任务会在上一次执行完成后再等待一个完整间隔；新增无需追赶历史的计划任务时应优先使用固定延迟。
+
 计划任务只要具备可调用的执行入口，都可以使用“立即执行”。管理员触发不会抢占或替换正常调度，但任务已经在运行时会拒绝重复启动。
 
 对应管理接口为：
@@ -104,13 +106,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExampleMetricsTask {
 
-    @Scheduled(fixedRate = 60_000, initialDelay = 10_000)
+    @Scheduled(fixedDelay = 60_000, initialDelay = 10_000)
     @MonitoredScheduledTask(
             id = "example-metrics-sample",
             group = TaskGroup.MAINTENANCE,
             nameKey = "admin.tasks.items.example-metrics-sample.name",
             descriptionKey = "admin.tasks.items.example-metrics-sample.description",
-            scheduleType = TaskScheduleType.FIXED_RATE,
+            scheduleType = TaskScheduleType.FIXED_DELAY,
             intervalMillis = 60_000,
             initialDelayMillis = 10_000
     )
@@ -380,7 +382,8 @@ admin: {
 7. 中英文任务名称和描述是否已补充。
 8. 任务是否避免阻塞 HTTP 请求和调度线程。
 9. 大批量数据处理是否分批、可中断并控制数据库压力。
-10. 在 `/admin/tasks` 中确认任务能出现在正确分类，并完成一次实际运行。
+10. 计划任务是否避免配置补跑或 misfire 策略，错过执行时直接跳过。
+11. 在 `/admin/tasks` 中确认任务能出现在正确分类，并完成一次实际运行。
 
 建议验证命令：
 

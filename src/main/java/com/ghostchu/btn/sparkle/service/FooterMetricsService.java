@@ -69,13 +69,13 @@ public class FooterMetricsService {
         }
     }
 
-    @Scheduled(fixedRate = 10_000, initialDelay = 5_000)
+    @Scheduled(fixedDelay = 10_000, initialDelay = 5_000)
     @MonitoredScheduledTask(
             id = "footer-metrics-sample",
             group = TaskGroup.MAINTENANCE,
             nameKey = "admin.tasks.items.footer-metrics-sample.name",
             descriptionKey = "admin.tasks.items.footer-metrics-sample.description",
-            scheduleType = TaskScheduleType.FIXED_RATE,
+            scheduleType = TaskScheduleType.FIXED_DELAY,
             intervalMillis = 10_000,
             initialDelayMillis = 5_000
     )

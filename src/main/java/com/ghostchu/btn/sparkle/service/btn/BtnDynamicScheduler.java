@@ -171,7 +171,7 @@ public class BtnDynamicScheduler {
                 configService.longValue("heartbeatQueue", "initialDelayMs")
         );
         String signature = interval + ":" + initialDelay;
-        taskStatusService.configure(TaskDefinition.fixedRate(
+        taskStatusService.configure(TaskDefinition.fixedDelay(
                 HEARTBEAT_FLUSH_TASK,
                 TaskGroup.MAINTENANCE,
                 TaskKind.SCHEDULED,
@@ -186,7 +186,7 @@ public class BtnDynamicScheduler {
             return;
         }
         cancel(HEARTBEAT_FLUSH_TASK);
-        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(
+        ScheduledFuture<?> future = taskScheduler.scheduleWithFixedDelay(
                 heartbeatService::flushQueuedHeartbeats,
                 Instant.now().plusMillis(initialDelay),
                 Duration.ofMillis(interval)
@@ -195,7 +195,7 @@ public class BtnDynamicScheduler {
             futures.put(HEARTBEAT_FLUSH_TASK, future);
             signatures.put(HEARTBEAT_FLUSH_TASK, signature);
             log.info(
-                    "Scheduled heartbeat queue flush every {}ms after {}ms",
+                    "Scheduled heartbeat queue flush {}ms after completion, starting in {}ms",
                     interval,
                     initialDelay
             );

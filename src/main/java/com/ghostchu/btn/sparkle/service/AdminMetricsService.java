@@ -39,13 +39,13 @@ public class AdminMetricsService {
         this.objectMapper = objectMapper;
     }
 
-    @Scheduled(fixedRate = 60_000, initialDelay = 10_000)
+    @Scheduled(fixedDelay = 60_000, initialDelay = 10_000)
     @MonitoredScheduledTask(
             id = "admin-metrics-sample",
             group = TaskGroup.MAINTENANCE,
             nameKey = "admin.tasks.items.admin-metrics-sample.name",
             descriptionKey = "admin.tasks.items.admin-metrics-sample.description",
-            scheduleType = TaskScheduleType.FIXED_RATE,
+            scheduleType = TaskScheduleType.FIXED_DELAY,
             intervalMillis = 60_000,
             initialDelayMillis = 10_000
     )
