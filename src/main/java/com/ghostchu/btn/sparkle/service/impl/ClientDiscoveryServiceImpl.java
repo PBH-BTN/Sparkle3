@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMapper, ClientDiscovery> implements IClientDiscoveryService {
+    @Autowired
+    private com.ghostchu.btn.sparkle.service.CareerIngestionService careerIngestionService;
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "peer_id", "peer_client_name", "client_type", "client_semver", "found_at"
     );
@@ -83,12 +85,10 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                     .setClientSemver(clientSemver);
             clientDiscoveryList.add(clientDiscovery);
         }
-        try {
-            if (!clientDiscoveryList.isEmpty()) {
-                this.baseMapper.batchInsertReturning(clientDiscoveryList);
-            }
-        } catch (Exception e) {
-            log.error("Error inserting client discovery data", e);
+        if (!clientDiscoveryList.isEmpty()) {
+            var inserted = new java.util.HashSet<>(this.baseMapper.batchInsertReturning(clientDiscoveryList));
+            clientDiscoveryList.stream().filter(row -> inserted.remove(row.getHash()))
+                    .forEach(row -> careerIngestionService.featureByApp(userAppId, row.getHash(), row.getFoundAt()));
         }
     }
 

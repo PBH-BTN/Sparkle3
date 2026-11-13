@@ -21,6 +21,6 @@
             #{item.peerId},#{item.peerClientName},#{item.foundAt},#{item.foundUserappsId},#{item.clientType},#{item.clientSemver})
         </foreach>
         ON CONFLICT (hash) DO NOTHING
-        RETURNING found_userapps_id
+        RETURNING hash
     </select>
 </mapper>

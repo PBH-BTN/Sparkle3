@@ -52,6 +52,8 @@ import java.util.Set;
 @Service
 @Slf4j
 public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHistory> implements IBanHistoryService {
+    @Autowired
+    private com.ghostchu.btn.sparkle.service.CareerIngestionService careerIngestionService;
     private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "populate_time", "torrent_id", "peer_ip", "peer_port", "peer_id",
@@ -135,6 +137,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
+        list.forEach(row -> careerIngestionService.ban(userId, row));
         pointAwardContext.recordConfigured(
                 userId,
                 PointCategory.BAN_HISTORY,

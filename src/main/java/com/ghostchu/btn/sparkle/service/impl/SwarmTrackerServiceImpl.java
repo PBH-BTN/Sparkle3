@@ -52,6 +52,8 @@ import java.util.Set;
 @Service
 @Slf4j
 public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, SwarmTracker> implements ISwarmTrackerService {
+    @Autowired
+    private com.ghostchu.btn.sparkle.service.CareerIngestionService careerIngestionService;
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "torrent_id", "peer_ip", "peer_port", "peer_id", "peer_client_name",
             "peer_progress", "from_peer_traffic", "to_peer_traffic",
@@ -240,6 +242,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
 
         if (!swarmMap.isEmpty()) {
             this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
+            swarmMap.values().forEach(row -> careerIngestionService.swarm(userId, row));
             pointAwardContext.recordConfigured(
                     userId,
                     PointCategory.SWARM_TRACKER,

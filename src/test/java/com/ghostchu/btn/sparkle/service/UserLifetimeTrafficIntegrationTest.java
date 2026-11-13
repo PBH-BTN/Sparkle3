@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_ALLOW_DESTRUCTIVE", matches = "true")
 class UserLifetimeTrafficIntegrationTest {
     @Test
-    void backfillsAndAccumulatesWithoutCountingRetriesOrLosingRetainedTotals() throws Exception {
+    void skipsHistoricalRowsAndAccumulatesTransactionallyWithoutDatabaseFunctions() throws Exception {
         String source = System.getenv("SPARKLE_FLYWAY_TEST_URL");
         String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
         String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
@@ -56,86 +56,81 @@ class UserLifetimeTrafficIntegrationTest {
                 Flyway latest = Flyway.configure().dataSource(url, username, password).load();
                 latest.migrate();
                 latest.validate();
-                try (var connection = DriverManager.getConnection(url, username, password);
-                     var sql = connection.createStatement()) {
-                    assertTotals(connection, 1, "100", "40", "0", "0");
-                    assertTotals(connection, 2, "0", "0", "40", "100");
-                    try (var result = sql.executeQuery("SELECT bool_and(history_partial) FROM user_lifetime_traffic")) {
-                        assertTrue(result.next());
-                        assertTrue(result.getBoolean(1));
-                    }
-                    // Retry, increase, out-of-order decrease, retry after decrease.
-                    for (int bytes : new int[]{100, 150, 80, 150}) {
-                        sql.execute("UPDATE swarm_tracker SET to_peer_traffic = " + bytes);
-                    }
-                    assertTotals(connection, 1, "150", "40", "0", "0");
-                    assertTotals(connection, 2, "0", "0", "40", "150");
-                    // Raw cleanup and subsequent replay must retain high-water marks.
-                    sql.execute("DELETE FROM swarm_tracker");
-                    sql.execute(trackerInsert(150, 40, "2026-11-01Z"));
-                    assertTotals(connection, 1, "150", "40", "0", "0");
-                    // A new client session starts a new counter epoch.
-                    sql.execute("UPDATE swarm_tracker SET first_time_seen = '2026-11-02Z', to_peer_traffic = 20, from_peer_traffic = 10");
-                    assertTotals(connection, 1, "170", "50", "0", "0");
-                    assertTotals(connection, 2, "0", "0", "50", "170");
-                    connection.setAutoCommit(false);
-                    sql.execute("UPDATE swarm_tracker SET to_peer_traffic = 999");
-                    connection.rollback();
-                    connection.setAutoCommit(true);
-                    assertTotals(connection, 1, "170", "50", "0", "0");
-                    try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
-                        var updates = java.util.stream.IntStream.of(200, 100, 200).mapToObj(bytes ->
-                                executor.submit(() -> {
-                                    try (var concurrent = DriverManager.getConnection(url, username, password);
-                                         var update = concurrent.createStatement()) {
-                                        update.execute("UPDATE swarm_tracker SET to_peer_traffic = " + bytes);
-                                    }
-                                    return true;
-                                })).toList();
-                        for (var update : updates) assertTrue(update.get());
-                    }
-                    assertTotals(connection, 1, "350", "50", "0", "0");
-                    assertTotals(connection, 2, "0", "0", "50", "350");
-                    sql.execute("INSERT INTO client_discovery(hash,peer_id,peer_client_name,found_at,found_userapps_id) VALUES (991,'test','Test',now(),1)");
-                    try (var result = sql.executeQuery("SELECT amount FROM user_career_daily WHERE user_id=1 AND kind='feature'")) {
-                        assertTrue(result.next());
-                        assertEquals(1, result.getLong(1));
-                    }
-                    try (var result = sql.executeQuery("SELECT SUM(amount) FROM user_career_daily WHERE user_id=1 AND kind='swarm'")) {
-                        assertTrue(result.next());
-                        assertEquals(2, result.getLong(1));
-                    }
-                    try (var result = sql.executeQuery("SELECT SUM(amount) FROM user_career_daily WHERE user_id=2 AND kind='observation'")) {
-                        assertTrue(result.next());
-                        assertEquals(2, result.getLong(1));
-                    }
-                    sql.execute("DELETE FROM userapp WHERE id = 1");
-                    assertTotals(connection, 1, "350", "50", "0", "0");
-                    sql.execute("""
-                            INSERT INTO "user" (id, avatar, email, nickname, register_at, last_login_at)
-                            VALUES (3, '/test.png', '3@example.invalid', 'Test', now(), now());
-                            """);
-                    try (var result = sql.executeQuery("SELECT history_partial FROM user_lifetime_traffic WHERE user_id = 3")) {
-                        assertTrue(result.next());
-                        assertFalse(result.getBoolean(1));
-                    }
-                    sql.execute("INSERT INTO user_privacy_settings (user_id) VALUES (3)");
-                    try (var result = sql.executeQuery("SELECT lifetime_traffic_visibility FROM user_privacy_settings WHERE user_id = 3")) {
-                        assertTrue(result.next());
-                        assertEquals("HIDDEN", result.getString(1));
-                    }
-                    sql.execute("UPDATE user_lifetime_traffic SET sent_self = 9223372036854775808 WHERE user_id = 3");
-                }
-                // Verify production MyBatis record mapping and exact decimal strings above Long.MAX_VALUE.
-                Configuration config = new Configuration(new Environment("test", new JdbcTransactionFactory(),
-                        new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+                var dataSource = new UnpooledDataSource("org.postgresql.Driver", url, username, password);
+                var config = new Configuration(new Environment("test",new JdbcTransactionFactory(),dataSource));
                 config.setMapUnderscoreToCamelCase(true);
+                config.addMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class);
                 config.addMapper(UserLifetimeTrafficMapper.class);
-                try (var session = new SqlSessionFactoryBuilder().build(config).openSession()) {
-                    var traffic = session.getMapper(UserLifetimeTrafficMapper.class).selectByUserId(3);
-                    assertEquals("9223372036854775808", traffic.sentTrafficSelfReport());
-                    assertNotNull(traffic.trackedSince());
-                    assertFalse(traffic.historyPartial());
+                config.addMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
+                try (var resource = getClass().getResourceAsStream("/mapper/CareerIngestionMapper.xml")) {
+                    new org.apache.ibatis.builder.xml.XMLMapperBuilder(resource,config,
+                            "mapper/CareerIngestionMapper.xml",config.getSqlFragments()).parse();
+                }
+                var factory = new SqlSessionFactoryBuilder().build(config);
+                try (var session = factory.openSession()) {
+                    var connection=session.getConnection();
+                    var totals=session.getMapper(UserLifetimeTrafficMapper.class);
+                    var career=session.getMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
+                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class));
+                    assertTotals(connection,1,"0","0","0","0");
+                    assertTrue(career.counts(1).isEmpty());
+                    try(var sql=connection.createStatement(); var result=sql.executeQuery(
+                            "SELECT COUNT(*) FROM pg_proc WHERE proname IN ('accumulate_user_lifetime_traffic','career_source_event','career_count_event','initialize_user_lifetime_traffic')")) {
+                        assertTrue(result.next()); assertEquals(0,result.getLong(1));
+                    }
+                    var at=java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).withNano(0);
+                    var row=new com.ghostchu.btn.sparkle.entity.SwarmTracker()
+                            .setUserappsId(1L).setUserDownloader("test").setTorrentId(1L)
+                            .setPeerIp(java.net.InetAddress.ofLiteral("192.0.2.1")).setPeerPort(6881)
+                            .setFirstTimeSeen(at.minusDays(1)).setLastTimeSeen(at)
+                            .setToPeerTraffic(1000L).setFromPeerTraffic(500L)
+                            .setToPeerTrafficOffset(10L).setFromPeerTrafficOffset(5L).setUserProgress(1);
+                    ingestion.swarm(1,row);
+                    assertTotals(connection,1,"10","5","0","0");
+                    assertTotals(connection,2,"0","0","5","10");
+                    ingestion.swarm(1,row);
+                    assertTotals(connection,1,"10","5","0","0");
+                    row.setToPeerTraffic(1020L).setLastTimeSeen(at.plusSeconds(60));
+                    ingestion.swarm(1,row);
+                    assertTotals(connection,1,"30","5","0","0");
+                    assertEquals("60.000000",career.durations(1).get("seeding"));
+                    row.setToPeerTraffic(800L);
+                    ingestion.swarm(1,row);
+                    assertTotals(connection,1,"30","5","0","0");
+                    ingestion.featureByApp(1,991,at);
+                    ingestion.featureByApp(1,991,at);
+                    assertEquals("1",career.counts(1).stream().filter(r -> "feature".equals(r.get("kind"))).findFirst().orElseThrow().get("total"));
+                    session.commit();
+                    row.setToPeerTraffic(2000L);
+                    ingestion.swarm(1,row);
+                    session.rollback();
+                    assertTotals(connection,1,"30","5","0","0");
+                    assertEquals("30",totals.selectByUserId(1).sentTrafficSelfReport());
+                    row.setToPeerTraffic(1020L);
+                    try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+                        var futures = java.util.stream.IntStream.range(0,3).mapToObj(i -> executor.submit(() -> {
+                            try (var concurrent = factory.openSession()) {
+                                new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerIngestionMapper.class)).swarm(1,row);
+                                concurrent.commit();
+                            }
+                            return true;
+                        })).toList();
+                        for (var future : futures) assertTrue(future.get());
+                    }
+                    assertTotals(connection,1,"30","5","0","0");
+                    try (var sql=connection.createStatement()) {
+                        sql.execute("DELETE FROM swarm_tracker");
+                        sql.execute("UPDATE user_lifetime_traffic SET sent_self=9223372036854775808 WHERE user_id=1");
+                    }
+                    ingestion.swarm(1,row);
+                    session.clearCache();
+                    assertEquals("9223372036854775808",totals.selectByUserId(1).sentTrafficSelfReport());
+                    var ban = new com.ghostchu.btn.sparkle.entity.BanHistory().setUserappsId(1L).setTorrentId(1L)
+                            .setPeerIp(java.net.InetAddress.ofLiteral("192.0.2.1")).setPeerPort(6881)
+                            .setPopulateTime(at).setModuleName("test").setRule("test");
+                    ingestion.ban(1,ban);
+                    ingestion.ban(1,ban);
+                    assertEquals("1",career.counts(1).stream().filter(r -> "ban".equals(r.get("kind"))).findFirst().orElseThrow().get("total"));
                 }
             } finally {
                 statement.execute("DROP DATABASE " + database + " WITH (FORCE)");
