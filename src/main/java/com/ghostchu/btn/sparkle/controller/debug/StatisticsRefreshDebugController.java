@@ -41,10 +41,5 @@ public class StatisticsRefreshDebugController {
         return ResponseEntity.ok("OK!");
     }
 
-    @GetMapping("/executeTrackerDashboardRefreshCron")
-    public ResponseEntity<@NotNull String> executeTrackerDashboardRefreshCron() {
-        service.onTrackerDashboardRefresh();
-        return ResponseEntity.ok("OK!");
-    }
 }
 

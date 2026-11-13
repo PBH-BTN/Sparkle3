@@ -1,0 +1,184 @@
+package com.ghostchu.btn.sparkle.controller.admin;
+
+import com.ghostchu.btn.sparkle.constants.MemberPlatform;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.LicenseSettingsUpdateRequest;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.LicenseSettingsView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderUpdateRequest;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SyncOutcome;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.LicensePage;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.ReconciliationView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.TransactionPage;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AfdianSettingsService;
+import com.ghostchu.btn.sparkle.service.ExchangeRateService;
+import com.ghostchu.btn.sparkle.service.MemberPlatformService;
+import com.ghostchu.btn.sparkle.service.MemberPlatformAdminService;
+import com.ghostchu.btn.sparkle.service.PbhLicenseService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.time.OffsetDateTime;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/admin/memberships")
+@RequiredArgsConstructor
+public class AdminMemberPlatformController {
+    private final MemberPlatformService memberPlatformService;
+    private final MemberPlatformAdminService memberPlatformAdminService;
+    private final ExchangeRateService exchangeRateService;
+    private final AfdianSettingsService afdianSettingsService;
+    private final PbhLicenseService licenseService;
+
+    @GetMapping
+    public SettingsView settings() {
+        return memberPlatformService.settings();
+    }
+
+    @GetMapping("/license")
+    public LicenseSettingsView licenseSettings() {
+        return new LicenseSettingsView(
+                afdianSettingsService.donationLicenseAmount().toPlainString(),
+                afdianSettingsService.licenseValidYears(),
+                afdianSettingsService.licensePrivateKeyConfigured(),
+                exchangeRateService.baseCurrency()
+        );
+    }
+
+    @PutMapping("/license")
+    public LicenseSettingsView updateLicense(
+            @RequestBody LicenseSettingsUpdateRequest request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        if (request == null) {
+            throw new BusinessException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "License settings are required"
+            );
+        }
+        afdianSettingsService.updateLicense(
+                request.donationLicenseAmount(),
+                request.validYears(),
+                request.privateKey(),
+                Boolean.TRUE.equals(request.clearPrivateKey()),
+                principal == null ? null : principal.getUserId()
+        );
+        return licenseSettings();
+    }
+
+    @PutMapping("/{provider}")
+    public ProviderView update(
+            @PathVariable String provider,
+            @RequestBody ProviderUpdateRequest request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        MemberPlatform platform = memberPlatformService.parseProvider(provider);
+        return memberPlatformService.update(
+                platform,
+                request,
+                principal == null ? null : principal.getUserId()
+        );
+    }
+
+    @PutMapping("/currency")
+    public Map<String, Object> updateCurrency(
+            @RequestBody CurrencyUpdateRequest request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        exchangeRateService.updateSettings(
+                request.baseCurrency(),
+                request.exchangeRateApiUrl(),
+                principal == null ? null : principal.getUserId()
+        );
+        exchangeRateService.refresh();
+        int recalculatedTransactions =
+                memberPlatformService.recalculateTransactionBaseAmounts();
+        return Map.of(
+                "baseCurrency", exchangeRateService.baseCurrency(),
+                "exchangeRateApiUrl", exchangeRateService.apiUrl(),
+                "recalculatedTransactions", recalculatedTransactions
+        );
+    }
+
+    @PostMapping("/sync")
+    public Map<String, Object> sync() {
+        return Map.of("synchronizedProviders", memberPlatformService.syncAll());
+    }
+
+    @PostMapping("/{provider}/sync")
+    public SyncOutcome syncProvider(@PathVariable String provider)
+            throws BusinessException {
+        return memberPlatformService.syncProvider(
+                memberPlatformService.parseProvider(provider)
+        );
+    }
+
+    @GetMapping("/transactions")
+    public TransactionPage transactions(
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean remotePresent,
+            @RequestParam(required = false) OffsetDateTime occurredFrom,
+            @RequestParam(required = false) OffsetDateTime occurredTo,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) throws BusinessException {
+        return memberPlatformAdminService.transactions(
+                provider,
+                keyword,
+                type,
+                status,
+                remotePresent,
+                occurredFrom,
+                occurredTo,
+                page,
+                size
+        );
+    }
+
+    @GetMapping("/reconciliation")
+    public ReconciliationView reconciliation(
+            @RequestParam(required = false) String provider,
+            @RequestParam(defaultValue = "50") int limit
+    ) throws BusinessException {
+        return memberPlatformAdminService.reconciliation(provider, limit);
+    }
+
+    @GetMapping("/licenses")
+    public LicensePage licenses(
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sourceType,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) throws BusinessException {
+        return licenseService.adminLicenses(
+                keyword,
+                provider,
+                sourceType,
+                status,
+                page,
+                size
+        );
+    }
+
+    public record CurrencyUpdateRequest(
+            String baseCurrency,
+            String exchangeRateApiUrl
+    ) {
+    }
+}

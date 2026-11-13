@@ -1,0 +1,11 @@
+# 发布包只需要 PHP 服务端文件、语言包和已构建的 js/dist。
+/js/node_modules export-ignore
+/js/src export-ignore
+/js/admin.js export-ignore
+/js/forum.js export-ignore
+/js/package.json export-ignore
+/js/pnpm-lock.yaml export-ignore
+/js/tsconfig.json export-ignore
+/js/webpack.config.js export-ignore
+/js/.gitignore export-ignore
+/.gitignore export-ignore

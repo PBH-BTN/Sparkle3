@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.ClientDiscovery;
 import com.ghostchu.btn.sparkle.mapper.ClientDiscoveryMapper;
+import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.util.HexUtil;
 import com.ghostchu.btn.sparkle.util.PeerIdParser;
@@ -14,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,33 +38,30 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMapper, ClientDiscovery> implements IClientDiscoveryService {
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "peer_id", "peer_client_name", "client_type", "client_semver", "found_at"
+    );
 
-    @Value("${sparkle.client-discovery.enabled}")
-    private boolean useClientDiscovery;
-
+    @Autowired
+    private AdminConfigService adminConfigService;
     @Transactional
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
-        if(!useClientDiscovery) return;
+        if (!adminConfigService.get().clientDiscoveryEnabled()) return;
+        if (data == null || data.isEmpty()) return;
         List<ClientDiscovery> clientDiscoveryList = new ArrayList<>();
         for (Pair<String, String> pair : data) {
+            if (pair == null) continue;
             var peerIdIn = pair.getKey();
             var peerClientName = pair.getValue();
-            if (peerIdIn == null && peerClientName == null) return;
+            if (peerIdIn == null && peerClientName == null) continue;
             // 设置默认值
             String peerId = HexUtil.cutPeerId(peerIdIn);
             OffsetDateTime foundAt = OffsetDateTime.now();
             String clientType = null;
             String clientSemver = null;
 
-            if(peerId != null){
-                if(peerId.startsWith("-XL0012") && peerClientName.startsWith("-XL0012-"))
-                    continue;
-                if(peerClientName.startsWith("Gopeed") && !peerId.startsWith("-GP"))
-                    continue;
-                if(peerId.startsWith("FD6"))
-                    continue;
-            }
+            if (shouldSkipPeer(peerId, peerClientName)) continue;
             // 处理 PeerId
             if (peerIdIn != null) {
                 var parsed = PeerIdParser.parse(peerIdIn);
@@ -86,11 +85,26 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
         }
         try {
             if (!clientDiscoveryList.isEmpty()) {
-                this.baseMapper.batchInsert(clientDiscoveryList);
+                this.baseMapper.batchInsertReturning(clientDiscoveryList);
             }
         } catch (Exception e) {
-            log.error("Error inserting client discovery data: {}", e.getMessage());
+            log.error("Error inserting client discovery data", e);
         }
+    }
+
+    static boolean shouldSkipPeer(@Nullable String peerId, @Nullable String peerClientName) {
+        if (peerId == null) return false;
+        if (peerId.startsWith("-XL0012")
+                && peerClientName != null
+                && peerClientName.startsWith("-XL0012-")) {
+            return true;
+        }
+        if (peerClientName != null
+                && peerClientName.startsWith("Gopeed")
+                && !peerId.startsWith("-GP")) {
+            return true;
+        }
+        return peerId.startsWith("FD6");
     }
 
     @Override
@@ -112,7 +126,7 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                 .like(clientSemver != null && !clientSemver.isBlank(), "client_semver", clientSemver);
 
         // 添加排序
-        String sort = (sortBy != null && !sortBy.isBlank()) ? sortBy : "found_at";
+        String sort = sortBy != null && SORTABLE_FIELDS.contains(sortBy) ? sortBy : "found_at";
         String order = (sortOrder != null && !sortOrder.isBlank()) ? sortOrder : "desc";
         if ("desc".equalsIgnoreCase(order)) {
             wrapper.orderByDesc(sort);

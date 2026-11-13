@@ -1,0 +1,43 @@
+{
+    "name": "sparkle/btn-flarum",
+    "description": "Sync Sparkle BTN profile data into Flarum through FoF OAuth.",
+    "type": "flarum-extension",
+    "license": "AGPL-3.0-or-later",
+    "require": {
+        "php": "^8.3",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "flarum/core": "^2.0.0",
+        "fof/oauth": "^2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sparkle\\Flarum\\": "src/"
+        }
+    },
+    "archive": {
+        "exclude": [
+            "/js/node_modules",
+            "/js/src",
+            "/js/admin.js",
+            "/js/forum.js",
+            "/js/package.json",
+            "/js/pnpm-lock.yaml",
+            "/js/tsconfig.json",
+            "/js/webpack.config.js",
+            "/js/.gitignore",
+            "/.gitignore"
+        ]
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Sparkle BTN Profile",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-satellite-dish",
+                "backgroundColor": "#10b981",
+                "color": "#fff"
+            }
+        }
+    }
+}

@@ -1,8 +1,10 @@
 package com.ghostchu.btn.sparkle.util.ipdb.geocn;
 
+import com.ghostchu.btn.sparkle.util.ipdb.GeoNetworkRecord;
 import com.ghostchu.btn.sparkle.util.ipdb.IPGeoData;
 import com.maxmind.db.MaxMindDbConstructor;
 import com.maxmind.db.MaxMindDbParameter;
+import com.maxmind.db.InvalidNetworkException;
 import com.maxmind.db.NodeCache;
 import com.maxmind.db.Reader;
 import io.sentry.Sentry;
@@ -12,6 +14,8 @@ import lombok.ToString;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Set;
+import java.util.function.Consumer;
 
 public class GeoCN1 implements AutoCloseable {
 
@@ -76,6 +80,31 @@ public class GeoCN1 implements AutoCloseable {
             Sentry.captureException(e);
             return null;
         }
+    }
+
+    public void forEachNetwork(Consumer<GeoNetworkRecord> consumer) throws IOException {
+        try {
+            var networks = reader.networks(CNLookupResult.class);
+            while (networks.hasNext()) {
+                var record = networks.next();
+                var data = record.getData();
+                if (data == null) {
+                    continue;
+                }
+                consumer.accept(new GeoNetworkRecord(
+                        record.getNetwork(),
+                        "CN",
+                        names(data.getProvince()),
+                        names(data.getCity())
+                ));
+            }
+        } catch (InvalidNetworkException exception) {
+            throw new IOException("Unable to enumerate GeoCN networks", exception);
+        }
+    }
+
+    private Set<String> names(String value) {
+        return value == null || value.isBlank() ? Set.of() : Set.of(value);
     }
 
     @Override

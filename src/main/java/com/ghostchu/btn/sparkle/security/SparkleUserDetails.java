@@ -5,12 +5,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,13 +37,7 @@ public class SparkleUserDetails implements UserDetails, OAuth2User {
 
     @Override
     public @NotNull Collection<? extends GrantedAuthority> getAuthorities() {
-        // 可以根据 User 实体的角色或权限来返回权限列表
-        // 目前返回基本的 USER 角色
-        return List.of(
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("user"),
-                new SimpleGrantedAuthority(user.getRole())
-        );
+        return AdminPolicy.authorities(user);
     }
 
     @Override

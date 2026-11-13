@@ -166,6 +166,73 @@
                  userapps_count DESC
         LIMIT 1000
     </select>
+    <resultMap id="analyseMassDownloadResult"
+               type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseMassDownloadResult">
+        <result column="peer_ip_cidr" property="peerIpCidr"/>
+        <result column="download_bytes" property="downloadBytes"/>
+        <result column="reporter_count" property="reporterCount"/>
+        <result column="connection_count" property="connectionCount"/>
+        <result column="torrent_count" property="torrentCount"/>
+        <result column="latest_seen_at" property="latestSeenAt"/>
+    </resultMap>
+    <select id="analyseMassDownload" resultMap="analyseMassDownloadResult" fetchSize="100">
+        WITH latest_reports AS MATERIALIZED (
+            SELECT DISTINCT ON (
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port
+            )
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port,
+                GREATEST(swarm.to_peer_traffic, 0)::numeric AS download_bytes,
+                swarm.last_time_seen
+            FROM public.swarm_tracker swarm
+            WHERE swarm.last_time_seen &gt;= #{afterTimestamp}
+              AND swarm.last_time_seen &lt; NOW()
+              AND swarm.to_peer_traffic &gt; 0
+            ORDER BY
+                swarm.userapps_id,
+                swarm.user_downloader,
+                swarm.torrent_id,
+                swarm.peer_ip,
+                swarm.peer_port,
+                swarm.last_time_seen DESC,
+                swarm.id DESC
+        ),
+        grouped AS (
+            SELECT
+                CASE family(latest.peer_ip)
+                    WHEN 4 THEN
+                        CASE
+                            WHEN #{ipv4Prefix} = 32 THEN host(latest.peer_ip)
+                            ELSE network(set_masklen(latest.peer_ip, #{ipv4Prefix}))::text
+                        END
+                    WHEN 6 THEN network(set_masklen(latest.peer_ip, #{ipv6Prefix}))::text
+                END AS peer_ip_cidr,
+                SUM(latest.download_bytes)::numeric AS download_bytes,
+                COUNT(DISTINCT latest.userapps_id)::bigint AS reporter_count,
+                COUNT(*)::bigint AS connection_count,
+                COUNT(DISTINCT latest.torrent_id)::bigint AS torrent_count,
+                MAX(latest.last_time_seen) AS latest_seen_at
+            FROM latest_reports latest
+            GROUP BY peer_ip_cidr
+        )
+        SELECT
+            grouped.peer_ip_cidr,
+            grouped.download_bytes::text AS download_bytes,
+            grouped.reporter_count,
+            grouped.connection_count,
+            grouped.torrent_count,
+            grouped.latest_seen_at
+        FROM grouped
+        WHERE grouped.download_bytes &gt; #{thresholdDownload}
+        ORDER BY grouped.download_bytes DESC, grouped.peer_ip_cidr
+    </select>
     <resultMap id="analyseIpAndIdentityResult"
                type="com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult">
         <result column="peer_ip" property="peerIp"/>

@@ -12,6 +12,8 @@ import java.net.InetAddress;
 @NoArgsConstructor
 @Data
 public class SwarmTrackerDto {
+    @JsonProperty("id")
+    private Long id;
     @JsonProperty("torrent")
     private String torrent;
     @JsonProperty("peer_ip")
@@ -42,6 +44,7 @@ public class SwarmTrackerDto {
     private double userProgress;
 
     public SwarmTrackerDto(SwarmTracker swarmTracker) {
+        this.id = swarmTracker.getId();
         this.torrent = String.valueOf(swarmTracker.getTorrentId());
         this.peerIp = swarmTracker.getPeerIp();
         this.peerPort = swarmTracker.getPeerPort();

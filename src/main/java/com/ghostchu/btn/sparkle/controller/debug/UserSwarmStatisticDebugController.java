@@ -33,8 +33,8 @@ public class UserSwarmStatisticDebugController {
 
     @GetMapping("/executeCronUserSwarmStatisticsUpdate")
     public ResponseEntity<@NotNull String> debugPerUserSwarmStatistic() {
-        userSwarmStatisticsService.cronUserSwarmStatisticsUpdate();
-        return ResponseEntity.ok("SWARM STATISTICS UPDATED");
+        boolean started = userSwarmStatisticsService.requestManualRefresh(null);
+        return ResponseEntity.ok(started ? "SWARM STATISTICS REFRESH STARTED" : "REFRESH ALREADY RUNNING");
     }
 }
 

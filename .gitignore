@@ -39,4 +39,7 @@ application.yaml
 application-local.yaml
 application-production.yaml
 data/
-frontend/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+flarum/extensions/*.zip

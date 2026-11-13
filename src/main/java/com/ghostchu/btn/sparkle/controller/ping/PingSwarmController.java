@@ -4,17 +4,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnSwarmPeerPing;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
+import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
-import lombok.Data;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,18 +24,19 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 public class PingSwarmController extends BasePingController {
-    @Value("${sparkle.ping.sync-swarm.pow-captcha}")
-    private boolean powCaptcha;
     @Autowired
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IClientDiscoveryService clientDiscoveryService;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
 
     @PostMapping("/ping/syncSwarm")
-    public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
-        if(powCaptcha){
-            validatePowCaptcha();
+    public ResponseEntity<@NotNull String> onSwarmSync(@RequestBody BtnSwarmPeerPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException, PowCaptchaFailureException {
+        if (configService.booleanValue("syncSwarm", "powCaptcha")
+                && !validatePowCaptcha()) {
+            throw new PowCaptchaFailureException();
         }
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
@@ -52,24 +53,35 @@ public class PingSwarmController extends BasePingController {
             swarm.setClientName(sanitizeU0(swarm.getClientName()));
             swarm.setPeerLastFlags(sanitizeU0(swarm.getPeerLastFlags()));
         }
-        swarmTrackerService.syncSwarm(userapp.getId(), swarms);
-        clientDiscoveryService.handleClientDiscovery(userapp.getId(), swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList());
+        swarmTrackerService.syncSwarm(userapp.getId(), userapp.getOwner(), swarms);
+        clientDiscoveryService.handleClientDiscovery(
+                userapp.getId(),
+                swarms.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getClientName())).toList()
+        );
         return ResponseEntity.status(200).build();
     }
 
     @Component
-    @Data
-    public static class SwarmSyncBtnAbility implements SparkleBtnAbility {
-        @Value("${sparkle.ping.sync-swarm.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.sync-swarm.interval}")
-        public long interval;
-        @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
+    public static class SwarmSyncBtnAbility extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("syncSwarm", "endpoint");
+        }
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("syncSwarm", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
-        @Value("${sparkle.ping.sync-swarm.pow-captcha}")
+        public long getRandomInitialDelay() {
+            return longValue("syncSwarm", "randomInitialDelay");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
+        public boolean isPowCaptcha() {
+            return booleanValue("syncSwarm", "powCaptcha");
+        }
 
         @Override
         public String getConfigKey() {

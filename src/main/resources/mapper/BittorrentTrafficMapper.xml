@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.BittorrentTrafficMapper">
+    <resultMap id="trafficRowResult" type="com.ghostchu.btn.sparkle.service.dto.DashboardTrafficRowDto">
+        <result column="city" property="city"/>
+        <result column="upload_bytes" property="uploadBytes"/>
+        <result column="download_bytes" property="downloadBytes"/>
+    </resultMap>
+
+    <select id="selectBanTraffic" resultMap="trafficRowResult">
+        WITH city_totals AS MATERIALIZED (
+            <choose>
+                <when test="useSnapshot">
+                    SELECT
+                        city,
+                        SUM(upload_bytes)::numeric AS upload,
+                        SUM(download_bytes)::numeric AS download
+                    FROM public.dashboard_ban_city_traffic
+                    WHERE range_days = #{days}
+                    GROUP BY city
+                </when>
+                <otherwise>
+                    SELECT
+                        latest.city,
+                        SUM(latest.upload_bytes)::numeric AS upload,
+                        SUM(latest.download_bytes)::numeric AS download
+                    FROM (
+                        SELECT
+                            ban_history.userapps_id,
+                            ban_history.torrent_id,
+                            ban_history.peer_ip,
+                            ban_history.peer_port,
+                            COALESCE(ban_history.peer_id, '') AS peer_id,
+                            MAX(COALESCE(
+                                NULLIF(ban_history.peer_geoip #>> '{city,cnCity}', ''),
+                                NULLIF(ban_history.peer_geoip #>> '{city,name}', ''),
+                                NULLIF(ban_history.peer_geoip #>> '{country,name}', ''),
+                                'Unknown'
+                            )) AS city,
+                            MAX(GREATEST(ban_history.to_peer_traffic, 0))::numeric AS upload_bytes,
+                            MAX(GREATEST(ban_history.from_peer_traffic, 0))::numeric AS download_bytes
+                        FROM public.ban_history
+                        WHERE ban_history.populate_time &gt;= #{startAt}
+                          AND ban_history.populate_time &lt; #{endAt}
+                        GROUP BY
+                            ban_history.userapps_id,
+                            ban_history.torrent_id,
+                            ban_history.peer_ip,
+                            ban_history.peer_port,
+                            COALESCE(ban_history.peer_id, '')
+                    ) latest
+                    GROUP BY latest.city
+                </otherwise>
+            </choose>
+        ),
+        top_cities AS (
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY upload DESC, city
+                LIMIT #{limit}
+            )
+            UNION ALL
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY download DESC, city
+                LIMIT #{limit}
+            )
+        ),
+        totals AS (
+            SELECT SUM(upload)::numeric AS upload, SUM(download)::numeric AS download
+            FROM city_totals
+        )
+        SELECT NULL::text AS city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM totals
+        UNION ALL
+        SELECT city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM (
+            SELECT DISTINCT city, upload, download
+            FROM top_cities
+        ) selected
+    </select>
+
+    <select id="selectSwarmTraffic" resultMap="trafficRowResult">
+        WITH city_totals AS MATERIALIZED (
+            <choose>
+                <when test="useSnapshot">
+                    SELECT
+                        city,
+                        SUM(upload_bytes)::numeric AS upload,
+                        SUM(download_bytes)::numeric AS download
+                    FROM public.dashboard_swarm_hourly_traffic
+                    WHERE bucket &gt;= #{startAt}
+                      AND bucket &lt; #{endAt}
+                    GROUP BY city
+                </when>
+                <otherwise>
+                    SELECT
+                        COALESCE(
+                            NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                            NULLIF(peer_geoip #>> '{city,name}', ''),
+                            NULLIF(peer_geoip #>> '{country,name}', ''),
+                            'Unknown'
+                        ) AS city,
+                        SUM(GREATEST(to_peer_traffic, 0))::numeric AS upload,
+                        SUM(GREATEST(from_peer_traffic, 0))::numeric AS download
+                    FROM public.swarm_tracker
+                    WHERE last_time_seen &gt;= #{startAt}
+                      AND last_time_seen &lt; #{endAt}
+                    GROUP BY city
+                </otherwise>
+            </choose>
+        ),
+        top_cities AS (
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY upload DESC, city
+                LIMIT #{limit}
+            )
+            UNION ALL
+            (
+                SELECT city, upload, download
+                FROM city_totals
+                ORDER BY download DESC, city
+                LIMIT #{limit}
+            )
+        ),
+        totals AS (
+            SELECT SUM(upload)::numeric AS upload, SUM(download)::numeric AS download
+            FROM city_totals
+        )
+        SELECT NULL::text AS city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM totals
+        UNION ALL
+        SELECT city, upload::text AS upload_bytes, download::text AS download_bytes
+        FROM (
+            SELECT DISTINCT city, upload, download
+            FROM top_cities
+        ) selected
+    </select>
+
+    <delete id="deleteSwarmTrafficSnapshot">
+        DELETE FROM public.dashboard_swarm_hourly_traffic
+        WHERE bucket &gt;= #{startAt}
+          AND bucket &lt; #{endAt}
+    </delete>
+
+    <insert id="insertSwarmTrafficSnapshot">
+        INSERT INTO public.dashboard_swarm_hourly_traffic (
+            bucket,
+            city,
+            upload_bytes,
+            download_bytes,
+            refreshed_at
+        )
+        SELECT
+            time_bucket(INTERVAL '1 hour', last_time_seen) AS bucket,
+            COALESCE(
+                NULLIF(peer_geoip #>> '{city,cnCity}', ''),
+                NULLIF(peer_geoip #>> '{city,name}', ''),
+                NULLIF(peer_geoip #>> '{country,name}', ''),
+                'Unknown'
+            ) AS city,
+            SUM(GREATEST(to_peer_traffic, 0))::numeric AS upload_bytes,
+            SUM(GREATEST(from_peer_traffic, 0))::numeric AS download_bytes,
+            NOW()
+        FROM public.swarm_tracker
+        WHERE last_time_seen &gt;= #{startAt}
+          AND last_time_seen &lt; #{endAt}
+        GROUP BY bucket, city
+        ON CONFLICT (bucket, city) DO UPDATE
+        SET upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes,
+            refreshed_at = EXCLUDED.refreshed_at
+    </insert>
+
+    <delete id="deleteExpiredSwarmTrafficSnapshot">
+        DELETE FROM public.dashboard_swarm_hourly_traffic
+        WHERE bucket &lt; #{cutoff}
+    </delete>
+
+    <delete id="deleteBanTrafficSnapshot">
+        DELETE FROM public.dashboard_ban_city_traffic
+    </delete>
+
+    <insert id="upsertBanConnectionBackfill">
+        INSERT INTO public.dashboard_ban_connection_traffic (
+            userapps_id,
+            torrent_id,
+            peer_ip,
+            peer_port,
+            peer_id,
+            city,
+            upload_bytes,
+            download_bytes,
+            last_seen_at
+        )
+        SELECT
+            ban_history.userapps_id,
+            ban_history.torrent_id,
+            ban_history.peer_ip,
+            ban_history.peer_port,
+            COALESCE(ban_history.peer_id, '') AS peer_id,
+            MAX(COALESCE(
+                NULLIF(ban_history.peer_geoip #>> '{city,cnCity}', ''),
+                NULLIF(ban_history.peer_geoip #>> '{city,name}', ''),
+                NULLIF(ban_history.peer_geoip #>> '{country,name}', ''),
+                'Unknown'
+            )) AS city,
+            MAX(GREATEST(ban_history.to_peer_traffic, 0)) AS upload_bytes,
+            MAX(GREATEST(ban_history.from_peer_traffic, 0)) AS download_bytes,
+            MAX(ban_history.populate_time) AS last_seen_at
+        FROM public.ban_history
+        WHERE ban_history.populate_time &gt;= #{startAt}
+          AND ban_history.populate_time &lt; #{endAt}
+        GROUP BY
+            ban_history.userapps_id,
+            ban_history.torrent_id,
+            ban_history.peer_ip,
+            ban_history.peer_port,
+            COALESCE(ban_history.peer_id, '')
+        ON CONFLICT (
+            userapps_id,
+            torrent_id,
+            peer_ip,
+            peer_port,
+            peer_id
+        ) DO UPDATE
+        SET city = EXCLUDED.city,
+            upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes,
+            last_seen_at = EXCLUDED.last_seen_at
+        WHERE EXCLUDED.last_seen_at &gt; dashboard_ban_connection_traffic.last_seen_at
+           OR (
+               EXCLUDED.last_seen_at = dashboard_ban_connection_traffic.last_seen_at
+               AND (
+                   EXCLUDED.upload_bytes &gt; dashboard_ban_connection_traffic.upload_bytes
+                   OR EXCLUDED.download_bytes &gt; dashboard_ban_connection_traffic.download_bytes
+               )
+           )
+    </insert>
+
+    <insert id="upsertBanConnectionsIncremental">
+        INSERT INTO public.dashboard_ban_connection_traffic (
+            userapps_id,
+            torrent_id,
+            peer_ip,
+            peer_port,
+            peer_id,
+            city,
+            upload_bytes,
+            download_bytes,
+            last_seen_at
+        )
+        SELECT
+            ban_history.userapps_id,
+            ban_history.torrent_id,
+            ban_history.peer_ip,
+            ban_history.peer_port,
+            COALESCE(ban_history.peer_id, '') AS peer_id,
+            MAX(COALESCE(
+                NULLIF(ban_history.peer_geoip #>> '{city,cnCity}', ''),
+                NULLIF(ban_history.peer_geoip #>> '{city,name}', ''),
+                NULLIF(ban_history.peer_geoip #>> '{country,name}', ''),
+                'Unknown'
+            )) AS city,
+            MAX(GREATEST(ban_history.to_peer_traffic, 0)) AS upload_bytes,
+            MAX(GREATEST(ban_history.from_peer_traffic, 0)) AS download_bytes,
+            MAX(ban_history.populate_time) AS last_seen_at
+        FROM public.ban_history
+        WHERE ban_history.insert_time &gt;= #{startAt}
+          AND ban_history.insert_time &lt; #{endAt}
+        GROUP BY
+            ban_history.userapps_id,
+            ban_history.torrent_id,
+            ban_history.peer_ip,
+            ban_history.peer_port,
+            COALESCE(ban_history.peer_id, '')
+        ON CONFLICT (
+            userapps_id,
+            torrent_id,
+            peer_ip,
+            peer_port,
+            peer_id
+        ) DO UPDATE
+        SET city = EXCLUDED.city,
+            upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes,
+            last_seen_at = EXCLUDED.last_seen_at
+        WHERE EXCLUDED.last_seen_at &gt; dashboard_ban_connection_traffic.last_seen_at
+           OR (
+               EXCLUDED.last_seen_at = dashboard_ban_connection_traffic.last_seen_at
+               AND (
+                   EXCLUDED.upload_bytes &gt; dashboard_ban_connection_traffic.upload_bytes
+                   OR EXCLUDED.download_bytes &gt; dashboard_ban_connection_traffic.download_bytes
+               )
+           )
+    </insert>
+
+    <delete id="deleteExpiredBanConnections">
+        DELETE FROM public.dashboard_ban_connection_traffic
+        WHERE last_seen_at &lt; #{cutoff}
+    </delete>
+
+    <delete id="clearBanCityHourlyTraffic">
+        DELETE FROM public.dashboard_ban_city_hourly_traffic
+    </delete>
+
+    <insert id="rebuildBanCityHourlyTraffic">
+        INSERT INTO public.dashboard_ban_city_hourly_traffic (
+            hour,
+            city,
+            upload_bytes,
+            download_bytes
+        )
+        SELECT
+            time_bucket(INTERVAL '1 hour', last_seen_at) AS hour,
+            city,
+            SUM(upload_bytes)::numeric AS upload_bytes,
+            SUM(download_bytes)::numeric AS download_bytes
+        FROM public.dashboard_ban_connection_traffic
+        WHERE last_seen_at &gt;= #{cutoff}
+        GROUP BY time_bucket(INTERVAL '1 hour', last_seen_at), city
+        ON CONFLICT (hour, city) DO UPDATE
+        SET upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes
+    </insert>
+
+    <insert id="insertBanTrafficSnapshotFromDaily">
+        INSERT INTO public.dashboard_ban_city_traffic (
+            range_days,
+            city,
+            upload_bytes,
+            download_bytes,
+            generated_at
+        )
+        WITH current_hour AS (
+            SELECT time_bucket(INTERVAL '1 hour', NOW()) + INTERVAL '1 hour' AS range_end
+        ),
+        windows AS (
+            SELECT
+                hourly.city,
+                COALESCE(SUM(upload_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '1 day'
+                ), 0)::numeric AS upload_1d,
+                COALESCE(SUM(download_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '1 day'
+                ), 0)::numeric AS download_1d,
+                COALESCE(SUM(upload_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '3 days'
+                ), 0)::numeric AS upload_3d,
+                COALESCE(SUM(download_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '3 days'
+                ), 0)::numeric AS download_3d,
+                COALESCE(SUM(upload_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '7 days'
+                ), 0)::numeric AS upload_7d,
+                COALESCE(SUM(download_bytes) FILTER (
+                    WHERE hour &gt;= current_hour.range_end - INTERVAL '7 days'
+                ), 0)::numeric AS download_7d
+            FROM public.dashboard_ban_city_hourly_traffic hourly
+            CROSS JOIN current_hour
+            WHERE hourly.hour &gt;= current_hour.range_end - INTERVAL '7 days'
+            GROUP BY hourly.city
+        )
+        SELECT
+            ranges.range_days,
+            windows.city,
+            ranges.upload_bytes,
+            ranges.download_bytes,
+            NOW()
+        FROM windows
+        CROSS JOIN LATERAL (
+            VALUES
+                (1::SMALLINT, upload_1d, download_1d),
+                (3::SMALLINT, upload_3d, download_3d),
+                (7::SMALLINT, upload_7d, download_7d)
+        ) AS ranges(range_days, upload_bytes, download_bytes)
+        WHERE ranges.upload_bytes &gt; 0
+           OR ranges.download_bytes &gt; 0
+        ON CONFLICT (range_days, city) DO UPDATE
+        SET upload_bytes = EXCLUDED.upload_bytes,
+            download_bytes = EXCLUDED.download_bytes,
+            generated_at = EXCLUDED.generated_at
+    </insert>
+</mapper>

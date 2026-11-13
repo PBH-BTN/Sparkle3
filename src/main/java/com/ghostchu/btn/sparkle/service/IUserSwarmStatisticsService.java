@@ -1,8 +1,8 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.ghostchu.btn.sparkle.entity.Rule;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
+import com.ghostchu.btn.sparkle.service.dto.SwarmStatisticsStatusDto;
 import com.ghostchu.btn.sparkle.service.dto.UserSwarmStatisticTrackRankingDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,4 +22,8 @@ public interface IUserSwarmStatisticsService extends IService<UserSwarmStatistic
     @NotNull List<UserSwarmStatisticTrackRankingDto> getUsersRanking();
 
     @Nullable UserSwarmStatisticTrackRankingDto getUserRanking(long userId);
+
+    @NotNull SwarmStatisticsStatusDto getRefreshStatus();
+
+    boolean requestManualRefresh(@Nullable Long operatorId);
 }

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -24,8 +25,14 @@ public interface IUserappsHeartbeatService extends IService<UserappsHeartbeat> {
 
     @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdInTimeRange(long userAppId, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);
 
+    @NotNull List<UserappsHeartbeat> fetchHeartBeatsByUserAppIdsInTimeRange(
+            @NotNull Collection<Long> userAppIds,
+            @NotNull OffsetDateTime startAt,
+            @NotNull OffsetDateTime endAt
+    );
+
     @NotNull List<UserappsHeartbeat> fetchIpHeartbeatRecords(String ip, OffsetDateTime after);
 
     @Transactional
-    void onHeartBeat(long userAppId, @NotNull InetAddress ip);
+    void onHeartBeat(long userAppId, long userId, @NotNull InetAddress ip);
 }

@@ -1,0 +1,9 @@
+{
+  "extends": "flarum-tsconfig",
+  "include": [
+    "src/**/*"
+  ],
+  "compilerOptions": {
+    "target": "ES2020"
+  }
+}

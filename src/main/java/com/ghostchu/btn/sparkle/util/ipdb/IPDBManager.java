@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class IPDBManager {
     private final Cache<String, IPDBResponse> geoIpCache = CacheBuilder.newBuilder()
             .expireAfterAccess(300000, TimeUnit.MILLISECONDS)
-            .maximumSize(300)
+            .maximumSize(10_000)
             .softValues()
             .build();
     @Getter

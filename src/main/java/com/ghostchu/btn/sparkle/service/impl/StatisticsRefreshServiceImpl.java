@@ -14,27 +14,15 @@ import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.time.Duration;
 
 @Service
 @Slf4j
 public class StatisticsRefreshServiceImpl {
-    private static final Timestamp thirtyDaysAgo = new Timestamp(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
-    private static final Timestamp fourteenDaysAgo = new Timestamp(System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000);
-    private static final Timestamp sevenDaysAgo = new Timestamp(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000);
-    private static final Timestamp last24HoursAgo = new Timestamp(System.currentTimeMillis() - 24L * 60 * 60 * 1000);
-
     @Autowired
     @Qualifier("stringLongRedisTemplate")
     private RedisTemplate<String, Long> stringLongRedisTemplate;
@@ -47,47 +35,48 @@ public class StatisticsRefreshServiceImpl {
     @Autowired
     private TorrentMapper torrentMapper;
 
-    @Value("${sparkle.statistics.tracker-dashboard-image-retrieve}")
-    private String trackerDashboardImageRetrieveUrl;
-    @Value("${sparkle.statistics.tracker-dashboard-image-auth-token}")
-    private String trackerDashboardImageAuthToken;
-
-    @Scheduled(cron = "${sparkle.statistics.ban-count-refresh-cron}")
     public void onBanCountRefresh() {
         long allTime = banHistoryMapper.estimateCountAll();
         UniversalCountDto count = banHistoryMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_30DAYS.getKey(), count.getDays30());
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_14DAYS.getKey(), count.getDays14());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_7DAYS.getKey(), count.getDays7());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_BANHISTORY_24HOURS.getKey(), count.getDays1());
     }
 
-    @Scheduled(cron = "${sparkle.statistics.swarm-tracker-count-refresh-cron}")
     public void onSwarmTracker() {
         long allTime = swarmTrackerMapper.estimateCountAll();
         UniversalCountDto count = swarmTrackerMapper.countTimeStatistics();
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_30DAYS.getKey(), count.getDays30());
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), count.getDays15());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_14DAYS.getKey(), count.getDays14());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_7DAYS.getKey(), count.getDays7());
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_SWARMTRACKER_24HOURS.getKey(), count.getDays1());
     }
 
-    @Scheduled(cron = "${sparkle.statistics.userapp-count-refresh-cron}")
     public void onUserAppUpdate() {
+        Timestamp thirtyDaysAgo = ago(Duration.ofDays(30));
+        Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
+        Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
+        Timestamp last24HoursAgo = ago(Duration.ofDays(1));
+        long allTime = userappMapper.selectCount(null);
         long last30Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", thirtyDaysAgo));
         long last14Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", fourteenDaysAgo));
         long last7Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", sevenDaysAgo));
         long last24Hours = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", last24HoursAgo));
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_ALLTIME.getKey(), allTime);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_30DAYS.getKey(), last30Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_14DAYS.getKey(), last14Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_7DAYS.getKey(), last7Days);
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_24HOURS.getKey(), last24Hours);
     }
 
-    @Scheduled(cron = "${sparkle.statistics.torrent-count-refresh-cron}")
     public void onTorrentUpdate() {
+        Timestamp thirtyDaysAgo = ago(Duration.ofDays(30));
+        Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
+        Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
+        Timestamp last24HoursAgo = ago(Duration.ofDays(1));
         long last30Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", thirtyDaysAgo));
         long last14Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", fourteenDaysAgo));
         long last7Days = torrentMapper.selectCount(new QueryWrapper<Torrent>().ge("last_seen_at", sevenDaysAgo));
@@ -98,24 +87,8 @@ public class StatisticsRefreshServiceImpl {
         stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_TORRENT_24HOURS.getKey(), last24Hours);
     }
 
-    @Scheduled(cron = "${sparkle.statistics.tracker-dashboard-refresh-cron}")
-    public void onTrackerDashboardRefresh() {
-        // download the tracker dashboard image from trackerDashboardImageRetrieveUrl
-        // and save to /tmp/sparkle_tracker_dashboard.png
-        // use Java 11+ HttpClient
-        try (var httpClient = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create(trackerDashboardImageRetrieveUrl))
-                    .header("Authorization", "Bearer " + trackerDashboardImageAuthToken)
-                    .build();
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            if (response.statusCode() == 200) {
-                Files.write(Paths.get("data/sparkle_tracker_dashboard.png"), response.body());
-            } else {
-                log.error("Failed to download tracker dashboard image, status code: {}", response.statusCode());
-            }
-        } catch (Exception e) {
-            log.error("Failed to download tracker dashboard image", e);
-        }
+    private Timestamp ago(Duration duration) {
+        return new Timestamp(System.currentTimeMillis() - duration.toMillis());
     }
+
 }

@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service.impl.denylist;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.ghostchu.btn.sparkle.util.UnitConverter;
@@ -14,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,12 +35,26 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private AnalyseModuleConfigService moduleConfigService;
 
-    @Scheduled(cron = "${sparkle.analyse.concurrent-download-analyse.schedule}")
     @Transactional
     public void analyseConcurrentDownload() {
-        log.info("Performing concurrent download analysis with duration: {} ms, thresholdConcurrent: {}, thresholdUserapps: {}", duration, thresholdConcurrent, thresholdUserapps);
-        var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
+        if (!moduleConfigService.isEnabled("concurrent-download-analyse")) {
+            return;
+        }
+        long activeDuration = moduleConfigService.durationMillis(
+                "concurrent-download-analyse", "duration", duration
+        );
+        double activeThresholdConcurrent = moduleConfigService.decimalValue(
+                "concurrent-download-analyse", "threshold-concurrent", thresholdConcurrent
+        );
+        double activeThresholdUserapps = moduleConfigService.decimalValue(
+                "concurrent-download-analyse", "threshold-userapps", thresholdUserapps
+        );
+        log.info("Performing concurrent download analysis with duration: {} ms, thresholdConcurrent: {}, thresholdUserapps: {}",
+                activeDuration, activeThresholdConcurrent, activeThresholdUserapps);
+        var afterTimestamp = OffsetDateTime.now().minus(activeDuration, ChronoUnit.MILLIS);
         StringBuilder sb = new StringBuilder();
 
         try (var cursor = this.baseMapper.analyseConcurrentDownload(afterTimestamp)) {
@@ -48,7 +62,8 @@ public class AnalyseRuleConcurrentDownloadServiceImpl extends AbstractAnalyseRul
             for (var result : cursor) {
                 IPAddress ip = IPAddressUtil.getIPAddress(result.getPeerIp());
                 // 边遍历边过滤边输出，不创建中间 List
-                if (result.getTorrentCount() >= thresholdConcurrent && result.getUserappsCount() >= thresholdUserapps) {
+                if (result.getTorrentCount() >= activeThresholdConcurrent
+                        && result.getUserappsCount() >= activeThresholdUserapps) {
                     if (ip.isIPv6()) {
                         ip = ip.toPrefixBlock(56);
                     }

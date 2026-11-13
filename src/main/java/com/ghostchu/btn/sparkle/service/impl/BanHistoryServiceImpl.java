@@ -12,6 +12,12 @@ import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
+import com.ghostchu.btn.sparkle.service.TorrentRegistration;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
+import com.ghostchu.btn.sparkle.service.points.PointRulesService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
@@ -21,19 +27,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * <p>
@@ -47,23 +53,33 @@ import java.util.Objects;
 @Slf4j
 public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHistory> implements IBanHistoryService {
     private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "populate_time", "torrent_id", "peer_ip", "peer_port", "peer_id",
+            "peer_client_name", "peer_progress", "module_name", "rule", "insert_time"
+    );
     @Autowired
     private ITorrentService torrentService;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private IPDBManager geoIPManager;
-    @Value("${sparkle.machine-learning.banhistory-sample-rate}")
-    private double banHistorySampleRate;
-
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> stringStringRedisTemplate;
+    @Autowired
+    private PointAwardContext pointAwardContext;
+    @Autowired
+    private PointRulesService pointRulesService;
 
 
     @Transactional
     @Override
-    public void syncBanHistory(@NotNull String submitterIp, long userAppId, @NotNull List<BtnBan> bans) {
+    public void syncBanHistory(
+            @NotNull String submitterIp,
+            long userAppId,
+            long userId,
+            @NotNull List<BtnBan> bans
+    ) {
         var nowTime = OffsetDateTime.now();
         var list = bans.stream().map(btnBan -> {
             Map<String, Object> structuredDataMap = Map.of();
@@ -90,11 +106,18 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                 return null;
             }
             var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
+            TorrentRegistration registration = torrentService.getOrCreateTorrent(
+                    btnBan.getTorrentIdentifier(),
+                    btnBan.getTorrentSize(),
+                    btnBan.isTorrentIsPrivate(),
+                    null,
+                    null
+            );
             return new BanHistory()
                     .setInsertTime(nowTime)
                     .setPopulateTime(banAtTime)
                     .setUserappsId(userAppId)
-                    .setTorrentId(torrentService.getOrCreateTorrentId(btnBan.getTorrentIdentifier(), btnBan.getTorrentSize(), btnBan.isTorrentIsPrivate(), null, null))
+                    .setTorrentId(registration.id())
                     .setPeerIp(inet)
                     .setPeerPort(btnBan.getPeerPort())
                     .setPeerId(btnBan.getPeerId())
@@ -112,6 +135,52 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
+        pointAwardContext.recordConfigured(
+                userId,
+                PointCategory.BAN_HISTORY,
+                list.size(),
+                0
+        );
+        long ruleHitCount = list.stream()
+                .filter(ban -> ban.getRule() != null && !ban.getRule().isBlank())
+                .count();
+        if (ruleHitCount > 0) {
+            pointAwardContext.recordConfigured(
+                    userId,
+                    PointCategory.RULE_HIT_IP,
+                    ruleHitCount,
+                    0
+            );
+        }
+
+        long wastedUploadBytes = 0;
+        for (BanHistory ban : list) {
+            long traffic = ban.getToPeerTraffic();
+            if (traffic > 0) {
+                wastedUploadBytes = wastedUploadBytes > Long.MAX_VALUE - traffic
+                        ? Long.MAX_VALUE
+                        : wastedUploadBytes + traffic;
+            }
+        }
+        long wastedPoints = BigInteger.valueOf(wastedUploadBytes)
+                .multiply(BigInteger.valueOf(
+                        pointRulesService.points(PointCategory.WASTED_UPLOAD)
+                ))
+                .divide(BigInteger.valueOf(1_048_576L)
+                        .multiply(BigInteger.valueOf(
+                                pointRulesService.wastedUploadMib()
+                        )))
+                .min(BigInteger.valueOf(Long.MAX_VALUE))
+                .longValue();
+        if (wastedPoints > 0) {
+            pointAwardContext.record(
+                    userId,
+                    PointCategory.WASTED_UPLOAD,
+                    wastedPoints,
+                    list.size(),
+                    wastedUploadBytes
+            );
+        }
     }
 
     @Override
@@ -173,7 +242,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
 
         // Sorting
-        String sortBy = queryDto.getSortBy() != null ? queryDto.getSortBy() : "populate_time";
+        String requestedSort = queryDto.getSortBy();
+        String sortBy = requestedSort != null && SORTABLE_FIELDS.contains(requestedSort)
+                ? requestedSort
+                : "populate_time";
         String sortOrder = queryDto.getSortOrder() != null ? queryDto.getSortOrder().toLowerCase() : "desc";
 
         if ("asc".equals(sortOrder)) {
@@ -184,7 +256,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
         // Pagination
         int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
-        int size = (queryDto.getSize() != null && queryDto.getSize() > 0) ? queryDto.getSize() : 100;
+        int size = (queryDto.getSize() != null && queryDto.getSize() > 0)
+                ? Math.min(queryDto.getSize(), 100)
+                : 100;
 
         Page<BanHistory> pageRequest = new Page<>(page, size);
 
@@ -233,7 +307,13 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         });
     }
 
-    @Scheduled(cron = "${sparkle.banhistory.refresh-module-name-cache-cron}")
+    @MonitoredScheduledTask(
+            id = "ban-module-name-cache",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.ban-module-name-cache.name",
+            descriptionKey = "admin.tasks.items.ban-module-name-cache.description",
+            expression = "${sparkle.banhistory.refresh-module-name-cache-cron}"
+    )
     public void refreshDistinctModuleNamesCache() {
         List<String> moduleNames = this.baseMapper.selectObjs(
                 new QueryWrapper<BanHistory>()
@@ -246,6 +326,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             stringStringRedisTemplate.opsForValue().set(DISTINCT_MODULE_NAMES_CACHE_KEY, serialized);
         } catch (Exception e) {
             log.error("Failed to serialize distinct module names for caching", e);
+            throw new IllegalStateException(
+                    "Failed to cache distinct ban module names",
+                    e
+            );
         }
     }
 

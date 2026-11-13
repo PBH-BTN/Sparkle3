@@ -2,6 +2,9 @@ package com.ghostchu.btn.sparkle.service.impl;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import inet.ipaddr.IPAddress;
@@ -10,9 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -23,8 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @Slf4j
 public class UserIPWarningServiceImpl {
-    @Value("${sparkle.admin.user-ip-warning.duration}")
-    private long duration;
     @Autowired
     private List<IPDenyListRuleProvider> ipDenyListRuleProviders;
     @Autowired
@@ -32,9 +31,18 @@ public class UserIPWarningServiceImpl {
     @Qualifier("stringObjectRedisTemplate")
     @Autowired
     private RedisTemplate<String, Object> stringObjectRedisTemplate;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
 
-    @Scheduled(cron = "${sparkle.admin.user-ip-warning.cron}")
+    @MonitoredScheduledTask(
+            id = "user-ip-warning",
+            group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.user-ip-warning.name",
+            descriptionKey = "admin.tasks.items.user-ip-warning.description",
+            expression = "${sparkle.admin.user-ip-warning.cron}"
+    )
     public void userIpWarning() {
+        long duration = btnConfigService.longValue("userIpWarning", "duration");
         Map<IPAddress, String> map = new LinkedHashMap<>();
         DualIPv4v6AssociativeTries<String> ips = new DualIPv4v6AssociativeTries<>();
         ipDenyListRuleProviders.forEach(provider -> {

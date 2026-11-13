@@ -3,8 +3,10 @@ package com.ghostchu.btn.sparkle.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.service.*;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
 import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
+import com.ghostchu.btn.sparkle.service.ipquery.IpScope;
 import com.ghostchu.btn.sparkle.util.TimeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,7 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -24,24 +25,6 @@ import java.util.*;
 @Slf4j
 @Service
 public class QueryIpServiceImpl {
-    @Value("${sparkle.ping.query-ip.pow-captcha}")
-    private boolean powCaptcha;
-    @Value("${sparkle.query.query-ip.include-modules}")
-    private String queryIpIncludeModules;
-    @Value("${sparkle.query.query-ip.bans-counting-duration}")
-    private long bansCountingDuration;
-    @Value("${sparkle.query.query-ip.swarms-counting-duration}")
-    private long swarmsCountingDuration;
-    @Value("${sparkle.query.query-ip.heartbeat-query-duration}")
-    private long heartbeatDuration;
-    @Value("${sparkle.ping.sync-swarm.interval}")
-    private long syncSwarmIntervalForConcurrentDownload;
-    @Value("${sparkle.ping.sync-swarm.random-initial-delay}")
-    private long syncSwarmRandomInitialDelayForConcurrentDownload;
-    @Value("${sparkle.query.query-ip.traffic-measure-duration}")
-    private long trafficMeasureDuration;
-    @Value("${sparkle.query.query-ip.torrents-counting-duration}")
-    private long torrentsCountingDuration;
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
@@ -54,8 +37,52 @@ public class QueryIpServiceImpl {
     private IUserappService userappService;
     @Autowired
     private IUserService userService;
+    @Autowired
+    private BtnRuntimeConfigService btnConfigService;
 
     public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
+        try {
+            peerIp = IpScope.parse(peerIp).canonicalCidr();
+        } catch (Exception exception) {
+            throw new IllegalArgumentException(
+                    exception.getMessage() == null
+                            ? "Invalid IP address or CIDR"
+                            : exception.getMessage(),
+                    exception
+            );
+        }
+        String queryIpIncludeModules = btnConfigService.text(
+                "queryIpStatistics",
+                "includeModules"
+        );
+        long bansCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "bansCountingDuration"
+        );
+        long swarmsCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "swarmsCountingDuration"
+        );
+        long heartbeatDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "heartbeatQueryDuration"
+        );
+        long trafficMeasureDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "trafficMeasureDuration"
+        );
+        long torrentsCountingDuration = btnConfigService.longValue(
+                "queryIpStatistics",
+                "torrentsCountingDuration"
+        );
+        long syncSwarmInterval = btnConfigService.longValue("syncSwarm", "interval");
+        long syncSwarmRandomInitialDelay = btnConfigService.longValue(
+                "syncSwarm",
+                "randomInitialDelay"
+        );
+        long concurrentDownloadWindow = syncSwarmInterval
+                + syncSwarmRandomInitialDelay
+                + 120_000;
         IpQueryResult result = new IpQueryResult();
         result.setColor("#808080");
         result.setLabels(new ArrayList<>());
@@ -74,14 +101,20 @@ public class QueryIpServiceImpl {
                 Page.of(1, 1000)
         );
         var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
-                OffsetDateTime.now().minus((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload + 120000), ChronoUnit.MILLIS),
+                OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
                 peerIp
         );
         var concurrentSeeds = swarmTrackerService.calcPeerConcurrentSeeds(
-                OffsetDateTime.now().minus((syncSwarmIntervalForConcurrentDownload + syncSwarmRandomInitialDelayForConcurrentDownload + 120000), ChronoUnit.MILLIS),
+                OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
                 peerIp
         );
-        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(syncSwarmIntervalForConcurrentDownload, swarms.getTotal(), swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(), concurrentDownloads, concurrentSeeds));
+        result.setSwarms(new IpQueryResult.IpQueryResultSwarms(
+                syncSwarmInterval,
+                swarms.getTotal(),
+                swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(),
+                concurrentDownloads,
+                concurrentSeeds
+        ));
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
         var trafficMeasureSince = OffsetDateTime.now().minus(trafficMeasureDuration, ChronoUnit.MILLIS);

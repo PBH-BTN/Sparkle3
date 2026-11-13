@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.User;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.awt.*;
 import java.util.List;
@@ -17,6 +19,8 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface UserMapper extends BaseMapper<User> {
+    @Select("SELECT * FROM \"user\" WHERE id = #{id} FOR UPDATE")
+    User selectForUpdate(@Param("id") long id);
 
     @NotNull
     Cursor<User> fetchAllUsers();

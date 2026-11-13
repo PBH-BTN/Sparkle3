@@ -4,19 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
-import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
-import io.sentry.Sentry;
-import jakarta.mail.Message;
-import jakarta.mail.internet.InternetAddress;
+import com.ghostchu.btn.sparkle.service.VersionAlertService;
+import com.ghostchu.btn.sparkle.service.account.UserAccountDeletionService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +21,7 @@ import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -36,23 +34,32 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> implements IUserappService {
-    @Qualifier("stringLongRedisTemplate")
     @Autowired
-    private RedisTemplate<String, Long> userAppsRedisTemplate;
-    @Value("${sparkle.userapp.auto-account.allow-register}")
-    private boolean autoAccountAllowRegister;
-    @Value("${sparkle.userapp.auto-account.allow-login}")
-    private boolean autoAccountAllowLogin;
-    @Value("${sparkle.userapp.auto-account.holder-uid}")
-    private long autoAccountHolderUid;
+    private VersionAlertService versionAlertService;
     @Autowired
-    private JavaMailSender javaMailSender;
+    private BtnRuntimeConfigService btnConfigService;
     @Autowired
-    private IUserService userService;
+    private UserAccountDeletionService accountDeletionService;
+    private final Cache<Long, Boolean> lastSeenUpdateThrottle = CacheBuilder.newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(30, TimeUnit.SECONDS)
+            .build();
 
     @Nullable
     @Transactional
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent) {
+        boolean autoAccountAllowRegister = btnConfigService.booleanValue(
+                "userappAutoAccount",
+                "allowRegister"
+        );
+        boolean autoAccountAllowLogin = btnConfigService.booleanValue(
+                "userappAutoAccount",
+                "allowLogin"
+        );
+        long autoAccountHolderUid = btnConfigService.longValue(
+                "userappAutoAccount",
+                "holderUid"
+        );
         Userapp userApp;
         if (("example-app-id".equals(appId) || appId.isBlank())
                 && ("example-app-secret".equals(appSecret) || appSecret.isBlank())
@@ -82,37 +89,30 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
             userApp = baseMapper.selectOne(new QueryWrapper<Userapp>().eq("app_id", appId).eq("app_secret", appSecret));
         }
         if (userApp != null) {
-            this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
-        }
-        // TODO: delete after emerg alert
-        if (userAgent != null && userAgent.contains("PeerBanHelper/9.3.0") && userApp != null) {
-            var ownerId = userApp.getOwner();
-            if(ownerId != null) {
-                var user = userService.getById(ownerId);
-                if (user != null) {
-                    Boolean success = userAppsRedisTemplate.opsForValue().setIfAbsent("pbh-930-security-alert:" + ownerId, System.currentTimeMillis());
-                    if (success == Boolean.TRUE) {
-                        try {
-                            var mimeMessage = javaMailSender.createMimeMessage();
-                            mimeMessage.setFrom(new InternetAddress("sparkle@pbh-btn.com", "SparkleBTN 系统通知"));
-                            mimeMessage.setRecipients(Message.RecipientType.TO, user.getEmail()); // testing
-                            mimeMessage.setSubject("[SparkleBTN] 您使用的 PeerBanHelper (v9.3.0) 存在安全风险，建议您及时升级");
-                            mimeMessage.setText("""
-                                    您好 %s，
-                                      您之所以收到这封邮件，是因为 SparkleBTN 系统已检测到您正在使用存在已知安全问题的 PeerBanHelper 版本 (%s)。
-                                      作为对用户安全性负责的一部分，SparkleBTN 会向使用存在已知安全问题的注册用户发送安全通知邮件。不幸的是，您处于受影响的范围内。
-                                      我们已发布紧急安全更新，并修复了相关安全漏洞，请您及时更新！您可以从下面的链接或者通过 PeerBanHelper 自带的更新程序进行更新：
-                                      https://github.com/PBH-BTN/PeerBanHelper/releases/latest
-                                      对您带来的不便，我们致以诚挚歉意。
-                                      此邮件仅发送一次。
-                                    """.formatted(user.getNickname(), userAgent));
-                            javaMailSender.send(mimeMessage);
-                        } catch (Exception e) {
-                            Sentry.captureException(e);
-                            log.warn("Failed to send security alert email to user ID {}", ownerId, e);
-                        }
-                    }
+            try {
+                var deletionActivity = accountDeletionService.recordApplicationActivity(
+                        userApp.getOwner(),
+                        userApp.getId()
+                );
+                if (deletionActivity
+                        == UserAccountDeletionService.ApplicationActivityDecision.ACCOUNT_DELETED) {
+                    return null;
                 }
+            } catch (Exception exception) {
+                log.warn("Unable to inspect account deletion activity for user {}: {}",
+                        userApp.getOwner(), exception.getMessage());
+            }
+            if (lastSeenUpdateThrottle.getIfPresent(userApp.getId()) == null) {
+                lastSeenUpdateThrottle.put(userApp.getId(), Boolean.TRUE);
+                this.baseMapper.updateUserAppLastThing(userApp.getId(), userAgent);
+            }
+        }
+        if (userApp != null) {
+            try {
+                versionAlertService.evaluateAsync(userApp.getOwner(), userAgent);
+            } catch (Exception exception) {
+                log.warn("Unable to evaluate version alert rules for user app {}: {}",
+                        userApp.getId(), exception.getMessage());
             }
         }
         return userApp;

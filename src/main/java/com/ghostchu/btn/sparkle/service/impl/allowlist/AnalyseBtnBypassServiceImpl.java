@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.IPAllowListRuleProvider;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
@@ -18,7 +19,6 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,10 +39,14 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
     private IUserappsHeartbeatService iUserappsHeartbeatService;
     @Autowired
     private IUserService iUserService;
+    @Autowired
+    private AnalyseModuleConfigService moduleConfigService;
 
-    @Scheduled(cron = "${sparkle.analyse.btnbypass-userapps.schedule}")
     @Transactional
     public void analyseBtnBypass() {
+        if (!moduleConfigService.isEnabled("btnbypass-userapps")) {
+            return;
+        }
         log.info("Starting analysis of BTN-Bypassing user applications...");
         OffsetDateTime start = OffsetDateTime.now().minusHours(1);
         OffsetDateTime end = OffsetDateTime.now();

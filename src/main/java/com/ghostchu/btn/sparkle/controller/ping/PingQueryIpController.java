@@ -1,69 +1,74 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
-import com.ghostchu.btn.sparkle.service.IBanHistoryService;
-import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
-import com.ghostchu.btn.sparkle.service.ITorrentService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
-import com.ghostchu.btn.sparkle.service.dto.BanHistoryDto;
-import com.ghostchu.btn.sparkle.service.dto.SwarmTrackerDto;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
 import com.ghostchu.btn.sparkle.service.impl.QueryIpServiceImpl;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.InetAddress;
-import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class PingQueryIpController extends BasePingController {
-    @Value("${sparkle.ping.query-ip.pow-captcha}")
-    private boolean powCaptcha;
     @Autowired
     private QueryIpServiceImpl queryIpService;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
     @GetMapping("/ping/queryIp")
-    //@Cacheable(value = "pingQueryIpCache#600000", key = "#ip", unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
     public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
-        if (powCaptcha && !validatePowCaptcha()) {
+        if (configService.booleanValue("queryIp", "powCaptcha") && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
         var userApps = verifyUserApplication();
-        return ResponseEntity.ok(queryIpService.queryIp(ip));
+        return ResponseEntity.ok(safeQuery(ip));
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
+    @GetMapping("/ping/queryIp/widget/data")
+    public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIpWidget(@RequestParam String ip)
+            throws AccessDeniedException, UserApplicationBannedException, UserApplicationNotFoundException {
+        verifyUserApplication();
+        return ResponseEntity.ok(safeQuery(ip));
+    }
+
+    private QueryIpServiceImpl.IpQueryResult safeQuery(String ip) {
+        try {
+            return queryIpService.queryIp(ip);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
     @Component
-    public static class IpQueryBtnModule implements SparkleBtnAbility {
-        @Value("${sparkle.ping.query-ip.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.query-ip.pow-captcha}")
+    public static class IpQueryBtnModule extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("queryIp", "endpoint");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
-        @Value("${sparkle.ping.query-ip.iframe-endpoint}")
+        public boolean isPowCaptcha() {
+            return booleanValue("queryIp", "powCaptcha");
+        }
+
         @JsonProperty("iframe_endpoint")
-        public String iframeEndpoint;
+        public String getIframeEndpoint() {
+            return text("queryIp", "iframeEndpoint");
+        }
 
         @Override
         public String getConfigKey() {

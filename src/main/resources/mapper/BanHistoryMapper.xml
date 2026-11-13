@@ -2,15 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.BanHistoryMapper">
     <resultMap id="sumPeerIpTrafficSummaryDto" type="com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto">
-        <result column="peer_ip" property="peerIp"/>
         <result column="sum_to_peer_traffic" property="sumToPeerTraffic"/>
         <result column="sum_from_peer_traffic" property="sumFromPeerTraffic"/>
     </resultMap>
+    <!-- 汇总整个查询范围（单个 IP 或 CIDR）内所有 peer 的流量，必须只返回一行。 -->
     <select id="sumPeerIpTraffic" resultMap="sumPeerIpTrafficSummaryDto">
-        SELECT peer_ip, SUM(to_peer_traffic) AS sum_to_peer_traffic, SUM(from_peer_traffic) AS sum_from_peer_traffic
+        SELECT COALESCE(SUM(to_peer_traffic), 0) AS sum_to_peer_traffic,
+               COALESCE(SUM(from_peer_traffic), 0) AS sum_from_peer_traffic
         FROM ban_history
-            WHERE populate_time > #{afterTimestamp} AND peer_ip &lt;&lt;= #{peerIp}::inet
-        GROUP BY peer_ip
+        WHERE populate_time > #{afterTimestamp}
+          AND peer_ip &lt;&lt;= #{peerIp}::inet
     </select>
     <select id="selectPeerTorrents" resultType="long">
         SELECT DISTINCT torrent_id AS torrent_count
@@ -28,17 +29,15 @@
     </select>
     <resultMap id="countTimeStatistics" type="com.ghostchu.btn.sparkle.service.dto.UniversalCountDto">
         <result column="days30" property="days30"/>
-        <result column="days15" property="days15"/>
+        <result column="days14" property="days14"/>
         <result column="days7" property="days7"/>
-        <result column="days3" property="days3"/>
         <result column="days1" property="days1"/>
     </resultMap>
     <select id="countTimeStatistics" resultMap="countTimeStatistics">
         SELECT
             COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '30 days') AS days30,
-            COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '15 days') AS days15,
+            COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '14 days') AS days14,
             COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '7 days') AS days7,
-            COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '3 days') AS days3,
             COUNT(*) FILTER (WHERE populate_time > NOW() - INTERVAL '1 days') AS days1
         FROM ban_history;
     </select>

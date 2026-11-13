@@ -8,10 +8,13 @@ import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.moderation.UserProfileChangedEvent;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * <p>
@@ -32,11 +36,23 @@ import java.util.List;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
     @Autowired
     private UserRelMapper userRelMapper;
+    @Autowired
+    private UserPrivacyService userPrivacyService;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     public @Nullable UserRel getUserRelByBindUserId(long btnUserId) {
         return userRelMapper.selectOne(new QueryWrapper<UserRel>()
                 .eq("bind_user_id", btnUserId));
+    }
+
+    @Override
+    public boolean isGithubAccountRegistered(long githubUid) {
+        return userRelMapper.findUserRelByPlatformUserId(
+                "github",
+                String.valueOf(githubUid)
+        ) != null;
     }
 
     /**
@@ -54,11 +70,38 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             if (user == null) {
                 throw new IllegalStateException("User relation exists but the bound user does not exist, inconsistent database state.");
             }
-            user.setNickname(githubName);
+            boolean nicknameChanged = !Objects.equals(user.getNickname(), githubName);
+            boolean avatarChanged = !Objects.equals(user.getAvatar(), githubAvatarUrl);
+            long nicknameGeneration = value(user.getNicknameReviewGeneration());
+            long avatarGeneration = value(user.getAvatarReviewGeneration());
+            if (nicknameChanged) {
+                nicknameGeneration++;
+                user.setNickname(githubName)
+                        .setNicknameModerationStatus("PENDING")
+                        .setNicknameModerationReason(null)
+                        .setNicknameReviewGeneration(nicknameGeneration);
+            }
+            if (avatarChanged) {
+                avatarGeneration++;
+                user.setAvatar(githubAvatarUrl)
+                        .setAvatarModerationStatus("PENDING")
+                        .setAvatarModerationReason(null)
+                        .setAvatarReviewGeneration(avatarGeneration);
+            }
             user.setEmail(githubEmail);
-            user.setAvatar(githubAvatarUrl);
             user.setLastLoginAt(OffsetDateTime.now());
             baseMapper.updateById(user);
+            if (nicknameChanged || avatarChanged) {
+                eventPublisher.publishEvent(new UserProfileChangedEvent(
+                        user.getId(),
+                        nicknameGeneration,
+                        avatarGeneration,
+                        nicknameChanged,
+                        avatarChanged,
+                        githubName,
+                        githubAvatarUrl
+                ));
+            }
             return user;
         }
         User newUser = new User()
@@ -68,11 +111,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(OffsetDateTime.now())
                 .setRole("user")
+                .setNicknameModerationStatus("APPROVED")
+                .setAvatarModerationStatus("APPROVED")
+                .setNicknameReviewGeneration(0L)
+                .setAvatarReviewGeneration(0L)
                 .setPrivacyLevel(UserPrivacyLevel.MEDIUM);
         boolean success = baseMapper.insert(newUser) != 0;
         if (!success) {
             throw new IllegalStateException("Failed to create new user, the changed records count is 0.");
         }
+        userPrivacyService.ensure(newUser.getId());
         UserRel newUserRel = new UserRel()
                 .setPlatform("github")
                 .setBindUserId(newUser.getId())
@@ -100,5 +148,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Override
     public @NotNull Cursor<User> fetchAllUsers() {
         return baseMapper.fetchAllUsers();
+    }
+
+    private long value(Long value) {
+        return value == null ? 0 : value;
     }
 }

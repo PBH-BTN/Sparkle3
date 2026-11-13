@@ -19,9 +19,11 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface UserSwarmStatisticMapper extends BaseMapper<UserSwarmStatistic> {
-    int updateUserSwarmStatistics(@Param("startAt") @NotNull OffsetDateTime startAt,
-                                  @Param("endAt") @NotNull OffsetDateTime endAt,
-                                  @Param("userIds") @NotNull List<Long> userIds);
+    int refreshUserSwarmStatistics(@Param("startAt") @NotNull OffsetDateTime startAt,
+                                   @Param("endAt") @NotNull OffsetDateTime endAt);
+
+    @Nullable
+    OffsetDateTime selectLatestUpdateAt();
 
     @NotNull
     List<UserSwarmStatisticTrackRankingDto> calcUsersRanking(double sentTrafficOtherAckWeight,

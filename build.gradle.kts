@@ -1,4 +1,5 @@
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+import org.gradle.api.tasks.Exec
 
 plugins {
 	java
@@ -27,6 +28,13 @@ repositories {
 	mavenCentral()
 }
 
+configurations.configureEach {
+	resolutionStrategy.capabilitiesResolution.withCapability("org.lz4:lz4-pure-java") {
+		select("at.yawk.lz4:lz4-java:1.10.1")
+		because("Kafka and ClickHouse provide the same LZ4 capability; use Kafka's maintained implementation")
+	}
+}
+
 dependencyManagement {
     imports {
         mavenBom("com.baomidou:mybatis-plus-bom:3.5.15")
@@ -35,11 +43,12 @@ dependencyManagement {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("org.springframework.boot:spring-boot-starter-aop")
 	implementation("org.springframework.boot:spring-boot-starter-batch")
 	implementation("org.springframework.boot:spring-boot-starter-batch-jdbc")
 	implementation("org.springframework.boot:spring-boot-starter-cache")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
-	//implementation("org.springframework.boot:spring-boot-starter-flyway")
+	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.springframework.boot:spring-boot-starter-jdbc")
 	implementation("org.springframework.boot:spring-boot-starter-kafka")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
@@ -48,7 +57,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
 	implementation("org.springframework.boot:spring-boot-starter-session-data-redis")
-	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.apache.commons:commons-pool2")
@@ -63,8 +71,7 @@ dependencies {
 	//implementation("com.baomidou:mybatis-plus-generator:3.5.14")
 	//implementation("org.freemarker:freemarker:2.3.34")
 	//implementation("org.apache.kafka:kafka-streams")
-	//implementation("org.flywaydb:flyway-database-postgresql")
-	implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+	implementation("org.flywaydb:flyway-database-postgresql")
 	compileOnly("org.projectlombok:lombok")
 	compileOnly("org.jetbrains:annotations:26.1.0")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -77,7 +84,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-batch-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-cache-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-redis-test")
-	//testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-jdbc-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-mail-test")
@@ -86,7 +93,6 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-client-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-session-data-redis-test")
-	testImplementation("org.springframework.boot:spring-boot-starter-thymeleaf-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -112,4 +118,50 @@ tasks.named<BootBuildImage>("bootBuildImage") {
 
 tasks.named<Test>("test") {
 	useJUnitPlatform()
+}
+
+val frontendDirectory = layout.projectDirectory.dir("frontend")
+val frontendBuildDirectory = layout.buildDirectory.dir("generated/frontend")
+val pnpmExecutable = if (System.getProperty("os.name").lowercase().contains("windows")) "pnpm.cmd" else "pnpm"
+
+val installFrontendDependencies = tasks.register<Exec>("installFrontendDependencies") {
+	group = "frontend"
+	description = "Installs frontend dependencies with pnpm."
+	workingDir(frontendDirectory)
+	commandLine(pnpmExecutable, "install", "--frozen-lockfile")
+	inputs.file(frontendDirectory.file("package.json"))
+	inputs.file(frontendDirectory.file("pnpm-lock.yaml"))
+	inputs.file(frontendDirectory.file("pnpm-workspace.yaml"))
+	outputs.dir(frontendDirectory.dir("node_modules"))
+}
+
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
+	group = "frontend"
+	description = "Builds the Vue frontend with pnpm."
+	dependsOn(installFrontendDependencies)
+	workingDir(frontendDirectory)
+	commandLine(pnpmExecutable, "run", "build")
+	inputs.files(
+		fileTree(frontendDirectory) {
+			include(
+				"index.html",
+				"package.json",
+				"pnpm-lock.yaml",
+				"tsconfig*.json",
+				"vite.config.ts",
+				"public/**",
+				"src/**"
+			)
+			exclude("node_modules/**", "dist/**")
+		}
+	)
+	outputs.dir(frontendBuildDirectory)
+}
+
+tasks.named<ProcessResources>("processResources") {
+	dependsOn(buildFrontend)
+	duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+	from(frontendBuildDirectory) {
+		into("static")
+	}
 }

@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.service.impl.denylist;
 
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
 import com.google.common.hash.Hashing;
@@ -14,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +31,18 @@ public class AnalyseGopeedDevIdentityServiceImpl extends AbstractAnalyseRuleServ
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     protected RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private AnalyseModuleConfigService moduleConfigService;
 
-    @Scheduled(cron = "${sparkle.analyse.gopeeddev-identity-analyse.schedule}")
     @Transactional
     public void analyseGopeedDevIdentity() {
-        var afterTimestamp = OffsetDateTime.now().minus(duration, ChronoUnit.MILLIS);
+        if (!moduleConfigService.isEnabled("gopeeddev-identity-analyse")) {
+            return;
+        }
+        long activeDuration = moduleConfigService.durationMillis(
+                "gopeeddev-identity-analyse", "duration", duration
+        );
+        var afterTimestamp = OffsetDateTime.now().minus(activeDuration, ChronoUnit.MILLIS);
         DualIPv4v6AssociativeTries<Pair<String, String>> tries = new DualIPv4v6AssociativeTries<>();
 
         try (var banhistory = baseMapper.analyseGopeeddevIdentityBanHistory(afterTimestamp);

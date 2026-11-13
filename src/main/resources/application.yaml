@@ -4,11 +4,21 @@ spring:
   web:
     resources:
       static-locations: "classpath:/static/,file:./static/"
+  flyway:
+    enabled: true
+    locations: "classpath:db/migration"
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    validate-migration-naming: true
+    fail-on-missing-locations: true
+    placeholder-replacement: false
+    clean-disabled: true
+    connect-retries: 30
+    connect-retries-interval: 2
+    lock-retry-count: 120
   threads:
     virtual:
       enabled: true
-  thymeleaf:
-    cache: false
   datasource:
     dynamic:
       primary: master
@@ -53,20 +63,6 @@ spring:
             token-uri: https://github.com/login/oauth/access_token
             user-info-uri: https://api.github.com/user
             user-name-attribute: id
-  mail:
-    host: localhost
-    username: mail@mail.com
-    password: 123
-    port: 465
-    protocol: smtps
-    properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
-      mail.smtp.starttls.required: true
-      mail.smtp.connectiontimeout: 5000
-      mail.smtp.timeout: 3000
-      mail.smtp.writetimeout: 5000
-    default-encoding: UTF-8
 server:
   address: 0.0.0.0
   port: 7799
@@ -111,6 +107,11 @@ mybatis-plus:
 sparkle:
   root-url: "http://localhost:7799"
   chn-root-url: "http://chn.sparkle.local:7799"
+  flarum-integration:
+    # Managed from /admin/flarum-integration and stored in app_config_entries.
+    # An environment value remains available as a fallback when no database
+    # value has been saved.
+    token: ""
   security:
     zip-bomb-threshold: 33554432
   captcha:
@@ -123,11 +124,17 @@ sparkle:
       allow-register: true
       allow-login: true
       holder-uid: 16402
+  user-avatar:
+    cache-directory: "data/avatar-cache"
+    cache-duration: 2592000000
+    cleanup-cron: "0 30 4 * * *"
   client-discovery:
+    # Default value. Runtime overrides are managed from the admin console.
     enabled: false
   banhistory:
     refresh-module-name-cache-cron: "0 0 */2 * * *"
   ping:
+    # All sparkle.ping settings can be hot-overridden from the BTN Management page.
     config:
       min-protocol-version: 20
       max-protocol-version: 20
@@ -169,12 +176,18 @@ sparkle:
       multi-if: true
       cleanup-before: 604800000
       cleanup-cron: "0 0 0 * * *"
+      queue:
+        flush-interval-ms: 1000
+        initial-delay-ms: 1000
+        batch-size: 2000
+        max-size: 100000
     query-ip:
       pow-captcha: true
       endpoint: "{rooturl}/ping/queryIp"
       iframe-endpoint: "{rooturl}/ping/queryIp/widget"
   analyse:
     untrusted-vote:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker"
@@ -187,6 +200,7 @@ sparkle:
         min-userapps-vote: 3
         min-ban-count: 5
     overdownload-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 604800000
       threshold-ratio: 3.2
@@ -197,24 +211,91 @@ sparkle:
       # Auto-refresh materialized view before each analysis (recommended for accuracy)
       materialized-view-refresh: true
     concurrent-download-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 3600000
       threshold-concurrent: 150
       threshold-userapps: 3
+    mass-download-monitor:
+      enabled: true
+      schedule: "0 0 * * * *"
+      duration: 86400000
+      ipv4-prefix: 32
+      ipv6-prefix: 56
+      threshold-download: 10737418240
     random-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     rain000-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     gopeeddev-identity-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
     datacenter-highrisk-analyse:
+      enabled: true
       schedule: "0 0 * * * *"
       duration: 1209600000
+    geoip-city-blacklist:
+      enabled: true
+      schedule: "0 0 4 * * *"
     btnbypass-userapps:
+      enabled: true
       schedule: "0 */20 * * * *"
+    points-dynamic:
+      enabled: true
+      schedule: "0 5 * * * *"
+    swarm-peer-distribution:
+      enabled: true
+      schedule: "0 10 * * * *"
+    ban-peer-distribution:
+      enabled: true
+      schedule: "0 20 2 * * *"
+    points-settings:
+      login-enabled: true
+      active-app-enabled: true
+      app-online-enabled: true
+      ban-history-enabled: true
+      swarm-tracker-enabled: true
+      rules-fetch-enabled: true
+      keepalive-enabled: true
+      rule-hit-ip-enabled: true
+      wasted-upload-enabled: true
+      dynamic-seed-upload-enabled: true
+      dynamic-download-enabled: true
+      dynamic-hot-peer-enabled: true
+    points-fixed-rules:
+      login-points: 1000
+      login-daily-cap: 1000
+      active-app-points: 5000
+      app-online-points: 500
+      app-online-gap-minutes: 15
+      ban-history-points: 3
+      ban-history-daily-cap: 2000
+      swarm-tracker-points: 3
+      swarm-tracker-daily-cap: 2000
+      rules-fetch-points: 2
+      rules-fetch-daily-cap: 2000
+      keepalive-points: 1
+      keepalive-daily-cap: 2000
+      rule-hit-ip-points: 10
+      rule-hit-ip-daily-cap: 2000
+      wasted-upload-points-per-mib: 10
+      wasted-upload-mib: 1
+      wasted-upload-daily-cap: 3000
+    points-dynamic-rules:
+      dynamic-seed-upload-points: 180
+      dynamic-seed-upload-mib: 200
+      dynamic-download-points: 50
+      dynamic-download-mib: 512
+      dynamic-hot-peer-points: 100
+      dynamic-hot-peer-top: 50
+      dynamic-torrent-size-gib: 1
+  points:
+    time-zone: "Asia/Shanghai"
   query:
     query-ip:
       include-modules: "com.ghostchu.peerbanhelper.module.impl.rule.ProgressCheatBlocker,com.ghostchu.peerbanhelper.module.impl.rule.MultiDialingBlocker,com.ghostchu.peerbanhelper.module.impl.rule.AutoRangeBan"
@@ -225,20 +306,62 @@ sparkle:
       heartbeat-query-duration: 604800000
   github-sync:
     schedule: "0 */30 * * * *"
-    personal-access-token: sometoken
+    personal-access-token: ""
     org-name: PBH-BTN
     repository-name: BTN-Collected-Rules-BTN3
     branch-name: master
-  tracker:
-    endpoint: "http://localhost:6969/announce"
-  statistics:
-    ban-count-refresh-cron: "0 10 * * * *"
-    swarm-tracker-count-refresh-cron: "0 20 * * * *"
-    userapp-count-refresh-cron: "0 30 * * * *"
-    torrent-count-refresh-cron: "0 40 * * * *"
-    tracker-dashboard-refresh-cron: "0 */10 * * * *"
-    tracker-dashboard-image-retrieve: "https://grafana.ghostchu-services.top/render/public-dashboards/ed6c1383ac134a4e99b1efde6f377ebc"
-    tracker-dashboard-image-auth-token: xxyyzz
+  github-community:
+    personal-access-token: ""
+    api-base-url: "https://api.github.com"
+  afdian:
+    api-base-url: "https://afdian.com/api/open"
+    user-id: ""
+    access-token: ""
+    sync-enabled: true
+    license-plan-ids: ""
+    license-donation-amount: 50
+    license-valid-years: 100
+    license-private-key: ""
+  memberships:
+    base-currency: "CNY"
+    exchange-rate-api-url: "https://open.er-api.com/v6/latest/{currency}"
+  version-alert:
+    from-address: "sparkle@pbh-btn.com"
+    from-name: "SparkleBTN 系统通知"
+  user-contact-email:
+    from-address: "sparkle@pbh-btn.com"
+    from-name: "Sparkle BTN 用户邮件"
+    subject-template: "[Sparkle BTN] {{title}}"
+    content-template: |
+      {{senderName}}（UID {{senderId}}）通过 Sparkle BTN 向你发送了一条消息：
+
+      {{content}}
+
+      --
+      这是一封由用户发起并通过 Sparkle BTN 发送的邮件，请勿直接回复。
+  homepage-statistics-refresh:
+    modules:
+      ban-history:
+        enabled: true
+        refresh-interval-minutes: 10
+      active-apps:
+        enabled: true
+        refresh-interval-minutes: 30
+      swarm-tracker:
+        enabled: true
+        refresh-interval-minutes: 20
+      torrents:
+        enabled: true
+        refresh-interval-minutes: 40
+      network-charts:
+        enabled: true
+        refresh-interval-minutes: 5
+      companion-charts:
+        enabled: true
+        refresh-interval-minutes: 5
+      bittorrent-traffic:
+        enabled: true
+        refresh-interval-minutes: 60
   admin:
     user-ip-warning:
       duration: 1209600000
@@ -254,19 +377,12 @@ sparkle:
       ipv6: 48
   swarm-statistics-track:
     enabled: true
-    cron: "0 0 * * * *"
-    duration: 604800000
+    refresh-interval-minutes: 60
+    window-days: 7
   ranking:
-      weight:
-        user-swarm-statistics:
-          sent-traffic-other-ack: 10
-          sent-traffic-self-report: 5
-          received-traffic-other-ack: 3
-          received-traffic-self-report: 5
-
-  machine-learning:
-    enabled: true
-    learning-rate: 1.0
-    banhistory-sample-rate: 1.0
-    swarmtracker-sample-rate: 0.005
-    queue-capacity: 10000
+    weight:
+      user-swarm-statistics:
+        sent-traffic-other-ack: 10
+        sent-traffic-self-report: 5
+        received-traffic-other-ack: 3
+        received-traffic-self-report: 5

@@ -2,15 +2,15 @@ package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnRuleset;
+import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.service.IRuleService;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -23,8 +23,8 @@ import java.util.*;
 @RestController
 public class PingRulePeerIdentityController extends BasePingController {
 
-    @Value("${sparkle.ping.rule-peer-identity.pow-captcha}")
-    private boolean powCaptcha;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
     @Autowired
     private IRuleService ruleService;
@@ -32,11 +32,23 @@ public class PingRulePeerIdentityController extends BasePingController {
     @Autowired
     @Qualifier("stringStringRedisTemplate")
     private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private PointAwardContext pointAwardContext;
 
     @GetMapping("/ping/rulePeerIdentity")
-    public ResponseEntity<@NotNull Object> rulePeerIdentity(@RequestParam("rev") String version) {
-        if(powCaptcha){
-            validatePowCaptcha();
+    public ResponseEntity<@NotNull Object> rulePeerIdentity(@RequestParam("rev") String version) throws PowCaptchaFailureException {
+        if (configService.booleanValue("rulePeerIdentity", "powCaptcha")
+                && !validatePowCaptcha()) {
+            throw new PowCaptchaFailureException();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.recordConfigured(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    1,
+                    0
+            );
         }
         var peerId = ruleService.getRulesByType("peer_id");
         var clientName = ruleService.getRulesByType("client_name");
@@ -80,21 +92,27 @@ public class PingRulePeerIdentityController extends BasePingController {
         return ResponseEntity.ok().header("X-BTN-ContentVersion", String.valueOf(ver)).body(ruleset);
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
     @Component
-    public static class RulePeerIdentityBtnModule implements SparkleBtnAbility {
-        @Value("${sparkle.ping.rule-peer-identity.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.rule-peer-identity.interval}")
-        public long interval;
-        @Value("${sparkle.ping.rule-peer-identity.random-initial-delay}")
+    public static class RulePeerIdentityBtnModule extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("rulePeerIdentity", "endpoint");
+        }
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("rulePeerIdentity", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
-        @Value("${sparkle.ping.rule-peer-identity.pow-captcha}")
+        public long getRandomInitialDelay() {
+            return longValue("rulePeerIdentity", "randomInitialDelay");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
+        public boolean isPowCaptcha() {
+            return booleanValue("rulePeerIdentity", "powCaptcha");
+        }
 
         @Override
         public String getConfigKey() {

@@ -1,0 +1,6 @@
+package com.ghostchu.btn.sparkle.constants;
+
+public enum PointComponent {
+    FIXED,
+    DYNAMIC
+}

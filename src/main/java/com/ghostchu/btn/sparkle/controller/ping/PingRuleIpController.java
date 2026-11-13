@@ -1,19 +1,16 @@
 package com.ghostchu.btn.sparkle.controller.ping;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.service.btnability.IPAllowListRuleProvider;
 import com.ghostchu.btn.sparkle.service.btnability.IPDenyListRuleProvider;
-import com.ghostchu.btn.sparkle.service.btnability.SparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
+import com.ghostchu.btn.sparkle.constants.PointCategory;
+import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.util.HexUtil;
-import com.google.common.hash.Hashing;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -38,20 +35,26 @@ public class PingRuleIpController extends BasePingController {
     private List<IPAllowListRuleProvider> ipAllowListRuleProviders;
 
 
-    @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
-    private boolean denyListPowCaptcha;
-
-    @Value("${sparkle.ping.rule-ip-allowlist.pow-captcha}")
-    private boolean allowListPowCaptcha;
+    @Autowired
+    private BtnRuntimeConfigService configService;
 
     @Autowired
-    @Qualifier("stringStringRedisTemplate")
-    private RedisTemplate<String, String> redisTemplate;
+    private PointAwardContext pointAwardContext;
 
     @GetMapping("/ping/ruleIpDenylist")
-    public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) throws NoSuchAlgorithmException {
-        if (denyListPowCaptcha) {
-            validatePowCaptcha();
+    public ResponseEntity<@NotNull Object> ipDenyList(@RequestParam("rev") String version) throws NoSuchAlgorithmException, PowCaptchaFailureException {
+        if (configService.booleanValue("ruleIpDenylist", "powCaptcha")
+                && !validatePowCaptcha()) {
+            throw new PowCaptchaFailureException();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.recordConfigured(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    1,
+                    0
+            );
         }
         MessageDigest versionDigest = MessageDigest.getInstance("SHA-256");
         for (IPDenyListRuleProvider ipDenyListRuleProvider : ipDenyListRuleProviders) {
@@ -76,9 +79,19 @@ public class PingRuleIpController extends BasePingController {
     }
 
     @GetMapping("/ping/ruleIpAllowlist")
-    public ResponseEntity<@NotNull String> ipAllowList(@RequestParam("rev") String version) throws NoSuchAlgorithmException {
-        if (allowListPowCaptcha) {
-            validatePowCaptcha();
+    public ResponseEntity<@NotNull String> ipAllowList(@RequestParam("rev") String version) throws NoSuchAlgorithmException, PowCaptchaFailureException {
+        if (configService.booleanValue("ruleIpAllowlist", "powCaptcha")
+                && !validatePowCaptcha()) {
+            throw new PowCaptchaFailureException();
+        }
+        var userapp = authenticateForRulesPoints();
+        if (userapp != null) {
+            pointAwardContext.recordConfigured(
+                    userapp.getOwner(),
+                    PointCategory.RULES_FETCH,
+                    1,
+                    0
+            );
         }
         MessageDigest versionDigest = MessageDigest.getInstance("SHA-256");
         for (IPAllowListRuleProvider ipAllowListRuleProvider : ipAllowListRuleProviders) {
@@ -102,21 +115,27 @@ public class PingRuleIpController extends BasePingController {
                 .contentType(MediaType.TEXT_PLAIN).body(joiner.toString());
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
     @Component
-    public static class IpDenyListBtnModule implements SparkleBtnAbility {
-        @Value("${sparkle.ping.rule-ip-denylist.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.rule-ip-denylist.interval}")
-        public long interval;
-        @Value("${sparkle.ping.rule-ip-denylist.random-initial-delay}")
+    public static class IpDenyListBtnModule extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("ruleIpDenylist", "endpoint");
+        }
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("ruleIpDenylist", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
-        @Value("${sparkle.ping.rule-ip-denylist.pow-captcha}")
+        public long getRandomInitialDelay() {
+            return longValue("ruleIpDenylist", "randomInitialDelay");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
+        public boolean isPowCaptcha() {
+            return booleanValue("ruleIpDenylist", "powCaptcha");
+        }
 
         @Override
         public String getConfigKey() {
@@ -124,21 +143,27 @@ public class PingRuleIpController extends BasePingController {
         }
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Data
     @Component
-    public static class IpAllowListBtnModule implements SparkleBtnAbility {
-        @Value("${sparkle.ping.rule-ip-allowlist.endpoint}")
-        public String endpoint;
-        @Value("${sparkle.ping.rule-ip-allowlist.interval}")
-        public long interval;
-        @Value("${sparkle.ping.rule-ip-allowlist.random-initial-delay}")
+    public static class IpAllowListBtnModule extends DynamicSparkleBtnAbility {
+        @JsonProperty("endpoint")
+        public String getEndpoint() {
+            return text("ruleIpAllowlist", "endpoint");
+        }
+
+        @JsonProperty("interval")
+        public long getInterval() {
+            return longValue("ruleIpAllowlist", "interval");
+        }
+
         @JsonProperty("random_initial_delay")
-        public long randomInitialDelay;
-        @Value("${sparkle.ping.rule-ip-allowlist.pow-captcha}")
+        public long getRandomInitialDelay() {
+            return longValue("ruleIpAllowlist", "randomInitialDelay");
+        }
+
         @JsonProperty("pow_captcha")
-        public boolean powCaptcha;
+        public boolean isPowCaptcha() {
+            return booleanValue("ruleIpAllowlist", "powCaptcha");
+        }
 
         @Override
         public String getConfigKey() {

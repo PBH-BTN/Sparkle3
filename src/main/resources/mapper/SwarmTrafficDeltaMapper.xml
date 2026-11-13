@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.SwarmTrafficDeltaMapper">
+    <insert id="batchInsert">
+        INSERT INTO public.swarm_traffic_delta (
+            occurred_at, user_id, userapp_id, torrent_id,
+            torrent_size, upload_bytes, download_bytes
+        )
+        VALUES
+        <foreach collection="rows" item="row" separator=",">
+            (#{row.occurredAt}, #{row.userId}, #{row.userappId}, #{row.torrentId},
+             #{row.torrentSize}, #{row.uploadBytes}, #{row.downloadBytes})
+        </foreach>
+        ON CONFLICT (occurred_at, user_id, torrent_id) DO UPDATE
+        SET torrent_size = GREATEST(
+                public.swarm_traffic_delta.torrent_size,
+                EXCLUDED.torrent_size
+            ),
+            upload_bytes = public.swarm_traffic_delta.upload_bytes + EXCLUDED.upload_bytes,
+            download_bytes = public.swarm_traffic_delta.download_bytes + EXCLUDED.download_bytes
+    </insert>
+</mapper>

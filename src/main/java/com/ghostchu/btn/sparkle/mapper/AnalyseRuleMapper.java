@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.AnalyseRule;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseByModuleResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseConcurrentDownloadResult;
+import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseMassDownloadResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseOverDownloadedResult;
 import com.ghostchu.btn.sparkle.mapper.customresult.AnalyseIPAndIdentityResult;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.session.ResultHandler;
+import org.apache.ibatis.annotations.Param;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -36,6 +39,14 @@ public interface AnalyseRuleMapper extends BaseMapper<AnalyseRule> {
 
     @NotNull
     Cursor<AnalyseConcurrentDownloadResult> analyseConcurrentDownload(@NotNull OffsetDateTime afterTimestamp);
+
+    @NotNull
+    Cursor<AnalyseMassDownloadResult> analyseMassDownload(
+            @Param("afterTimestamp") @NotNull OffsetDateTime afterTimestamp,
+            @Param("ipv4Prefix") int ipv4Prefix,
+            @Param("ipv6Prefix") int ipv6Prefix,
+            @Param("thresholdDownload") @NotNull BigInteger thresholdDownload
+    );
 
     @NotNull
     Cursor<AnalyseIPAndIdentityResult> analyseRandomIdentityBanHistory(@NotNull OffsetDateTime afterTimestamp);

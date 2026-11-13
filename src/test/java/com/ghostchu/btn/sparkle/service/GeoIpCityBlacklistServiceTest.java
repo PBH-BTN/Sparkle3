@@ -1,0 +1,88 @@
+package com.ghostchu.btn.sparkle.service;
+
+import com.ghostchu.btn.sparkle.entity.GeoIpCityBlacklistEntry;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
+import com.ghostchu.btn.sparkle.util.IPAddressUtil;
+import com.ghostchu.btn.sparkle.util.ipdb.GeoNetworkRecord;
+import com.maxmind.db.Network;
+import org.junit.jupiter.api.Test;
+
+import java.net.InetAddress;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+
+class GeoIpCityBlacklistServiceTest {
+    private final GeoIpCityBlacklistService service =
+            new GeoIpCityBlacklistService(
+                    null,
+                    null,
+                    null,
+                    mock(TaskStatusService.class)
+            );
+
+    @Test
+    void matchesChineseNamesWithOptionalAdministrativeSuffixes() {
+        GeoIpCityBlacklistEntry entry = new GeoIpCityBlacklistEntry()
+                .setCountryCode("CN")
+                .setProvince("海南")
+                .setCity("海口");
+        GeoNetworkRecord record = new GeoNetworkRecord(
+                new Network(InetAddress.ofLiteral("1.2.3.0"), 24),
+                "CN",
+                Set.of("海南省"),
+                Set.of("海口市")
+        );
+
+        assertTrue(service.matches(entry, record));
+        assertFalse(service.matches(entry.setCountryCode("US"), record));
+    }
+
+    @Test
+    void mergesAdjacentIpv4AndIpv6Networks() {
+        var mergedIpv4 = service.mergeNetworks(List.of(
+                IPAddressUtil.getIPAddress("10.0.0.0/25"),
+                IPAddressUtil.getIPAddress("10.0.0.128/25")
+        ));
+        var mergedIpv6 = service.mergeNetworks(List.of(
+                IPAddressUtil.getIPAddress("2001:db8::/65"),
+                IPAddressUtil.getIPAddress("2001:db8:0:0:8000::/65")
+        ));
+
+        assertEquals(List.of("10.0.0.0/24"), mergedIpv4.stream()
+                .map(network -> network.toCompressedString())
+                .toList());
+        assertEquals(List.of("2001:db8::/64"), mergedIpv6.stream()
+                .map(network -> network.toCompressedString())
+                .toList());
+    }
+
+    @Test
+    void attachesLocationCommentToEveryRule() {
+        GeoIpCityBlacklistEntry entry = new GeoIpCityBlacklistEntry()
+                .setCountryCode("CN")
+                .setProvince("海南省")
+                .setCity("海口市");
+
+        String content = service.renderContent(
+                entry,
+                List.of(
+                        IPAddressUtil.getIPAddress("192.0.2.0/31"),
+                        IPAddressUtil.getIPAddress("192.0.2.2/31")
+                ),
+                List.of(IPAddressUtil.getIPAddress("2001:db8::/56"))
+        );
+
+        assertEquals(
+                """
+                192.0.2.0/31 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
+                192.0.2.2/31 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市
+                2001:db8::/56 # Sparkle3 GeoIP 城市黑名单 | CN 海南省 / 海口市""",
+                content
+        );
+    }
+}
