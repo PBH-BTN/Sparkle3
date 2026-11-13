@@ -13,14 +13,15 @@ import java.util.Map;
 public interface PointsMapper {
     @Select("""
             SELECT public.sparkle_touch_point_app_activity(
-                #{userappId}, #{userId}, #{occurredAt}, #{onlineGapMinutes}
+                #{userappId}, #{userId}, #{occurredAt},
+                CAST(#{onlineGapMinutes} AS INTEGER)
             )
             """)
     Long touchAppActivity(
             @Param("userappId") long userappId,
             @Param("userId") long userId,
             @Param("occurredAt") OffsetDateTime occurredAt,
-            @Param("onlineGapMinutes") long onlineGapMinutes
+            @Param("onlineGapMinutes") int onlineGapMinutes
     );
 
     @Select("""
