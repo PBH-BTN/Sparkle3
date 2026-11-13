@@ -429,3 +429,4 @@ pnpm --dir flarum/extensions/sparkle-btn/js build
   `feat(frontend): ...`。
 
 当项目架构、构建流程、权限模型或数据库约定发生变化时，同步更新本文件。
+`V62` 生涯统计复用 V61 流量；贡献事件和 UTC 按日汇总长期保存，种子活动区间从上线后采样累计。详见 README 的 BTN 生涯统计。
