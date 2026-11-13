@@ -540,6 +540,16 @@ export default {
     messageSendFailed: 'Unable to send the message.',
   },
   career: {"days":"Days on BTN","ban":"Total bans submitted","feature":"Total new features discovered","swarm":"Total peers synced","banRecent":"Bans submitted in 7 days","featureRecent":"New features in 7 days","swarmRecent":"Peers synced in 7 days","seeding":"Total seeding time","downloading":"Total download time","observation":"Observations by other BTN users","upload":"Total upload","download":"Total reported download","uploadAck":"Total confirmed upload","downloadAck":"Total confirmed download","latest":"Last observed at {time} by {name}","disclaimer":"These statistics are based on user reports and observations by other BTN users. They may be incomplete or inaccurate and are for reference only.","method":"Seven-day counts use UTC calendar days. Peers are deduplicated by session. Time is sampled from launch, summed per torrent, with gaps capped at 5 minutes. Historical time cannot be recovered."},
+  careerCard: {
+    member: 'Since registration',
+    total: 'Lifetime contributions',
+    recent: 'Last 7 days',
+    torrentTime: 'Summed across individual torrents',
+    observed: 'Reported by other BTN users',
+    upload: 'User → Peer',
+    download: 'Peer → user',
+    confirmed: 'Observed by other BTN users',
+  },
   lifetimeTraffic: {
     title: "BTN career statistics",
     since: 'Since registration · {time}',

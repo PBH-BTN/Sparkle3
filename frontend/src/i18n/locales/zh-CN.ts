@@ -522,6 +522,16 @@ export default {
     messageSendFailed: '站内信发送失败。',
   },
   career: {"days":"已来到 BTN（天）","ban":"累计提交封禁（条）","feature":"累计发现新特征（条）","swarm":"累计同步种群（个 Peer）","banRecent":"近 7 天提交封禁（条）","featureRecent":"近 7 天发现新特征（条）","swarmRecent":"近 7 天同步种群（个 Peer）","seeding":"总做种时长","downloading":"总下载时长","observation":"BTN 其它用户观测次数（次）","upload":"总上传量","download":"总汇报下载量","uploadAck":"总确认上传量","downloadAck":"总确认下载量","latest":"最后一次观测于 {time}，由 {name}","disclaimer":"以下数据基于用户汇报和 BTN 其它用户观测，因此可能并不完整或准确，仅供参考。","method":"近 7 天按 UTC 自然日统计。Peer 按会话去重；时长自功能上线后采样，每个种子单独累计，失联间隔最多计 5 分钟，历史时长无法恢复。"},
+  careerCard: {
+    member: '自注册以来',
+    total: '累计贡献',
+    recent: '最近 7 天',
+    torrentTime: '每个种子分别累计',
+    observed: '来自 BTN 其它用户',
+    upload: '用户 → Peer',
+    download: 'Peer → 用户',
+    confirmed: 'BTN 其它用户观测',
+  },
   lifetimeTraffic: {
     title: "BTN 生涯统计",
     since: '自注册以来 · {time}',
