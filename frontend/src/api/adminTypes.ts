@@ -855,7 +855,6 @@ export interface AfdianSettings {
   configured: boolean
   apiBaseUrl: string
   syncEnabled: boolean
-  licensePlanIds: string
   licenseDonationAmount: string
   licenseValidYears: number
   licensePrivateKeyConfigured: boolean

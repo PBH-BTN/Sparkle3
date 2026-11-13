@@ -1270,9 +1270,6 @@ export default {
       clearToken: '清除 Access Key',
       syncEnabled: '启用定时同步',
       licenseSettings: 'PBHLicense v2 签发规则',
-      productPlanIds: '商品 SKU / Plan ID',
-      productPlanHint: '每行或逗号分隔，例如 PLAN_A, PLAN_B',
-      productPlanHelp: '只有这些 Plan ID 的已完成商品订单会直接产生许可证槽位。',
       donationLicenseAmount: '每份许可证所需捐赠金额',
       donationLicenseHelp:
         '按后台配置的结算货币汇总所有已完成捐赠；每达到该金额产生一个可消耗槽位。',

@@ -30,7 +30,6 @@ const form = reactive({
   clearToken: false,
   apiBaseUrl: 'https://afdian.com/api/open',
   syncEnabled: true,
-  licensePlanIds: '',
   licenseDonationAmount: '50',
   licenseValidYears: 100,
   licensePrivateKey: '',
@@ -84,7 +83,6 @@ function apply(settings: AfdianSettings) {
     clearToken: false,
     apiBaseUrl: settings.apiBaseUrl,
     syncEnabled: settings.syncEnabled,
-    licensePlanIds: settings.licensePlanIds,
     licenseDonationAmount: settings.licenseDonationAmount,
     licenseValidYears: settings.licenseValidYears,
     licensePrivateKey: '',
@@ -102,7 +100,6 @@ async function save() {
         clearToken: form.clearToken,
         apiBaseUrl: form.apiBaseUrl.trim(),
         syncEnabled: form.syncEnabled,
-        licensePlanIds: form.licensePlanIds.trim(),
         licenseDonationAmount: form.licenseDonationAmount.trim(),
         licenseValidYears: form.licenseValidYears,
         licensePrivateKey: form.licensePrivateKey.trim() || undefined,
@@ -218,14 +215,6 @@ onMounted(load)
 
           <a-divider>{{ t('admin.afdian.licenseSettings') }}</a-divider>
           <div class="settings-grid">
-            <a-form-item :label="t('admin.afdian.productPlanIds')">
-              <a-textarea
-                v-model="form.licensePlanIds"
-                :auto-size="{ minRows: 2, maxRows: 5 }"
-                :placeholder="t('admin.afdian.productPlanHint')"
-              />
-              <template #extra>{{ t('admin.afdian.productPlanHelp') }}</template>
-            </a-form-item>
             <a-form-item :label="t('admin.afdian.donationLicenseAmount')" required>
               <a-input
                 v-model="form.licenseDonationAmount"

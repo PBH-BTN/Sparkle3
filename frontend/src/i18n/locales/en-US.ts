@@ -1298,10 +1298,6 @@ export default {
       clearToken: 'Clear Access Key',
       syncEnabled: 'Enable scheduled synchronization',
       licenseSettings: 'PBHLicense v2 issuance rules',
-      productPlanIds: 'Product SKU / Plan IDs',
-      productPlanHint: 'One per line or comma-separated, for example PLAN_A, PLAN_B',
-      productPlanHelp:
-        'Only completed product orders for these Plan IDs directly create license slots.',
       donationLicenseAmount: 'Donation amount per license',
       donationLicenseHelp:
         'Completed donations are summed in the configured settlement currency. Every configured amount creates one consumable license slot.',

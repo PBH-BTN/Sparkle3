@@ -452,7 +452,6 @@ export const adminApi = {
     clearToken?: boolean
     apiBaseUrl: string
     syncEnabled: boolean
-    licensePlanIds: string
     licenseDonationAmount: string
     licenseValidYears: number
     licensePrivateKey?: string
