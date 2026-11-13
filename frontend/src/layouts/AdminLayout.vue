@@ -149,6 +149,10 @@ function navigate(key: string) {
 .admin-sidebar {
   position: sticky;
   top: 88px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 108px);
+  max-height: calc(100dvh - 108px);
   padding: 16px 12px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
@@ -157,6 +161,7 @@ function navigate(key: string) {
 
 .admin-title {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 10px;
   padding: 4px 8px 18px;
@@ -190,10 +195,20 @@ function navigate(key: string) {
 }
 
 .admin-sidebar :deep(.arco-menu) {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
   border-radius: 6px;
 }
 
+.admin-sidebar :deep(.arco-menu-inner) {
+  height: auto;
+  overflow: visible;
+}
+
 .back-button {
+  flex-shrink: 0;
   width: 100%;
   margin-top: 16px;
   color: var(--color-text-3);
