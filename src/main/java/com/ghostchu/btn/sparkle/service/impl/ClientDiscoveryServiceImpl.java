@@ -104,7 +104,13 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
                 && !peerId.startsWith("-GP")) {
             return true;
         }
-        return peerId.startsWith("FD6");
+        if (peerClientName != null && peerClientName.startsWith("FDM")) {
+            return true;
+        }
+        if (peerId.startsWith("FD6") || peerId.startsWith("MG-3")){
+            return true;
+        }
+        return false;
     }
 
     @Override
