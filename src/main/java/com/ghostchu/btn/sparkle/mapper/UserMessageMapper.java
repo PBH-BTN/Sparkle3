@@ -1,11 +1,15 @@
 package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ghostchu.btn.sparkle.entity.UserMessage;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 public interface UserMessageMapper extends BaseMapper<UserMessage> {
+    Page<UserMessage> selectConversations(Page<UserMessage> page, @Param("userId") long userId,
+                                           @Param("unreadOnly") boolean unreadOnly);
+
     @Select("""
             SELECT 1
             FROM (SELECT pg_advisory_xact_lock(hashtextextended(#{key}, 0))) AS lock

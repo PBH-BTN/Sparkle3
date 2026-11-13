@@ -19,6 +19,8 @@ import java.util.UUID;
 public class UserMessage {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+    @TableField(exist = false)
+    private Boolean hasUnread;
     @TableField("dispatch_id")
     private UUID dispatchId;
     private Boolean broadcast;

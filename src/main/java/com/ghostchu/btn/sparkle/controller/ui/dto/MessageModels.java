@@ -46,7 +46,10 @@ public final class MessageModels {
             boolean broadcast,
             boolean emailRequested,
             boolean emailForced,
-            String emailStatus
+            String emailStatus,
+            boolean outgoing,
+            String peerUserId,
+            String peerDisplayName
     ) {
     }
 

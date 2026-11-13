@@ -32,6 +32,16 @@ public class InboxApiController {
         return messageService.inbox(currentUserId(principal), page, size, unreadOnly);
     }
 
+    @GetMapping("/{id}/conversation")
+    public InboxPage conversation(
+            @PathVariable long id,
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "20") long size,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws com.ghostchu.btn.sparkle.exception.BusinessException {
+        return messageService.conversation(currentUserId(principal), id, page, size);
+    }
+
     @GetMapping("/unread-count")
     public UnreadMessageCount unreadCount(
             @AuthenticationPrincipal SparkleUserDetails principal

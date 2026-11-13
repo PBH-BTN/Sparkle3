@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.UserMessageMapper">
+    <resultMap id="conversationMessage" type="com.ghostchu.btn.sparkle.entity.UserMessage" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="hasUnread" column="has_unread"/>
+    </resultMap>
+    <select id="selectConversations" resultMap="conversationMessage">
+        SELECT * FROM (
+            SELECT m.*,
+                   row_number() OVER (
+                       PARTITION BY CASE
+                           WHEN category = 'DIRECT_MESSAGE' AND sender_kind = 'USER'
+                                AND broadcast = false
+                           THEN 'user:' || CASE WHEN sender_user_id = #{userId}
+                                THEN recipient_user_id ELSE sender_user_id END::text
+                           ELSE 'message:' || id::text END
+                       ORDER BY created_at DESC, id DESC
+                   ) AS conversation_row,
+                   bool_or(recipient_user_id = #{userId} AND read_at IS NULL) OVER (
+                       PARTITION BY CASE
+                           WHEN category = 'DIRECT_MESSAGE' AND sender_kind = 'USER'
+                                AND broadcast = false
+                           THEN 'user:' || CASE WHEN sender_user_id = #{userId}
+                                THEN recipient_user_id ELSE sender_user_id END::text
+                           ELSE 'message:' || id::text END
+                   ) AS has_unread
+            FROM user_messages m
+            WHERE (recipient_user_id = #{userId} AND deleted_at IS NULL AND inbox_visible = true)
+               OR (sender_user_id = #{userId} AND sender_kind = 'USER'
+                   AND category = 'DIRECT_MESSAGE' AND broadcast = false)
+        ) conversations
+        WHERE conversation_row = 1
+        <if test="unreadOnly">AND has_unread = true</if>
+        ORDER BY created_at DESC, id DESC
+    </select>
+</mapper>

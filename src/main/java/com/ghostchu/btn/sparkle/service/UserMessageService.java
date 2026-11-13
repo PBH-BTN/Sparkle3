@@ -263,25 +263,54 @@ public class UserMessageService {
     public InboxPage inbox(long userId, long page, long size, boolean unreadOnly) {
         long safePage = Math.max(1, page);
         long safeSize = Math.min(100, Math.max(1, size));
-        QueryWrapper<UserMessage> wrapper = new QueryWrapper<UserMessage>()
-                .eq("recipient_user_id", userId)
-                .isNull("deleted_at")
-                .eq("inbox_visible", true)
-                .orderByDesc("created_at")
-                .orderByDesc("id");
-        if (unreadOnly) {
-            wrapper.isNull("read_at");
-        }
-        Page<UserMessage> result = messageMapper.selectPage(
-                new Page<>(safePage, safeSize),
-                wrapper
-        );
+        Page<UserMessage> result = messageMapper.selectConversations(
+                new Page<>(safePage, safeSize), userId, unreadOnly);
         long totalValue = result.getTotal();
         List<InboxMessageView> records = result.getRecords().stream()
-                .map(this::mapMessage)
+                .map(message -> mapMessage(message, userId))
                 .toList();
         long pages = totalValue == 0 ? 0 : (totalValue + safeSize - 1) / safeSize;
         return new InboxPage(records, safePage, safeSize, totalValue, pages);
+    }
+
+    public InboxPage conversation(long userId, long messageId, long page, long size)
+            throws BusinessException {
+        UserMessage anchor = messageMapper.selectById(messageId);
+        if (anchor == null || !canView(userId, anchor)) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "Message not found");
+        }
+        long safePage = Math.max(1, page);
+        long safeSize = Math.min(100, Math.max(1, size));
+        QueryWrapper<UserMessage> query = new QueryWrapper<>();
+        if (isConversation(anchor)) {
+            long peerId = anchor.getSenderUserId() == userId
+                    ? anchor.getRecipientUserId() : anchor.getSenderUserId();
+            query.eq("category", NotificationCategory.DIRECT_MESSAGE.name())
+                    .eq("sender_kind", "USER").eq("broadcast", false)
+                    .and(q -> q.nested(incoming -> incoming.eq("recipient_user_id", userId)
+                                    .eq("sender_user_id", peerId).isNull("deleted_at")
+                                    .eq("inbox_visible", true))
+                            .or(outgoing -> outgoing.eq("sender_user_id", userId)
+                                    .eq("recipient_user_id", peerId)));
+        } else {
+            query.eq("id", messageId);
+        }
+        query.orderByDesc("created_at").orderByDesc("id");
+        Page<UserMessage> result = messageMapper.selectPage(new Page<>(safePage, safeSize), query);
+        return new InboxPage(result.getRecords().stream().map(m -> mapMessage(m, userId)).toList(),
+                safePage, safeSize, result.getTotal(), result.getPages());
+    }
+
+    private boolean isConversation(UserMessage message) {
+        return "USER".equals(message.getSenderKind()) && message.getSenderUserId() != null
+                && NotificationCategory.DIRECT_MESSAGE.name().equals(message.getCategory())
+                && !Boolean.TRUE.equals(message.getBroadcast());
+    }
+
+    private boolean canView(long userId, UserMessage message) {
+        return (message.getRecipientUserId() == userId && message.getDeletedAt() == null
+                && Boolean.TRUE.equals(message.getInboxVisible()))
+                || (isConversation(message) && message.getSenderUserId() == userId);
     }
 
     public int unreadCount(long userId) {
@@ -489,21 +518,30 @@ public class UserMessageService {
                 .setReadAt(initiallyRead ? OffsetDateTime.now() : null);
     }
 
-    private InboxMessageView mapMessage(UserMessage message) {
+    private InboxMessageView mapMessage(UserMessage message, long userId) {
+        boolean outgoing = isConversation(message) && message.getSenderUserId() == userId;
+        Long peerId = isConversation(message)
+                ? (outgoing ? message.getRecipientUserId() : message.getSenderUserId()) : null;
+        User peer = peerId == null ? null : userService.getById(peerId);
+        String peerName = peer == null ? message.getSenderDisplayName() : senderDisplayName(peer);
         return new InboxMessageView(
                 message.getId(),
-                message.getSenderDisplayName(),
+                outgoing ? message.getSenderDisplayName() : peerName,
                 message.getSenderKind(),
                 message.getCategory(),
                 message.getSubject(),
                 message.getContent(),
                 message.getCreatedAt(),
                 message.getReadAt(),
-                message.getReadAt() != null,
+                message.getHasUnread() != null ? !message.getHasUnread()
+                        : outgoing || message.getReadAt() != null,
                 Boolean.TRUE.equals(message.getBroadcast()),
                 Boolean.TRUE.equals(message.getEmailRequested()),
                 Boolean.TRUE.equals(message.getEmailForced()),
-                message.getEmailStatus()
+                message.getEmailStatus(),
+                outgoing,
+                peerId == null ? null : peerId.toString(),
+                peerName
         );
     }
 
