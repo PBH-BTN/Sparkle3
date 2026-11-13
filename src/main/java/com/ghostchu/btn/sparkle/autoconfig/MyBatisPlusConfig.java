@@ -7,10 +7,13 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.ghostchu.btn.sparkle.converter.InetAddressTypeHandler;
+import com.ghostchu.btn.sparkle.converter.UuidTypeHandler;
 import com.ghostchu.btn.sparkle.service.FooterSqlMetricsInterceptor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.UUID;
 
 @Configuration
 @MapperScan(basePackages = "com.ghostchu.btn.sparkle.mapper")
@@ -36,6 +39,10 @@ public class MyBatisPlusConfig {
             // 注册类型处理器
             configuration.getTypeHandlerRegistry().register(
                     InetAddressTypeHandler.class
+            );
+            configuration.getTypeHandlerRegistry().register(
+                    UUID.class,
+                    UuidTypeHandler.class
             );
         };
     }

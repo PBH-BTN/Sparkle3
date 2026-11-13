@@ -18,7 +18,8 @@ public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
                 start_at, expire_at
             )
             VALUES (
-                #{licenseId}, #{btnUserId}, #{provider}, #{externalUserId},
+                #{licenseId,typeHandler=com.ghostchu.btn.sparkle.converter.UuidTypeHandler},
+                #{btnUserId}, #{provider}, #{externalUserId},
                 #{afdianUserId}, #{sourceType}, #{sourceOrderNo}, #{planId},
                 #{consumedAmount}, #{licenseKey}, CAST(#{licensePayload} AS jsonb),
                 #{startAt}, #{expireAt}
