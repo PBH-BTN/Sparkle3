@@ -126,7 +126,7 @@ public interface AdminStorageMapper {
     );
 
     @Select("SELECT remove_compression_policy(#{relation}::regclass, if_exists => true)")
-    void removeCompressionPolicy(@Param("relation") String relation);
+    boolean removeCompressionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_compression_policy(
@@ -136,7 +136,7 @@ public interface AdminStorageMapper {
                 if_not_exists => false
             )
             """)
-    void addCompressionPolicy(
+    int addCompressionPolicy(
             @Param("relation") String relation,
             @Param("afterDays") int afterDays,
             @Param("scheduleHours") int scheduleHours
@@ -169,7 +169,7 @@ public interface AdminStorageMapper {
     );
 
     @Select("SELECT remove_retention_policy(#{relation}::regclass, if_exists => true)")
-    void removeRetentionPolicy(@Param("relation") String relation);
+    boolean removeRetentionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_retention_policy(
@@ -179,7 +179,7 @@ public interface AdminStorageMapper {
                 if_not_exists => false
             )
             """)
-    void addRetentionPolicy(
+    int addRetentionPolicy(
             @Param("relation") String relation,
             @Param("afterDays") int afterDays,
             @Param("scheduleHours") int scheduleHours
