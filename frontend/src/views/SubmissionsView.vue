@@ -8,9 +8,11 @@ import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TablePager from '@/components/TablePager.vue'
 import { useFormatters } from '@/utils/format'
+import { geoIp, shortModuleName } from '@/utils/peerRecords'
+import { IconCode } from '@arco-design/web-vue/es/icon'
 
 const { t } = useI18n()
-const { formatDate, formatBytes } = useFormatters()
+const { formatDate, formatBytes, formatProgress } = useFormatters()
 const type = ref<SubmissionType>('bans')
 const days = ref(3)
 const page = ref(1)
@@ -19,21 +21,45 @@ const records = ref<SubmissionRecord[]>([])
 const total = ref(0)
 const loading = ref(false)
 const failed = ref(false)
+const structuredRecord = ref<SubmissionRecord | null>(null)
+const structuredVisible = ref(false)
 let requestId = 0
 
 const columns = computed<TableColumnData[]>(() => {
-  const fields = ['application', 'time', 'peerId', 'client',
-    ...(type.value === 'bans' ? ['module'] : []),
-    ...(type.value === 'clients' ? ['clientType', 'version'] : ['torrent', 'uploaded', 'downloaded'])]
-  const dataIndexes: Record<string, string> = {
-    time: 'submittedAt', client: 'clientName', module: 'moduleName',
-    version: 'clientVersion', torrent: 'torrentId',
+  const column = (field: string, label: string, width = 170): TableColumnData => ({
+    title: t(label), dataIndex: field, slotName: field, width, ellipsis: true, tooltip: true,
+  })
+  const source = column('application', 'submissions.application', 190)
+  if (type.value === 'clients') {
+    return [source, column('submittedAt', 'clientDiscovery.foundAt', 180),
+      column('peerId', 'clientDiscovery.peerId', 240), column('clientName', 'clientDiscovery.peerClientName'),
+      column('clientType', 'clientDiscovery.clientType'), column('clientVersion', 'clientDiscovery.clientSemver')]
   }
-  return fields.map(field => ({
-    title: t('submissions.' + field), dataIndex: dataIndexes[field] ?? field,
-    slotName: field, width: field === 'peerId' ? 240 : 190, ellipsis: true, tooltip: true,
-  }))
+  const prefix = type.value === 'bans' ? 'banHistory.' : 'swarmTracker.'
+  const common = [column('torrentId', prefix + 'torrentId', 120), column('peerIp', prefix + 'peerIp'),
+    column('peerPort', prefix + 'peerPort', 100), column('peerId', prefix + 'peerId'),
+    column('clientName', prefix + 'peerClientName')]
+  if (type.value === 'bans') {
+    return [source, column('populateTime', 'banHistory.populateTime', 180), ...common,
+      column('peerProgress', 'banHistory.progress', 100), column('peerGeoip', 'banHistory.geoIp'),
+      column('moduleName', 'banHistory.moduleName', 220), column('rule', 'banHistory.rule', 220),
+      column('description', 'banHistory.descriptionField', 300),
+      column('reporterProgress', 'swarmTracker.userTaskProgress', 130),
+      column('flags', 'swarmTracker.flags', 100), column('uploaded', 'submissions.uploaded'),
+      column('downloaded', 'submissions.downloaded'), column('insertTime', 'submissions.time', 180),
+      { title: '', slotName: 'details', width: 70, fixed: 'right' }]
+  }
+  return [source, ...common, column('peerProgress', 'swarmTracker.peerTaskProgress', 130),
+    column('downloaded', 'swarmTracker.fromPeerTraffic'), column('uploaded', 'swarmTracker.toPeerTraffic'),
+    column('flags', 'swarmTracker.flags', 100), column('firstTimeSeen', 'swarmTracker.firstSeen', 180),
+    column('lastTimeSeen', 'swarmTracker.lastSeen', 180), column('userProgress', 'swarmTracker.userTaskProgress', 130)]
 })
+const tableWidth = computed(() => columns.value.reduce((sum, column) => sum + Number(column.width ?? 170), 0))
+
+function showStructuredData(record: SubmissionRecord) {
+  structuredRecord.value = record
+  structuredVisible.value = true
+}
 
 async function load() {
   const id = ++requestId
@@ -88,14 +114,39 @@ onMounted(load)
         {{ t('submissions.failed') }}
         <template #action><a-button size="small" @click="load">{{ t('submissions.retry') }}</a-button></template>
       </a-alert>
-      <a-table v-else :columns="columns" :data="records" :loading="loading" :pagination="false" :scroll="{ x: '100%' }" row-key="id">
-        <template #time="{ record }">{{ formatDate(record.submittedAt) }}</template>
+      <a-table v-else :columns="columns" :data="records" :loading="loading" :pagination="false" :scroll="{ x: tableWidth }" row-key="id" stripe>
+        <template v-for="field in ['submittedAt', 'insertTime', 'populateTime', 'firstTimeSeen', 'lastTimeSeen']" :key="field" #[field]="{ record }">
+          {{ formatDate(record[field]) }}
+        </template>
+        <template v-for="field in ['peerProgress', 'reporterProgress', 'userProgress']" :key="field" #[field]="{ record }">
+          {{ formatProgress(record[field]) }}
+        </template>
+        <template #peerPort="{ record }">{{ record.peerPort ?? 'N/A' }}</template>
+        <template #peerIp="{ record }"><code class="mono">{{ record.peerIp || 'N/A' }}</code></template>
+        <template #peerId="{ record }"><span class="table-cell-ellipsis mono" :title="record.peerId || ''">{{ record.peerId || 'N/A' }}</span></template>
+        <template #flags="{ record }"><code class="mono">{{ record.flags || 'N/A' }}</code></template>
+        <template #peerGeoip="{ record }"><span class="table-cell-ellipsis" :title="geoIp(record)">{{ geoIp(record) }}</span></template>
+        <template #moduleName="{ record }">
+          <a-tooltip :content="record.moduleName || 'N/A'">
+            <a-tag color="arcoblue" nowrap>{{ shortModuleName(record.moduleName) }}</a-tag>
+          </a-tooltip>
+        </template>
+        <template #details="{ record }">
+          <a-tooltip :content="t('banHistory.structuredData')">
+            <a-button type="text" size="mini" :disabled="!record.structuredData" @click="showStructuredData(record)">
+              <template #icon><IconCode /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
         <template #uploaded="{ record }">{{ formatBytes(record.uploaded) }}</template>
         <template #downloaded="{ record }">{{ formatBytes(record.downloaded) }}</template>
         <template #empty><EmptyState :title="t('submissions.empty')" /></template>
       </a-table>
       <TablePager v-if="!failed" :current="page" :page-size="pageSize" :total="total" :records-length="records.length" @change="changePage" @page-size-change="changePageSize" />
     </a-card>
+    <a-modal v-model:visible="structuredVisible" :title="t('banHistory.structuredData')" :footer="false" width="760px">
+      <pre class="structured-data">{{ JSON.stringify(structuredRecord?.structuredData, null, 2) }}</pre>
+    </a-modal>
   </div>
 </template>
 
@@ -105,6 +156,12 @@ onMounted(load)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+.structured-data {
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .submission-note {
   color: var(--color-text-3);

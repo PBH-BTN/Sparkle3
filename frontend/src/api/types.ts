@@ -873,6 +873,20 @@ export interface IpCommentPage {
 export type SubmissionType = 'bans' | 'clients' | 'swarm'
 
 export interface SubmissionRecord {
+  insertTime: string | null
+  populateTime: string | null
+  peerIp: string | null
+  peerPort: number | null
+  peerProgress: number | null
+  reporterProgress: number | null
+  flags: string | null
+  peerGeoip: BanHistoryRecord['peerGeoip']
+  rule: string | null
+  description: string | null
+  structuredData: Record<string, unknown> | null
+  firstTimeSeen: string | null
+  lastTimeSeen: string | null
+  userProgress: number | null
   id: string
   application: string | null
   submittedAt: string
