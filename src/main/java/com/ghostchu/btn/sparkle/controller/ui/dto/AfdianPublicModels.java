@@ -34,7 +34,7 @@ public final class AfdianPublicModels {
             OffsetDateTime boundAt,
             OffsetDateTime lastSyncedAt,
             String totalAmount,
-            long donationCount,
+            long transactionCount,
             List<DonationView> donations
     ) {
     }

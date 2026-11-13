@@ -520,18 +520,18 @@ public class AfdianIntegrationService {
                 null,
                 entity.getOccurredAt()
         )).toList();
-        BigDecimal total = transactions.stream()
-                .filter(item -> "DONATION".equals(item.getTransactionType()))
+        List<MemberTransaction> completedTransactions = transactions.stream()
                 .filter(item -> !Boolean.FALSE.equals(item.getRemotePresent()))
                 .filter(item -> completed(item.getTransactionStatus()))
-                .map(MemberTransaction::getAmountCny)
+                .toList();
+        // Cumulative payments cover both donations and product SKU orders.
+        // License slots are still separated by transaction type elsewhere.
+        BigDecimal total = completedTransactions.stream()
+                .map(item -> item.getAmountCny() != null
+                        ? item.getAmountCny()
+                        : item.getAmount())
                 .filter(java.util.Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        long donationCount = transactions.stream()
-                .filter(item -> "DONATION".equals(item.getTransactionType()))
-                .filter(item -> !Boolean.FALSE.equals(item.getRemotePresent()))
-                .filter(item -> completed(item.getTransactionStatus()))
-                .count();
         return new BindingView(
                 settingsService.configured(),
                 true,
@@ -541,7 +541,7 @@ public class AfdianIntegrationService {
                 binding.boundAt(),
                 binding.lastSyncedAt(),
                 total.toPlainString(),
-                donationCount,
+                completedTransactions.size(),
                 donations
         );
     }
