@@ -239,3 +239,9 @@ UPDATE "user" SET role = 'moderator' WHERE id = <user-id>;
 快照保存在应用内存，重启后首次更新前显示等待状态，刷新失败保留上一份完整快照。
 统计查询限定时间范围，可使用现有 TimescaleDB hypertable 的 chunk 裁剪与已有列存策略，
 无需新增数据库结构或调整现有压缩策略。上线前应在实际数据规模下检查执行计划和刷新耗时。
+
+## OAuth 多域名登录
+
+GitHub 的固定 redirect-uri 指向统一回调域名。其他域名会先跳到该域名发起授权，完成后通过 Redis 中两分钟有效、只能使用一次的凭据回到原域名，并校验发起浏览器的会话。所有入口必须连接同一 Redis 和 Spring Session 存储，反向代理必须正确保留外部协议和主机信息。跨域回跳不传递会话 ID。新用户会返回原域名继续注册。使用包含占位符的动态 redirect-uri 时保留原有流程。
+
+设置 `sparkle.web.allow-alternate-domains=false` 可关闭非主域名页面访问（默认 true）；主域名来自固定 GitHub redirect-uri，非主域名页面请求将跳转到主站，`/ping/**` 和 `/api/**` 保持可用。该设置可通过启动环境提供。
