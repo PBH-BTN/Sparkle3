@@ -831,13 +831,14 @@ onMounted(() => {
                           <strong>{{ t('ipQueryPage.comments.network') }}</strong>
                           {{ comment.network }}
                         </button>
-                        <span>
+                        <span v-if="comment.authorIp">
                           <strong>{{ t('ipQueryPage.comments.authorIp') }}</strong>
-                          {{ comment.authorIp || 'N/A' }}
+                          {{ comment.authorIp }}
                         </span>
                         <span
+                          v-if="comment.authorUserAgent"
                           class="ua-value"
-                          :title="comment.authorUserAgent || ''"
+                          :title="comment.authorUserAgent"
                         >
                           <strong>UA</strong>
                           {{ collapse(comment.authorUserAgent, 56) }}
@@ -983,9 +984,14 @@ onMounted(() => {
             <span>{{ formatDate(revision.createdAt) }}</span>
           </div>
           <p>{{ revision.content || t('ipQueryPage.comments.historyHidden') }}</p>
-          <div class="history-meta">
-            <span>IP：{{ revision.editorIp || 'N/A' }}</span>
-            <span>UA：{{ revision.editorUserAgent || 'N/A' }}</span>
+          <div
+            v-if="revision.editorIp || revision.editorUserAgent"
+            class="history-meta"
+          >
+            <span v-if="revision.editorIp">IP：{{ revision.editorIp }}</span>
+            <span v-if="revision.editorUserAgent">
+              UA：{{ revision.editorUserAgent }}
+            </span>
           </div>
           <a-alert
             v-if="revision.moderationReason"
