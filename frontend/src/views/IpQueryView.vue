@@ -930,10 +930,9 @@ onMounted(() => {
                     </div>
                   </article>
                 </div>
-                <EmptyState
-                  v-else-if="!commentsLoading"
-                  :title="t('ipQueryPage.comments.empty')"
-                />
+                <p v-else-if="!commentsLoading" class="comments-empty">
+                  {{ t('ipQueryPage.comments.empty') }}
+                </p>
               </a-spin>
               <TablePager
                 v-if="commentTotal > 0"
@@ -1517,6 +1516,13 @@ button.metric-card {
 .comment-actions {
   gap: 2px;
   margin: -4px 0 -6px -8px;
+}
+
+.comments-empty {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--color-text-3);
+  text-align: center;
 }
 
 .empty-query {
