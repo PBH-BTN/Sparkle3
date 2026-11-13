@@ -42,10 +42,6 @@ public class AdminAfdianController {
                 Boolean.TRUE.equals(request.clearToken()),
                 request.apiBaseUrl(),
                 request.syncEnabled(),
-                request.licenseDonationAmount(),
-                request.licenseValidYears(),
-                request.licensePrivateKey(),
-                Boolean.TRUE.equals(request.clearLicensePrivateKey()),
                 principal == null ? null : principal.getUserId()
         );
         return afdianService.settings();

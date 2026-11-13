@@ -89,10 +89,6 @@ public class AfdianSettingsService {
             boolean clearToken,
             String apiBaseUrl,
             boolean syncEnabled,
-            String licenseDonationAmount,
-            int licenseValidYears,
-            @Nullable String licensePrivateKey,
-            boolean clearLicensePrivateKey,
             @Nullable Long operatorId
     ) throws BusinessException {
         String normalizedUserId = userId == null ? "" : userId.trim();
@@ -101,39 +97,11 @@ public class AfdianSettingsService {
                     "Afdian user ID is too long");
         }
         String normalizedBaseUrl = validateApiBaseUrl(apiBaseUrl);
-        BigDecimal donationAmount;
-        try {
-            donationAmount = new BigDecimal(
-                    licenseDonationAmount == null ? "" : licenseDonationAmount.trim()
-            );
-        } catch (NumberFormatException exception) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "License donation amount must be a valid number");
-        }
-        if (donationAmount.signum() <= 0
-                || donationAmount.compareTo(new BigDecimal("1000000")) > 0) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "License donation amount must be between 0 and 1,000,000");
-        }
-        if (licenseValidYears < 1 || licenseValidYears > 1_000) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "License validity must be between 1 and 1,000 years");
-        }
         databaseConfigService.update(USER_ID_KEY, normalizedUserId, operatorId);
         databaseConfigService.update(API_BASE_URL_KEY, normalizedBaseUrl, operatorId);
         databaseConfigService.update(
                 SYNC_ENABLED_KEY,
                 Boolean.toString(syncEnabled),
-                operatorId
-        );
-        databaseConfigService.update(
-                LICENSE_DONATION_AMOUNT_KEY,
-                donationAmount.stripTrailingZeros().toPlainString(),
-                operatorId
-        );
-        databaseConfigService.update(
-                LICENSE_VALID_YEARS_KEY,
-                String.valueOf(licenseValidYears),
                 operatorId
         );
         if (clearToken) {
@@ -150,20 +118,60 @@ public class AfdianSettingsService {
                     operatorId
             );
         }
-        if (clearLicensePrivateKey) {
+    }
+
+    /**
+     * Licence rules are shared by every membership platform, not by Afdian.
+     */
+    public void updateLicense(
+            String donationAmountRaw,
+            int validYears,
+            @Nullable String privateKey,
+            boolean clearPrivateKey,
+            @Nullable Long operatorId
+    ) throws BusinessException {
+        BigDecimal donationAmount;
+        try {
+            donationAmount = new BigDecimal(
+                    donationAmountRaw == null ? "" : donationAmountRaw.trim()
+            );
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "License donation amount must be a valid number");
+        }
+        if (donationAmount.signum() <= 0
+                || donationAmount.compareTo(new BigDecimal("1000000")) > 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "License donation amount must be between 0 and 1,000,000");
+        }
+        if (validYears < 1 || validYears > 1_000) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "License validity must be between 1 and 1,000 years");
+        }
+        databaseConfigService.update(
+                LICENSE_DONATION_AMOUNT_KEY,
+                donationAmount.stripTrailingZeros().toPlainString(),
+                operatorId
+        );
+        databaseConfigService.update(
+                LICENSE_VALID_YEARS_KEY,
+                String.valueOf(validYears),
+                operatorId
+        );
+        if (clearPrivateKey) {
             databaseConfigService.updateSensitive(
                     LICENSE_PRIVATE_KEY_KEY,
                     "",
                     operatorId
             );
-        } else if (licensePrivateKey != null && !licensePrivateKey.isBlank()) {
-            if (licensePrivateKey.length() > 16_384) {
+        } else if (privateKey != null && !privateKey.isBlank()) {
+            if (privateKey.length() > 16_384) {
                 throw new BusinessException(HttpStatus.BAD_REQUEST,
                         "License private key is too long");
             }
             databaseConfigService.updateSensitive(
                     LICENSE_PRIVATE_KEY_KEY,
-                    licensePrivateKey.trim(),
+                    privateKey.trim(),
                     operatorId
             );
         }

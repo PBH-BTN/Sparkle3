@@ -75,9 +75,6 @@ public class AfdianIntegrationService {
                 settingsService.configured(),
                 settingsService.apiBaseUrl(),
                 settingsService.syncEnabled(),
-                settingsService.donationLicenseAmount().toPlainString(),
-                settingsService.licenseValidYears(),
-                settingsService.licensePrivateKeyConfigured(),
                 exchangeRateService.baseCurrency(),
                 lastSyncedAt,
                 adminBindings(),
@@ -93,10 +90,6 @@ public class AfdianIntegrationService {
             boolean clearToken,
             String apiBaseUrl,
             boolean syncEnabled,
-            String licenseDonationAmount,
-            int licenseValidYears,
-            @Nullable String licensePrivateKey,
-            boolean clearLicensePrivateKey,
             @Nullable Long operatorId
     ) throws BusinessException {
         settingsService.update(
@@ -105,10 +98,6 @@ public class AfdianIntegrationService {
                 clearToken,
                 apiBaseUrl,
                 syncEnabled,
-                licenseDonationAmount,
-                licenseValidYears,
-                licensePrivateKey,
-                clearLicensePrivateKey,
                 operatorId
         );
     }

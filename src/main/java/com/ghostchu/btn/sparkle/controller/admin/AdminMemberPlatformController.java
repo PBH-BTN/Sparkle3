@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.controller.admin;
 
 import com.ghostchu.btn.sparkle.constants.MemberPlatform;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.LicenseSettingsUpdateRequest;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.LicenseSettingsView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderUpdateRequest;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
@@ -9,6 +11,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.R
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.TransactionPage;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AfdianSettingsService;
 import com.ghostchu.btn.sparkle.service.ExchangeRateService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformAdminService;
@@ -33,10 +36,42 @@ public class AdminMemberPlatformController {
     private final MemberPlatformService memberPlatformService;
     private final MemberPlatformAdminService memberPlatformAdminService;
     private final ExchangeRateService exchangeRateService;
+    private final AfdianSettingsService afdianSettingsService;
 
     @GetMapping
     public SettingsView settings() {
         return memberPlatformService.settings();
+    }
+
+    @GetMapping("/license")
+    public LicenseSettingsView licenseSettings() {
+        return new LicenseSettingsView(
+                afdianSettingsService.donationLicenseAmount().toPlainString(),
+                afdianSettingsService.licenseValidYears(),
+                afdianSettingsService.licensePrivateKeyConfigured(),
+                exchangeRateService.baseCurrency()
+        );
+    }
+
+    @PutMapping("/license")
+    public LicenseSettingsView updateLicense(
+            @RequestBody LicenseSettingsUpdateRequest request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        if (request == null) {
+            throw new BusinessException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "License settings are required"
+            );
+        }
+        afdianSettingsService.updateLicense(
+                request.donationLicenseAmount(),
+                request.validYears(),
+                request.privateKey(),
+                Boolean.TRUE.equals(request.clearPrivateKey()),
+                principal == null ? null : principal.getUserId()
+        );
+        return licenseSettings();
     }
 
     @PutMapping("/{provider}")

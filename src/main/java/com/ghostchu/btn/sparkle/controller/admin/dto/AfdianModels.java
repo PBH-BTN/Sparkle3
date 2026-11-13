@@ -12,11 +12,7 @@ public final class AfdianModels {
             String accessToken,
             Boolean clearToken,
             String apiBaseUrl,
-            boolean syncEnabled,
-            String licenseDonationAmount,
-            int licenseValidYears,
-            String licensePrivateKey,
-            Boolean clearLicensePrivateKey
+            boolean syncEnabled
     ) {
     }
 
@@ -56,9 +52,6 @@ public final class AfdianModels {
             boolean configured,
             String apiBaseUrl,
             boolean syncEnabled,
-            String licenseDonationAmount,
-            int licenseValidYears,
-            boolean licensePrivateKeyConfigured,
             String baseCurrency,
             OffsetDateTime lastSyncedAt,
             List<BindingView> bindings,

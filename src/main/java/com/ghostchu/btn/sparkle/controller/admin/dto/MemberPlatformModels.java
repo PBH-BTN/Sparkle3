@@ -60,4 +60,20 @@ public final class MemberPlatformModels {
             String message
     ) {
     }
+
+    public record LicenseSettingsView(
+            String donationLicenseAmount,
+            int validYears,
+            boolean privateKeyConfigured,
+            String baseCurrency
+    ) {
+    }
+
+    public record LicenseSettingsUpdateRequest(
+            String donationLicenseAmount,
+            int validYears,
+            String privateKey,
+            Boolean clearPrivateKey
+    ) {
+    }
 }

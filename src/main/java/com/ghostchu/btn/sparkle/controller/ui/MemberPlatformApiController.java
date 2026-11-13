@@ -1,11 +1,13 @@
 package com.ghostchu.btn.sparkle.controller.ui;
 
+import com.ghostchu.btn.sparkle.constants.MemberPlatform;
 import com.ghostchu.btn.sparkle.controller.ui.dto.AfdianPublicModels.LicenseAvailabilityView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.AfdianPublicModels.LicenseView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MemberPlatformPublicModels.BindRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MemberPlatformPublicModels.ProviderBindingView;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AfdianIntegrationService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformService;
 import com.ghostchu.btn.sparkle.service.PbhLicenseService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MemberPlatformApiController {
     private final MemberPlatformService memberPlatformService;
+    private final AfdianIntegrationService afdianIntegrationService;
     private final PbhLicenseService licenseService;
 
     @GetMapping
@@ -42,9 +45,18 @@ public class MemberPlatformApiController {
             @RequestBody BindRequest request,
             @AuthenticationPrincipal SparkleUserDetails principal
     ) throws BusinessException {
+        MemberPlatform platform = memberPlatformService.parseProvider(provider);
+        long userId = userId(principal);
+        if (platform == MemberPlatform.AFDIAN) {
+            afdianIntegrationService.bind(
+                    userId,
+                    request == null ? null : request.proof()
+            );
+            return memberPlatformService.bindingView(userId, platform, false);
+        }
         return memberPlatformService.bind(
-                userId(principal),
-                memberPlatformService.parseProvider(provider),
+                userId,
+                platform,
                 request == null ? null : request.proof()
         );
     }
@@ -54,10 +66,12 @@ public class MemberPlatformApiController {
             @PathVariable String provider,
             @AuthenticationPrincipal SparkleUserDetails principal
     ) throws BusinessException {
-        memberPlatformService.unbind(
-                userId(principal),
-                memberPlatformService.parseProvider(provider)
-        );
+        MemberPlatform platform = memberPlatformService.parseProvider(provider);
+        if (platform == MemberPlatform.AFDIAN) {
+            afdianIntegrationService.unbind(userId(principal));
+            return;
+        }
+        memberPlatformService.unbind(userId(principal), platform);
     }
 
     @GetMapping("/licenses")
