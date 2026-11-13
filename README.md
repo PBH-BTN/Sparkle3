@@ -76,7 +76,7 @@ pnpm --dir frontend build
 - `ban_history` 维护：按 cutoff 预览并删除完整旧 chunks；删除需要输入确认文本，避免误操作。
 - 版本提醒：基于客户端产品名、User-Agent 和 NPM 语义化版本范围配置邮件通知，支持启停、编辑、匹配测试、真实测试邮件和发送记录。
 - 会员平台与许可证：在“捐赠支持”页统一配置爱发电、Patreon、Ko-fi、面包多的官方接入凭据，
-  查看同步运行记录、远端缺失对账和交易账本，并维护所有平台共用的 PBHLicense 签发规则。
+  查看同步运行记录、远端缺失对账、交易账本和已签发许可证，并维护所有平台共用的 PBHLicense 签发规则。
 
 主机指标每分钟采样一次并保存到 Redis key `sparkle:admin:metrics:host:history`，保留 8 天。
 后台运行设置保存在 PostgreSQL 表 `app_config_entries`，并保留 `application.yaml` 中的值作为默认值。
