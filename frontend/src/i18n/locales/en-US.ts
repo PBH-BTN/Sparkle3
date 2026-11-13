@@ -544,7 +544,7 @@ export default {
     title: "BTN career statistics",
     since: 'Since registration · {time}',
     partialSince: 'Tracking since {time}',
-    partialHistory: 'Some early records are no longer available. Totals include recoverable history and traffic recorded since then.',
+    partialHistory: 'Totals are recorded from the time statistics were enabled. Earlier history is not included.',
     updatedAt: 'Last updated: {time}',
     empty: 'No traffic recorded yet.',
     hidden: 'Only this user can view their career statistics.',

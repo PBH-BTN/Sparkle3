@@ -526,7 +526,7 @@ export default {
     title: "BTN 生涯统计",
     since: '自注册以来 · {time}',
     partialSince: '统计起点：{time}',
-    partialHistory: '部分早期记录已不再保留，累计值仅包含可恢复的历史记录及此后的流量。',
+    partialHistory: '累计数据从统计启用后开始记录，不包含此前的历史数据。',
     updatedAt: '最近更新：{time}',
     empty: '暂无流量记录。',
     hidden: '该用户的生涯统计仅自己可见。',
