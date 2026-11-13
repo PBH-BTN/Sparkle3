@@ -1,0 +1,11 @@
+-- Keep primary/unique indexes required by atomic ON CONFLICT accumulation.
+ALTER TABLE user_privacy_settings DROP CONSTRAINT IF EXISTS user_privacy_settings_lifetime_traffic_visibility_check;
+ALTER TABLE user_lifetime_traffic DROP CONSTRAINT IF EXISTS user_lifetime_traffic_user_id_fkey;
+ALTER TABLE user_lifetime_traffic DROP CONSTRAINT IF EXISTS user_lifetime_traffic_sent_self_check;
+ALTER TABLE user_lifetime_traffic DROP CONSTRAINT IF EXISTS user_lifetime_traffic_received_self_check;
+ALTER TABLE user_lifetime_traffic DROP CONSTRAINT IF EXISTS user_lifetime_traffic_sent_ack_check;
+ALTER TABLE user_lifetime_traffic DROP CONSTRAINT IF EXISTS user_lifetime_traffic_received_ack_check;
+ALTER TABLE user_lifetime_traffic_checkpoint DROP CONSTRAINT IF EXISTS user_lifetime_traffic_checkpoint_user_id_fkey;
+ALTER TABLE user_career_events DROP CONSTRAINT IF EXISTS user_career_events_user_id_fkey;
+ALTER TABLE user_career_daily DROP CONSTRAINT IF EXISTS user_career_daily_user_id_fkey;
+ALTER TABLE user_career_torrent_time DROP CONSTRAINT IF EXISTS user_career_torrent_time_user_id_fkey;
