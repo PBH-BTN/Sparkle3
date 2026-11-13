@@ -72,4 +72,44 @@ public interface AiModerationJobMapper extends BaseMapper<AiModerationJob> {
                    OR content_type = CAST(#{contentType} AS VARCHAR))
             """)
     int retryFailedJobs(@Param("contentType") String contentType);
+
+    @Update("""
+            UPDATE ai_moderation_jobs
+            SET status = #{status},
+                result_json = CAST(#{resultJson} AS jsonb),
+                rejection_reason = #{rejectionReason},
+                completed_at = #{completedAt},
+                locked_by = NULL,
+                locked_at = NULL,
+                updated_at = #{updatedAt}
+            WHERE id = #{id}
+              AND status = 'RUNNING'
+            """)
+    int completeRunningJob(
+            @Param("id") long id,
+            @Param("status") String status,
+            @Param("resultJson") String resultJson,
+            @Param("rejectionReason") String rejectionReason,
+            @Param("completedAt") OffsetDateTime completedAt,
+            @Param("updatedAt") OffsetDateTime updatedAt
+    );
+
+    @Update("""
+            UPDATE ai_moderation_jobs
+            SET status = 'PENDING',
+                attempt_count = 0,
+                max_attempts = #{maxAttempts},
+                next_attempt_at = now(),
+                last_error = NULL,
+                locked_by = NULL,
+                locked_at = NULL,
+                completed_at = NULL,
+                updated_at = now()
+            WHERE id = #{id}
+              AND status = 'FAILED'
+            """)
+    int requeueFailedJob(
+            @Param("id") long id,
+            @Param("maxAttempts") int maxAttempts
+    );
 }

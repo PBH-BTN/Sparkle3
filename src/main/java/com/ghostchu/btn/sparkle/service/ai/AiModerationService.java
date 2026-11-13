@@ -23,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,20 +54,15 @@ public class AiModerationService {
         if (!enabled()) {
             return false;
         }
-        AiModerationSettings settings = settingsService.get();
-        jobMapper.insert(new AiModerationJob()
-                .setContentType("COMMENT")
-                .setContentRefId(comment.getId())
-                .setContentVersion(comment.getReviewGeneration())
-                .setSubjectUserId(comment.getAuthorUserId())
-                .setTextContent(comment.getContent())
-                .setStatus("PENDING")
-                .setAttemptCount(0)
-                .setMaxAttempts(settings.maxAttempts())
-                .setProviderModel(settings.model())
-                .setNextAttemptAt(OffsetDateTime.now())
-                .setCreatedAt(OffsetDateTime.now())
-                .setUpdatedAt(OffsetDateTime.now()));
+        insertJob(
+                "COMMENT",
+                comment.getId(),
+                comment.getReviewGeneration(),
+                comment.getAuthorUserId(),
+                comment.getContent(),
+                null,
+                settingsService.get()
+        );
         return true;
     }
 
@@ -204,32 +201,15 @@ public class AiModerationService {
     @Transactional
     public void complete(AiModerationJob job, Verdict verdict) {
         OffsetDateTime now = OffsetDateTime.now();
-        boolean updated = applyVerdict(job, verdict, now);
-        if (!updated) {
-            jobMapper.update(null, new LambdaUpdateWrapper<AiModerationJob>()
-                    .set(AiModerationJob::getStatus,
-                            verdict.approved() ? "APPROVED" : "REJECTED")
-                    .set(AiModerationJob::getResultJson, verdict.rawJson())
-                    .set(AiModerationJob::getRejectionReason, verdict.reason())
-                    .set(AiModerationJob::getCompletedAt, now)
-                    .set(AiModerationJob::getLockedBy, null)
-                    .set(AiModerationJob::getLockedAt, null)
-                    .set(AiModerationJob::getUpdatedAt, now)
-                    .eq(AiModerationJob::getId, job.getId())
-                    .eq(AiModerationJob::getStatus, "RUNNING"));
-            return;
-        }
-        jobMapper.update(null, new LambdaUpdateWrapper<AiModerationJob>()
-                .set(AiModerationJob::getStatus,
-                        verdict.approved() ? "APPROVED" : "REJECTED")
-                .set(AiModerationJob::getResultJson, verdict.rawJson())
-                .set(AiModerationJob::getRejectionReason, verdict.reason())
-                .set(AiModerationJob::getCompletedAt, now)
-                .set(AiModerationJob::getLockedBy, null)
-                .set(AiModerationJob::getLockedAt, null)
-                .set(AiModerationJob::getUpdatedAt, now)
-                .eq(AiModerationJob::getId, job.getId())
-                .eq(AiModerationJob::getStatus, "RUNNING"));
+        applyVerdict(job, verdict, now);
+        jobMapper.completeRunningJob(
+                job.getId(),
+                verdict.approved() ? "APPROVED" : "REJECTED",
+                verdict.rawJson(),
+                verdict.reason(),
+                now,
+                now
+        );
     }
 
     @Transactional
@@ -280,6 +260,87 @@ public class AiModerationService {
                         ? null
                         : contentType.trim().toUpperCase()
         );
+    }
+
+    /**
+     * Re-queues comments that were never reviewed or whose review failed, so a
+     * scheduled run can recover content that was hidden while the moderation
+     * model was unreachable. Comments that already have an active job for the
+     * current revision are left alone.
+     */
+    @Transactional
+    public int reauditOutstandingComments(int requestedLimit) {
+        if (!enabled()) {
+            return 0;
+        }
+        int limit = Math.max(1, Math.min(200, requestedLimit));
+        AiModerationSettings settings = settingsService.get();
+        List<IpQueryComment> candidates = commentMapper.selectList(
+                new QueryWrapper<IpQueryComment>()
+                        .in("moderation_status", "PENDING", "FAILED")
+                        .isNull("deleted_at")
+                        .orderByAsc("updated_at")
+                        .last("LIMIT " + (limit * 4))
+        );
+        if (candidates.isEmpty()) {
+            return 0;
+        }
+        List<Long> commentIds = candidates.stream()
+                .map(IpQueryComment::getId)
+                .toList();
+        Map<Long, AiModerationJob> latestJobs = new HashMap<>();
+        jobMapper.selectList(new QueryWrapper<AiModerationJob>()
+                        .eq("content_type", "COMMENT")
+                        .in("content_ref_id", commentIds)
+                        .orderByDesc("id"))
+                .forEach(job -> latestJobs.putIfAbsent(
+                        job.getContentRefId(),
+                        job
+                ));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        int queued = 0;
+        for (IpQueryComment comment : candidates) {
+            if (queued >= limit) {
+                break;
+            }
+            long generation = comment.getReviewGeneration() == null
+                    ? 0
+                    : comment.getReviewGeneration();
+            AiModerationJob job = latestJobs.get(comment.getId());
+            boolean currentVersion = job != null
+                    && job.getContentVersion() != null
+                    && job.getContentVersion() == generation;
+            if (currentVersion) {
+                if ("PENDING".equals(job.getStatus())
+                        || "RUNNING".equals(job.getStatus())) {
+                    continue;
+                }
+                if ("FAILED".equals(job.getStatus())) {
+                    if (jobMapper.requeueFailedJob(
+                            job.getId(),
+                            settings.maxAttempts()
+                    ) == 0) {
+                        continue;
+                    }
+                    markCommentPending(comment, now);
+                    queued++;
+                    continue;
+                }
+            }
+            insertJob(
+                    "COMMENT",
+                    comment.getId(),
+                    generation,
+                    comment.getAuthorUserId(),
+                    comment.getContent(),
+                    null,
+                    settings
+            );
+            markCommentPending(comment, now);
+            queued++;
+        }
+        return queued;
     }
 
     public ModerationMetrics metrics() {
@@ -454,6 +515,51 @@ public class AiModerationService {
             default -> {
             }
         }
+    }
+
+    private long insertJob(
+            String contentType,
+            long contentRefId,
+            Long contentVersion,
+            Long subjectUserId,
+            String textContent,
+            String imageUrl,
+            AiModerationSettings settings
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        AiModerationJob job = new AiModerationJob()
+                .setContentType(contentType)
+                .setContentRefId(contentRefId)
+                .setContentVersion(contentVersion == null ? 0L : contentVersion)
+                .setSubjectUserId(subjectUserId)
+                .setTextContent(textContent)
+                .setImageUrl(imageUrl)
+                .setStatus("PENDING")
+                .setAttemptCount(0)
+                .setMaxAttempts(settings.maxAttempts())
+                .setProviderModel(settings.model())
+                .setNextAttemptAt(now)
+                .setCreatedAt(now)
+                .setUpdatedAt(now);
+        jobMapper.insert(job);
+        return job.getId() == null ? 0 : job.getId();
+    }
+
+    private void markCommentPending(IpQueryComment comment, OffsetDateTime now) {
+        commentMapper.update(null, new LambdaUpdateWrapper<IpQueryComment>()
+                .set(IpQueryComment::getModerationStatus, "PENDING")
+                .set(IpQueryComment::getModerationReason, null)
+                .set(IpQueryComment::getUpdatedAt, now)
+                .eq(IpQueryComment::getId, comment.getId())
+                .in(IpQueryComment::getModerationStatus, "PENDING", "FAILED"));
+        revisionMapper.update(null,
+                new LambdaUpdateWrapper<IpQueryCommentRevision>()
+                        .set(IpQueryCommentRevision::getModerationStatus, "PENDING")
+                        .set(IpQueryCommentRevision::getModerationReason, null)
+                        .eq(IpQueryCommentRevision::getCommentId, comment.getId())
+                        .eq(IpQueryCommentRevision::getRevision, comment.getRevision())
+                        .in(IpQueryCommentRevision::getModerationStatus,
+                                "PENDING", "FAILED"));
     }
 
     private void notifyReplyIfNeeded(IpQueryComment comment) {
