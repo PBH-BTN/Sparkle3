@@ -51,7 +51,8 @@ public final class AnnouncementModels {
             boolean dismissible,
             int sortOrder,
             OffsetDateTime startsAt,
-            OffsetDateTime endsAt
+            OffsetDateTime endsAt,
+            boolean sendInbox
     ) {
     }
 }

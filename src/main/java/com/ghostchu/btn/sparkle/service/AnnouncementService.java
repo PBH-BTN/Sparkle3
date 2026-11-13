@@ -101,7 +101,7 @@ public class AnnouncementService {
                     "Unable to create announcement");
         }
         AnnouncementView created = require(entity.getId());
-        if (created.enabled()) {
+        if (created.enabled() && normalized.sendInbox()) {
             publishInbox(created);
         }
         return created;
@@ -113,7 +113,6 @@ public class AnnouncementService {
             @Nullable Long operatorId
     ) throws BusinessException {
         AnnouncementInput normalized = validate(input);
-        AnnouncementView existing = require(id);
         Announcement entity = announcementMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND, "Announcement not found");
@@ -133,7 +132,7 @@ public class AnnouncementService {
                 .setUpdatedBy(operatorId);
         announcementMapper.updateById(entity);
         AnnouncementView updated = require(id);
-        if (!existing.enabled() && updated.enabled()) {
+        if (updated.enabled() && normalized.sendInbox()) {
             publishInbox(updated);
         }
         return updated;
@@ -213,7 +212,8 @@ public class AnnouncementService {
                 input.dismissible(),
                 input.sortOrder(),
                 input.startsAt(),
-                input.endsAt()
+                input.endsAt(),
+                input.sendInbox()
         );
     }
 
