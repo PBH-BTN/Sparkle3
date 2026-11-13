@@ -143,7 +143,7 @@ onMounted(load)
             </span>
             <div class="group-title">
               <h2>{{ title(group) }}</h2>
-              <a-tag size="small" :color="group.type === 'GITHUB' ? 'purple' : 'arcoblue'">
+              <a-tag v-if="group.type === 'GITHUB'" size="small" color="purple">
                 {{ t(`communityGroups.types.${group.type}`) }}
               </a-tag>
             </div>
