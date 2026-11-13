@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message, type TableColumnData } from '@arco-design/web-vue'
 import {
+  IconLink,
   IconRefresh,
   IconSave,
   IconSync,
@@ -20,12 +21,9 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 interface ProviderForm {
   enabled: boolean
-  apiUrl: string
   accountId: string
   accessToken: string
   clearAccessToken: boolean
-  authHeader: string
-  authScheme: string
   webhookToken: string
   clearWebhookToken: boolean
   currency: string
@@ -36,6 +34,7 @@ const { t } = useI18n()
 const { formatDate } = useFormatters()
 const loading = ref(true)
 const savingProvider = ref('')
+const syncingProvider = ref('')
 const savingCurrency = ref(false)
 const syncing = ref(false)
 const settings = ref<MemberPlatformSettings | null>(null)
@@ -56,10 +55,12 @@ const filterSize = ref(20)
 
 const providerOptions = computed(() => [
   { label: t('memberships.providers.AFDIAN'), value: 'AFDIAN' },
-  ...(settings.value?.providers ?? []).map((provider) => ({
-    label: providerLabel(provider.provider),
-    value: provider.provider,
-  })),
+  ...(settings.value?.providers ?? [])
+    .filter((provider) => provider.supported)
+    .map((provider) => ({
+      label: providerLabel(provider.provider),
+      value: provider.provider,
+    })),
 ])
 
 const transactionColumns = (): TableColumnData[] => [
@@ -119,12 +120,9 @@ async function load() {
 function applyProvider(provider: MemberPlatformConfig) {
   providerForms[provider.provider] = {
     enabled: provider.enabled,
-    apiUrl: provider.apiUrl ?? '',
     accountId: provider.accountId ?? '',
     accessToken: '',
     clearAccessToken: false,
-    authHeader: provider.authHeader || 'Authorization',
-    authScheme: provider.authScheme ?? 'Bearer',
     webhookToken: '',
     clearWebhookToken: false,
     currency: provider.currency || 'CNY',
@@ -139,12 +137,9 @@ async function saveProvider(provider: MemberPlatformConfig) {
   try {
     const saved = await adminApi.updateMemberPlatform(provider.provider, {
       enabled: form.enabled,
-      apiUrl: form.apiUrl.trim(),
       accountId: form.accountId.trim(),
       accessToken: form.accessToken.trim() || undefined,
       clearAccessToken: form.clearAccessToken,
-      authHeader: form.authHeader.trim(),
-      authScheme: form.authScheme.trim(),
       webhookToken: form.webhookToken.trim() || undefined,
       clearWebhookToken: form.clearWebhookToken,
       currency: form.currency.trim(),
@@ -165,6 +160,31 @@ function replaceProvider(saved: MemberPlatformConfig) {
     provider.provider === saved.provider ? saved : provider,
   )
   applyProvider(saved)
+}
+
+async function syncProvider(provider: MemberPlatformConfig) {
+  syncingProvider.value = provider.provider
+  try {
+    const result = await adminApi.syncMemberPlatform(provider.provider)
+    Message.success(
+      t('admin.memberships.syncOneDone', {
+        provider: providerLabel(provider.provider),
+        count: result.records,
+      }),
+    )
+    await Promise.all([loadTransactions(), loadReconciliation()])
+  } catch (error) {
+    Message.error(
+      errorMessage(
+        error,
+        t('admin.memberships.syncOneFailed', {
+          provider: providerLabel(provider.provider),
+        }),
+      ),
+    )
+  } finally {
+    syncingProvider.value = ''
+  }
 }
 
 async function saveCurrency() {
@@ -203,8 +223,18 @@ async function syncAll() {
   } else {
     Message.error(t('admin.memberships.syncFailed'))
   }
-  await Promise.all([loadTransactions(), loadReconciliation()])
+  await Promise.all([loadTransactions(), loadReconciliation(), refreshProviders()])
   syncing.value = false
+}
+
+async function refreshProviders() {
+  try {
+    const data = await adminApi.memberPlatformSettings()
+    settings.value = data
+    data.providers.forEach(applyProvider)
+  } catch {
+    // The table refresh remains useful even when provider settings fail.
+  }
 }
 
 async function loadTransactions() {
@@ -265,6 +295,32 @@ function webhookUrl(provider: string) {
   return `${window.location.origin}/api/integrations/memberships/${provider}`
 }
 
+function fieldLabel(key: string) {
+  if (key === 'webhookToken') return t('admin.memberships.webhookToken')
+  if (key === 'accountId') return t('admin.memberships.accountId')
+  return t('admin.memberships.accessToken')
+}
+
+function fieldPlaceholder(provider: string, key: string) {
+  return t(`admin.memberships.fields.${provider}.${key}Placeholder`)
+}
+
+function fieldHelp(provider: string, key: string) {
+  return t(`admin.memberships.fields.${provider}.${key}Help`)
+}
+
+function runStatusColor(status: string | null) {
+  if (status === 'COMPLETED') return 'green'
+  if (status === 'RUNNING') return 'arcoblue'
+  if (status === 'FAILED') return 'red'
+  if (status === 'INCOMPLETE') return 'orange'
+  return 'gray'
+}
+
+function transactionRowClass(record: MemberTransactionAdmin) {
+  return record.remotePresent ? '' : 'remote-missing-row'
+}
+
 onMounted(load)
 </script>
 
@@ -287,13 +343,7 @@ onMounted(load)
     </PageHeader>
 
     <a-alert type="info" show-icon>
-      {{
-        t('admin.memberships.credentialHint', {
-          accountId: '{accountId}',
-          page: '{page}',
-          perPage: '{perPage}',
-        })
-      }}
+      {{ t('admin.memberships.integrationHint') }}
     </a-alert>
 
     <a-spin :loading="loading" class="admin-spin">
@@ -327,123 +377,192 @@ onMounted(load)
           <template #title>
             <div class="provider-title">
               <strong>{{ providerLabel(provider.provider) }}</strong>
+              <a-tag v-if="!provider.supported" color="gray">
+                {{ t('admin.memberships.unsupported') }}
+              </a-tag>
+              <a-tag v-else-if="provider.historySync" color="green">
+                {{ t('admin.memberships.historySync') }}
+              </a-tag>
+              <a-tag v-else color="orange">
+                {{ t('admin.memberships.webhookOnly') }}
+              </a-tag>
               <a-tag :color="provider.enabled ? 'green' : 'gray'">
                 {{ provider.enabled ? t('admin.common.enabled') : t('admin.common.disabled') }}
               </a-tag>
-              <a-tag v-if="provider.accessTokenConfigured" color="arcoblue">
-                {{ t('admin.memberships.credentialConfigured') }}
+              <a-tag v-if="provider.ready" color="arcoblue">
+                {{ t('admin.memberships.ready') }}
               </a-tag>
+              <a
+                v-if="provider.documentationUrl"
+                class="docs-link"
+                :href="provider.documentationUrl"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <IconLink />
+                {{ t('admin.memberships.docs') }}
+              </a>
             </div>
           </template>
+
+          <a-alert
+            v-if="!provider.supported"
+            type="warning"
+            show-icon
+            class="inline-alert"
+          >
+            {{ t('admin.memberships.unsupportedHint', { provider: providerLabel(provider.provider) }) }}
+          </a-alert>
+
           <a-form
-            v-if="providerForms[provider.provider]"
+            v-else-if="providerForms[provider.provider]"
             :model="providerForms[provider.provider]"
             layout="vertical"
           >
-            <a-form-item :label="t('admin.memberships.enabled')">
+            <div class="provider-switch">
               <a-switch v-model="providerForms[provider.provider].enabled" />
-            </a-form-item>
-            <a-form-item :label="t('admin.memberships.apiUrl')" required>
-              <a-input
-                v-model="providerForms[provider.provider].apiUrl"
-                :max-length="2048"
-                placeholder="https://provider.example/api/transactions?page={page}&per_page={perPage}&account={accountId}"
-              />
-              <template #extra>
-                {{
-                  t('admin.memberships.apiUrlHint', {
-                    page: '{page}',
-                    perPage: '{perPage}',
-                  })
-                }}
-              </template>
-            </a-form-item>
-            <div class="compact-grid">
-              <a-form-item :label="t('admin.memberships.accountId')">
+              <span>{{ t('admin.memberships.enabled') }}</span>
+            </div>
+
+            <template
+              v-for="field in provider.configFields"
+              :key="field"
+            >
+              <a-form-item
+                v-if="field === 'accountId'"
+                :label="fieldLabel(field)"
+              >
                 <a-input
                   v-model="providerForms[provider.provider].accountId"
                   :max-length="255"
+                  :placeholder="fieldPlaceholder(provider.provider, field)"
                 />
+                <template #extra>
+                  {{ fieldHelp(provider.provider, field) }}
+                </template>
               </a-form-item>
+
+              <a-form-item
+                v-else-if="field === 'accessToken'"
+                :label="fieldLabel(field)"
+              >
+                <a-input-password
+                  v-model="providerForms[provider.provider].accessToken"
+                  :max-length="4096"
+                  :placeholder="
+                    provider.accessTokenConfigured
+                      ? t('admin.memberships.credentialKeep')
+                      : fieldPlaceholder(provider.provider, field)
+                  "
+                />
+                <template #extra>
+                  <div class="field-extra">
+                    <span>{{ fieldHelp(provider.provider, field) }}</span>
+                    <a-checkbox
+                      v-if="provider.accessTokenConfigured"
+                      v-model="providerForms[provider.provider].clearAccessToken"
+                    >
+                      {{ t('admin.memberships.clearCredential') }}
+                    </a-checkbox>
+                  </div>
+                </template>
+              </a-form-item>
+
+              <a-form-item
+                v-else-if="field === 'webhookToken'"
+                :label="fieldLabel(field)"
+              >
+                <a-input-password
+                  v-model="providerForms[provider.provider].webhookToken"
+                  :max-length="4096"
+                  :placeholder="
+                    provider.webhookTokenConfigured
+                      ? t('admin.memberships.webhookKeep')
+                      : fieldPlaceholder(provider.provider, field)
+                  "
+                />
+                <template #extra>
+                  <div class="field-extra">
+                    <span>{{ fieldHelp(provider.provider, field) }}</span>
+                    <a-checkbox
+                      v-if="provider.webhookTokenConfigured"
+                      v-model="providerForms[provider.provider].clearWebhookToken"
+                    >
+                      {{ t('admin.memberships.clearWebhook') }}
+                    </a-checkbox>
+                  </div>
+                </template>
+              </a-form-item>
+            </template>
+
+            <div class="compact-grid">
               <a-form-item :label="t('admin.memberships.paymentCurrency')">
                 <a-input
                   v-model="providerForms[provider.provider].currency"
                   :max-length="8"
                 />
               </a-form-item>
-            </div>
-            <a-form-item :label="t('admin.memberships.accessToken')">
-              <a-input-password
-                v-model="providerForms[provider.provider].accessToken"
-                :max-length="4096"
-                :placeholder="
-                  provider.accessTokenConfigured
-                    ? t('admin.memberships.credentialKeep')
-                    : t('admin.memberships.credentialPlaceholder')
-                "
-              />
-              <template #extra>
-                <a-checkbox
-                  v-if="provider.accessTokenConfigured"
-                  v-model="providerForms[provider.provider].clearAccessToken"
-                >
-                  {{ t('admin.memberships.clearCredential') }}
-                </a-checkbox>
-              </template>
-            </a-form-item>
-            <div class="compact-grid">
-              <a-form-item :label="t('admin.memberships.authHeader')">
+              <a-form-item :label="t('admin.memberships.fallbackRate')">
                 <a-input
-                  v-model="providerForms[provider.provider].authHeader"
-                  :max-length="128"
-                />
-              </a-form-item>
-              <a-form-item :label="t('admin.memberships.authScheme')">
-                <a-input
-                  v-model="providerForms[provider.provider].authScheme"
-                  :max-length="64"
-                  :placeholder="t('admin.memberships.authSchemePlaceholder')"
+                  v-model="providerForms[provider.provider].exchangeRate"
+                  :max-length="32"
                 />
               </a-form-item>
             </div>
-            <a-form-item :label="t('admin.memberships.fallbackRate')">
-              <a-input
-                v-model="providerForms[provider.provider].exchangeRate"
-                :max-length="32"
-              />
-              <template #extra>{{ t('admin.memberships.fallbackRateHint') }}</template>
-            </a-form-item>
-            <a-form-item :label="t('admin.memberships.webhookToken')">
-              <a-input-password
-                v-model="providerForms[provider.provider].webhookToken"
-                :max-length="4096"
-                :placeholder="
-                  provider.webhookTokenConfigured
-                    ? t('admin.memberships.webhookKeep')
-                    : t('admin.memberships.webhookPlaceholder')
-                "
-              />
-              <template #extra>
-                <a-checkbox
-                  v-if="provider.webhookTokenConfigured"
-                  v-model="providerForms[provider.provider].clearWebhookToken"
-                >
-                  {{ t('admin.memberships.clearWebhook') }}
-                </a-checkbox>
-              </template>
-            </a-form-item>
-            <div class="endpoint-row">
+
+            <div v-if="provider.webhook" class="endpoint-row">
               <span>{{ t('admin.memberships.webhookUrl') }}</span>
               <code>{{ webhookUrl(provider.provider) }}</code>
             </div>
-            <a-button
-              type="primary"
-              :loading="savingProvider === provider.provider"
-              @click="saveProvider(provider)"
+
+            <div class="provider-status">
+              <span>
+                {{ t('admin.memberships.lastRun') }}:
+                <a-tag :color="runStatusColor(provider.lastRunStatus)">
+                  {{ provider.lastRunStatus || t('admin.memberships.runNever') }}
+                </a-tag>
+                {{ formatDate(provider.lastRunAt) }}
+              </span>
+              <span>
+                {{ t('admin.memberships.lastSync') }}: {{ formatDate(provider.lastSyncedAt) }}
+              </span>
+            </div>
+            <a-alert
+              v-if="provider.lastRunError"
+              type="error"
+              show-icon
+              class="inline-alert"
             >
-              <template #icon><IconSave /></template>
-              {{ t('admin.common.save') }}
-            </a-button>
+              {{ provider.lastRunError }}
+            </a-alert>
+            <a-alert
+              v-if="provider.webhook"
+              type="info"
+              show-icon
+              class="inline-alert"
+            >
+              {{ t('admin.memberships.webhookHint', { provider: providerLabel(provider.provider) }) }}
+            </a-alert>
+
+            <div class="provider-actions">
+              <a-button
+                type="primary"
+                :loading="savingProvider === provider.provider"
+                @click="saveProvider(provider)"
+              >
+                <template #icon><IconSave /></template>
+                {{ t('admin.common.save') }}
+              </a-button>
+              <a-button
+                v-if="provider.historySync"
+                :loading="syncingProvider === provider.provider"
+                :disabled="!provider.ready"
+                @click="syncProvider(provider)"
+              >
+                <template #icon><IconSync /></template>
+                {{ t('admin.memberships.syncNow') }}
+              </a-button>
+            </div>
           </a-form>
         </a-card>
       </div>
@@ -491,6 +610,7 @@ onMounted(load)
           :data="transactionPage?.items ?? []"
           :pagination="false"
           :scroll="{ x: 1540 }"
+          :row-class="transactionRowClass"
           row-key="id"
         >
           <template #empty><a-empty :description="t('common.noData')" /></template>
@@ -605,11 +725,29 @@ onMounted(load)
 }
 
 .provider-title,
-.endpoint-row {
+.endpoint-row,
+.provider-actions,
+.provider-status,
+.provider-switch,
+.field-extra {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.provider-switch {
+  margin-bottom: 14px;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.docs-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgb(var(--arcoblue-6));
+  font-size: 12px;
 }
 
 .endpoint-row {
@@ -624,6 +762,21 @@ onMounted(load)
 .endpoint-row code {
   overflow-wrap: anywhere;
   color: var(--color-text-2);
+}
+
+.provider-status {
+  margin-bottom: 12px;
+  color: var(--color-text-3);
+  font-size: 11px;
+}
+
+.provider-actions {
+  gap: 10px;
+}
+
+.field-extra {
+  justify-content: space-between;
+  width: 100%;
 }
 
 .query-bar {
@@ -649,6 +802,10 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   margin-top: 14px;
+}
+
+:deep(.remote-missing-row) {
+  opacity: 0.62;
 }
 
 @media (max-width: 1080px) {

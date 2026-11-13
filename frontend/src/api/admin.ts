@@ -53,6 +53,7 @@ import type {
   ManualRule,
   MemberPlatformConfig,
   MemberPlatformSettings,
+  MemberPlatformSyncOutcome,
   MemberReconciliation,
   MemberTransactionPage,
   ModerationTestResult,
@@ -471,12 +472,9 @@ export const adminApi = {
     provider: string,
     body: {
       enabled: boolean
-      apiUrl: string
       accountId: string
       accessToken?: string
       clearAccessToken?: boolean
-      authHeader: string
-      authScheme: string
       webhookToken?: string
       clearWebhookToken?: boolean
       currency: string
@@ -506,6 +504,11 @@ export const adminApi = {
     request<{ synchronizedProviders: number }>('/api/admin/memberships/sync', {
       method: 'POST',
     }),
+  syncMemberPlatform: (provider: string) =>
+    request<MemberPlatformSyncOutcome>(
+      `/api/admin/memberships/${encodeURIComponent(provider)}/sync`,
+      { method: 'POST' },
+    ),
   memberPlatformTransactions: (params: {
     provider?: string
     keyword?: string

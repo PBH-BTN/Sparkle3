@@ -509,6 +509,7 @@ export interface MemberProviderBinding {
   baseCurrency: string
   donationCount: number
   productCount: number
+  bindingCount: number
   transactions: MemberTransaction[]
 }
 

@@ -17,7 +17,7 @@ import type {
 } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { formatDate } = useFormatters()
 const loading = ref(true)
 const providers = ref<MemberProviderBinding[]>([])
@@ -130,6 +130,11 @@ function providerName(provider: string) {
   return t(`memberships.providers.${provider}`)
 }
 
+function providerCopy(provider: string, key: string, fallback: string) {
+  const path = `memberships.${key}.${provider}`
+  return te(path) ? t(path) : t(`memberships.${fallback}`)
+}
+
 onMounted(load)
 </script>
 
@@ -234,8 +239,11 @@ onMounted(load)
             <template v-if="provider.bound">
               <div class="provider-account">
                 <div>
-                  <h2>{{ provider.externalUserName || provider.externalUserId }}</h2>
-                  <code>{{ provider.externalUserId }}</code>
+                  <h2>{{ provider.externalUserName || provider.externalUserId || providerName(provider.provider) }}</h2>
+                  <code v-if="provider.bindingCount <= 1">{{ provider.externalUserId }}</code>
+                  <span v-else>
+                    {{ t('memberships.bindingCount', { count: provider.bindingCount }) }}
+                  </span>
                   <span>{{ t('memberships.boundAt', { time: formatDate(provider.boundAt) }) }}</span>
                   <span>
                     {{ t('memberships.lastReconciled', {
@@ -258,7 +266,15 @@ onMounted(load)
                     {{ provider.totalBase }}
                   </strong>
                   <span>
-                    {{ t('memberships.donationCount', { count: provider.donationCount }) }}
+                    {{ t('memberships.transactionCount', {
+                      count: provider.donationCount + provider.productCount,
+                    }) }}
+                  </span>
+                  <span>
+                    {{ t('memberships.typeSplit', {
+                      donation: provider.donationCount,
+                      product: provider.productCount,
+                    }) }}
                   </span>
                 </div>
               </div>
@@ -318,7 +334,7 @@ onMounted(load)
                 <IconLink />
                 <div>
                   <h2>{{ t('memberships.bindTitle', { provider: providerName(provider.provider) }) }}</h2>
-                  <p>{{ t('memberships.bindHint') }}</p>
+                  <p>{{ providerCopy(provider.provider, 'bindHints', 'bindHint') }}</p>
                 </div>
               </div>
               <a-form
@@ -327,11 +343,16 @@ onMounted(load)
                 class="bind-form"
                 @submit="bind(provider.provider)"
               >
-                <a-form-item :label="t('memberships.proof')" required>
+                <a-form-item
+                  :label="providerCopy(provider.provider, 'proofLabels', 'proof')"
+                  required
+                >
                   <a-input
                     v-model="proofs[provider.provider]"
                     :max-length="255"
-                    :placeholder="t('memberships.proofPlaceholder')"
+                    :placeholder="
+                      providerCopy(provider.provider, 'proofPlaceholders', 'proofPlaceholder')
+                    "
                   />
                 </a-form-item>
                 <a-button

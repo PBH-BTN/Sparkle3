@@ -897,18 +897,31 @@ export type MemberPlatformCode =
 
 export interface MemberPlatformConfig {
   provider: MemberPlatformCode
+  supported: boolean
   enabled: boolean
-  apiUrl: string | null
+  historySync: boolean
+  webhook: boolean
+  documentationUrl: string | null
+  configFields: string[]
   accountId: string | null
   accessTokenConfigured: boolean
-  authHeader: string
-  authScheme: string
   webhookTokenConfigured: boolean
+  ready: boolean
   currency: string
   exchangeRate: string
   bindingCount: number
   transactionCount: number
   lastSyncedAt: string | null
+  lastRunStatus: 'RUNNING' | 'COMPLETED' | 'INCOMPLETE' | 'FAILED' | null
+  lastRunAt: string | null
+  lastRunError: string | null
+}
+
+export interface MemberPlatformSyncOutcome {
+  provider: MemberPlatformCode
+  success: boolean
+  records: number
+  message: string | null
 }
 
 export interface MemberPlatformSettings {

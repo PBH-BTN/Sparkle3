@@ -239,8 +239,28 @@ export default {
     unbound: 'Membership account unlinked.',
     boundAt: 'Linked {time}',
     lastReconciled: 'Last reconciled {time}',
-    totalDonation: 'Total paid donations',
-    donationCount: '{count} confirmed transactions',
+    totalDonation: 'Total donated',
+    transactionCount: '{count} completed transactions',
+    typeSplit: '{donation} donations · {product} products',
+    bindingCount: '{count} orders linked',
+    bindHints: {
+      PATREON:
+        'Enter the email you use for Patreon. Linking imports that membership and its cumulative support, converted from the campaign currency.',
+      KOFI:
+        'Enter the transaction ID from your Ko-fi receipt email. Ko-fi only pushes live payment events, so only transactions received after its webhook was enabled can be matched.',
+      MIANBAODUO:
+        'Enter the Mianbaoduo order number shown after a successful purchase. Mianbaoduo exposes no buyer identity, so orders are claimed one at a time and you can claim several.',
+    },
+    proofLabels: {
+      PATREON: 'Patreon account email',
+      KOFI: 'Ko-fi transaction ID',
+      MIANBAODUO: 'Mianbaoduo order number',
+    },
+    proofPlaceholders: {
+      PATREON: 'Enter your Patreon sign-in email',
+      KOFI: 'Enter the Ko-fi transaction ID',
+      MIANBAODUO: 'Enter the Mianbaoduo order number',
+    },
     transactions: 'Transaction cache & reconciliation',
     noTransactions: 'No transactions have been cached for this account yet.',
     remoteMissing: 'Missing remotely; local audit retained',
@@ -1333,11 +1353,11 @@ export default {
       expiresAt: 'Expires at',
     },
     memberships: {
-      title: 'Membership API, reconciliation & queries',
+      title: 'Membership integrations, reconciliation & queries',
       description:
-        'Use administrator API credentials to fetch complete Patreon, Ko-fi, Mianbaoduo, and Liandong transaction histories, then maintain the local ledger, remote discrepancies, and license slots.',
-      credentialHint:
-        'A platform appears to users only when it is enabled and has both an API URL and administrator credential. Synchronization supports the placeholders {accountId}, {page}, and {perPage}. Webhooks supplement the cache and never replace full history synchronization.',
+        'Patreon syncs members and lifetime support through its official API. Ko-fi delivers real-time payments through its official webhook. Mianbaoduo syncs product orders with a developer key. Liandong publishes no order API, so it is not synced automatically.',
+      integrationHint:
+        'Platform credentials stay on the server. Patreon and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
       currencySettings: 'Settlement currency & live exchange rates',
       baseCurrency: 'License and donation settlement currency',
       rateApi: 'Exchange-rate API (must contain {currency})',
@@ -1346,31 +1366,60 @@ export default {
       saveCurrency: 'Save & recalculate',
       currencySaved: 'Settlement settings saved and {count} transactions recalculated.',
       syncAll: 'Sync all platforms',
-      syncFinished: '{count} platform synchronization groups completed. Review reconciliation runs for details.',
+      syncFinished: 'Started {count} platform synchronization groups. Review reconciliation runs for details.',
       syncFailed: 'Platform synchronization did not complete. Check credentials and run history.',
-      providerSaved: 'Platform API settings saved.',
+      providerSaved: 'Platform settings saved.',
       enabled: 'Enable and show to users',
-      apiUrl: 'Complete transaction API URL',
-      apiUrlHint:
-        'The endpoint must return the full historical transaction list. Use {page} and {perPage} for pagination; do not configure a current-members-only summary endpoint.',
-      accountId: 'Platform account / Campaign / Store ID',
+      accountId: 'Account / Campaign ID',
       paymentCurrency: 'Original transaction currency',
-      accessToken: 'Administrator API credential',
+      accessToken: 'API credential',
       credentialKeep: 'Leave blank to keep the current credential',
-      credentialPlaceholder: 'Enter an API access token or key',
-      credentialConfigured: 'Credential configured',
+      credentialPlaceholder: 'Paste the credential issued by the platform',
       clearCredential: 'Clear existing credential',
-      authHeader: 'Credential header',
-      authScheme: 'Credential prefix',
-      authSchemePlaceholder: 'For example Bearer; leave blank to send the raw credential',
       fallbackRate: 'Fallback rate when live FX is unavailable',
-      fallbackRateHint:
-        'Used only when the transaction currency matches the platform source currency and the live exchange-rate API fails.',
-      webhookToken: 'Webhook verification token (optional)',
-      webhookKeep: 'Leave blank to keep the current webhook token',
-      webhookPlaceholder: 'Used for real-time supplements, not full scheduled history sync',
-      clearWebhook: 'Clear webhook token',
+      webhookToken: 'Webhook secret / verification token',
+      webhookKeep: 'Leave blank to keep the current secret',
+      webhookPlaceholder: 'Paste the webhook secret issued by the platform',
+      clearWebhook: 'Clear existing secret',
       webhookUrl: 'Webhook URL',
+      webhookHint:
+        'Paste the URL above into {provider} and enter the platform-issued secret to receive real-time payment events.',
+      unsupported: 'Not supported',
+      unsupportedHint:
+        '{provider} publishes no public order or sales API. Sparkle cannot synchronize, reconcile, or verify transactions, so account linking stays disabled.',
+      historySync: 'History sync',
+      webhookOnly: 'Webhook only',
+      ready: 'Ready',
+      docs: 'Developer docs',
+      lastRun: 'Last sync',
+      lastSync: 'Last transaction',
+      runNever: 'Never synced',
+      syncNow: 'Sync now',
+      syncOneDone: '{provider} synchronized with {count} transactions read.',
+      syncOneFailed: 'Unable to synchronize {provider}.',
+      fields: {
+        PATREON: {
+          accessTokenPlaceholder: 'Patreon Creator Access Token',
+          accessTokenHelp:
+            'Create an API client in the Patreon developer portal and copy its Creator Access Token. The token needs the campaigns.members scope.',
+          accountIdPlaceholder: 'Leave blank to discover',
+          accountIdHelp:
+            'Leave blank to use the campaign that owns the token. Accounts with several campaigns can enter one explicitly.',
+          webhookTokenPlaceholder: 'Patreon Webhook Secret',
+          webhookTokenHelp:
+            'Create a members webhook in the Patreon portal and paste its secret. Leave blank when webhooks are not used.',
+        },
+        KOFI: {
+          webhookTokenPlaceholder: 'Ko-fi Verification Token',
+          webhookTokenHelp:
+            'Find it under Ko-fi settings → API/Webhooks → Advanced.',
+        },
+        MIANBAODUO: {
+          accessTokenPlaceholder: 'Mianbaoduo developer key',
+          accessTokenHelp:
+            'Copy the developer key from Mianbaoduo “Edit profile → Developer settings”. It is sent as the x-token header.',
+        },
+      },
       queryTitle: 'Transaction ledger query',
       keywordPlaceholder: 'Transaction ID, user ID, name, SKU, or product',
       provider: 'Provider',
