@@ -13,7 +13,7 @@ Sparkle 3 是一个 Spring Boot 单体应用，同时提供 BTN 客户端 API、
 | --- | --- | --- |
 | 后端 | Java 25、Spring Boot 4.1.1、Spring Security、Spring Session、MyBatis-Plus、Flyway | `src/main/java` |
 | 前端 | Vue 3.5、TypeScript 5.9（strict）、Vue Router、Pinia、Arco Design Vue、ECharts、Vite 7 | `frontend/src` |
-| 数据库 | PostgreSQL、TimescaleDB、`pg_trgm` | `src/main/resources/db/migration` |
+| 数据库 | PostgreSQL 18、TimescaleDB、`pg_trgm` | `src/main/resources/db/migration` |
 | 后台任务 | Spring Scheduling、`@MonitoredScheduledTask`、可热更新 Cron 模块 | `service/tasks`、`service/AnalyseModuleScheduler.java` |
 | Flarum 集成 | Flarum 2、FoF OAuth、PHP 8.3、TypeScript/webpack | `flarum/extensions/sparkle-btn` |
 | 交付 | Gradle 将 Vite 产物打入 Spring Boot jar，Dockerfile 仅复制已构建 jar | `build.gradle.kts`、`Dockerfile` |
@@ -57,7 +57,7 @@ Sparkle 3 是一个 Spring Boot 单体应用，同时提供 BTN 客户端 API、
 - Node.js：CI 使用 24。
 - pnpm：`12.9.1`；主前端和 Flarum 扩展都使用 pnpm，不提交 npm/yarn lockfile。
 - PHP（仅 Flarum 扩展）：8.3，启用 JSON 和 mbstring。
-- 数据库：PostgreSQL + TimescaleDB；不要用 H2 验证 PostgreSQL/Timescale SQL。
+- 数据库：服务器使用 TimescaleDB（基于 PostgreSQL 18，PG18）；不要用 H2 验证 PostgreSQL/Timescale SQL。
 
 如果本机默认 JDK 不是 25，优先安装 JDK 25 或让 Gradle toolchain 找到它。CI 的权威构建配置见
 `.github/workflows/build-gradle.yml`。
@@ -258,6 +258,10 @@ pnpm --dir flarum/extensions/sparkle-btn/js build
 - 外部服务失败必须保留可诊断日志，但不得阻断不相关的主流程；例如 Flarum 同步失败不应阻止登录。
 
 ## 数据库与 Flyway
+
+服务器使用 TimescaleDB（基于 PostgreSQL 18，PG18）。设计存储、查询和迁移时，可以使用 TSDB 的
+高级功能，包括超表（hypertable）、列存、压缩、连续聚合以及自动保留和刷新策略等。具体语法和能力
+应以服务器安装的 TimescaleDB 扩展版本为准，并按下述迁移与集成测试要求验证。
 
 应用启动自动执行 `classpath:db/migration`。全新库从 `V1__initial_schema.sql` 建库；已有生产库由
 `FlywayMigrationConfig` 和 `LegacySchemaBaselineResolver` 识别版本后建立基线，再执行后续迁移。
