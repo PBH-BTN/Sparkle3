@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
+import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisIndexedHttpSession;
 
 @SpringBootApplication
 @MapperScan("com.ghostchu.btn.sparkle.mapper")
@@ -13,7 +13,7 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 @EnableScheduling
 //@EnableRetry
 @EnableCaching
-@EnableRedisHttpSession
+@EnableRedisIndexedHttpSession
 public class SparkleApplication {
 
     public static void main(String[] args) {
