@@ -39,7 +39,7 @@ class AfdianMessageImportServiceTest {
         assertEquals(3, service.status().messages());
         assertEquals(2, service.status().imported());
         assertEquals(1, service.status().duplicates());
-        verify(writer, times(2)).register(eq("a"), eq("30"), any(), eq(42L));
+        verify(writer).register(eq("a"), eq("30"), any(), eq(42L));
         verify(writer).register(eq("a"), eq("10"), any(), eq(42L));
         verify(execution).success();
     }
@@ -52,6 +52,46 @@ class AfdianMessageImportServiceTest {
         assertEquals("FAILED", service.status().state());
         verify(execution).failure(anyString());
         verify(execution, never()).success();
+    }
+
+    @Test
+    void matchesMultipleLicensesToPrecedingCardsAcrossPagesAndUsesOriginalCardForResentKeys() throws Exception {
+        when(tasks.begin(anyString(), anyString())).thenReturn(execution);
+        when(client.dialogs("token", 1)).thenReturn(json.readTree("{\"total_page\":1,\"list\":[{\"user\":{\"user_id\":\"a\"}}]}"));
+        var pair = PbhLicenseDecoderTest.pair();
+        String original = PbhLicenseDecoderTest.encode(pair, PbhLicenseDecoderTest.payload(""));
+        String second = PbhLicenseDecoderTest.encode(pair, PbhLicenseDecoderTest.payload(",\"hidden\":\"second\""));
+        String third = PbhLicenseDecoderTest.encode(pair, PbhLicenseDecoderTest.payload(",\"hidden\":\"third\""));
+        // Afdian returns each page oldest-first, even though pages move backwards in history.
+        when(client.messages("token", "a", "0")).thenReturn(json.readTree(
+                "{\"has_more\":1,\"list\":[" + card(50, "order-b") + ","
+                        + message(60, original + "，另一份：" + second) + "]}"));
+        when(client.messages("token", "a", "50")).thenReturn(json.readTree(
+                "{\"has_more\":0,\"list\":[" + card(10, "order-a") + ","
+                        + message(20, original + "，另一份：" + third) + "," + message(30, "感谢支持") + "]}"));
+        when(writer.register(eq("a"), anyString(), any(), eq(42L), any())).thenReturn("IMPORTED");
+        service.run("token", List.of(pair.getPublic()), 42L);
+        assertEquals("COMPLETED", service.status().state());
+        assertEquals(3, service.status().imported());
+        assertEquals(1, service.status().duplicates());
+        verify(writer).register(eq("a"), eq("20"), argThat(l -> l.key().equals(original)), eq(42L),
+                argThat(card -> card.orderId().equals("order-a") && card.sku().equals("sku-1")));
+        verify(writer).register(eq("a"), eq("20"), argThat(l -> l.key().equals(third)), eq(42L),
+                argThat(card -> card.orderId().equals("order-a")));
+        verify(writer).register(eq("a"), eq("60"), argThat(l -> l.key().equals(second)), eq(42L),
+                argThat(card -> card.orderId().equals("order-b")));
+        verify(writer, never()).register(anyString(), anyString(), any(), any());
+    }
+
+    private String card(int id, String order) {
+        return "{\"type\":\"receive\",\"message\":{\"msg_id\":" + id
+                + ",\"type\":2,\"content\":{\"out_trade_no\":\"" + order
+                + "\",\"total_amount\":\"50.00\",\"product_type\":1,\"sku_detail\":[{\"sku_id\":\"sku-1\"}]}}}";
+    }
+
+    private String message(int id, String content) throws Exception {
+        return "{\"type\":\"send\",\"message\":{\"msg_id\":" + id + ",\"type\":4,\"content\":"
+                + json.writeValueAsString(content) + "}}";
     }
 
     @Test

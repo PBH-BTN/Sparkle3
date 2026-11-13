@@ -13,7 +13,8 @@ import static org.mockito.Mockito.*;
 
 class AfdianMessageLicenseWriterTest {
     private final AfdianMessageLicenseMapper mapper = mock(AfdianMessageLicenseMapper.class);
-    private final AfdianMessageLicenseWriter writer = new AfdianMessageLicenseWriter(mapper);
+    private final ExchangeRateService exchangeRates = mock(ExchangeRateService.class);
+    private final AfdianMessageLicenseWriter writer = new AfdianMessageLicenseWriter(mapper, exchangeRates);
 
     @Test
     void repeatedScansSkipExistingLicenseWithoutConsumingAgain() throws Exception {
@@ -31,7 +32,7 @@ class AfdianMessageLicenseWriterTest {
         when(mapper.matchStatus(1L)).thenReturn("UNMATCHED");
         when(mapper.exact("user", "order-1")).thenReturn(order());
         assertEquals("RECONCILED", writer.register("user", "2", decoded(",\"paymentOrderId\":\"order-1\""), 42L));
-        verify(mapper).match(1L, "PRODUCT", "order-1", "sku", "EXACT");
+        verify(mapper).matchFromMessage(1L, "PRODUCT", "order-1", "sku", java.math.BigDecimal.ZERO, "EXACT");
         verify(mapper, never()).insert(any(), anyString(), anyString(), anyString(), any());
     }
 
@@ -62,6 +63,40 @@ class AfdianMessageLicenseWriterTest {
 
     private PbhLicense existing() {
         return new PbhLicense().setId(1L).setProvider("AFDIAN").setExternalUserId("user");
+    }
+
+    @Test
+    void receiptMatchesPreviouslyImportedV1EvenBeforeLocalOrderSync() throws Exception {
+        when(mapper.existing("key")).thenReturn(existing());
+        when(mapper.matchStatus(1L)).thenReturn("UNMATCHED");
+        var amount = new java.math.BigDecimal("68.00");
+        when(exchangeRates.convert(amount, "CNY")).thenReturn(amount);
+        var receipt = new AfdianMessageReceipt("card-order", "PRODUCT", "card-sku", amount);
+        assertEquals("RECONCILED", writer.register("user", "2", decoded(""), 42L, receipt));
+        verify(mapper).matchFromMessage(1L, "PRODUCT", "card-order", "card-sku", amount, "MESSAGE_CARD");
+        verify(mapper, never()).insert(any(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void receiptCanCorrectPreviousTimeBasedHeuristicButNotManualMatching() throws Exception {
+        when(mapper.existing("key")).thenReturn(existing());
+        when(mapper.matchStatus(1L)).thenReturn("HEURISTIC", "MANUAL");
+        var amount = new java.math.BigDecimal("50.00");
+        when(exchangeRates.convert(amount, "CNY")).thenReturn(amount);
+        var receipt = new AfdianMessageReceipt("original-order", "DONATION", "plan", amount);
+        assertEquals("RECONCILED", writer.register("user", "2", decoded(""), 42L, receipt));
+        assertEquals("DUPLICATE", writer.register("user", "2", decoded(""), 42L, receipt));
+        verify(mapper, times(1)).matchFromMessage(1L, "DONATION", "original-order", "plan", amount, "MESSAGE_CARD");
+    }
+
+    @Test
+    void explicitLicenseOrderDoesNotGetReplacedWithAnUnrelatedNearbyCard() throws Exception {
+        when(mapper.existing("key")).thenReturn(existing());
+        when(mapper.matchStatus(1L)).thenReturn("UNMATCHED");
+        var receipt = new AfdianMessageReceipt("different-order", "PRODUCT", "sku", java.math.BigDecimal.TEN);
+        assertEquals("UNMATCHED", writer.register("user", "2", decoded(",\"paymentOrderId\":\"signed-order\""), 42L, receipt));
+        verifyNoInteractions(exchangeRates);
+        verify(mapper, never()).matchFromMessage(anyLong(), anyString(), anyString(), any(), any(), anyString());
     }
 
     @Test

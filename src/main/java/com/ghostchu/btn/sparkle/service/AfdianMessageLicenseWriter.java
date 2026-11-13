@@ -24,6 +24,7 @@ import java.util.UUID;
 @Slf4j
 public class AfdianMessageLicenseWriter {
     private final AfdianMessageLicenseMapper mapper;
+    private final ExchangeRateService exchangeRates;
 
     public List<PendingLicense> pending() {
         return mapper.pending();
@@ -51,22 +52,39 @@ public class AfdianMessageLicenseWriter {
     @Transactional(rollbackFor = Exception.class)
     public String register(String userId, String messageId, PbhLicenseDecoder.Decoded decoded,
                            Long operatorId) throws Exception {
+        return register(userId, messageId, decoded, operatorId, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public String register(String userId, String messageId, PbhLicenseDecoder.Decoded decoded,
+                           Long operatorId, AfdianMessageReceipt receipt) throws Exception {
         mapper.lock();
         PbhLicense existing = mapper.existing(decoded.key());
         if (existing != null && (!"AFDIAN".equals(existing.getProvider())
                 || !userId.equals(existing.getExternalUserId()))) return "CONFLICT";
-        if (existing != null && !"UNMATCHED".equals(mapper.matchStatus(existing.getId()))) return "DUPLICATE";
+        if (existing != null) {
+            String status = mapper.matchStatus(existing.getId());
+            if (!"UNMATCHED".equals(status) && !(receipt != null && "HEURISTIC".equals(status))) return "DUPLICATE";
+        }
         String orderId = decoded.payload().path("paymentOrderId").asText("");
         MemberTransaction order = orderId.isBlank() ? null : mapper.exact(userId, orderId);
         String match = "EXACT";
-        if (orderId.isBlank()) {
+        if (receipt != null && (orderId.isBlank() || orderId.equals(receipt.orderId()))) {
+            // The card identifies the order even when it has not reached the local ledger yet.
+            MemberTransaction local = mapper.exact(userId, receipt.orderId());
+            order = local == null ? new MemberTransaction().setExternalTransactionId(receipt.orderId())
+                    .setTransactionType(receipt.sourceType()).setSku(receipt.sku())
+                    .setAmountBase(exchangeRates.convert(receipt.amountCny(), "CNY")) : local;
+            match = "MESSAGE_CARD";
+        } else if (orderId.isBlank()) {
             var candidates = mapper.candidates(userId, decoded.createdAt());
             if (candidates.size() == 1) order = candidates.getFirst();
             match = "HEURISTIC";
         }
         if (existing != null) {
             if (order == null) return "UNMATCHED";
-            mapper.match(existing.getId(), order.getTransactionType(), order.getExternalTransactionId(), order.getSku(), match);
+            mapper.matchFromMessage(existing.getId(), order.getTransactionType(), order.getExternalTransactionId(),
+                    order.getSku(), order.getAmountBase() == null ? BigDecimal.ZERO : order.getAmountBase(), match);
             log.info("Afdian message license reconciled by administrator {}", operatorId);
             return "RECONCILED";
         }

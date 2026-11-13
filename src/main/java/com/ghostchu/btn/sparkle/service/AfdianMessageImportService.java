@@ -15,6 +15,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigInteger;
 import java.security.PublicKey;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -93,11 +97,22 @@ public class AfdianMessageImportService {
     private void scanDialog(String token, String userId, List<PublicKey> keys, Long operatorId, Counts counts) throws Exception {
         String cursor = "0";
         Set<String> seen = new HashSet<>();
+        List<Occurrence> awaitingCard = new ArrayList<>();
+        Map<String, Occurrence> licenses = new LinkedHashMap<>();
         while (true) {
             JsonNode data = client.messages(token, userId, cursor);
+            List<JsonNode> entries = new ArrayList<>();
+            for (JsonNode entry : data.path("list")) {
+                if (!entry.path("message").path("msg_id").asText().matches("[0-9]{1,30}")) {
+                    throw new IllegalStateException("Invalid message cursor");
+                }
+                entries.add(entry);
+            }
+            entries.sort(Comparator.comparing((JsonNode entry) ->
+                    new BigInteger(entry.path("message").path("msg_id").asText())).reversed());
             BigInteger oldest = null;
             int added = 0;
-            for (JsonNode entry : data.path("list")) {
+            for (JsonNode entry : entries) {
                 JsonNode message = entry.path("message");
                 String id = message.path("msg_id").asText();
                 if (!id.matches("[0-9]{1,30}")) throw new IllegalStateException("Invalid message cursor");
@@ -106,7 +121,10 @@ public class AfdianMessageImportService {
                 if (!seen.add(id)) continue;
                 added++;
                 counts.messages++;
-                scanContent(message.path("content"), userId, id, keys, operatorId, counts);
+                if (AfdianMessageReceipt.isOrderCard(entry)) {
+                    associate(awaitingCard, licenses, AfdianMessageReceipt.from(entry), counts);
+                }
+                scanContent(message.path("content"), id, keys, awaitingCard);
             }
             publish("RUNNING", counts);
             boolean more = data.path("has_more").asInt() != 0 || data.path("has_more").asBoolean();
@@ -114,23 +132,43 @@ public class AfdianMessageImportService {
             if (added == 0 || oldest == null || oldest.toString().equals(cursor)) throw new IllegalStateException("Message pagination did not advance");
             cursor = oldest.toString();
         }
+        associate(awaitingCard, licenses, null, counts);
+        for (Occurrence occurrence : licenses.values()) {
+            String result = occurrence.receipt() == null
+                    ? writer.register(userId, occurrence.messageId(), occurrence.license(), operatorId)
+                    : writer.register(userId, occurrence.messageId(), occurrence.license(), operatorId, occurrence.receipt());
+            switch (result) {
+                case "IMPORTED" -> counts.imported++;
+                case "DUPLICATE" -> counts.duplicates++;
+                case "UNMATCHED" -> counts.unmatched++;
+                case "RECONCILED" -> counts.reconciled++;
+                case "CONFLICT" -> counts.conflicts++;
+            }
+        }
     }
 
-    private void scanContent(JsonNode content, String userId, String id, List<PublicKey> keys,
-                             Long operatorId, Counts counts) throws Exception {
+    private void scanContent(JsonNode content, String id, List<PublicKey> keys, List<Occurrence> pending) {
         if (content.isTextual()) {
-            for (var license : decoder.scan(content.asText(), keys)) {
-                switch (writer.register(userId, id, license, operatorId)) {
-                    case "IMPORTED" -> counts.imported++;
-                    case "DUPLICATE" -> counts.duplicates++;
-                    case "UNMATCHED" -> counts.unmatched++;
-                    case "RECONCILED" -> counts.reconciled++;
-                    case "CONFLICT" -> counts.conflicts++;
-                }
-            }
+            for (var license : decoder.scan(content.asText(), keys)) pending.add(new Occurrence(id, license, null));
         } else if (content.isContainerNode()) {
-            for (JsonNode child : content) scanContent(child, userId, id, keys, operatorId, counts);
+            for (JsonNode child : content) scanContent(child, id, keys, pending);
         }
+    }
+
+    private void associate(List<Occurrence> pending, Map<String, Occurrence> licenses,
+                           AfdianMessageReceipt receipt, Counts counts) {
+        for (Occurrence occurrence : pending) {
+            // Scanning backwards lets the oldest occurrence win when a key was later resent.
+            if (licenses.put(occurrence.license().key(), new Occurrence(occurrence.messageId(), occurrence.license(), receipt)) != null) {
+                counts.duplicates++;
+            }
+        }
+        pending.clear();
+    }
+
+    private record Occurrence(String messageId, PbhLicenseDecoder.Decoded license, AfdianMessageReceipt receipt) {
+        @Override
+        public String toString() { return "Occurrence[redacted]"; }
     }
 
     private void publish(String state, Counts c) {

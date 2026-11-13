@@ -78,6 +78,15 @@ public interface AfdianMessageLicenseMapper {
     int match(@Param("id") long id, @Param("type") String type, @Param("orderId") String orderId,
               @Param("sku") String sku, @Param("match") String match);
 
+    @Update("""
+            UPDATE pbh_licenses SET source_type = #{type}, source_order_no = #{orderId},
+                plan_id = #{sku}, consumed_amount = #{amount}, import_match = #{match}
+            WHERE id = #{id} AND import_match IN ('UNMATCHED', 'HEURISTIC')
+            """)
+    int matchFromMessage(@Param("id") long id, @Param("type") String type, @Param("orderId") String orderId,
+                         @Param("sku") String sku, @Param("amount") java.math.BigDecimal amount,
+                         @Param("match") String match);
+
     @Select("SELECT import_match FROM pbh_licenses WHERE id = #{id}")
     String matchStatus(long id);
 
