@@ -262,7 +262,7 @@ TimescaleDB 分区列 `populate_time` 筛选和排序，便于 chunk 裁剪；�
 
 ## 首页 Peer 流量排行
 
-首页 BitTorrent 流量承载的 PeerID 和客户端名称 Top 50 横向条形图合并封禁记录与种群检视，
+首页 BitTorrent 流量承载的 PeerID 和客户端名称 Top 100 横向条形图合并封禁记录与种群检视，
 按 `to_peer_traffic + from_peer_traffic` 降序排列，分别展示两个方向的流量；相同合计按名称排序。
 封禁记录在各窗口内按应用、种子、Peer 地址、端口及 PeerID 去重，取双向计数最大值，
 再与种群检视记录累加，口径与现有首页流量统计一致。窗口为刷新时刻（UTC）之前的最近 1、3、7 天。
