@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +15,7 @@ import java.time.OffsetDateTime;
 @Accessors(chain = true)
 @TableName("swarm_traffic_delta")
 public class SwarmTrafficDelta {
-    @TableField("occurred_at")
+    @TableId(value = "occurred_at", type = IdType.INPUT)
     private OffsetDateTime occurredAt;
     @TableField("user_id")
     private long userId;

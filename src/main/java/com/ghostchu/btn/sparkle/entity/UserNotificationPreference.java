@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +15,7 @@ import java.time.OffsetDateTime;
 @TableName("user_notification_preferences")
 @Accessors(chain = true)
 public class UserNotificationPreference {
-    @TableField("user_id")
+    @TableId(value = "user_id", type = IdType.INPUT)
     private Long userId;
     private String category;
     @TableField("inbox_enabled")

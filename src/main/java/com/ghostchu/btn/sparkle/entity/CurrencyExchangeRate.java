@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,7 +16,7 @@ import java.time.OffsetDateTime;
 @TableName("currency_exchange_rates")
 @Accessors(chain = true)
 public class CurrencyExchangeRate {
-    @TableField("base_currency")
+    @TableId(value = "base_currency", type = IdType.INPUT)
     private String baseCurrency;
     @TableField("quote_currency")
     private String quoteCurrency;
