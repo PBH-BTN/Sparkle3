@@ -259,6 +259,7 @@ export default {
     donationSlots: 'Donation slots',
     donationUnit: 'Donation amount per license',
     availableSlots: 'Licenses available',
+    historicalReviewRequired: 'Your historical licenses need review. New licenses cannot be generated yet. Please contact an administrator.',
     licenseTitle: 'PBHLicense v2',
     licenseHint:
       'A directly purchased PBH license automatically unlocks one license issuance slot. Donations, subscriptions, and membership support settle in CNY, with slots unlocked according to the donated amount.',
@@ -1152,6 +1153,10 @@ export default {
           name: 'GitHub rule sync',
           description: 'Publishes generated analysis rules to the remote GitHub rule repository.',
         },
+        'afdian-message-license-import': {
+          name: 'Afdian message license import',
+          description: 'Scan historical conversations, verify licenses and register prior issuance.',
+        },
         'afdian-sync': {
           name: 'Afdian transaction sync',
           description:
@@ -1300,6 +1305,30 @@ export default {
       deleteTitle: 'Delete community group',
       deleteConfirm:
         'Delete “{name}”? It will disappear from the user settings page.',
+    },
+    afdianMessageImport: {
+      pendingTitle: 'Unmatched licenses (up to 100; refresh after resolving)',
+      order: 'Completed order number for the same Afdian account',
+      match: 'Match order',
+      matched: 'License linked to the order.',
+      matchConfirm: 'This order will no longer provide license credit. Confirm that it corresponds to this license.',
+      title: 'Import licenses from Afdian messages',
+      help: 'Scan every conversation and verify PBH v1/v2 licenses. Repeated scans do not register the same license or consume the same order again. Session credentials and optional private keys are used only for this scan. Sync Afdian transactions first.',
+      token: 'Afdian auth_token',
+      key: 'Verification private key (optional; otherwise use the configured key and official public key)',
+      keySelected: 'Temporary verification key selected.',
+      invalidKey: 'Unable to read the private key file. Select a valid file.',
+      start: 'Scan and import',
+      failed: 'The scan did not finish. Imported records were retained. Check the credential and retry.',
+      progress: 'Scanned {dialogs} conversations and {messages} messages; imported {imported}, duplicates {duplicates}, unmatched {unmatched}, reconciled {reconciled}, ownership conflicts {conflicts}.',
+      unmatchedHelp: 'Some licenses have no matching transaction. New issuance for affected accounts is paused to avoid duplicates. Sync transactions and scan again to retry matching.',
+      conflictsHelp: 'Some licenses already belong to other accounts. Their ownership was preserved.',
+      states: {
+        IDLE: 'No scan yet.',
+        RUNNING: 'Scanning. You can leave this page.',
+        COMPLETED: 'Scan completed.',
+        FAILED: 'Scan interrupted. Imported records were retained. Run the scan again.',
+      },
     },
     afdian: {
       title: 'Afdian & PBHLicense',

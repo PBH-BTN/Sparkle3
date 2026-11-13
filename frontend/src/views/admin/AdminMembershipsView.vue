@@ -9,6 +9,7 @@ import {
   IconSync,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import AfdianMessageImport from '@/components/AfdianMessageImport.vue'
 import { adminApi } from '@/api/admin'
 import type {
   AfdianSettings,
@@ -523,6 +524,8 @@ onMounted(load)
     <a-alert type="info" show-icon>
       {{ t('admin.memberships.integrationHint') }}
     </a-alert>
+
+    <AfdianMessageImport @completed="load" />
 
     <a-spin :loading="loading" class="admin-spin">
       <div class="provider-grid">

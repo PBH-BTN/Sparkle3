@@ -180,6 +180,9 @@ onMounted(load)
             {{ t('memberships.licenseTitle') }}
           </span>
         </template>
+        <a-alert v-if="licenses?.historicalReviewRequired" type="warning">
+          {{ t('memberships.historicalReviewRequired') }}
+        </a-alert>
         <div class="slot-grid">
           <div>
             <span>{{ t('memberships.productSlots') }}</span>

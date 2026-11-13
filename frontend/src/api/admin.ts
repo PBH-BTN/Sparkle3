@@ -7,6 +7,8 @@ import type {
   AnalyseModule,
   AfdianSettings,
   AfdianSyncResult,
+  AfdianMessageImportStatus,
+  AfdianPendingLicense,
   AnalyseModuleRunResult,
   AnalyseModuleUpdate,
   AdminNavigationItem,
@@ -454,6 +456,20 @@ export const adminApi = {
       },
     ),
   afdianSettings: () => request<AfdianSettings>('/api/admin/afdian'),
+  afdianMessageImportStatus: () =>
+    request<AfdianMessageImportStatus>('/api/admin/afdian/message-license-import'),
+  afdianPendingLicenses: () =>
+    request<AfdianPendingLicense[]>('/api/admin/afdian/message-license-import/pending'),
+  matchAfdianImportedLicense: (body: { licenseId: string; orderId: string }) =>
+    request<void>('/api/admin/afdian/message-license-import/match', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  startAfdianMessageImport: (body: { authToken: string; verificationPrivateKey?: string }) =>
+    request<AfdianMessageImportStatus>('/api/admin/afdian/message-license-import', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   updateAfdianSettings: (body: {
     userId: string
     accessToken?: string

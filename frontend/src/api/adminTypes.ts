@@ -872,7 +872,7 @@ export interface LicenseSettings {
 
 export interface AfdianAdminLicense {
   licenseId: string
-  btnUserId: number
+  btnUserId: number | null
   btnNickname: string
   afdianUserId: string
   sourceType: string
@@ -883,6 +883,23 @@ export interface AfdianAdminLicense {
   expireAt: string
   revokedAt: string | null
   revokedReason: string | null
+}
+
+export interface AfdianMessageImportStatus {
+  state: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  dialogs: number
+  messages: number
+  imported: number
+  duplicates: number
+  unmatched: number
+  reconciled: number
+  conflicts: number
+}
+
+export interface AfdianPendingLicense {
+  licenseId: string
+  externalUserId: string
+  issuedAt: string
 }
 
 export interface AfdianSyncResult {

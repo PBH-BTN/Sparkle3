@@ -453,6 +453,7 @@ export interface PbhLicense {
 }
 
 export interface PbhLicenseAvailability {
+  historicalReviewRequired: boolean
   configured: boolean
   availableProductLicenses: number
   availableDonationLicenses: number
