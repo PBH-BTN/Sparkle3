@@ -154,6 +154,9 @@ pnpm --dir flarum/extensions/sparkle-btn/js build
 
 ## 提交与拆分
 
+- 每次完成代码、测试、配置或文档修改并通过相关验证后，必须主动执行 git commit，无需等待用户另行要求。
+  除非用户明确要求不提交，否则提交完成后才能交付；只提交本次任务的改动，保留用户已有未提交改动。
+- 如果 GPG 签名授权等待超时且用户未响应，必须使用 git commit --no-gpg-sign 重试提交，不要因此搁置交付。
 - 每个模块的修改必须单独提交；不要把多个模块或互不相关的功能混在同一个 commit 中。
 - 前端和后端必须分别提交，即使它们属于同一个功能。后端 commit 只包含后端代码、迁移和后端测试；
   主前端 commit 只包含 `frontend/` 下的页面、API 类型、样式和国际化改动。
@@ -413,7 +416,7 @@ pnpm --dir flarum/extensions/sparkle-btn/js build
 - 最终说明实际运行过的命令；未运行 Flyway/浏览器/Flarum 真实环境验证时应明确写出。
 - 提交前用 `git show --stat` 或 `git diff --cached --stat` 确认每个 commit 只涉及一个模块；前后端
   改动必须出现在不同 commit 中。
-- 如用户要求提交，沿用现有 Conventional Commit 风格，例如 `feat: ...`、`fix: ...`、
+- 提交必须沿用现有 Conventional Commit 风格，例如 `feat: ...`、`fix: ...`、
   `refactor: ...`，并可用模块 scope 区分，例如 `feat(backend): ...`、
   `feat(frontend): ...`。
 
