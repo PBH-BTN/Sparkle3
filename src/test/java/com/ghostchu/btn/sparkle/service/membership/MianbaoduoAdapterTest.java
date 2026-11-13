@@ -129,6 +129,32 @@ class MianbaoduoAdapterTest {
     }
 
     @Test
+    void skipsIncludedBundleItemsWithZeroAmount() throws Exception {
+        stubProducts();
+        when(httpClient.get(contains("/order-list"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "code": 200,
+                          "result": {
+                            "count": 2,
+                            "orders": [
+                              {"ordertime": 1569739766, "orderamount": 0,
+                               "orderid": "included", "urlkey": "k1"},
+                              {"ordertime": 1569739767, "orderamount": 30,
+                               "orderid": "bundle", "urlkey": "k9"}
+                            ]
+                          },
+                          "error_info": ""
+                        }
+                        """));
+
+        MemberPlatformSnapshot snapshot = adapter.fetchHistory(credentials());
+
+        assertEquals(1, snapshot.transactions().size());
+        assertEquals("bundle", snapshot.transactions().getFirst().transactionId());
+    }
+
+    @Test
     void rejectsInvalidDeveloperKey() throws Exception {
         when(httpClient.get(contains("/order-list"), eq(null), any()))
                 .thenReturn(objectMapper.readTree("""

@@ -218,6 +218,11 @@ public class MianbaoduoAdapter implements MemberPlatformAdapter {
         }
         String urlkey = text(order.path("urlkey"));
         BigDecimal amount = decimal(order.path("orderamount"));
+        if (amount.signum() <= 0) {
+            // Included items of a 全家桶 purchase report 0; only the bundle
+            // payment itself should grant a product slot.
+            return null;
+        }
         OffsetDateTime occurredAt = time(order.path("ordertime"));
         return new PlatformTransaction(
                 orderId,
