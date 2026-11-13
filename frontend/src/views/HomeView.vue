@@ -129,7 +129,7 @@ function hasTrafficDistribution(chart: TrafficDistribution | undefined) {
 function compactTrafficCities(chart: TrafficDistribution | undefined) {
   const items = chart?.data ?? []
   const named = items.filter((item) => item.name !== 'Other' && item.name !== 'Unknown')
-  const visible = named.slice(0, 8)
+  const visible = named.slice(0, 15)
   let total = 0n
   let unknown = 0n
   try {
@@ -516,7 +516,7 @@ onMounted(() => {
               :title="t('home.statistics.topUploadCities')"
             >
               <template #extra>
-                <a-tag color="arcoblue">{{ t('home.statistics.topEightPlusOther') }}</a-tag>
+                <a-tag color="arcoblue">{{ t('home.statistics.topFifteenPlusOther') }}</a-tag>
               </template>
               <EChart
                 v-if="hasTrafficDistribution(trafficStats?.topUploadCities)"
@@ -546,7 +546,7 @@ onMounted(() => {
               :title="t('home.statistics.topDownloadCities')"
             >
               <template #extra>
-                <a-tag color="green">{{ t('home.statistics.topEightPlusOther') }}</a-tag>
+                <a-tag color="green">{{ t('home.statistics.topFifteenPlusOther') }}</a-tag>
               </template>
               <EChart
                 v-if="hasTrafficDistribution(trafficStats?.topDownloadCities)"
