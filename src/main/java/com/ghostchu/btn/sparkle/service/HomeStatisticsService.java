@@ -45,7 +45,7 @@ public class HomeStatisticsService {
     private static final Set<Integer> ALLOWED_DAYS = Set.of(1, 7, 14, 30);
     private static final Set<String> ALLOWED_SOURCES = Set.of("ban", "all");
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
-    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v6:";
+    private static final String CACHE_KEY_PREFIX = "sparkle:home:statistics:v7:";
     private static final Pattern CLIENT_VERSION_PATTERN = Pattern.compile(
             "([a-z][a-z0-9._ +-]{0,63})/([0-9]+(?:\\.[0-9a-z.-]+){0,3})",
             Pattern.CASE_INSENSITIVE
@@ -58,8 +58,8 @@ public class HomeStatisticsService {
             "mozilla", "applewebkit", "chrome", "safari", "gecko",
             "trident", "edg", "firefox", "windows", "macintosh", "linux", "android"
     );
-    private static final int TOP_DIMENSIONS = 15;
-    private static final int TOP_CITIES = 15;
+    private static final int TOP_DIMENSIONS = 50;
+    private static final int TOP_CITIES = 50;
     private static final long AGGREGATE_ACCESS_CACHE_MILLIS = 60_000L;
 
     private final HomeStatisticsMapper mapper;
