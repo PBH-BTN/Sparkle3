@@ -1,31 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.SubmissionMapper">
-    <select id="query" resultType="com.ghostchu.btn.sparkle.controller.ui.dto.SubmissionModels$SubmissionRecord">
+    <select id="findApplicationIds" resultType="long">
+        SELECT id FROM userapp WHERE owner = #{owner}
+    </select>
+    <sql id="applicationFilter">
+        <choose>
+            <when test="applicationIds != null and !applicationIds.isEmpty()">
+                <foreach collection="applicationIds" item="appId" open="(" separator="," close=")">#{appId}</foreach>
+            </when>
+            <otherwise>(NULL)</otherwise>
+        </choose>
+    </sql>
+    <resultMap id="submissionRecord" type="com.ghostchu.btn.sparkle.controller.ui.dto.SubmissionModels$SubmissionRecord" autoMapping="true">
+        <result column="peer_geoip" property="peerGeoip" javaType="com.ghostchu.btn.sparkle.util.ipdb.IPGeoData" typeHandler="com.ghostchu.btn.sparkle.converter.JsonbTypeHandler"/>
+        <result column="structured_data" property="structuredData" javaType="java.util.Map" typeHandler="com.ghostchu.btn.sparkle.converter.JsonbTypeHandler"/>
+    </resultMap>
+    <select id="query" resultMap="submissionRecord">
         SELECT r.id, a.comment AS application, r.submitted_at, r.peer_id, r.client_name,
-               r.module_name, r.client_type, r.client_version, r.torrent_id, r.uploaded, r.downloaded
+               r.module_name, r.client_type, r.client_version, r.torrent_id, r.uploaded, r.downloaded,
+               r.insert_time, r.populate_time, r.peer_ip, r.peer_port, r.peer_progress,
+               r.reporter_progress, r.flags, r.peer_geoip, r.rule, r.description, r.structured_data,
+               r.first_time_seen, r.last_time_seen, r.user_progress
         FROM (
         <choose>
             <when test="type == 'bans'">
-                SELECT id::text, userapps_id AS app, insert_time AS submitted_at, peer_id,
+                SELECT id::text, userapps_id AS app, populate_time AS submitted_at, peer_id,
                        peer_client_name AS client_name, module_name, NULL::text AS client_type,
                        NULL::text AS client_version, torrent_id::text,
-                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded
-                FROM ban_history WHERE insert_time &gt;= #{start} AND insert_time &lt;= #{end}
+                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded,
+                       insert_time, populate_time, host(peer_ip) AS peer_ip, peer_port, peer_progress,
+                       reporter_progress, peer_flags AS flags, peer_geoip, rule, description, structured_data,
+                       NULL::timestamptz AS first_time_seen, NULL::timestamptz AS last_time_seen,
+                       NULL::double precision AS user_progress
+                FROM ban_history WHERE populate_time &gt;= #{start} AND populate_time &lt;= #{end}
+                  AND userapps_id IN <include refid="applicationFilter"/>
             </when>
             <when test="type == 'clients'">
                 SELECT hash::text AS id, found_userapps_id AS app, found_at AS submitted_at, peer_id,
                        peer_client_name AS client_name, NULL::text AS module_name, client_type,
                        client_semver AS client_version, NULL::text AS torrent_id,
-                       NULL::text AS uploaded, NULL::text AS downloaded
+                       NULL::text AS uploaded, NULL::text AS downloaded,
+                       NULL::timestamptz AS insert_time, NULL::timestamptz AS populate_time,
+                       NULL::text AS peer_ip, NULL::integer AS peer_port, NULL::double precision AS peer_progress,
+                       NULL::double precision AS reporter_progress, NULL::text AS flags, NULL::jsonb AS peer_geoip,
+                       NULL::text AS rule, NULL::text AS description, NULL::jsonb AS structured_data,
+                       NULL::timestamptz AS first_time_seen, NULL::timestamptz AS last_time_seen,
+                       NULL::double precision AS user_progress
                 FROM client_discovery WHERE found_at &gt;= #{start} AND found_at &lt;= #{end}
+                  AND found_userapps_id IN <include refid="applicationFilter"/>
             </when>
             <otherwise>
                 SELECT id::text, userapps_id AS app, last_time_seen AS submitted_at, peer_id,
                        peer_client_name AS client_name, NULL::text AS module_name, NULL::text AS client_type,
                        NULL::text AS client_version, torrent_id::text,
-                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded
+                       to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded,
+                       NULL::timestamptz AS insert_time, NULL::timestamptz AS populate_time,
+                       host(peer_ip) AS peer_ip, peer_port, peer_progress, NULL::double precision AS reporter_progress,
+                       flags, peer_geoip, NULL::text AS rule, NULL::text AS description, NULL::jsonb AS structured_data,
+                       first_time_seen, last_time_seen, user_progress
                 FROM swarm_tracker WHERE last_time_seen &gt;= #{start} AND last_time_seen &lt;= #{end}
+                  AND userapps_id IN <include refid="applicationFilter"/>
             </otherwise>
         </choose>
         ) r JOIN userapp a ON a.id = r.app AND a.owner = #{owner}

@@ -22,7 +22,11 @@ public class SubmissionService {
                 || !Set.of(1, 3, 7).contains(days) || page < 1 || size < 1 || size > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid query options");
         }
+        var applicationIds = mapper.findApplicationIds(owner);
+        if (applicationIds.isEmpty()) {
+            return new Page<SubmissionRecord>(page, size, 0).setRecords(java.util.List.of());
+        }
         OffsetDateTime end = OffsetDateTime.now(ZoneOffset.UTC);
-        return mapper.query(new Page<>(page, size), owner, type, end.minusDays(days), end);
+        return mapper.query(new Page<>(page, size), owner, applicationIds, type, end.minusDays(days), end);
     }
 }
