@@ -46,6 +46,7 @@ import type {
   GithubSyncTargetInput,
   GithubSyncTargetRunResult,
   GithubSyncUpdateSettings,
+  LicenseSettings,
   MailIngestionStatus,
   MailSettings,
   MailSettingsUpdate,
@@ -453,10 +454,6 @@ export const adminApi = {
     clearToken?: boolean
     apiBaseUrl: string
     syncEnabled: boolean
-    licenseDonationAmount: string
-    licenseValidYears: number
-    licensePrivateKey?: string
-    clearLicensePrivateKey?: boolean
   }) =>
     request<AfdianSettings>('/api/admin/afdian/settings', {
       method: 'PUT',
@@ -468,6 +465,18 @@ export const adminApi = {
     }),
   memberPlatformSettings: () =>
     request<MemberPlatformSettings>('/api/admin/memberships'),
+  membershipLicenseSettings: () =>
+    request<LicenseSettings>('/api/admin/memberships/license'),
+  updateMembershipLicenseSettings: (body: {
+    donationLicenseAmount: string
+    validYears: number
+    privateKey?: string
+    clearPrivateKey?: boolean
+  }) =>
+    request<LicenseSettings>('/api/admin/memberships/license', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   updateMemberPlatform: (
     provider: string,
     body: {

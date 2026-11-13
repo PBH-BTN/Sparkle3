@@ -855,14 +855,18 @@ export interface AfdianSettings {
   configured: boolean
   apiBaseUrl: string
   syncEnabled: boolean
-  licenseDonationAmount: string
-  licenseValidYears: number
-  licensePrivateKeyConfigured: boolean
   baseCurrency: string
   lastSyncedAt: string | null
   bindings: AfdianAdminBinding[]
   recentDonations: AfdianAdminDonation[]
   recentLicenses: AfdianAdminLicense[]
+}
+
+export interface LicenseSettings {
+  donationLicenseAmount: string
+  validYears: number
+  privateKeyConfigured: boolean
+  baseCurrency: string
 }
 
 export interface AfdianAdminLicense {

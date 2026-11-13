@@ -36,7 +36,6 @@ const allItems = computed(() => [
     label: t('admin.nav.communityGroups'),
     icon: IconUserGroup,
   },
-  { key: '/admin/afdian', label: t('admin.nav.afdian'), icon: IconHeart },
   { key: '/admin/memberships', label: t('admin.nav.memberships'), icon: IconHeart },
   { key: '/admin/navigation', label: t('admin.nav.navigation'), icon: IconMenu },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },

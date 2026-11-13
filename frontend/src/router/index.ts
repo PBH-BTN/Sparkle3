@@ -94,8 +94,7 @@ const router = createRouter({
         },
         {
           path: 'afdian',
-          name: 'afdian-settings',
-          component: () => import('@/views/AfdianSettingsView.vue'),
+          redirect: { name: 'membership-settings' },
         },
         {
           path: 'memberships',
@@ -208,8 +207,7 @@ const router = createRouter({
         },
         {
           path: 'afdian',
-          name: 'admin-afdian',
-          component: () => import('@/views/admin/AdminAfdianView.vue'),
+          redirect: { name: 'admin-memberships' },
         },
         {
           path: 'memberships',

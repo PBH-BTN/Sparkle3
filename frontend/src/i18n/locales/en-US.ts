@@ -169,60 +169,11 @@ export default {
     empty: 'There are no community groups available to join.',
     statusFailed: 'Unable to load GitHub membership status.',
   },
-  afdian: {
-    title: 'Afdian & licenses',
-    description:
-      'Link an Afdian account, review transactions, and use product slots or accumulated donation credit to generate PBHLicense v2.',
-    bindTitle: 'Link Afdian account',
-    bindHint:
-      'Enter a completed Afdian order number. Sparkle will resolve the Afdian user, then cache that user’s transaction history.',
-    orderNo: 'Afdian order number',
-    orderPlaceholder: 'Enter a completed order number',
-    bind: 'Look up and link',
-    orderRequired: 'Enter an Afdian order number.',
-    bound: 'Afdian account linked.',
-    bindFailed: 'Unable to link this Afdian order.',
-    unavailable: 'Afdian has not been configured with an API and administrator credential.',
-    unbind: 'Unlink',
-    unbindTitle: 'Unlink Afdian',
-    unbindConfirm:
-      'The linked Afdian donations and license slots will no longer appear in your settings. Admin audit records are retained.',
-    unbound: 'Afdian account unlinked.',
-    unnamed: 'Afdian user',
-    boundAt: 'Linked {time}',
-    lastSync: 'Last synced {time}',
-    totalDonation: 'Total donated',
-    transactionCount: '{count} completed transactions',
-    licenseTitle: 'PBHLicense v2',
-    productSlots: 'Product SKU slots',
-    donationSlots: 'Donation slots',
-    donationUnit: 'Donation amount per license',
-    availableSlots: 'Licenses available',
-    licenseHint:
-      'Each qualifying product order directly grants one slot. Donations accumulate in the settlement currency {currency} and grant one slot per configured amount. Licenses are valid for {years} years.',
-    generate: 'Generate PBHLicense',
-    generateTitle: 'Generate PBHLicense v2',
-    generateConfirm:
-      'You have {product} product slots and {donation} donation slots. Generation consumes the oldest product order first, otherwise one donation slot.',
-    generated: 'License generated and copied to the clipboard.',
-    generateFailed: 'Unable to generate the license.',
-    licenseCopied: 'License copied.',
-    copyFailed: 'Unable to copy automatically. Select the license text manually.',
-    expiresAt: 'Expires {time}',
-    revoked: 'Revoked',
-    sources: {
-      PRODUCT: 'Product purchase',
-      DONATION: 'Donation credit',
-    },
-    donations: 'Transactions',
-    donation: 'Afdian sponsorship',
-    noDonations: 'No local transactions have been cached for this Afdian user yet.',
-  },
   memberships: {
-    title: 'Membership platforms',
+    title: 'Donations & licenses',
     description:
-      'Link Patreon, Ko-fi, Mianbaoduo, or Liandong, query the local transaction ledger, and use product slots or accumulated donations to generate PBHLicense.',
-    empty: 'No membership platform API and administrator credential has been configured yet.',
+      'Link Afdian, Patreon, Ko-fi, or Mianbaoduo, review each platform’s transactions and cumulative donations, and generate PBHLicense from product slots or donation credit.',
+    empty: 'No membership platform has been configured yet.',
     bindTitle: 'Link {provider} account',
     bindHint:
       'Enter a completed order or transaction ID. Sparkle checks the local cache first and, when needed, fetches the complete transaction history using the administrator API credentials.',
@@ -244,6 +195,8 @@ export default {
     typeSplit: '{donation} donations · {product} products',
     bindingCount: '{count} orders linked',
     bindHints: {
+      AFDIAN:
+        'Enter a completed Afdian order number. Sparkle resolves the Afdian user who placed it and syncs that user’s history after linking.',
       PATREON:
         'Enter the email you use for Patreon. Linking imports that membership and its cumulative support, converted from the campaign currency.',
       KOFI:
@@ -252,11 +205,13 @@ export default {
         'Enter the Mianbaoduo order number shown after a successful purchase. Mianbaoduo exposes no buyer identity, so orders are claimed one at a time and you can claim several.',
     },
     proofLabels: {
+      AFDIAN: 'Afdian order number',
       PATREON: 'Patreon account email',
       KOFI: 'Ko-fi transaction ID',
       MIANBAODUO: 'Mianbaoduo order number',
     },
     proofPlaceholders: {
+      AFDIAN: 'Enter the completed Afdian order number',
       PATREON: 'Enter your Patreon sign-in email',
       KOFI: 'Enter the Ko-fi transaction ID',
       MIANBAODUO: 'Enter the Mianbaoduo order number',
@@ -306,8 +261,7 @@ export default {
       privacy: 'Privacy settings',
       notifications: 'Notifications & reminders',
       communityGroups: 'Community groups',
-      afdian: 'Afdian',
-      memberships: 'Membership platforms',
+      memberships: 'Donations & licenses',
     },
   },
   accountSettings: {
@@ -979,8 +933,7 @@ export default {
       announcements: 'Announcements',
       messages: 'Broadcast messages',
       communityGroups: 'Community groups',
-      afdian: 'Afdian & licenses',
-      memberships: 'Membership reconciliation',
+      memberships: 'Donations',
       navigation: 'Navigation',
       btn: 'BTN management',
       githubSync: 'GitHub rule sync',
@@ -1353,14 +1306,14 @@ export default {
       expiresAt: 'Expires at',
     },
     memberships: {
-      title: 'Membership integrations, reconciliation & queries',
+      title: 'Donations & reconciliation',
       description:
         'Patreon syncs members and lifetime support through its official API. Ko-fi delivers real-time payments through its official webhook. Mianbaoduo syncs product orders with a developer key. Liandong publishes no order API, so it is not synced automatically.',
       integrationHint:
-        'Platform credentials stay on the server. Patreon and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
-      licenseSharedHint:
-        'PBHLicense private key, validity, and donation thresholds are shared by every platform and configured on the “Afdian & PBHLicense” page.',
-      licenseSharedLink: 'Configure licences',
+        'Platform credentials stay on the server. Afdian, Patreon, and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
+      licenseTitle: 'PBHLicense issuance rules',
+      licenseSaved: 'Licence issuance rules saved.',
+      notConfigured: 'Not configured',
       currencySettings: 'Settlement currency & live exchange rates',
       baseCurrency: 'License and donation settlement currency',
       rateApi: 'Exchange-rate API (must contain {currency})',

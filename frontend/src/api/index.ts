@@ -2,7 +2,6 @@ import { request } from './http'
 import type {
   AccountDeletionReauthenticationResponse,
   AccountDeletionStatus,
-  AfdianBinding,
   Announcement,
   ApplicationCredentials,
   BanHistoryQuery,
@@ -132,21 +131,6 @@ export const uiApi = {
     request<GithubCommunityStatus>(`/api/ui/community-groups/${id}/github-status`),
   joinCommunityGithubGroup: (id: number) =>
     request<GithubCommunityJoinResult>(`/api/ui/community-groups/${id}/join`, {
-      method: 'POST',
-    }),
-  afdianBinding: () => request<AfdianBinding>('/api/ui/afdian'),
-  bindAfdian: (orderNo: string) =>
-    request<AfdianBinding>('/api/ui/afdian/bind', {
-      method: 'POST',
-      body: JSON.stringify({ orderNo }),
-    }),
-  unbindAfdian: () =>
-    request<void>('/api/ui/afdian', {
-      method: 'DELETE',
-    }),
-  afdianLicenses: () => request<PbhLicenseAvailability>('/api/ui/afdian/licenses'),
-  generateAfdianLicense: () =>
-    request<PbhLicense>('/api/ui/afdian/licenses', {
       method: 'POST',
     }),
   memberPlatforms: () =>

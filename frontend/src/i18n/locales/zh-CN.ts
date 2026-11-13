@@ -165,58 +165,11 @@ export default {
     empty: '当前暂无可加入的社区群组。',
     statusFailed: '无法获取 GitHub 群组状态。',
   },
-  afdian: {
-    title: '爱发电与许可证',
-    description: '绑定爱发电账号，查看捐赠记录，并使用购买商品槽位或累计捐赠额度生成 PBHLicense v2。',
-    bindTitle: '绑定爱发电账号',
-    bindHint:
-      '输入一笔已经完成的爱发电订单号。系统会查询订单所属的爱发电用户，并在绑定后自动缓存该用户的历史交易。',
-    orderNo: '爱发电订单号',
-    orderPlaceholder: '输入已完成订单号',
-    bind: '查询并绑定',
-    orderRequired: '请输入爱发电订单号。',
-    bound: '爱发电账号已绑定。',
-    bindFailed: '无法绑定该爱发电订单。',
-    unavailable: '爱发电功能尚未完成后台 API 与管理员凭据配置。',
-    unbind: '解除绑定',
-    unbindTitle: '解除爱发电绑定',
-    unbindConfirm: '解除后前台将不再显示该爱发电账号的捐赠和许可证槽位，后台审计记录仍会保留。',
-    unbound: '爱发电账号已解绑。',
-    unnamed: '爱发电用户',
-    boundAt: '绑定时间：{time}',
-    lastSync: '最近同步：{time}',
-    totalDonation: '累计已捐赠',
-    transactionCount: '共 {count} 笔已完成交易',
-    licenseTitle: 'PBHLicense v2',
-    productSlots: '商品 SKU 槽位',
-    donationSlots: '捐赠累计槽位',
-    donationUnit: '每份捐赠额度',
-    availableSlots: '可生成许可证',
-    licenseHint:
-      '商品订单每个直接产生一个槽位；捐赠按结算货币 {currency} 累计，每达到一份额度产生一个槽位。许可证有效期 {years} 年。',
-    generate: '生成 PBHLicense',
-    generateTitle: '生成 PBHLicense v2',
-    generateConfirm:
-      '当前有 {product} 个商品槽位和 {donation} 个捐赠槽位。生成后会优先消耗最早的商品订单，否则消耗一份捐赠额度。',
-    generated: '许可证已生成并复制到剪贴板。',
-    generateFailed: '许可证生成失败。',
-    licenseCopied: '许可证已复制。',
-    copyFailed: '无法自动复制许可证，请手动选择文本。',
-    expiresAt: '到期：{time}',
-    revoked: '已撤销',
-    sources: {
-      PRODUCT: '商品购买',
-      DONATION: '捐赠累计',
-    },
-    donations: '交易记录',
-    donation: '爱发电赞助',
-    noDonations: '本地还没有该爱发电用户的交易缓存。',
-  },
   memberships: {
-    title: '会员平台',
+    title: '捐赠支持与许可证',
     description:
-      '绑定 Patreon、Ko-fi、面包多或链动小铺账号，查询本地交易缓存，并统一使用商品槽位或捐赠累计生成 PBHLicense。',
-    empty: '后台尚未完成会员平台 API 与管理员凭据配置。',
+      '绑定爱发电、Patreon、Ko-fi 或面包多账号，查看各平台的交易与累计捐赠，并统一使用商品槽位或捐赠累计生成 PBHLicense。',
+    empty: '后台尚未配置任何可用的会员平台。',
     bindTitle: '绑定 {provider} 账号',
     bindHint:
       '输入该平台任意一笔已完成交易的订单号或交易号。系统会先查询本地缓存，必要时通过管理员配置的 API 拉取完整交易清单进行匹配。',
@@ -238,6 +191,8 @@ export default {
     typeSplit: '捐赠 {donation} 笔 · 商品 {product} 笔',
     bindingCount: '已绑定 {count} 个订单',
     bindHints: {
+      AFDIAN:
+        '输入一笔已完成的爱发电订单号。系统会查询订单所属的爱发电用户，并在绑定后同步该用户的历史交易。',
       PATREON:
         '输入注册 Patreon 时使用的邮箱。绑定后会同步该账号的会员记录和累计支持金额（按 Campaign 币种结算）。',
       KOFI:
@@ -246,11 +201,13 @@ export default {
         '输入面包多订单号（购买成功页显示的订单号）。面包多没有买家账号标识，每个订单单独绑定，可重复绑定多个订单。',
     },
     proofLabels: {
+      AFDIAN: '爱发电订单号',
       PATREON: 'Patreon 账号邮箱',
       KOFI: 'Ko-fi 交易号',
       MIANBAODUO: '面包多订单号',
     },
     proofPlaceholders: {
+      AFDIAN: '输入已完成的爱发电订单号',
       PATREON: '输入 Patreon 登录邮箱',
       KOFI: '输入 Ko-fi 交易号',
       MIANBAODUO: '输入面包多订单号',
@@ -299,8 +256,7 @@ export default {
       privacy: '隐私设置',
       notifications: '通知与提醒',
       communityGroups: '社区群组',
-      afdian: '爱发电',
-      memberships: '会员平台',
+      memberships: '捐赠支持与许可证',
     },
   },
   accountSettings: {
@@ -955,8 +911,7 @@ export default {
       announcements: '公告管理',
       messages: '站内信群发',
       communityGroups: '社区群组',
-      afdian: '爱发电与许可证',
-      memberships: '会员平台对账',
+      memberships: '捐赠支持',
       navigation: '导航管理',
       btn: 'BTN 管理',
       githubSync: 'GitHub 规则同步',
@@ -1323,14 +1278,14 @@ export default {
       expiresAt: '到期时间',
     },
     memberships: {
-      title: '会员平台接入、对账与查询',
+      title: '捐赠支持与对账',
       description:
         'Patreon 使用官方 API 同步会员与累计支持金额，Ko-fi 使用官方 Webhook 接收实时支付，面包多使用开发者 Key 同步作品订单。链动小铺没有公开的订单 API，暂不提供自动同步。',
       integrationHint:
-        '平台凭据只保存在服务端。Patreon 与面包多支持完整历史同步与远端缺失对账；Ko-fi 没有历史查询接口，只能接收启用 Webhook 之后的新交易。所有平台的商品与捐赠统一进入本地账本，并按同一套规则生成 PBHLicense 槽位。',
-      licenseSharedHint:
-        'PBHLicense 的私钥、有效期限和捐赠额度规则由所有平台共用，在“爱发电与 PBHLicense”页统一配置。',
-      licenseSharedLink: '前往配置',
+        '平台凭据只保存在服务端。爱发电、Patreon 与面包多支持完整历史同步与远端缺失对账；Ko-fi 没有历史查询接口，只能接收启用 Webhook 之后的新交易。所有平台的商品与捐赠统一进入本地账本，并按同一套规则生成 PBHLicense 槽位。',
+      licenseTitle: 'PBHLicense 签发规则',
+      licenseSaved: '许可证签发规则已保存。',
+      notConfigured: '未配置',
       currencySettings: '结算货币与实时汇率',
       baseCurrency: '许可证与捐赠结算货币',
       rateApi: '汇率 API（必须包含 {currency}）',

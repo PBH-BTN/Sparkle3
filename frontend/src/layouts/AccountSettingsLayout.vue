@@ -43,16 +43,7 @@ const items = computed(() => [
         },
       ]
     : []),
-  ...(features.value.afdianConfigured
-    ? [
-        {
-          key: '/user/settings/afdian',
-          label: t('settings.menu.afdian'),
-          icon: IconHeart,
-        },
-      ]
-    : []),
-  ...(features.value.memberPlatformsConfigured
+  ...(features.value.afdianConfigured || features.value.memberPlatformsConfigured
     ? [
         {
           key: '/user/settings/memberships',

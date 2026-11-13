@@ -11,6 +11,8 @@ import {
 import PageHeader from '@/components/PageHeader.vue'
 import { adminApi } from '@/api/admin'
 import type {
+  AfdianSettings,
+  LicenseSettings,
   MemberPlatformConfig,
   MemberPlatformSettings,
   MemberReconciliation,
@@ -38,9 +40,26 @@ const syncingProvider = ref('')
 const savingCurrency = ref(false)
 const syncing = ref(false)
 const settings = ref<MemberPlatformSettings | null>(null)
+const afdianData = ref<AfdianSettings | null>(null)
+const licenseData = ref<LicenseSettings | null>(null)
 const transactionPage = ref<MemberTransactionPage | null>(null)
 const reconciliation = ref<MemberReconciliation>({ runs: [], events: [] })
 const providerForms = reactive<Record<string, ProviderForm>>({})
+const afdianForm = reactive({
+  userId: '',
+  accessToken: '',
+  clearToken: false,
+  apiBaseUrl: 'https://afdian.com/api/open',
+  syncEnabled: true,
+})
+const licenseForm = reactive({
+  donationLicenseAmount: '50',
+  validYears: 100,
+  privateKey: '',
+  clearPrivateKey: false,
+})
+const savingAfdian = ref(false)
+const savingLicense = ref(false)
 const currencyForm = reactive({
   baseCurrency: 'CNY',
   exchangeRateApiUrl: 'https://open.er-api.com/v6/latest/{currency}',
@@ -100,11 +119,15 @@ const auditColumns = (): TableColumnData[] => [
 async function load() {
   loading.value = true
   try {
-    const [data, reconciliationData] = await Promise.all([
+    const [data, afdian, license, reconciliationData] = await Promise.all([
       adminApi.memberPlatformSettings(),
+      adminApi.afdianSettings(),
+      adminApi.membershipLicenseSettings(),
       adminApi.memberPlatformReconciliation({ limit: 50 }),
     ])
     settings.value = data
+    applyAfdian(afdian)
+    applyLicense(license)
     reconciliation.value = reconciliationData
     currencyForm.baseCurrency = data.baseCurrency
     currencyForm.exchangeRateApiUrl = data.exchangeRateApiUrl
@@ -114,6 +137,79 @@ async function load() {
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
     loading.value = false
+  }
+}
+
+function applyAfdian(data: AfdianSettings) {
+  afdianData.value = data
+  Object.assign(afdianForm, {
+    userId: data.userId,
+    accessToken: '',
+    clearToken: false,
+    apiBaseUrl: data.apiBaseUrl,
+    syncEnabled: data.syncEnabled,
+  })
+}
+
+function applyLicense(data: LicenseSettings) {
+  licenseData.value = data
+  Object.assign(licenseForm, {
+    donationLicenseAmount: data.donationLicenseAmount,
+    validYears: data.validYears,
+    privateKey: '',
+    clearPrivateKey: false,
+  })
+}
+
+async function saveAfdian() {
+  savingAfdian.value = true
+  try {
+    applyAfdian(
+      await adminApi.updateAfdianSettings({
+        userId: afdianForm.userId.trim(),
+        accessToken: afdianForm.accessToken.trim() || undefined,
+        clearToken: afdianForm.clearToken,
+        apiBaseUrl: afdianForm.apiBaseUrl.trim(),
+        syncEnabled: afdianForm.syncEnabled,
+      }),
+    )
+    Message.success(t('admin.afdian.saved'))
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    savingAfdian.value = false
+  }
+}
+
+async function saveLicense() {
+  savingLicense.value = true
+  try {
+    applyLicense(
+      await adminApi.updateMembershipLicenseSettings({
+        donationLicenseAmount: licenseForm.donationLicenseAmount.trim(),
+        validYears: licenseForm.validYears,
+        privateKey: licenseForm.privateKey.trim() || undefined,
+        clearPrivateKey: licenseForm.clearPrivateKey,
+      }),
+    )
+    Message.success(t('admin.memberships.licenseSaved'))
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    savingLicense.value = false
+  }
+}
+
+async function syncAfdianNow() {
+  syncingProvider.value = 'AFDIAN'
+  try {
+    const result = await adminApi.syncAfdian()
+    Message.success(t('admin.afdian.syncDone', { ...result }))
+    await Promise.all([loadTransactions(), loadReconciliation(), refreshProviders()])
+  } catch (error) {
+    Message.error(errorMessage(error, t('admin.afdian.syncFailed')))
+  } finally {
+    syncingProvider.value = ''
   }
 }
 
@@ -229,8 +325,12 @@ async function syncAll() {
 
 async function refreshProviders() {
   try {
-    const data = await adminApi.memberPlatformSettings()
+    const [data, afdian] = await Promise.all([
+      adminApi.memberPlatformSettings(),
+      adminApi.afdianSettings(),
+    ])
     settings.value = data
+    applyAfdian(afdian)
     data.providers.forEach(applyProvider)
   } catch {
     // The table refresh remains useful even when provider settings fail.
@@ -343,16 +443,133 @@ onMounted(load)
     </PageHeader>
 
     <a-alert type="info" show-icon>
-      <div>{{ t('admin.memberships.integrationHint') }}</div>
-      <div class="license-link-row">
-        {{ t('admin.memberships.licenseSharedHint') }}
-        <router-link to="/admin/afdian">
-          {{ t('admin.memberships.licenseSharedLink') }}
-        </router-link>
-      </div>
+      {{ t('admin.memberships.integrationHint') }}
     </a-alert>
 
     <a-spin :loading="loading" class="admin-spin">
+      <div class="provider-grid">
+        <a-card class="surface-card provider-card">
+          <template #title>
+            <div class="provider-title">
+              <strong>{{ t('memberships.providers.AFDIAN') }}</strong>
+              <a-tag color="green">{{ t('admin.memberships.historySync') }}</a-tag>
+              <a-tag :color="afdianData?.configured ? 'arcoblue' : 'gray'">
+                {{
+                  afdianData?.configured
+                    ? t('admin.memberships.ready')
+                    : t('admin.memberships.notConfigured')
+                }}
+              </a-tag>
+              <a-tag v-if="afdianData?.tokenConfigured" color="green">
+                {{ t('admin.afdian.tokenConfigured') }}
+              </a-tag>
+            </div>
+          </template>
+          <a-form :model="afdianForm" layout="vertical">
+            <a-form-item :label="t('admin.afdian.userId')">
+              <a-input v-model="afdianForm.userId" :max-length="128" />
+            </a-form-item>
+            <a-form-item :label="t('admin.afdian.apiBaseUrl')">
+              <a-input v-model="afdianForm.apiBaseUrl" :max-length="2048" />
+            </a-form-item>
+            <a-form-item :label="t('admin.afdian.accessToken')">
+              <a-input-password
+                v-model="afdianForm.accessToken"
+                :max-length="4096"
+                :placeholder="
+                  afdianData?.tokenConfigured
+                    ? t('admin.afdian.tokenKeepPlaceholder')
+                    : t('admin.afdian.tokenPlaceholder')
+                "
+              />
+              <template #extra>
+                <a-checkbox
+                  v-if="afdianData?.tokenConfigured"
+                  v-model="afdianForm.clearToken"
+                >
+                  {{ t('admin.afdian.clearToken') }}
+                </a-checkbox>
+              </template>
+            </a-form-item>
+            <div class="provider-switch">
+              <a-switch v-model="afdianForm.syncEnabled" />
+              <span>{{ t('admin.afdian.syncEnabled') }}</span>
+            </div>
+            <div class="provider-status">
+              <span>
+                {{ t('admin.memberships.lastSync') }}:
+                {{ formatDate(afdianData?.lastSyncedAt) }}
+              </span>
+            </div>
+            <div class="provider-actions">
+              <a-button type="primary" :loading="savingAfdian" @click="saveAfdian">
+                <template #icon><IconSave /></template>
+                {{ t('admin.common.save') }}
+              </a-button>
+              <a-button
+                :loading="syncingProvider === 'AFDIAN'"
+                :disabled="!afdianData?.configured"
+                @click="syncAfdianNow"
+              >
+                <template #icon><IconSync /></template>
+                {{ t('admin.memberships.syncNow') }}
+              </a-button>
+            </div>
+          </a-form>
+        </a-card>
+
+        <a-card class="surface-card provider-card">
+          <template #title>
+            <div class="provider-title">
+              <strong>{{ t('admin.memberships.licenseTitle') }}</strong>
+              <a-tag :color="licenseData?.privateKeyConfigured ? 'green' : 'gray'">
+                {{
+                  licenseData?.privateKeyConfigured
+                    ? t('admin.memberships.ready')
+                    : t('admin.memberships.notConfigured')
+                }}
+              </a-tag>
+            </div>
+          </template>
+          <a-form :model="licenseForm" layout="vertical">
+            <a-form-item :label="t('admin.afdian.donationLicenseAmount')" required>
+              <a-input
+                v-model="licenseForm.donationLicenseAmount"
+                :add-before="licenseData?.baseCurrency || 'CNY'"
+                :max-length="32"
+              />
+              <template #extra>{{ t('admin.afdian.donationLicenseHelp') }}</template>
+            </a-form-item>
+            <a-form-item :label="t('admin.afdian.validYears')" required>
+              <a-input-number v-model="licenseForm.validYears" :min="1" :max="1000" />
+            </a-form-item>
+            <a-form-item :label="t('admin.afdian.privateKey')">
+              <a-textarea
+                v-model="licenseForm.privateKey"
+                :auto-size="{ minRows: 3, maxRows: 8 }"
+                :placeholder="
+                  licenseData?.privateKeyConfigured
+                    ? t('admin.afdian.privateKeyKeepPlaceholder')
+                    : t('admin.afdian.privateKeyPlaceholder')
+                "
+              />
+              <template #extra>
+                <a-checkbox
+                  v-if="licenseData?.privateKeyConfigured"
+                  v-model="licenseForm.clearPrivateKey"
+                >
+                  {{ t('admin.afdian.clearPrivateKey') }}
+                </a-checkbox>
+              </template>
+            </a-form-item>
+            <a-button type="primary" :loading="savingLicense" @click="saveLicense">
+              <template #icon><IconSave /></template>
+              {{ t('admin.common.save') }}
+            </a-button>
+          </a-form>
+        </a-card>
+      </div>
+
       <a-card class="surface-card">
         <template #title>{{ t('admin.memberships.currencySettings') }}</template>
         <div class="settings-grid">
@@ -722,14 +939,6 @@ onMounted(load)
 
 .inline-alert {
   margin-bottom: 14px;
-}
-
-.license-link-row {
-  margin-top: 6px;
-}
-
-.license-link-row a {
-  color: rgb(var(--arcoblue-6));
 }
 
 .provider-grid {

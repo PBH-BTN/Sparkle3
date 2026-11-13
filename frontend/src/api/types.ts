@@ -434,18 +434,6 @@ export interface GithubCommunityJoinResult {
   message: string
 }
 
-export interface AfdianDonation {
-  outTradeNo: string
-  planId: string | null
-  planTitle: string | null
-  type: 'PRODUCT' | 'DONATION' | string
-  amount: string
-  status: string
-  remotePresent: boolean
-  remark: string | null
-  createdAt: string | null
-}
-
 export interface PbhLicense {
   licenseId: string
   sourceType: 'PRODUCT' | 'DONATION' | string
@@ -511,19 +499,6 @@ export interface MemberProviderBinding {
   productCount: number
   bindingCount: number
   transactions: MemberTransaction[]
-}
-
-export interface AfdianBinding {
-  configured: boolean
-  bound: boolean
-  afdianUserId: string | null
-  afdianName: string | null
-  afdianAvatar: string | null
-  boundAt: string | null
-  lastSyncedAt: string | null
-  totalAmount: string
-  transactionCount: number
-  donations: AfdianDonation[]
 }
 
 export interface FeatureAvailability {
