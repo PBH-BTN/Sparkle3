@@ -42,6 +42,8 @@ import type {
   RankingResponse,
   RulePreviewResponse,
   SessionResponse,
+  SubmissionRecord,
+  SubmissionType,
   SendMessageResult,
   SwarmTrackerQuery,
   SwarmTrackerRecord,
@@ -61,6 +63,10 @@ function postQuery<T>(url: string, body: unknown) {
 }
 
 export const uiApi = {
+  submissions: (query: { type: SubmissionType; days: number; page: number; size: number }) =>
+    request<PageResponse<SubmissionRecord>>('/api/ui/submissions?' + new URLSearchParams({
+      type: query.type, days: String(query.days), page: String(query.page), size: String(query.size),
+    })),
   session: () => request<SessionResponse>('/api/ui/session'),
   features: () => request<FeatureAvailability>('/api/ui/features'),
   home: () => request<HomeStats>('/api/ui/home'),

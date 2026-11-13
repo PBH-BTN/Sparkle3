@@ -202,6 +202,10 @@ onBeforeUnmount(() => {
                 <template #icon><IconFire /></template>
                 {{ t('nav.points') }}
               </a-doption>
+              <a-doption @click="navigate('/user/submissions')">
+                <template #icon><IconList /></template>
+                {{ t('nav.submissions') }}
+              </a-doption>
               <a-doption
                 v-if="session.user?.admin || session.user?.moderator"
                 @click="navigate(session.user?.admin ? '/admin/dashboard' : '/admin/tasks')"
@@ -283,6 +287,10 @@ onBeforeUnmount(() => {
         <a-menu-item key="/user/points">
           <template #icon><IconFire /></template>
           {{ t('nav.points') }}
+        </a-menu-item>
+        <a-menu-item key="/user/submissions">
+          <template #icon><IconList /></template>
+          {{ t('nav.submissions') }}
         </a-menu-item>
         <a-menu-item key="/user/inbox">
           <template #icon><IconEmail /></template>

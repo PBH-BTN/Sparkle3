@@ -869,3 +869,19 @@ export interface IpCommentPage {
   scope: string
   access: IpCommentAccess
 }
+
+export type SubmissionType = 'bans' | 'clients' | 'swarm'
+
+export interface SubmissionRecord {
+  id: string
+  application: string | null
+  submittedAt: string
+  peerId: string | null
+  clientName: string | null
+  moduleName: string | null
+  clientType: string | null
+  clientVersion: string | null
+  torrentId: string | null
+  uploaded: string | null
+  downloaded: string | null
+}
