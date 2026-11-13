@@ -17,6 +17,7 @@ import type {
   PbhLicenseAvailability,
 } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
+import { membershipTransactionStatus } from '@/utils/membership'
 
 const { t, te } = useI18n()
 const { formatDate } = useFormatters()
@@ -275,7 +276,7 @@ onMounted(load)
                     show-icon
                     class="sync-error"
                   >
-                    {{ provider.lastError }}
+                    {{ t('memberships.syncFailed') }}
                   </a-alert>
                 </div>
                 <div class="account-total">
@@ -338,8 +339,10 @@ onMounted(load)
                     </span>
                     <span>{{ formatDate(transaction.occurredAt) }}</span>
                     <div class="transaction-tags">
-                      <a-tag color="green">{{ transaction.status }}</a-tag>
-                      <a-tag v-if="!transaction.remotePresent" color="red">
+                      <a-tag :color="membershipTransactionStatus(transaction.status).color">
+                        {{ t(`memberships.statuses.${membershipTransactionStatus(transaction.status).key}`) }}
+                      </a-tag>
+                      <a-tag v-if="!transaction.remotePresent" color="gray">
                         {{ t('memberships.remoteMissing') }}
                       </a-tag>
                     </div>
