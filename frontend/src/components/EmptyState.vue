@@ -26,8 +26,19 @@ withDefaults(
 
 <style scoped>
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
+  height: 100%;
   padding: 36px 12px;
   text-align: center;
+}
+
+.empty-state :deep(.arco-empty) {
+  min-height: 0;
 }
 
 .empty-icon {
