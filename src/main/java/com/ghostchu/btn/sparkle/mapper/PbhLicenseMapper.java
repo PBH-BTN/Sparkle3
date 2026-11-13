@@ -7,8 +7,11 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
-    @Select("SELECT pg_advisory_xact_lock(hashtextextended(#{key}, 0))")
-    void lockKey(@Param("key") String key);
+    @Select("""
+            SELECT 1
+            FROM (SELECT pg_advisory_xact_lock(hashtextextended(#{key}, 0))) AS lock
+            """)
+    int lockKey(@Param("key") String key);
 
     @Insert("""
             INSERT INTO pbh_licenses (
