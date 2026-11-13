@@ -8,6 +8,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface BittorrentTrafficMapper {
+    List<DashboardTrafficRowDto> selectFeatureTraffic(
+            @Param("startAt") OffsetDateTime startAt,
+            @Param("endAt") OffsetDateTime endAt,
+            @Param("peerId") boolean peerId);
+
     List<DashboardTrafficRowDto> selectBanTraffic(
             @Param("startAt") OffsetDateTime startAt,
             @Param("endAt") OffsetDateTime endAt,

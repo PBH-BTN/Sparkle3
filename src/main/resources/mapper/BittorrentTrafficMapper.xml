@@ -7,6 +7,32 @@
         <result column="download_bytes" property="downloadBytes"/>
     </resultMap>
 
+    <select id="selectFeatureTraffic" resultMap="trafficRowResult">
+        WITH connections AS (
+            SELECT COALESCE(NULLIF(peer_id, ''), 'Unknown') AS peer_id,
+                   MAX(COALESCE(NULLIF(peer_client_name, ''), 'Unknown')) AS client_name,
+                   MAX(GREATEST(to_peer_traffic, 0))::numeric AS upload,
+                   MAX(GREATEST(from_peer_traffic, 0))::numeric AS download
+            FROM public.ban_history
+            WHERE populate_time &gt;= #{startAt} AND populate_time &lt; #{endAt}
+            GROUP BY userapps_id, torrent_id, peer_ip, peer_port, COALESCE(NULLIF(peer_id, ''), 'Unknown')
+            UNION ALL
+            SELECT COALESCE(NULLIF(peer_id, ''), 'Unknown'),
+                   COALESCE(NULLIF(peer_client_name, ''), 'Unknown'),
+                   GREATEST(to_peer_traffic, 0)::numeric,
+                   GREATEST(from_peer_traffic, 0)::numeric
+            FROM public.swarm_tracker
+            WHERE last_time_seen &gt;= #{startAt} AND last_time_seen &lt; #{endAt}
+        )
+        SELECT <choose><when test="peerId">peer_id</when><otherwise>client_name</otherwise></choose> AS city,
+               SUM(upload)::text AS upload_bytes, SUM(download)::text AS download_bytes
+        FROM connections
+        GROUP BY city
+        HAVING SUM(upload) + SUM(download) &gt; 0
+        ORDER BY SUM(upload) + SUM(download) DESC, city
+        LIMIT 50
+    </select>
+
     <select id="selectBanTraffic" resultMap="trafficRowResult">
         WITH city_totals AS MATERIALIZED (
             <choose>

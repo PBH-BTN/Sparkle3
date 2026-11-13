@@ -7,6 +7,11 @@ public final class BittorrentTrafficModels {
     private BittorrentTrafficModels() {
     }
 
+    public record TrafficRanking(String name, String uploadBytes, String downloadBytes) {}
+
+    public record TrafficRankingsResponse(int days, List<TrafficRanking> peerIds,
+                                          List<TrafficRanking> clientNames, OffsetDateTime generatedAt) {}
+
     public record TrafficTotals(
             String uploadBytes,
             String downloadBytes,

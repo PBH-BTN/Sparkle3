@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.controller.ui;
 
 import com.ghostchu.btn.sparkle.controller.ui.dto.BittorrentTrafficModels.HomeBittorrentTrafficResponse;
+import com.ghostchu.btn.sparkle.controller.ui.dto.BittorrentTrafficModels.TrafficRankingsResponse;
+import com.ghostchu.btn.sparkle.service.BittorrentTrafficRankingService;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.BittorrentTrafficStatisticsService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BittorrentTrafficApiController {
     private final BittorrentTrafficStatisticsService statisticsService;
+    private final BittorrentTrafficRankingService rankingService;
+
+    @GetMapping("/bittorrent-traffic-rankings")
+    public TrafficRankingsResponse rankings(
+            @RequestParam(defaultValue = "7") int days) throws BusinessException {
+        return rankingService.getStatistics(days);
+    }
 
     @GetMapping("/bittorrent-traffic")
     public HomeBittorrentTrafficResponse traffic(
