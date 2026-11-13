@@ -49,6 +49,22 @@ public interface MemberPlatformAdapter {
     }
 
     /**
+     * Check whether a transaction that disappeared from the history listing still
+     * exists on the provider side.
+     *
+     * <p>Providers whose list endpoint is partial (time windows, capped pages) can
+     * return a shorter history than they report. Reconciliation must not treat
+     * such omissions as deletions, so adapters that expose a per-transaction
+     * lookup implement this. Returning {@code null} means presence is unknown.</p>
+     */
+    default Boolean transactionExists(
+            MemberPlatformCredentials credentials,
+            String externalTransactionId
+    ) throws com.ghostchu.btn.sparkle.exception.BusinessException {
+        return null;
+    }
+
+    /**
      * Verify and normalize one webhook delivery.
      *
      * @param rawBody   raw request body, required for signature verification

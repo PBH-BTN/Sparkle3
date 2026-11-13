@@ -123,7 +123,31 @@ public class MianbaoduoAdapter implements MemberPlatformAdapter {
         }
         log.info("Mianbaoduo order sync fetched {} orders (remote count {})",
                 transactions.size(), total);
-        return new MemberPlatformSnapshot(transactions, null, total);
+        boolean complete = total <= 0 || seenOrderIds.size() >= total;
+        if (!complete) {
+            log.warn("Mianbaoduo order sync stopped before every reported order was "
+                            + "fetched (fetched {}, remote count {}); presence will not be reconciled",
+                    seenOrderIds.size(), total);
+        }
+        return new MemberPlatformSnapshot(transactions, null, total, complete);
+    }
+
+    @Override
+    public Boolean transactionExists(
+            MemberPlatformCredentials credentials,
+            String externalTransactionId
+    ) throws BusinessException {
+        if (!credentials.hasAccessToken()
+                || externalTransactionId == null
+                || externalTransactionId.isBlank()) {
+            return null;
+        }
+        JsonNode order = orderDetail(credentials, "order_id", externalTransactionId);
+        if (order == null) {
+            return false;
+        }
+        String orderId = text(order.path("orderid"));
+        return orderId == null ? null : orderId.equals(externalTransactionId);
     }
 
     @Override

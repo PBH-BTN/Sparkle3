@@ -40,6 +40,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +69,12 @@ public class MemberPlatformService {
             "SUCCESS",
             "ACTIVE"
     );
+    /**
+     * Upper bound on per-transaction presence checks during one sync run. A
+     * provider that suddenly drops thousands of rows is far more likely to have
+     * returned a partial listing than to have deleted them all.
+     */
+    private static final int REMOTE_VERIFY_LIMIT = 100;
 
     private final MemberPlatformConfigMapper configMapper;
     private final MemberPlatformBindingMapper bindingMapper;
@@ -342,9 +349,8 @@ public class MemberPlatformService {
         MemberTransactionLedgerService.SyncSession session =
                 ledgerService.begin(provider);
         try {
-            MemberPlatformSnapshot snapshot = adapter.fetchHistory(
-                    credentials(adapter, config)
-            );
+            MemberPlatformCredentials credentials = credentials(adapter, config);
+            MemberPlatformSnapshot snapshot = adapter.fetchHistory(credentials);
             for (PlatformTransaction transaction : snapshot.transactions()) {
                 ledgerService.apply(session, toEntity(provider, config, transaction));
             }
@@ -359,7 +365,19 @@ public class MemberPlatformService {
                                         OffsetDateTime.now())
                                 .eq(MemberPlatformConfig::getProvider, provider.name()));
             }
-            ledgerService.complete(session);
+            if (snapshot.complete()) {
+                ledgerService.complete(
+                        session,
+                        remotelyPresentIds(adapter, credentials, session)
+                );
+            } else {
+                // A short listing must not mark the rows it omitted as deleted.
+                ledgerService.incomplete(
+                        session,
+                        "Provider returned a shorter history than it reports; "
+                                + "transaction presence was left unchanged"
+                );
+            }
             markBindingsSynced(provider);
             return new SyncOutcome(
                     provider.name(),
@@ -377,6 +395,47 @@ public class MemberPlatformService {
             markBindingsFailed(provider, exception.getMessage());
             throw exception;
         }
+    }
+
+    /**
+     * Ask the provider about the transactions its own history listing did not
+     * include. Only transactions confirmed to still exist are returned, so the
+     * ledger can keep their presence instead of flagging them as deleted.
+     */
+    private Set<Long> remotelyPresentIds(
+            MemberPlatformAdapter adapter,
+            MemberPlatformCredentials credentials,
+            MemberTransactionLedgerService.SyncSession session
+    ) {
+        List<MemberTransaction> candidates = ledgerService.missingCandidates(session);
+        if (candidates.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> present = new HashSet<>();
+        int checked = 0;
+        for (MemberTransaction candidate : candidates) {
+            if (checked >= REMOTE_VERIFY_LIMIT) {
+                log.warn("Stopped verifying provider presence after {} transactions; "
+                                + "{} rows in run {} will be reconciled as missing",
+                        checked, candidates.size() - checked, session.runId());
+                break;
+            }
+            checked++;
+            try {
+                if (Boolean.TRUE.equals(adapter.transactionExists(
+                        credentials,
+                        candidate.getExternalTransactionId()
+                ))) {
+                    present.add(candidate.getId());
+                }
+            } catch (BusinessException exception) {
+                log.warn("Unable to verify {} transaction {} remotely: {}",
+                        candidate.getProvider(),
+                        candidate.getExternalTransactionId(),
+                        exception.getMessage());
+            }
+        }
+        return present;
     }
 
     @Scheduled(fixedDelay = 21_600_000, initialDelay = 120_000)

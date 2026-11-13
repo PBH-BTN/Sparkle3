@@ -130,19 +130,55 @@ public class MemberTransactionLedgerService {
         session.pages++;
     }
 
+    /**
+     * Rows the current run has not seen yet. Callers may verify a few of them
+     * against the provider before {@link #complete(SyncSession, java.util.Set)}
+     * decides whether they were really removed.
+     */
+    public List<MemberTransaction> missingCandidates(SyncSession session) {
+        return transactionMapper.selectList(missingQuery(session));
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public int complete(SyncSession session) throws BusinessException {
-        List<MemberTransaction> missing = transactionMapper.selectList(
-                new QueryWrapper<MemberTransaction>()
-                        .eq("provider", session.provider().name())
-                        .lt("first_seen_at", session.startedAt())
-                        .and(query -> query
-                                .ne("last_sync_run_id", session.runId())
-                                .or()
-                                .isNull("last_sync_run_id"))
-        );
+        return complete(session, java.util.Set.of());
+    }
+
+    /**
+     * Finish a run, marking rows that the provider no longer lists as missing.
+     * Rows whose IDs are in {@code stillRemote} were confirmed by the provider
+     * through a per-transaction lookup even though the history listing omitted
+     * them, so they keep their presence instead of being flagged as deleted.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int complete(SyncSession session, java.util.Set<Long> stillRemote)
+            throws BusinessException {
+        List<MemberTransaction> missing = missingCandidates(session);
+        java.util.Set<Long> verified = stillRemote == null
+                ? java.util.Set.of()
+                : stillRemote;
         OffsetDateTime now = OffsetDateTime.now();
+        int markedMissing = 0;
         for (MemberTransaction transaction : missing) {
+            if (transaction.getId() != null && verified.contains(transaction.getId())) {
+                MemberTransaction previous = copyForAudit(transaction);
+                boolean wasMissing = Boolean.FALSE.equals(transaction.getRemotePresent());
+                transaction.setRemotePresent(true)
+                        .setLastReconciledAt(now)
+                        .setLastSyncRunId(session.runId());
+                transactionMapper.updateById(transaction);
+                if (wasMissing) {
+                    audit(
+                            session,
+                            transaction,
+                            "RESTORED_REMOTE",
+                            List.of(),
+                            previous,
+                            transaction
+                    );
+                }
+                continue;
+            }
             MemberTransaction previous = copyForAudit(transaction);
             boolean previouslyPresent = !Boolean.FALSE.equals(
                     transaction.getRemotePresent()
@@ -151,6 +187,7 @@ public class MemberTransactionLedgerService {
                     .setLastReconciledAt(now)
                     .setLastSyncRunId(session.runId());
             transactionMapper.updateById(transaction);
+            markedMissing++;
             if (previouslyPresent) {
                 session.missing++;
                 audit(
@@ -164,7 +201,17 @@ public class MemberTransactionLedgerService {
             }
         }
         saveRun(session, "COMPLETED", null);
-        return missing.size();
+        return markedMissing;
+    }
+
+    private QueryWrapper<MemberTransaction> missingQuery(SyncSession session) {
+        return new QueryWrapper<MemberTransaction>()
+                .eq("provider", session.provider().name())
+                .lt("first_seen_at", session.startedAt())
+                .and(query -> query
+                        .ne("last_sync_run_id", session.runId())
+                        .or()
+                        .isNull("last_sync_run_id"));
     }
 
     public void incomplete(SyncSession session, String reason) {

@@ -120,6 +120,35 @@ class MemberTransactionLedgerServiceTest {
         assertEquals("RESTORED_REMOTE", event.getValue().getEventType());
     }
 
+    @Test
+    void keepsProviderVerifiedTransactionsOutOfTheMissingList() throws Exception {
+        stubRunInsert();
+        MemberPlatformSyncRun run = new MemberPlatformSyncRun()
+                .setId(11L)
+                .setProvider(MemberPlatform.PATREON.name())
+                .setStatus("RUNNING");
+        when(syncRunMapper.selectById(11L)).thenReturn(run);
+        MemberTransaction existing = transaction("TX-OLD")
+                .setId(7L)
+                .setFirstSeenAt(OffsetDateTime.now().minusDays(2))
+                .setRemotePresent(false);
+        when(transactionMapper.selectList(any())).thenReturn(List.of(existing));
+
+        MemberTransactionLedgerService.SyncSession session =
+                service.begin(MemberPlatform.PATREON);
+        int missing = service.complete(session, java.util.Set.of(7L));
+
+        assertEquals(0, missing);
+        assertEquals(0, session.missing());
+        assertTrue(existing.getRemotePresent());
+        verify(transactionMapper).updateById(existing);
+        ArgumentCaptor<MemberTransactionAuditEvent> event =
+                ArgumentCaptor.forClass(MemberTransactionAuditEvent.class);
+        verify(auditMapper).insertEvent(event.capture());
+        assertEquals("RESTORED_REMOTE", event.getValue().getEventType());
+        assertEquals("COMPLETED", run.getStatus());
+    }
+
     private void stubRunInsert() {
         when(syncRunMapper.insert(any(MemberPlatformSyncRun.class))).thenAnswer(invocation -> {
             MemberPlatformSyncRun run = invocation.getArgument(0);

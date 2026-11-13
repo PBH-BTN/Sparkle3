@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -194,6 +195,54 @@ class MianbaoduoAdapterTest {
 
         assertEquals(3, snapshot.transactions().size());
         assertEquals("o3", snapshot.transactions().getLast().transactionId());
+    }
+
+    @Test
+    void marksSnapshotIncompleteWhenTheApiReportsMoreOrdersThanItReturns()
+            throws Exception {
+        stubProducts();
+        when(httpClient.get(contains("/order-list"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "code": 200,
+                          "result": {
+                            "count": 5,
+                            "next_page": null,
+                            "orders": [
+                              {"ordertime": 1569739766, "orderamount": 1,
+                               "orderid": "o1", "urlkey": "k1"},
+                              {"ordertime": 1569739767, "orderamount": 1,
+                               "orderid": "o2", "urlkey": "k1"}
+                            ]
+                          },
+                          "error_info": ""
+                        }
+                        """));
+
+        MemberPlatformSnapshot snapshot = adapter.fetchHistory(credentials());
+
+        assertFalse(snapshot.complete(),
+                "短于 provider 报告的订单总数时不能据此判定本地记录已被删除");
+        assertEquals(5, snapshot.remoteCount());
+    }
+
+    @Test
+    void verifiesTransactionPresenceThroughOrderDetail() throws Exception {
+        when(httpClient.get(contains("/order-detail?order_id=o7"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "code": 200,
+                          "result": {"orderid": "o7", "state": "invalid", "orderamount": 3},
+                          "error_info": ""
+                        }
+                        """));
+        when(httpClient.get(contains("/order-detail?order_id=missing"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {"code": 400, "result": null, "error_info": "order not found"}
+                        """));
+
+        assertEquals(Boolean.TRUE, adapter.transactionExists(credentials(), "o7"));
+        assertEquals(Boolean.FALSE, adapter.transactionExists(credentials(), "missing"));
     }
 
     @Test
