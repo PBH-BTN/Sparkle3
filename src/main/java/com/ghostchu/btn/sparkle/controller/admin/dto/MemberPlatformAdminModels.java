@@ -72,4 +72,31 @@ public final class MemberPlatformAdminModels {
             List<AuditEventView> events
     ) {
     }
+
+    public record LicenseAdminView(
+            String licenseId,
+            String btnUserId,
+            String btnNickname,
+            String provider,
+            String sourceType,
+            String sourceOrderNo,
+            String planId,
+            String consumedAmount,
+            String status,
+            OffsetDateTime issuedAt,
+            OffsetDateTime startAt,
+            OffsetDateTime expireAt,
+            OffsetDateTime revokedAt,
+            String revokedReason
+    ) {
+    }
+
+    public record LicensePage(
+            List<LicenseAdminView> items,
+            long total,
+            long page,
+            long size,
+            String baseCurrency
+    ) {
+    }
 }

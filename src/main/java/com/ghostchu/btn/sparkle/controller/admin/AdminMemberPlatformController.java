@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.Provid
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SyncOutcome;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.LicensePage;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.ReconciliationView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.TransactionPage;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
@@ -15,6 +16,7 @@ import com.ghostchu.btn.sparkle.service.AfdianSettingsService;
 import com.ghostchu.btn.sparkle.service.ExchangeRateService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformAdminService;
+import com.ghostchu.btn.sparkle.service.PbhLicenseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +39,7 @@ public class AdminMemberPlatformController {
     private final MemberPlatformAdminService memberPlatformAdminService;
     private final ExchangeRateService exchangeRateService;
     private final AfdianSettingsService afdianSettingsService;
+    private final PbhLicenseService licenseService;
 
     @GetMapping
     public SettingsView settings() {
@@ -152,6 +155,25 @@ public class AdminMemberPlatformController {
             @RequestParam(defaultValue = "50") int limit
     ) throws BusinessException {
         return memberPlatformAdminService.reconciliation(provider, limit);
+    }
+
+    @GetMapping("/licenses")
+    public LicensePage licenses(
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sourceType,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) throws BusinessException {
+        return licenseService.adminLicenses(
+                keyword,
+                provider,
+                sourceType,
+                status,
+                page,
+                size
+        );
     }
 
     public record CurrencyUpdateRequest(

@@ -3,6 +3,10 @@ package com.ghostchu.btn.sparkle.service;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ghostchu.btn.sparkle.constants.MemberPlatform;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.LicenseAdminView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.LicensePage;
 import com.ghostchu.btn.sparkle.controller.ui.dto.AfdianPublicModels.LicenseAvailabilityView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.AfdianPublicModels.LicenseView;
 import com.ghostchu.btn.sparkle.entity.User;
@@ -29,7 +33,11 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -222,6 +230,107 @@ public class PbhLicenseService {
         }).toList();
     }
 
+    public LicensePage adminLicenses(
+            String keyword,
+            String provider,
+            String sourceType,
+            String status,
+            int requestedPage,
+            int requestedSize
+    ) throws BusinessException {
+        int page = Math.max(1, requestedPage);
+        int size = Math.min(100, Math.max(1, requestedSize));
+        QueryWrapper<PbhLicense> query = new QueryWrapper<>();
+        String term = keyword == null ? "" : keyword.trim();
+        if (!term.isBlank()) {
+            Long userId = parseNumericId(term);
+            query.and(nested -> {
+                nested.apply("license_id::text LIKE {0}", "%" + term + "%")
+                        .or().like("source_order_no", term)
+                        .or().like("external_user_id", term)
+                        .or().like("plan_id", term);
+                if (userId != null) {
+                    nested.or().eq("btn_user_id", userId);
+                }
+            });
+        }
+        if (provider != null && !provider.isBlank()) {
+            query.eq("provider", normalizeProvider(provider));
+        }
+        if (sourceType != null && !sourceType.isBlank()) {
+            String normalizedType = sourceType.trim().toUpperCase(Locale.ROOT);
+            if (!List.of("PRODUCT", "DONATION").contains(normalizedType)) {
+                throw new BusinessException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unsupported license source type"
+                );
+            }
+            query.eq("source_type", normalizedType);
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        String normalizedStatus = status == null
+                ? ""
+                : status.trim().toUpperCase(Locale.ROOT);
+        switch (normalizedStatus) {
+            case "", "ALL" -> {
+            }
+            case "ACTIVE" -> query.isNull("revoked_at").gt("expire_at", now);
+            case "EXPIRED" -> query.isNull("revoked_at").le("expire_at", now);
+            case "REVOKED" -> query.isNotNull("revoked_at");
+            default -> throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported license status"
+            );
+        }
+        query.orderByDesc("issued_at").orderByDesc("id");
+        Page<PbhLicense> result = licenseMapper.selectPage(
+                new Page<>(page, size),
+                query
+        );
+        Map<Long, User> users = new HashMap<>();
+        List<Long> userIds = result.getRecords().stream()
+                .map(PbhLicense::getBtnUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (!userIds.isEmpty()) {
+            userService.listByIds(userIds)
+                    .forEach(user -> users.put(user.getId(), user));
+        }
+        List<LicenseAdminView> items = result.getRecords().stream()
+                .map(license -> {
+                    User user = users.get(license.getBtnUserId());
+                    return new LicenseAdminView(
+                            license.getLicenseId().toString(),
+                            license.getBtnUserId() == null
+                                    ? null
+                                    : license.getBtnUserId().toString(),
+                            user == null ? null : user.getNickname(),
+                            license.getProvider(),
+                            license.getSourceType(),
+                            license.getSourceOrderNo(),
+                            license.getPlanId(),
+                            license.getConsumedAmount() == null
+                                    ? "0"
+                                    : license.getConsumedAmount().toPlainString(),
+                            licenseStatus(license, now),
+                            license.getIssuedAt(),
+                            license.getStartAt(),
+                            license.getExpireAt(),
+                            license.getRevokedAt(),
+                            license.getRevokedReason()
+                    );
+                })
+                .toList();
+        return new LicensePage(
+                items,
+                result.getTotal(),
+                result.getCurrent(),
+                result.getSize(),
+                exchangeRateService.baseCurrency()
+        );
+    }
+
     private Availability calculateAvailability(long btnUserId) {
         BigDecimal totalDonation =
                 transactionMapper.sumCompletedDonationBase(btnUserId);
@@ -289,6 +398,42 @@ public class PbhLicenseService {
 
     private BigDecimal amount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String licenseStatus(PbhLicense license, OffsetDateTime now) {
+        if (license.getRevokedAt() != null) {
+            return "REVOKED";
+        }
+        if (license.getExpireAt() == null || !license.getExpireAt().isAfter(now)) {
+            return "EXPIRED";
+        }
+        return "ACTIVE";
+    }
+
+    private String normalizeProvider(String provider) throws BusinessException {
+        return MemberPlatform.parse(provider)
+                .orElseThrow(() -> new BusinessException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unsupported member platform"
+                ))
+                .name();
+    }
+
+    private Long parseNumericId(String value) {
+        if (value.isEmpty() || value.length() > 18) {
+            return null;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            if (!Character.isDigit(value.charAt(index))) {
+                return null;
+            }
+        }
+        try {
+            long id = Long.parseLong(value);
+            return id > 0 ? id : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private String encryptByPrivateKey(byte[] data, String pemOrBase64)
