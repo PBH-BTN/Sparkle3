@@ -62,7 +62,8 @@ public final class AfdianPublicModels {
             String donationLicenseAmount,
             String baseCurrency,
             int validYears,
-            List<LicenseView> licenses
+            List<LicenseView> licenses,
+            boolean historicalReviewRequired
     ) {
     }
 }

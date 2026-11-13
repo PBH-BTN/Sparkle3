@@ -69,7 +69,8 @@ public class PbhLicenseService {
                     settingsService.donationLicenseAmount().toPlainString(),
                     exchangeRateService.baseCurrency(),
                     settingsService.licenseValidYears(),
-                    List.of()
+                    List.of(),
+                    false
             );
         }
         Availability availability = calculateAvailability(btnUserId);
@@ -81,7 +82,8 @@ public class PbhLicenseService {
                 settingsService.donationLicenseAmount().toPlainString(),
                 exchangeRateService.baseCurrency(),
                 settingsService.licenseValidYears(),
-                licenses(btnUserId)
+                licenses(btnUserId),
+                licenseMapper.countUnmatchedImports(btnUserId) > 0
         );
     }
 
@@ -91,6 +93,7 @@ public class PbhLicenseService {
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
                     "PBHLicense private key is not configured");
         }
+        licenseMapper.lockKey("sparkle:pbh-import");
         licenseMapper.lockKey("sparkle:pbh-license:" + btnUserId);
         List<MemberPlatformBinding> bindings = bindings(btnUserId);
         if (bindings.isEmpty()) {
@@ -208,11 +211,13 @@ public class PbhLicenseService {
                         .last("LIMIT " + safeLimit)
         );
         if (licenses.isEmpty()) return List.of();
-        var users = userService.listByIds(
-                licenses.stream().map(PbhLicense::getBtnUserId).distinct().toList()
-        ).stream().collect(java.util.stream.Collectors.toMap(User::getId, value -> value));
+        resolveImportedOwners(licenses);
+        var userIds = licenses.stream().map(PbhLicense::getBtnUserId)
+                .filter(Objects::nonNull).distinct().toList();
+        Map<Long, User> users = userIds.isEmpty() ? Map.of() : userService.listByIds(userIds)
+                .stream().collect(java.util.stream.Collectors.toMap(User::getId, value -> value));
         return licenses.stream().map(license -> {
-            User user = users.get(license.getBtnUserId());
+            User user = license.getBtnUserId() == null ? null : users.get(license.getBtnUserId());
             return new com.ghostchu.btn.sparkle.controller.admin.dto.AfdianModels.LicenseView(
                     license.getLicenseId().toString(),
                     license.getBtnUserId(),
@@ -251,6 +256,9 @@ public class PbhLicenseService {
                         .or().like("plan_id", term);
                 if (userId != null) {
                     nested.or().eq("btn_user_id", userId);
+                    nested.or().apply("btn_user_id IS NULL AND provider = 'AFDIAN' AND EXISTS "
+                            + "(SELECT 1 FROM member_platform_bindings b WHERE b.provider = pbh_licenses.provider "
+                            + "AND b.external_user_id = pbh_licenses.external_user_id AND b.btn_user_id = {0})", userId);
                 }
             });
         }
@@ -287,6 +295,7 @@ public class PbhLicenseService {
                 new Page<>(page, size),
                 query
         );
+        resolveImportedOwners(result.getRecords());
         Map<Long, User> users = new HashMap<>();
         List<Long> userIds = result.getRecords().stream()
                 .map(PbhLicense::getBtnUserId)
@@ -331,7 +340,25 @@ public class PbhLicenseService {
         );
     }
 
+    private void resolveImportedOwners(List<PbhLicense> licenses) {
+        List<String> accounts = licenses.stream()
+                .filter(license -> license.getBtnUserId() == null && "AFDIAN".equals(license.getProvider()))
+                .map(PbhLicense::getExternalUserId).filter(Objects::nonNull).distinct().toList();
+        if (accounts.isEmpty()) return;
+        Map<String, Long> owners = new HashMap<>();
+        bindingMapper.selectList(new QueryWrapper<MemberPlatformBinding>()
+                        .eq("provider", "AFDIAN").in("external_user_id", accounts))
+                .forEach(binding -> owners.put(binding.getExternalUserId(), binding.getBtnUserId()));
+        for (PbhLicense license : licenses) {
+            if (license.getBtnUserId() == null && "AFDIAN".equals(license.getProvider())) {
+                license.setBtnUserId(owners.get(license.getExternalUserId()));
+            }
+        }
+    }
+
     private Availability calculateAvailability(long btnUserId) {
+        // Unresolved historical issuance must not permit duplicate issuance.
+        if (licenseMapper.countUnmatchedImports(btnUserId) > 0) return new Availability(0, 0, 0);
         BigDecimal totalDonation =
                 transactionMapper.sumCompletedDonationBase(btnUserId);
         int productSlots =
@@ -365,7 +392,10 @@ public class PbhLicenseService {
     private List<LicenseView> licenses(long btnUserId) {
         return licenseMapper.selectList(
                 new QueryWrapper<PbhLicense>()
-                        .eq("btn_user_id", btnUserId)
+                        .and(query -> query.eq("btn_user_id", btnUserId).or().apply(
+                                "import_fingerprint IS NOT NULL AND EXISTS (SELECT 1 FROM member_platform_bindings b "
+                                        + "WHERE b.btn_user_id = {0} AND b.provider = pbh_licenses.provider "
+                                        + "AND b.external_user_id = pbh_licenses.external_user_id)", btnUserId))
                         .orderByDesc("issued_at")
         ).stream().map(this::mapPublicLicense).toList();
     }

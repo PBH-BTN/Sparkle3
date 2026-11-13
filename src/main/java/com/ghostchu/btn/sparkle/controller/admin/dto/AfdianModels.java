@@ -62,7 +62,7 @@ public final class AfdianModels {
 
     public record LicenseView(
             String licenseId,
-            long btnUserId,
+            Long btnUserId,
             String btnNickname,
             String afdianUserId,
             String sourceType,

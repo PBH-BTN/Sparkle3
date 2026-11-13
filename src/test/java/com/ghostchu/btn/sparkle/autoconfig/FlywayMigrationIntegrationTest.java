@@ -52,6 +52,27 @@ class FlywayMigrationIntegrationTest {
 
         try (var connection = DriverManager.getConnection(url, username, password);
              var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("""
+                    SELECT COUNT(*) = 4
+                        AND bool_and(CASE WHEN column_name = 'btn_user_id' THEN is_nullable = 'YES' ELSE TRUE END)
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'pbh_licenses'
+                      AND column_name IN ('btn_user_id', 'import_fingerprint', 'import_message_id', 'import_match')
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+            try (var result = statement.executeQuery("""
+                    SELECT to_regclass('public.pbh_licenses_import_fingerprint_idx') IS NOT NULL
+                        AND to_regclass('public.pbh_licenses_key_hash_idx') IS NOT NULL
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+        }
+
+        try (var connection = DriverManager.getConnection(url, username, password);
+             var statement = connection.createStatement()) {
             try (var result = statement.executeQuery(
                     "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '30' AND success")) {
                 assertTrue(result.next());

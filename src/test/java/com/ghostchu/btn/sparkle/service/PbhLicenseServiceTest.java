@@ -204,6 +204,41 @@ class PbhLicenseServiceTest {
         );
     }
 
+    @Test
+    void pendingHistoricalIssuanceBlocksNewSlotsUntilReviewed() throws Exception {
+        when(bindingMapper.selectList(any())).thenReturn(List.of(new MemberPlatformBinding()
+                .setProvider("AFDIAN").setBtnUserId(42L).setExternalUserId("user")));
+        when(settingsService.donationLicenseAmount()).thenReturn(new BigDecimal("50"));
+        when(licenseMapper.countUnmatchedImports(42L)).thenReturn(1);
+        when(licenseMapper.selectList(any())).thenReturn(List.of());
+        var view = service().availability(42L);
+        assertEquals(0, view.totalAvailable());
+        assertTrue(view.historicalReviewRequired());
+    }
+
+    @Test
+    void recentLicensesSupportHistoricalIssuanceBeforeAccountBinding() {
+        when(licenseMapper.selectList(any())).thenReturn(List.of(
+                license(42L, OffsetDateTime.now().plusYears(1), null).setBtnUserId(null)));
+        var view = service().recentLicenses(20);
+        assertEquals(1, view.size());
+        assertEquals(null, view.getFirst().btnUserId());
+    }
+
+    @Test
+    void userLicenseQueryAssociatesImportsThroughCurrentPlatformBinding() {
+        when(bindingMapper.selectList(any())).thenReturn(List.of(new MemberPlatformBinding()
+                .setProvider("AFDIAN").setBtnUserId(42L).setExternalUserId("user")));
+        when(settingsService.donationLicenseAmount()).thenReturn(new BigDecimal("50"));
+        when(licenseMapper.selectList(any())).thenReturn(List.of());
+        service().availability(42L);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<QueryWrapper<PbhLicense>> query = ArgumentCaptor.forClass(QueryWrapper.class);
+        verify(licenseMapper).selectList(query.capture());
+        assertTrue(query.getValue().getSqlSegment().contains("member_platform_bindings"));
+        assertTrue(query.getValue().getSqlSegment().contains("b.external_user_id = pbh_licenses.external_user_id"));
+    }
+
     private PbhLicense license(
             long btnUserId,
             OffsetDateTime expireAt,
