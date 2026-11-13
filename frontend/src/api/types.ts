@@ -217,15 +217,6 @@ export interface FixedPointsSummary {
   categories: PointCategoryPoints[]
 }
 
-export interface OneTimePointsSummary {
-  pointsTodayRaw: string
-  averagePerHourRaw: number
-  newTorrentsToday: number
-  clientDiscoveriesToday: number
-  newTorrentEnabled: boolean
-  clientDiscoveryEnabled: boolean
-}
-
 export interface DynamicPointsSummary {
   pointsTodayRaw: string
   averagePerHourRaw: number
@@ -246,7 +237,6 @@ export interface PointFeatureFlags {
 export interface PointsOverview {
   balanceRaw: string
   fixed: FixedPointsSummary
-  oneTime: OneTimePointsSummary
   dynamic: DynamicPointsSummary | null
   features: PointFeatureFlags
   generatedAt: string
@@ -254,6 +244,7 @@ export interface PointsOverview {
 
 export interface PointsBreakdownEntry {
   category: string
+  // ONE_TIME is retained for ledgers created before its removal.
   component: 'FIXED' | 'ONE_TIME' | 'DYNAMIC'
   requestedPoints: number
   awardedPoints: number
@@ -277,7 +268,6 @@ export interface PointsLogEntry {
   eventType: string
   pointsRaw: string
   fixedPointsRaw: string
-  oneTimePointsRaw: string
   dynamicPointsRaw: string
   manualPointsRaw: string
   details: PointsLogDetails

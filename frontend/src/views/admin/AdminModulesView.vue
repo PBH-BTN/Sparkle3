@@ -24,7 +24,6 @@ const runningId = ref<string | null>(null)
 const pointsModuleIds = new Set([
   'points-settings',
   'points-fixed-rules',
-  'points-once-rules',
   'points-dynamic-rules',
   'points-dynamic',
 ])

@@ -682,7 +682,7 @@ export default {
   },
   points: {
     title: 'Bytes 积分',
-    description: '查看积分余额、固定积分进度、一次性积分、动态积分与积分获取记录。',
+    description: '查看积分余额、固定积分进度、动态积分与积分获取记录。',
     unit: 'Bytes',
     balanceHint:
       '积分余额以 long 整数存储。页面按 KiB、MiB、GiB 等二进制单位换算展示，原始值始终保留在下方。',
@@ -692,13 +692,6 @@ export default {
       title: '固定积分',
       badge: '今日',
       progress: '封顶类固定积分进度',
-    },
-    oneTime: {
-      eyebrow: '发现奖励',
-      title: '一次性积分',
-      newTorrents: '新种子',
-      discoveries: '客户端特征',
-      hint: '新种子按首次创建种子 ID 计算，客户端特征按首次写入发现记录计算。',
     },
     dynamic: {
       eyebrow: '计划任务',
@@ -1590,10 +1583,7 @@ export default {
         'rules-fetch-enabled': '启用规则获取积分',
         'keepalive-enabled': '启用 Keepalive 心跳积分',
         'rule-hit-ip-enabled': '启用规则命中 IP 积分',
-        'new-ip-enabled': '启用新 IP 积分',
         'wasted-upload-enabled': '启用 BanHistory 浪费上传积分',
-        'new-torrent-enabled': '启用新种子积分',
-        'client-discovery-enabled': '启用客户端特征发现积分',
         'dynamic-seed-upload-enabled': '启用做种上传积分',
         'dynamic-download-enabled': '启用任务下载积分',
         'dynamic-hot-peer-enabled': '启用热点种子 Peer 积分',
@@ -1612,13 +1602,9 @@ export default {
         'keepalive-daily-cap': '心跳每日上限',
         'rule-hit-ip-points': '每个命中规则 IP 奖励（Bytes）',
         'rule-hit-ip-daily-cap': '命中规则 IP 每日上限',
-        'new-ip-points': '每个新 IP 奖励（Bytes）',
-        'new-ip-daily-cap': '新 IP 每日上限',
         'wasted-upload-points-per-mib': '每 MiB 浪费上传奖励（Bytes）',
         'wasted-upload-mib': '浪费上传奖励流量单位（MiB）',
         'wasted-upload-daily-cap': '浪费上传每日上限',
-        'new-torrent-points': '每个新种子奖励（Bytes）',
-        'client-discovery-points': '每个新客户端特征奖励（Bytes）',
         'dynamic-seed-upload-points': '做种上传每小时奖励（Bytes）',
         'dynamic-seed-upload-mib': '做种上传流量单位（MiB）',
         'dynamic-download-points': '任务下载每小时奖励（Bytes）',
@@ -1694,10 +1680,6 @@ export default {
           name: '固定积分规则',
           description:
             '调整触发器型积分的单次奖励、每日上限以及应用在线连续性判断。修改后新事件立即使用新值。',
-        },
-        'points-once-rules': {
-          name: '一次性积分规则',
-          description: '调整新种子与新客户端特征发现的一次性奖励值。',
         },
         'points-dynamic-rules': {
           name: '动态积分规则',

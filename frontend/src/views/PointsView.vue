@@ -299,47 +299,6 @@ onMounted(refresh)
 
           <div class="side-panels">
             <a-card
-              v-if="overview.oneTime.newTorrentEnabled || overview.oneTime.clientDiscoveryEnabled"
-              class="surface-card info-card one-time-card"
-            >
-              <div class="card-heading">
-                <div>
-                  <h2>{{ t('points.oneTime.title') }}</h2>
-                </div>
-                <span class="panel-orbit"></span>
-              </div>
-              <div class="summary-value compact">
-                <strong>{{ formatPointAmount(overview.oneTime.pointsTodayRaw) }}</strong>
-                <span
-                  v-if="showPointRaw(overview.oneTime.pointsTodayRaw)"
-                  class="raw-value"
-                >
-                  {{ overview.oneTime.pointsTodayRaw }} Bytes
-                </span>
-              </div>
-              <div class="metric-pair">
-                <div v-if="overview.oneTime.newTorrentEnabled">
-                  <span>{{ t('points.oneTime.newTorrents') }}</span>
-                  <strong>{{ formatNumber(overview.oneTime.newTorrentsToday) }}</strong>
-                </div>
-                <div v-if="overview.oneTime.clientDiscoveryEnabled">
-                  <span>{{ t('points.oneTime.discoveries') }}</span>
-                  <strong>{{ formatNumber(overview.oneTime.clientDiscoveriesToday) }}</strong>
-                </div>
-              </div>
-              <div class="average-line">
-                <span>{{ t('points.last24HoursAverage') }}</span>
-                <span class="average-number">
-                  <strong>{{ formatPointAmount(overview.oneTime.averagePerHourRaw) }} / h</strong>
-                  <small v-if="showPointRaw(overview.oneTime.averagePerHourRaw)">
-                    {{ overview.oneTime.averagePerHourRaw }} Bytes/h
-                  </small>
-                </span>
-              </div>
-              <p class="panel-note">{{ t('points.oneTime.hint') }}</p>
-            </a-card>
-
-            <a-card
               v-if="overview.features.dynamicPoints && overview.dynamic"
               class="surface-card info-card dynamic-card"
             >
@@ -680,7 +639,6 @@ onMounted(refresh)
   white-space: nowrap;
 }
 
-.metric-pair,
 .dynamic-breakdown {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -692,7 +650,6 @@ onMounted(refresh)
   margin-top: 4px;
 }
 
-.metric-pair > div,
 .dynamic-breakdown > div {
   display: flex;
   flex-direction: column;
@@ -702,36 +659,21 @@ onMounted(refresh)
   border-radius: 8px;
 }
 
-.metric-pair span,
 .dynamic-breakdown span {
   color: var(--color-text-3);
   font-size: 11px;
 }
 
-.metric-pair strong,
 .dynamic-breakdown strong {
   font-size: 14px;
 }
 
-.panel-note {
-  margin: 16px 0 0;
-  color: var(--color-text-3);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.panel-orbit,
 .live-dot {
   width: 12px;
   height: 12px;
   margin-top: 4px;
-  background: rgb(var(--gold-6));
-  border-radius: 999px;
-  box-shadow: 0 0 0 6px rgb(var(--gold-2));
-}
-
-.live-dot {
   background: rgb(var(--green-6));
+  border-radius: 999px;
   box-shadow: 0 0 0 6px rgb(var(--green-2));
 }
 
@@ -795,8 +737,5 @@ onMounted(refresh)
     grid-template-columns: 1fr;
   }
 
-  .metric-pair {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

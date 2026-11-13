@@ -706,7 +706,7 @@ export default {
   points: {
     title: 'Bytes points',
     description:
-      'Inspect your point balance, fixed-point progress, one-time points, dynamic points, and acquisition history.',
+      'Inspect your point balance, fixed-point progress, dynamic points, and acquisition history.',
     unit: 'Bytes',
     balanceHint:
       'Balances are stored as Java long values. The UI converts them to KiB, MiB, GiB, and larger binary units while always showing the original value.',
@@ -716,14 +716,6 @@ export default {
       title: 'Fixed points',
       badge: 'Today',
       progress: 'Capped fixed-point progress',
-    },
-    oneTime: {
-      eyebrow: 'Discovery rewards',
-      title: 'One-time points',
-      newTorrents: 'New torrents',
-      discoveries: 'Client signatures',
-      hint:
-        'New torrents are counted when a torrent ID is first created. Client signatures are counted when a discovery row is first inserted.',
     },
     dynamic: {
       eyebrow: 'Scheduled jobs',
@@ -1630,10 +1622,7 @@ export default {
         'rules-fetch-enabled': 'Enable rule-fetch points',
         'keepalive-enabled': 'Enable Keepalive heartbeat points',
         'rule-hit-ip-enabled': 'Enable rule-matched IP points',
-        'new-ip-enabled': 'Enable new-IP points',
         'wasted-upload-enabled': 'Enable BanHistory wasted-upload points',
-        'new-torrent-enabled': 'Enable new-torrent points',
-        'client-discovery-enabled': 'Enable client-discovery points',
         'dynamic-seed-upload-enabled': 'Enable seeding upload points',
         'dynamic-download-enabled': 'Enable download task points',
         'dynamic-hot-peer-enabled': 'Enable hot-torrent peer points',
@@ -1652,13 +1641,9 @@ export default {
         'keepalive-daily-cap': 'Heartbeat daily cap',
         'rule-hit-ip-points': 'Reward per rule-matched IP (Bytes)',
         'rule-hit-ip-daily-cap': 'Rule-matched IP daily cap',
-        'new-ip-points': 'Reward per new IP (Bytes)',
-        'new-ip-daily-cap': 'New-IP daily cap',
         'wasted-upload-points-per-mib': 'Reward per MiB of wasted upload (Bytes)',
         'wasted-upload-mib': 'Wasted-upload reward traffic unit (MiB)',
         'wasted-upload-daily-cap': 'Wasted-upload daily cap',
-        'new-torrent-points': 'Reward per new torrent (Bytes)',
-        'client-discovery-points': 'Reward per new client signature (Bytes)',
         'dynamic-seed-upload-points': 'Seeding upload hourly reward (Bytes)',
         'dynamic-seed-upload-mib': 'Seeding upload traffic unit (MiB)',
         'dynamic-download-points': 'Download task hourly reward (Bytes)',
@@ -1739,11 +1724,6 @@ export default {
           name: 'Fixed point rules',
           description:
             'Adjust triggered point rewards, daily caps, and application online continuity. New events use updated values immediately.',
-        },
-        'points-once-rules': {
-          name: 'One-time point rules',
-          description:
-            'Adjust one-time rewards for new torrents and newly discovered client signatures.',
         },
         'points-dynamic-rules': {
           name: 'Dynamic point rules',
