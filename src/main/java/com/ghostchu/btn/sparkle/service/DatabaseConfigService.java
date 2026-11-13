@@ -3,25 +3,32 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.controller.admin.dto.DatabaseConfigModels.ConfigEntry;
 import com.ghostchu.btn.sparkle.controller.admin.dto.DatabaseConfigModels.ConfigSummary;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.AppConfigEntry;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.AppConfigEntryMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -62,13 +69,20 @@ public class DatabaseConfigService {
             "sparkle.footer.config"
     );
     private static final String TABLE = "app_config_entries";
+    private static final Duration CONFIG_CACHE_TTL = Duration.ofMinutes(5);
 
     private final AppConfigEntryMapper configMapper;
     private final Environment environment;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public DatabaseConfigService(AppConfigEntryMapper configMapper, Environment environment) {
+    public DatabaseConfigService(
+            AppConfigEntryMapper configMapper,
+            Environment environment,
+            @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate
+    ) {
         this.configMapper = configMapper;
         this.environment = environment;
+        this.redisTemplate = redisTemplate;
     }
 
     public @NotNull List<ConfigEntry> list(String keyword, String group) {
@@ -138,6 +152,7 @@ public class DatabaseConfigService {
                 .setUpdatedAt(OffsetDateTime.now())
                 .setUpdatedBy(operatorId);
         configMapper.updateById(row);
+        evictAfterCommit(key);
         return new ConfigEntry(
                 key,
                 row.getConfigGroup(),
@@ -153,10 +168,27 @@ public class DatabaseConfigService {
     }
 
     public @NotNull Map<String, String> getRawValues(@NotNull List<String> keys) {
-        if (keys.isEmpty()) return Map.of();
+        List<String> requestedKeys = keys.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (requestedKeys.isEmpty()) return Map.of();
+
+        Map<String, String> cachedValues = readCachedValues(requestedKeys);
+        List<String> missingKeys = requestedKeys.stream()
+                .filter(key -> !cachedValues.containsKey(key))
+                .toList();
+        Map<String, String> databaseValues = loadDatabaseValues(missingKeys);
+        cacheValues(databaseValues);
+
         Map<String, String> values = new LinkedHashMap<>();
-        configMapper.selectBatchIds(keys).forEach(entry ->
-                values.put(entry.getConfigKey(), entry.getConfigValue()));
+        for (String key : requestedKeys) {
+            if (cachedValues.containsKey(key)) {
+                values.put(key, cachedValues.get(key));
+            } else if (databaseValues.containsKey(key)) {
+                values.put(key, databaseValues.get(key));
+            }
+        }
         return values;
     }
 
@@ -185,6 +217,7 @@ public class DatabaseConfigService {
                 .setUpdatedAt(OffsetDateTime.now())
                 .setUpdatedBy(operatorId);
         configMapper.updateById(row);
+        evictAfterCommit(key);
     }
 
     private ConfigEntry toEntry(AppConfigEntry entry) {
@@ -303,7 +336,7 @@ public class DatabaseConfigService {
 
     public int insertIfMissing(String key, String value, String source) {
         if (configMapper.selectById(key) != null) return 0;
-        return configMapper.insert(new AppConfigEntry()
+        int inserted = configMapper.insert(new AppConfigEntry()
                 .setConfigKey(key)
                 .setConfigValue(value)
                 .setValueType(typeForValue(value))
@@ -312,6 +345,10 @@ public class DatabaseConfigService {
                 .setSensitive(isSensitiveKey(key))
                 .setHotReload(isHotReload(key))
                 .setUpdatedAt(OffsetDateTime.now()));
+        if (inserted > 0) {
+            evictAfterCommit(key);
+        }
+        return inserted;
     }
 
     public int upsertYamlValue(String key, String value) {
@@ -339,7 +376,11 @@ public class DatabaseConfigService {
                 .setSensitive(sensitive)
                 .setHotReload(hotReload)
                 .setUpdatedAt(OffsetDateTime.now());
-        return configMapper.updateById(existing);
+        int updated = configMapper.updateById(existing);
+        if (updated > 0) {
+            evictAfterCommit(key);
+        }
+        return updated;
     }
 
     public boolean exists(String key) {
@@ -354,7 +395,11 @@ public class DatabaseConfigService {
         entry.setConfigValue(value)
                 .setSource("redis-migration")
                 .setUpdatedAt(OffsetDateTime.now());
-        return configMapper.updateById(entry);
+        int updated = configMapper.updateById(entry);
+        if (updated > 0) {
+            evictAfterCommit(key);
+        }
+        return updated;
     }
 
     public boolean hasExternalOverride(String key, String databaseValue) {
@@ -376,5 +421,95 @@ public class DatabaseConfigService {
             return value != null && !String.valueOf(value).equals(databaseValue);
         }
         return false;
+    }
+
+    private Map<String, String> readCachedValues(List<String> keys) {
+        List<String> cacheableKeys = keys.stream()
+                .filter(key -> !isSensitiveKey(key))
+                .toList();
+        if (cacheableKeys.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            HashOperations<String, String, String> hash = redisTemplate.opsForHash();
+            List<String> cachedValues = hash.multiGet(
+                    RedisKeyConstant.APP_CONFIG_VALUES.getKey(),
+                    cacheableKeys
+            );
+            if (cachedValues == null) {
+                return Map.of();
+            }
+            Map<String, String> result = new LinkedHashMap<>();
+            for (int index = 0; index < cacheableKeys.size(); index++) {
+                String value = cachedValues.get(index);
+                if (value != null) {
+                    result.put(cacheableKeys.get(index), value);
+                }
+            }
+            return result;
+        } catch (Exception exception) {
+            log.debug("Unable to read business configuration from Redis", exception);
+            return Map.of();
+        }
+    }
+
+    private Map<String, String> loadDatabaseValues(List<String> keys) {
+        if (keys.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> values = new LinkedHashMap<>();
+        configMapper.selectBatchIds(keys).forEach(entry ->
+                values.put(entry.getConfigKey(), entry.getConfigValue()));
+        return values;
+    }
+
+    private void cacheValues(Map<String, String> values) {
+        Map<String, String> cacheableValues = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (entry.getValue() == null || isSensitiveKey(entry.getKey())) {
+                continue;
+            }
+            cacheableValues.put(entry.getKey(), entry.getValue());
+        }
+        if (cacheableValues.isEmpty()) {
+            return;
+        }
+        String cacheKey = RedisKeyConstant.APP_CONFIG_VALUES.getKey();
+        try {
+            redisTemplate.opsForHash().putAll(cacheKey, cacheableValues);
+            redisTemplate.expire(cacheKey, CONFIG_CACHE_TTL);
+        } catch (Exception exception) {
+            log.debug("Unable to cache business configuration in Redis", exception);
+            deleteCache(cacheKey);
+        }
+    }
+
+    private void evictAfterCommit(String key) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictCache(key);
+                }
+            });
+            return;
+        }
+        evictCache(key);
+    }
+
+    private void evictCache(String key) {
+        try {
+            redisTemplate.opsForHash().delete(RedisKeyConstant.APP_CONFIG_VALUES.getKey(), key);
+        } catch (Exception exception) {
+            log.warn("Unable to evict business configuration from Redis", exception);
+        }
+    }
+
+    private void deleteCache(String cacheKey) {
+        try {
+            redisTemplate.delete(cacheKey);
+        } catch (Exception exception) {
+            log.debug("Unable to delete incomplete business configuration cache", exception);
+        }
     }
 }

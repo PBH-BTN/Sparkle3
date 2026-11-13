@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum RedisKeyConstant {
+    APP_CONFIG_VALUES("sparkle:config:values"),
     RULE_IP_DENYLIST_VERSION("sparkle:rule:ip_denylist:version"),
     RULE_IP_DENYLIST_VALUE("sparkle:rule:ip_denylist:value"),
     RULE_IP_ALLOWLIST_VERSION("sparkle:rule:ip_allowlist:version"),

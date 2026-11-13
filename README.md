@@ -156,6 +156,10 @@ BTN 同伴 GeoIP 分布使用 `userapps_heartbeat.geoip`，统计最近 24 小�
 YAML 扫描。旧版保存在 Redis `sparkle:admin:runtime-config` 中的热更新值会在首次数据库
 迁移时自动兼容导入。
 
+运行期批量读取非敏感业务配置时会优先使用 Redis 缓存，未命中再读取 `app_config_entries`
+并回填缓存，缓存有效期为 5 分钟。数据库仍是配置事实源；配置写入提交后会失效对应缓存，
+Redis 不可用时直接回退数据库。敏感配置不会写入这份缓存。
+
 `app_config_entries` 表由 Flyway `V23` 创建。数据库账号只有 DML 权限时，需要数据库管理员
 提前授予 schema DDL 权限，否则应用会按设计拒绝启动，避免运行在结构不完整的数据库上。
 
