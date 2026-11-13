@@ -76,6 +76,7 @@ declare module 'vue' {
     EmptyState: typeof import('./components/EmptyState.vue')['default']
     GlobalAnnouncements: typeof import('./components/GlobalAnnouncements.vue')['default']
     LanguageSwitcher: typeof import('./components/LanguageSwitcher.vue')['default']
+    LifetimeTrafficCard: typeof import('./components/LifetimeTrafficCard.vue')['default']
     MetricTrendChart: typeof import('./components/admin/MetricTrendChart.vue')['default']
     PageHeader: typeof import('./components/PageHeader.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
