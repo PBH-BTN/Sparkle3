@@ -1,20 +1,21 @@
 .UserCard-content .SparkleBtnStats {
+  box-sizing: border-box;
   width: 100%;
-  max-width: 720px;
-  margin-top: 14px;
-  color: var(--text-color);
-  background: var(--body-bg);
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  border-radius: 10px;
-  box-shadow: 0 8px 22px var(--shadow-color);
+  max-width: 640px;
+  margin-top: 16px;
+  padding: 14px 16px 10px;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  text-align: left;
   overflow: hidden;
 }
 
 .SparkleBtnStats-header,
 .SparkleBtnStats-identity,
 .SparkleBtnStats-sectionHeading,
-.SparkleBtnStats-trafficRow,
-.SparkleBtnStats-summary {
+.SparkleBtnStats-trafficRow {
   display: flex;
   align-items: center;
 }
@@ -22,10 +23,6 @@
 .SparkleBtnStats-header {
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 12px;
-  color: var(--primary-color);
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.04));
-  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
   font-size: 12px;
 }
 
@@ -33,86 +30,92 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
-.SparkleBtnStats-private {
-  padding: 7px 12px 0;
-  color: var(--muted-color);
-  font-size: 11px;
+.SparkleBtnStats-brand .icon,
+.SparkleBtnStats-brand i {
+  opacity: 0.75;
 }
 
 .SparkleBtnStats-uid {
-  padding: 2px 7px;
-  color: var(--primary-color);
-  background: var(--control-bg);
-  border-radius: 999px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  white-space: nowrap;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  opacity: 0.7;
+}
+
+.SparkleBtnStats-private {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.75;
 }
 
 .SparkleBtnStats-identity {
   flex-wrap: wrap;
-  gap: 5px 12px;
-  padding: 9px 12px 0;
-  color: var(--muted-color);
-  font-size: 12px;
+  gap: 4px 10px;
+  margin-top: 8px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.SparkleBtnStats-identity > span:not(.SparkleBtnStats-banned) {
+  opacity: 0.7;
 }
 
 .SparkleBtnStats-identity strong {
-  color: var(--text-color);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .SparkleBtnStats-banned {
   padding: 1px 6px;
-  color: #b91c1c;
-  background: #fee2e2;
-  border-radius: 999px;
+  color: #fff;
+  background: #a52e2e;
+  border-radius: 4px;
   font-weight: 600;
 }
 
 .SparkleBtnStats-traffic {
-  padding: 9px 12px 11px;
+  padding: 12px 0;
 }
 
 .SparkleBtnStats-sectionHeading {
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 7px;
-  color: var(--muted-color);
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 400;
+  opacity: 0.7;
 }
 
 .SparkleBtnStats-sectionHeading small {
-  font-weight: 400;
+  font-size: inherit;
 }
 
 .SparkleBtnStats-trafficGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 18px;
+  gap: 7px 20px;
 }
 
 .SparkleBtnStats-trafficRow {
   min-width: 0;
-  gap: 7px;
+  gap: 8px;
   font-size: 11px;
 }
 
 .SparkleBtnStats-trafficLabel {
-  flex: 0 0 70px;
-  color: var(--muted-color);
-  white-space: nowrap;
+  flex: 0 0 62px;
+  opacity: 0.75;
 }
 
 .SparkleBtnStats-bar {
   flex: 1;
-  min-width: 34px;
-  height: 5px;
-  background: rgba(148, 163, 184, 0.24);
+  min-width: 16px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -120,21 +123,19 @@
 .SparkleBtnStats-barFill {
   display: block;
   height: 100%;
-  min-width: 0;
-  background: #10b981;
+  background: #8ed6ba;
   border-radius: inherit;
-  transition: width 180ms ease;
 }
 
 .SparkleBtnStats-barFill--receivedTrafficSelfReport,
 .SparkleBtnStats-barFill--receivedTrafficOtherAck {
-  background: #3b82f6;
+  background: #a9c9ee;
 }
 
 .SparkleBtnStats-trafficRow strong {
-  flex: 0 0 76px;
-  color: var(--text-color);
+  flex: 0 0 68px;
   font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
@@ -142,90 +143,61 @@
 
 .SparkleBtnStats-summary {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .SparkleBtnStats-summaryItem {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-}
-
-.SparkleBtnStats-summaryItem + .SparkleBtnStats-summaryItem {
-  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  gap: 3px;
 }
 
 .SparkleBtnStats-summaryItem span {
-  color: var(--muted-color);
   font-size: 10px;
+  opacity: 0.7;
 }
 
 .SparkleBtnStats-summaryItem strong {
-  color: var(--primary-color);
   font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .SparkleBtnStats-empty,
 .SparkleBtnStats-updated {
-  color: var(--muted-color);
-  font-size: 11px;
+  font-size: 10px;
+  opacity: 0.65;
 }
 
 .SparkleBtnStats-empty {
-  padding: 8px 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 12px 0;
 }
 
 .SparkleBtnStats-updated {
   display: block;
-  padding: 0 12px 8px;
+  margin-top: 10px;
 }
 
 .UserCard--popover .SparkleBtnStats {
-  width: 100%;
-  margin-top: 10px;
-  box-shadow: none;
+  margin-top: 12px;
+  padding: 12px;
 }
 
 .UserCard--popover .SparkleBtnStats-trafficGrid {
   grid-template-columns: 1fr;
 }
 
-.UserCard--popover .SparkleBtnStats-summary {
-  grid-template-columns: 1fr 1fr;
-}
-
-.UserCard--popover .SparkleBtnStats-summaryItem:first-child {
-  grid-column: span 2;
-  border-left: 0;
-}
-
-.UserCard--popover .SparkleBtnStats-summaryItem:nth-child(2) {
-  border-left: 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.UserCard--popover .SparkleBtnStats-summaryItem:nth-child(3) {
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-}
-
 @media (max-width: 767px) {
+  .UserCard .SparkleBtnStats {
+    padding: 12px;
+  }
+
   .UserCard .SparkleBtnStats-trafficGrid {
     grid-template-columns: 1fr;
-  }
-
-  .UserCard .SparkleBtnStats-summary {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .UserCard .SparkleBtnStats-summaryItem:first-child {
-    grid-column: span 2;
   }
 }
