@@ -255,6 +255,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminAiModerationView.vue'),
         },
         {
+          path: 'ip-query-comments',
+          name: 'admin-ip-query-comments',
+          component: () => import('@/views/admin/AdminIpQueryCommentsView.vue'),
+        },
+        {
           path: 'database-config',
           name: 'admin-database-config',
           component: () => import('@/views/admin/AdminDatabaseConfigView.vue'),

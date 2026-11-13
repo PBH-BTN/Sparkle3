@@ -939,6 +939,7 @@ export default {
       githubSync: 'GitHub rule sync',
       flarumIntegration: 'Flarum integration',
       aiModeration: 'IP lookup & AI review',
+      ipQueryComments: 'Comment moderation',
       databaseConfig: 'Config database',
     },
     common: {
@@ -1733,6 +1734,11 @@ export default {
           description:
             'Adjust seeding, download, and hot-peer rewards, traffic ratios, torrent-size units, and the hot-torrent top count.',
         },
+        'ip-query-comment-reaudit': {
+          name: 'IP comment re-review',
+          description:
+            'Periodically re-reviews pending and failed IP comments. Comments that already have an active review job are skipped.',
+        },
       },
     },
     pointsModules: {
@@ -2452,6 +2458,79 @@ export default {
       testPassed: 'The model approved public visibility',
       testRejected: 'The model denied public visibility',
       required: 'Complete the model configuration and moderation policy.',
+    },
+    ipQueryComments: {
+      title: 'IP comment moderation',
+      description:
+        'Review, edit, moderate and hide IP/CIDR comments, and re-submit them for AI review manually.',
+      create: 'New comment',
+      createTitle: 'New comment',
+      createHint:
+        'Comments created here take effect immediately in the selected state. The operator is not recorded as the author and the operator IP is not stored.',
+      editTitle: 'Edit comment #{id}',
+      editHint:
+        'Saving new content creates another history revision and applies the selected state. Earlier revisions stay visible in the detail view.',
+      detailTitle: 'Comment #{id}',
+      keyword: 'Keyword',
+      keywordPlaceholder: 'Search comment content or comment ID',
+      scope: 'Network',
+      scopeHint: 'Accepts a single IP or CIDR, for example 192.0.2.0/24 or 2001:db8::/32.',
+      includeDeleted: 'Include hidden',
+      author: 'Author',
+      anonymous: 'Anonymous',
+      parentComment: 'Reply to',
+      content: 'Comment',
+      revision: 'Revision',
+      job: 'Review job',
+      noJob: 'None',
+      updatedAt: 'Updated',
+      reviewGeneration: 'Review generation',
+      authorIp: 'Posted IP',
+      authorUserAgent: 'User agent',
+      authorUserId: 'Author UID',
+      authorUserIdHint: 'Optional; the comment is attributed to this user',
+      moderationStatus: 'Moderation state',
+      moderationReason: 'Moderation reason',
+      reasonPlaceholder: 'Explain why the comment is not approved',
+      defaultRejectReason: 'Did not pass manual review',
+      deletedTag: 'Hidden',
+      anonymizedTag: 'Anonymized',
+      systemEditor: 'System',
+      detail: 'Details',
+      approve: 'Approve',
+      reject: 'Reject',
+      rejectTitle: 'Reject comment #{id}',
+      reaudit: 'Re-review',
+      hide: 'Hide comment',
+      restore: 'Restore comment',
+      revisions: 'History ({count})',
+      required: 'Enter the network and the comment content.',
+      created: 'Comment created.',
+      updated: 'Comment updated.',
+      approved: 'Comment approved.',
+      rejected: 'Comment rejected.',
+      reaudited: 'Comment queued for AI review.',
+      hidden: 'Comment hidden.',
+      restored: 'Comment restored.',
+      approveConfirm:
+        'The comment becomes visible to other users immediately after approval. Continue?',
+      rejectHint:
+        'Rejected comments are hidden from others; the author can still read the reason in the comment thread.',
+      reauditConfirm:
+        'The comment is hidden from other users until AI review approves it again. Continue?',
+      hideConfirm:
+        'A hidden comment is no longer shown to other users and can be restored at any time. Continue?',
+      restoreConfirm:
+        'The comment becomes visible again according to its current moderation state. Continue?',
+      pendingHint:
+        'Selecting "Pending" requires AI content moderation to be enabled in "IP lookup & AI review" first.',
+      statuses: {
+        PENDING: 'Pending',
+        APPROVED: 'Approved',
+        REJECTED: 'Rejected',
+        FAILED: 'Failed',
+        RUNNING: 'Running',
+      },
     },
     databaseConfig: {
       title: 'Database configuration center',

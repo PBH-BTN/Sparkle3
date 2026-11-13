@@ -1063,3 +1063,72 @@ export interface ModerationTestResult {
   categories: string[]
   confidence: number
 }
+
+export type CommentModerationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FAILED'
+
+export interface AdminCommentRow {
+  id: number
+  network: string
+  parentCommentId: number | null
+  authorUserId: string | null
+  authorNickname: string | null
+  authorAvatarUrl: string | null
+  content: string
+  revision: number
+  moderationStatus: CommentModerationStatus
+  moderationReason: string | null
+  reviewGeneration: number
+  authorIp: string | null
+  authorUserAgent: string | null
+  anonymized: boolean
+  deleted: boolean
+  latestJobStatus: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+export interface AdminCommentRevision {
+  revision: number
+  content: string
+  moderationStatus: CommentModerationStatus
+  moderationReason: string | null
+  editorUserId: string | null
+  editorNickname: string | null
+  editorIp: string | null
+  editorUserAgent: string | null
+  createdAt: string
+}
+
+export interface AdminCommentDetail {
+  comment: AdminCommentRow
+  revisions: AdminCommentRevision[]
+}
+
+export interface AdminCommentQuery {
+  page: number
+  size: number
+  keyword?: string
+  scope?: string
+  status?: string
+  includeDeleted?: boolean
+}
+
+export interface AdminCommentCreateInput {
+  network: string
+  content: string
+  authorUserId?: string
+  moderationStatus?: string
+  moderationReason?: string
+}
+
+export interface AdminCommentUpdateInput {
+  revision?: number
+  content?: string
+  moderationStatus?: string
+  moderationReason?: string
+}

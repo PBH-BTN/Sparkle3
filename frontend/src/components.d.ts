@@ -65,6 +65,8 @@ declare module 'vue' {
     ATabs: typeof import('@arco-design/web-vue')['Tabs']
     ATag: typeof import('@arco-design/web-vue')['Tag']
     ATextarea: typeof import('@arco-design/web-vue')['Textarea']
+    ATimeline: typeof import('@arco-design/web-vue')['Timeline']
+    ATimelineItem: typeof import('@arco-design/web-vue')['TimelineItem']
     ATooltip: typeof import('@arco-design/web-vue')['Tooltip']
     EChart: typeof import('./components/EChart.vue')['default']
     EmptyState: typeof import('./components/EmptyState.vue')['default']

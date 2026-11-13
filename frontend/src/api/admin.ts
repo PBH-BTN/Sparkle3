@@ -14,6 +14,11 @@ import type {
   AdminApplicationCredentials,
   AdminApplicationInput,
   AdminApplicationQuery,
+  AdminCommentCreateInput,
+  AdminCommentDetail,
+  AdminCommentQuery,
+  AdminCommentRow,
+  AdminCommentUpdateInput,
   AdminDashboard,
   AdminPage,
   AdminRuleQuery,
@@ -584,4 +589,42 @@ export const adminApi = {
       { method: 'POST' },
     )
   },
+  ipQueryComments: (params: AdminCommentQuery) => {
+    const search = new URLSearchParams()
+    search.set('page', String(params.page))
+    search.set('size', String(params.size))
+    if (params.keyword) search.set('keyword', params.keyword)
+    if (params.scope) search.set('scope', params.scope)
+    if (params.status) search.set('status', params.status)
+    if (params.includeDeleted) search.set('includeDeleted', 'true')
+    return request<AdminPage<AdminCommentRow>>(
+      `/api/admin/ip-query-comments?${search.toString()}`,
+    )
+  },
+  ipQueryComment: (id: number) =>
+    request<AdminCommentDetail>(`/api/admin/ip-query-comments/${id}`),
+  createIpQueryComment: (body: AdminCommentCreateInput) =>
+    request<AdminCommentDetail>('/api/admin/ip-query-comments', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateIpQueryComment: (id: number, body: AdminCommentUpdateInput) =>
+    request<AdminCommentDetail>(`/api/admin/ip-query-comments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteIpQueryComment: (id: number) =>
+    request<AdminCommentDetail>(`/api/admin/ip-query-comments/${id}`, {
+      method: 'DELETE',
+    }),
+  restoreIpQueryComment: (id: number) =>
+    request<AdminCommentDetail>(
+      `/api/admin/ip-query-comments/${id}/restore`,
+      { method: 'POST' },
+    ),
+  reauditIpQueryComment: (id: number) =>
+    request<AdminCommentDetail>(
+      `/api/admin/ip-query-comments/${id}/reaudit`,
+      { method: 'POST' },
+    ),
 }
