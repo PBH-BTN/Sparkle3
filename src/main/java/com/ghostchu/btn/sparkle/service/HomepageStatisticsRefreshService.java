@@ -118,6 +118,14 @@ public class HomepageStatisticsRefreshService {
         }
     }
 
+    public @NotNull Map<String, Boolean> enabledModules() {
+        Map<String, Boolean> modules = new LinkedHashMap<>();
+        for (ModuleConfig config : getConfig()) {
+            modules.put(config.module(), config.enabled());
+        }
+        return Map.copyOf(modules);
+    }
+
     public @NotNull AdminResponse getStatus() {
         List<ModuleStatus> modules = getConfig().stream()
                 .map(this::toStatus)

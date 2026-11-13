@@ -19,6 +19,26 @@ import static org.mockito.Mockito.when;
 
 class HomepageStatisticsRefreshServiceTest {
     @Test
+    void homepageVisibilityMatchesEveryModuleSwitch() {
+        DatabaseConfigService config = mock(DatabaseConfigService.class);
+        when(config.getRawValues(anyList())).thenReturn(Map.of(
+                "sparkle.homepage-statistics-refresh.modules.ban-history.enabled", "false",
+                "sparkle.homepage-statistics-refresh.modules.network-charts.enabled", "false",
+                "sparkle.homepage-statistics-refresh.modules.companion-charts.enabled", "false"
+        ));
+        HomepageStatisticsRefreshService service = new HomepageStatisticsRefreshService(
+                mock(StatisticsRefreshServiceImpl.class), mock(HomeStatisticsService.class),
+                mock(BittorrentTrafficStatisticsService.class), mock(BittorrentTrafficFeatureService.class),
+                config, mock(TaskStatusService.class), mock(TaskManualExecutionService.class));
+
+        assertEquals(Map.of(
+                "ban-history", false, "active-apps", true, "swarm-tracker", true,
+                "torrents", true, "network-charts", false, "companion-charts", false,
+                "bittorrent-traffic", true
+        ), service.enabledModules());
+    }
+
+    @Test
     void manualRefreshRejectsDisabledBitTorrentTraffic() throws BusinessException {
         StatisticsRefreshServiceImpl statisticsRefreshService =
                 mock(StatisticsRefreshServiceImpl.class);

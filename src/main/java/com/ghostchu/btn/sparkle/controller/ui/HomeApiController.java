@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.UiModels.UserView;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AdminConfigService;
 import com.ghostchu.btn.sparkle.service.BittorrentTrafficFeatureService;
+import com.ghostchu.btn.sparkle.service.HomepageStatisticsRefreshService;
 import com.ghostchu.btn.sparkle.service.IUserSwarmStatisticsService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.NavigationService;
@@ -35,6 +36,7 @@ public class HomeApiController {
     private final PointsService pointsService;
     private final UserPrivacyService privacyService;
     private final BittorrentTrafficFeatureService bittorrentTrafficFeatureService;
+    private final HomepageStatisticsRefreshService homepageStatisticsRefreshService;
 
     public HomeApiController(@Qualifier("stringLongRedisTemplate") RedisTemplate<String, Long> redisTemplate,
                              IUserSwarmStatisticsService userSwarmStatisticsService,
@@ -43,7 +45,8 @@ public class HomeApiController {
                              NavigationService navigationService,
                              PointsService pointsService,
                              UserPrivacyService privacyService,
-                             BittorrentTrafficFeatureService bittorrentTrafficFeatureService) {
+                             BittorrentTrafficFeatureService bittorrentTrafficFeatureService,
+                             HomepageStatisticsRefreshService homepageStatisticsRefreshService) {
         this.redisTemplate = redisTemplate;
         this.userSwarmStatisticsService = userSwarmStatisticsService;
         this.userService = userService;
@@ -52,6 +55,7 @@ public class HomeApiController {
         this.pointsService = pointsService;
         this.privacyService = privacyService;
         this.bittorrentTrafficFeatureService = bittorrentTrafficFeatureService;
+        this.homepageStatisticsRefreshService = homepageStatisticsRefreshService;
     }
 
     @GetMapping("/session")
@@ -118,7 +122,8 @@ public class HomeApiController {
                         RedisKeyConstant.STATS_SWARMTRACKER_7DAYS,
                         RedisKeyConstant.STATS_SWARMTRACKER_24HOURS
                 ),
-                bittorrentTrafficFeatureService.isEnabled()
+                bittorrentTrafficFeatureService.isEnabled(),
+                homepageStatisticsRefreshService.enabledModules()
         );
     }
 
