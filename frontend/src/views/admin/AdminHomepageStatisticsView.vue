@@ -190,11 +190,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
             <div class="task-settings">
               <label>
                 <span>
-                  {{
-                    config.module === 'bittorrent-traffic'
-                      ? t('admin.homepageStatistics.updateAndDisplay')
-                      : t('admin.homepageStatistics.enabled')
-                  }}
+                  {{ t('admin.homepageStatistics.updateAndDisplay') }}
                 </span>
                 <a-switch v-model="config.enabled" />
               </label>

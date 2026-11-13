@@ -95,6 +95,7 @@ export interface HomeStatWindows {
 }
 
 export interface HomeStats {
+  enabledModules: Record<string, boolean>
   banHistory: HomeStatWindows
   userApps: HomeStatWindows
   swarmTracker: HomeStatWindows

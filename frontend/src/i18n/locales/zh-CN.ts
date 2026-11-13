@@ -1144,7 +1144,7 @@ export default {
     },
     homepageStatistics: {
       title: '首页数据刷新',
-      description: '管理前台首页统计数据的自动刷新周期，并支持按模块立即刷新。',
+      description: '管理首页统计的显示与自动刷新，并支持按模块立即刷新。',
       refreshAll: '刷新全部',
       hotReloadTitle: '配置即时生效',
       hotReloadText:

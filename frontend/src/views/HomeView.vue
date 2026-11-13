@@ -48,6 +48,10 @@ const networkSource = ref<StatisticsSource>('ban')
 let statisticsRequestId = 0
 let trafficRequestId = 0
 
+function moduleEnabled(module: string) {
+  return stats.value?.enabledModules?.[module] === true
+}
+
 const banStats = computed(() => [
   { label: t('home.allTime'), value: stats.value?.banHistory.allTime ?? 0 },
   { label: t('home.last30Days'), value: stats.value?.banHistory.last30Days ?? 0 },
@@ -280,6 +284,8 @@ async function loadHomeStats() {
   loading.value = true
   try {
     stats.value = await uiApi.home()
+    if (moduleEnabled('network-charts')) void loadNetworkStats()
+    if (moduleEnabled('companion-charts')) void loadCompanionStats()
     if (stats.value.bittorrentTrafficEnabled) {
       void loadTrafficStats()
     } else {
@@ -295,6 +301,7 @@ async function loadHomeStats() {
 }
 
 async function loadNetworkStats() {
+  if (!moduleEnabled('network-charts')) return
   const requestId = ++statisticsRequestId
   networkLoading.value = true
   try {
@@ -334,6 +341,7 @@ async function loadTrafficStats() {
 }
 
 async function loadCompanionStats() {
+  if (!moduleEnabled('companion-charts')) return
   companionLoading.value = true
   try {
     companionStats.value = await uiApi.homeCompanionStatistics()
@@ -349,8 +357,6 @@ watch(trafficDays, loadTrafficStats)
 
 onMounted(() => {
   loadHomeStats()
-  loadNetworkStats()
-  loadCompanionStats()
 })
 </script>
 
@@ -388,7 +394,7 @@ onMounted(() => {
       </div>
     </a-card>
 
-    <section class="stats-section">
+    <section v-if="moduleEnabled('ban-history') || moduleEnabled('active-apps')" class="stats-section">
       <div class="section-heading">
         <div>
           <h2>{{ t('home.statistics.overviewTitle') }}</h2>
@@ -397,7 +403,7 @@ onMounted(() => {
       </div>
       <a-spin :loading="loading" class="stats-spin">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="24" :lg="12">
+          <a-col v-if="moduleEnabled('ban-history')" :xs="24" :lg="moduleEnabled('active-apps') ? 12 : 24">
             <a-card class="surface-card stats-card">
               <template #title>
                 <span class="stats-title">
@@ -418,7 +424,7 @@ onMounted(() => {
               </a-row>
             </a-card>
           </a-col>
-          <a-col :xs="24" :lg="12">
+          <a-col v-if="moduleEnabled('active-apps')" :xs="24" :lg="moduleEnabled('ban-history') ? 12 : 24">
             <a-card class="surface-card stats-card">
               <template #title>
                 <span class="stats-title">
@@ -568,7 +574,7 @@ onMounted(() => {
       </a-spin>
     </section>
 
-    <section class="stats-section">
+    <section v-if="moduleEnabled('network-charts')" class="stats-section">
       <div class="section-heading">
         <div>
           <h2>{{ t('home.statistics.networkTitle') }}</h2>
@@ -688,7 +694,7 @@ onMounted(() => {
       </a-spin>
     </section>
 
-    <section class="stats-section">
+    <section v-if="moduleEnabled('companion-charts')" class="stats-section">
       <div class="section-heading">
         <div>
           <h2>{{ t('home.statistics.companionTitle') }}</h2>

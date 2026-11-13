@@ -1169,11 +1169,11 @@ export default {
     homepageStatistics: {
       title: 'Homepage data refresh',
       description:
-        'Configure scheduled refreshes for homepage statistics and trigger individual modules immediately.',
+        'Manage homepage statistics visibility and scheduled refreshes, or refresh individual modules immediately.',
       refreshAll: 'Refresh all',
       hotReloadTitle: 'Configuration applies immediately',
       hotReloadText:
-        'Enabled states and intervals apply immediately. The scheduler checks due jobs every 30 seconds. Disabling BitTorrent traffic stops updates and hides the section from the homepage; other modules can still be refreshed manually.',
+        'Switches and intervals apply immediately after saving. Disabling a module stops scheduled refreshes and hides its statistics when the homepage is reloaded. BitTorrent traffic also stops manual updates; other modules can still be refreshed manually.',
       tasks: 'Refresh jobs',
       runningCount: 'Refreshing {count} jobs',
       allIdle: 'All idle',
