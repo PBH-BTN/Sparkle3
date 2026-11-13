@@ -25,11 +25,6 @@ const features = ref<FeatureAvailability>({
 
 const items = computed(() => [
   {
-    key: '/user/settings/account',
-    label: t('settings.menu.account'),
-    icon: IconSafe,
-  },
-  {
     key: '/user/settings/privacy',
     label: t('settings.menu.privacy'),
     icon: IconLock,
@@ -66,6 +61,11 @@ const items = computed(() => [
         },
       ]
     : []),
+  {
+    key: '/user/settings/account',
+    label: t('settings.menu.account'),
+    icon: IconSafe,
+  },
 ])
 
 const selectedKey = computed(
