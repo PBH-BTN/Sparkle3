@@ -30,6 +30,11 @@ const session = useSessionStore()
 const allItems = computed(() => [
   { key: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: IconDashboard },
   { key: '/admin/tasks', label: t('admin.nav.tasks'), icon: IconSchedule },
+  {
+    key: '/admin/homepage-statistics',
+    label: t('admin.nav.homepageStatistics'),
+    icon: IconDashboard,
+  },
   { key: '/admin/announcements', label: t('admin.nav.announcements'), icon: IconNotification },
   { key: '/admin/messages', label: t('admin.nav.messages'), icon: IconEmail },
   {
@@ -40,6 +45,11 @@ const allItems = computed(() => [
   { key: '/admin/memberships', label: t('admin.nav.memberships'), icon: IconHeart },
   { key: '/admin/navigation', label: t('admin.nav.navigation'), icon: IconMenu },
   { key: '/admin/settings', label: t('admin.nav.settings'), icon: IconSettings },
+  {
+    key: '/admin/version-alerts',
+    label: t('admin.nav.versionAlerts'),
+    icon: IconNotification,
+  },
   { key: '/admin/users', label: t('admin.nav.users'), icon: IconUserGroup },
   {
     key: '/admin/points-modules',
