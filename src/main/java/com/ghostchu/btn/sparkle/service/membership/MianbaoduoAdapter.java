@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.service.membership;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ghostchu.btn.sparkle.constants.MemberPlatform;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -27,10 +28,11 @@ import java.util.Map;
  * binding identity and users claim an order by its order number.</p>
  */
 @Component
+@Slf4j
 public class MianbaoduoAdapter implements MemberPlatformAdapter {
     static final String API_BASE = "https://x.mbd.pub/api";
-    private static final int PAGE_SIZE = 100;
-    private static final int MAX_PAGES = 100;
+    private static final int PAGE_SIZE = 20;
+    private static final int MAX_PAGES = 500;
     private static final String DOCUMENTATION_URL = "https://mbd.pub/open_doc/";
 
     private final MemberPlatformHttpClient httpClient;
@@ -78,29 +80,49 @@ public class MianbaoduoAdapter implements MemberPlatformAdapter {
         }
         Map<String, String> productNames = productNames(credentials);
         List<PlatformTransaction> transactions = new ArrayList<>();
-        int total = Integer.MAX_VALUE;
-        int seen = 0;
-        for (int page = 1; page <= MAX_PAGES && seen < total; page++) {
+        java.util.Set<String> seenOrderIds = new java.util.HashSet<>();
+        int total = -1;
+        for (int page = 1; page <= MAX_PAGES; page++) {
             JsonNode result = request(
                     "/order-list?page=" + page + "&limit=" + PAGE_SIZE,
                     credentials
             );
-            total = result.path("count").asInt(0);
+            if (total < 0) {
+                total = result.path("count").asInt(0);
+            }
             JsonNode orders = result.path("orders");
             if (!orders.isArray() || orders.isEmpty()) {
                 break;
             }
+            int fresh = 0;
             for (JsonNode order : orders) {
+                String orderId = text(order.path("orderid"));
+                if (orderId == null || !seenOrderIds.add(orderId)) {
+                    continue;
+                }
+                fresh++;
                 PlatformTransaction transaction = mapOrder(order, productNames);
                 if (transaction != null) {
                     transactions.add(transaction);
                 }
             }
-            seen += orders.size();
-            if (orders.size() < PAGE_SIZE) {
+            if (fresh == 0) {
+                // The endpoint repeated a page; stop instead of looping forever.
                 break;
             }
+            int next = requestedNextPage(result);
+            if (next > page) {
+                page = next - 1;
+                continue;
+            }
+            if (total > 0 && seenOrderIds.size() < total) {
+                // Some deployments report count but omit next_page; keep paging.
+                continue;
+            }
+            break;
         }
+        log.info("Mianbaoduo order sync fetched {} orders (remote count {})",
+                transactions.size(), total);
         return new MemberPlatformSnapshot(transactions, null);
     }
 
@@ -176,31 +198,64 @@ public class MianbaoduoAdapter implements MemberPlatformAdapter {
     private Map<String, String> productNames(MemberPlatformCredentials credentials) {
         Map<String, String> names = new HashMap<>();
         try {
+            int total = -1;
             for (int page = 1; page <= MAX_PAGES; page++) {
                 JsonNode result = request(
                         "/product-list?page=" + page + "&limit=" + PAGE_SIZE,
                         credentials
                 );
+                if (total < 0) {
+                    total = result.path("count").asInt(0);
+                }
                 JsonNode products = result.path("products");
                 if (!products.isArray() || products.isEmpty()) {
                     break;
                 }
+                int fresh = 0;
                 for (JsonNode product : products) {
                     String urlkey = text(product.path("urlkey"));
                     String name = text(product.path("productname"));
-                    if (urlkey != null && name != null) {
-                        names.put(urlkey, name);
+                    if (urlkey != null && name != null
+                            && names.putIfAbsent(urlkey, name) == null) {
+                        fresh++;
                     }
                 }
-                if (products.size() < PAGE_SIZE) {
+                if (fresh == 0) {
                     break;
                 }
+                int next = requestedNextPage(result);
+                if (next > page) {
+                    page = next - 1;
+                    continue;
+                }
+                if (total > 0 && names.size() < total) {
+                    continue;
+                }
+                break;
             }
         } catch (BusinessException exception) {
             // Product titles only enrich the ledger; never fail a sync for them.
             return names;
         }
         return names;
+    }
+
+    private int requestedNextPage(JsonNode result) {
+        String next = text(result.path("next_page"));
+        if (next == null) {
+            return 0;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("[?&]page=(\\d+)")
+                .matcher(next);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
     }
 
     private PlatformTransaction mapOrder(JsonNode order, Map<String, String> productNames) {

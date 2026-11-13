@@ -155,6 +155,48 @@ class MianbaoduoAdapterTest {
     }
 
     @Test
+    void fetchesEveryPageEvenWhenPagesAreShort() throws Exception {
+        stubProducts();
+        when(httpClient.get(contains("/order-list?page=1&limit=20"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "code": 200,
+                          "result": {
+                            "count": 3,
+                            "orders": [
+                              {"ordertime": 1569739766, "orderamount": 1,
+                               "orderid": "o1", "urlkey": "k1"},
+                              {"ordertime": 1569739767, "orderamount": 1,
+                               "orderid": "o2", "urlkey": "k1"}
+                            ],
+                            "next_page": "https://x.mbd.pub/api/order-list?limit=20&page=2"
+                          },
+                          "error_info": ""
+                        }
+                        """));
+        when(httpClient.get(contains("/order-list?page=2&limit=20"), eq(null), any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "code": 200,
+                          "result": {
+                            "count": 3,
+                            "orders": [
+                              {"ordertime": 1569739768, "orderamount": 1,
+                               "orderid": "o3", "urlkey": "k1"}
+                            ],
+                            "next_page": null
+                          },
+                          "error_info": ""
+                        }
+                        """));
+
+        MemberPlatformSnapshot snapshot = adapter.fetchHistory(credentials());
+
+        assertEquals(3, snapshot.transactions().size());
+        assertEquals("o3", snapshot.transactions().getLast().transactionId());
+    }
+
+    @Test
     void rejectsInvalidDeveloperKey() throws Exception {
         when(httpClient.get(contains("/order-list"), eq(null), any()))
                 .thenReturn(objectMapper.readTree("""
