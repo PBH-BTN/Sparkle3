@@ -4,6 +4,7 @@ import com.ghostchu.btn.sparkle.constants.MemberPlatform;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderUpdateRequest;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SyncOutcome;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.ReconciliationView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.TransactionPage;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
@@ -75,6 +76,14 @@ public class AdminMemberPlatformController {
     @PostMapping("/sync")
     public Map<String, Object> sync() {
         return Map.of("synchronizedProviders", memberPlatformService.syncAll());
+    }
+
+    @PostMapping("/{provider}/sync")
+    public SyncOutcome syncProvider(@PathVariable String provider)
+            throws BusinessException {
+        return memberPlatformService.syncProvider(
+                memberPlatformService.parseProvider(provider)
+        );
     }
 
     @GetMapping("/transactions")

@@ -17,6 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * Receives provider webhooks. Patreon sends JSON with an HMAC-MD5 signature;
+ * Ko-fi sends a form field named {@code data} with a verification token inside
+ * the payload. Both are acknowledged with HTTP 200 so providers stop retrying.
+ */
 @RestController
 @RequestMapping("/api/integrations/memberships")
 @RequiredArgsConstructor
@@ -28,24 +33,32 @@ public class MemberPlatformWebhookController {
             value = "/{provider}",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public Map<String, Boolean> receiveJson(
+    public Map<String, Object> receiveJson(
             @PathVariable String provider,
             @RequestHeader(name = "X-Sparkle-Token", required = false) String token,
-            @RequestBody JsonNode payload
+            @RequestHeader(name = "X-Patreon-Signature", required = false)
+            String signature,
+            @RequestBody String body
     ) throws BusinessException {
-        memberPlatformService.ingestWebhook(
+        JsonNode payload = parse(body);
+        Map<String, String> headers = signature == null || signature.isBlank()
+                ? Map.of()
+                : Map.of("x-patreon-signature", signature);
+        int accepted = memberPlatformService.ingestWebhook(
                 memberPlatformService.parseProvider(provider),
                 token,
-                payload
+                body,
+                payload,
+                headers
         );
-        return Map.of("accepted", true);
+        return Map.of("accepted", true, "records", accepted);
     }
 
     @PostMapping(
             value = "/{provider}",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
-    public Map<String, Boolean> receiveForm(
+    public Map<String, Object> receiveForm(
             @PathVariable String provider,
             @RequestHeader(name = "X-Sparkle-Token", required = false) String token,
             @RequestParam(name = "data", required = false) String data
@@ -54,18 +67,31 @@ public class MemberPlatformWebhookController {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Webhook form payload is missing data");
         }
-        JsonNode payload;
-        try {
-            payload = objectMapper.readTree(data);
-        } catch (Exception exception) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Webhook form payload is not valid JSON");
-        }
-        memberPlatformService.ingestWebhook(
+        JsonNode payload = parse(data);
+        int accepted = memberPlatformService.ingestWebhook(
                 memberPlatformService.parseProvider(provider),
                 token,
-                payload
+                data,
+                payload,
+                Map.of()
         );
-        return Map.of("accepted", true);
+        return Map.of("accepted", true, "records", accepted);
+    }
+
+    private JsonNode parse(String body) throws BusinessException {
+        if (body == null || body.isBlank()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Webhook payload is empty");
+        }
+        if (body.length() > 1_048_576) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Webhook payload is too large");
+        }
+        try {
+            return objectMapper.readTree(body);
+        } catch (Exception exception) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Webhook payload is not valid JSON");
+        }
     }
 }

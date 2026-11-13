@@ -7,14 +7,15 @@ public final class MemberPlatformModels {
     private MemberPlatformModels() {
     }
 
+    /**
+     * Provider settings. Only the credential fields used by that provider are
+     * read; the rest stay untouched.
+     */
     public record ProviderUpdateRequest(
             boolean enabled,
-            String apiUrl,
             String accountId,
             String accessToken,
             Boolean clearAccessToken,
-            String authHeader,
-            String authScheme,
             String webhookToken,
             Boolean clearWebhookToken,
             String currency,
@@ -24,18 +25,24 @@ public final class MemberPlatformModels {
 
     public record ProviderView(
             String provider,
+            boolean supported,
             boolean enabled,
-            String apiUrl,
+            boolean historySync,
+            boolean webhook,
+            String documentationUrl,
+            List<String> configFields,
             String accountId,
             boolean accessTokenConfigured,
-            String authHeader,
-            String authScheme,
             boolean webhookTokenConfigured,
+            boolean ready,
             String currency,
             String exchangeRate,
             long bindingCount,
             long transactionCount,
-            OffsetDateTime lastSyncedAt
+            OffsetDateTime lastSyncedAt,
+            String lastRunStatus,
+            OffsetDateTime lastRunAt,
+            String lastRunError
     ) {
     }
 
@@ -43,6 +50,14 @@ public final class MemberPlatformModels {
             List<ProviderView> providers,
             String baseCurrency,
             String exchangeRateApiUrl
+    ) {
+    }
+
+    public record SyncOutcome(
+            String provider,
+            boolean success,
+            int records,
+            String message
     ) {
     }
 }

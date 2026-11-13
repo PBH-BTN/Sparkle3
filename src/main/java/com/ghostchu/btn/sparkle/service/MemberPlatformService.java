@@ -2,23 +2,28 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.DecimalNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ghostchu.btn.sparkle.constants.MemberPlatform;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderUpdateRequest;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SyncOutcome;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MemberPlatformPublicModels.ProviderBindingView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.MemberPlatformPublicModels.TransactionView;
-import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.entity.MemberPlatformBinding;
 import com.ghostchu.btn.sparkle.entity.MemberPlatformConfig;
+import com.ghostchu.btn.sparkle.entity.MemberPlatformSyncRun;
 import com.ghostchu.btn.sparkle.entity.MemberTransaction;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.MemberPlatformBindingMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberPlatformConfigMapper;
+import com.ghostchu.btn.sparkle.mapper.MemberPlatformSyncRunMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper;
+import com.ghostchu.btn.sparkle.service.membership.MemberPlatformAdapter;
+import com.ghostchu.btn.sparkle.service.membership.MemberPlatformCredentials;
+import com.ghostchu.btn.sparkle.service.membership.MemberPlatformSnapshot;
+import com.ghostchu.btn.sparkle.service.membership.PlatformTransaction;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
@@ -32,16 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,6 +47,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Provider-neutral membership ledger.
+ *
+ * <p>Afdian keeps its dedicated integration because of its signed request
+ * format. Patreon and Ko-fi are handled by first-class adapters that own their
+ * official API or webhook. Providers without a public API stay visible to
+ * administrators but are explicitly unsupported instead of asking them to type
+ * an arbitrary API URL.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -63,42 +68,24 @@ public class MemberPlatformService {
             "SUCCESS",
             "ACTIVE"
     );
-    private static final List<MemberPlatform> GENERIC_PROVIDERS = List.of(
-            MemberPlatform.PATREON,
-            MemberPlatform.KOFI,
-            MemberPlatform.MIANBAODUO,
-            MemberPlatform.LIANDONG
-    );
-    private static final List<String> TRANSACTION_ARRAY_FIELDS = List.of(
-            "transactions",
-            "orders",
-            "records",
-            "items",
-            "payments",
-            "charges",
-            "members"
-    );
-    private static final int PAGE_SIZE = 100;
-    private static final int MAX_SYNC_PAGES = 500;
 
     private final MemberPlatformConfigMapper configMapper;
     private final MemberPlatformBindingMapper bindingMapper;
     private final MemberTransactionMapper transactionMapper;
+    private final MemberPlatformSyncRunMapper syncRunMapper;
     private final ObjectMapper objectMapper;
     private final ExchangeRateService exchangeRateService;
     private final AfdianSettingsService afdianSettingsService;
     private final MemberTransactionLedgerService ledgerService;
+    private final List<MemberPlatformAdapter> adapters;
     private final Map<MemberPlatform, ReentrantLock> syncLocks =
             new ConcurrentHashMap<>();
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
 
     public SettingsView settings() {
         return new SettingsView(
-                GENERIC_PROVIDERS.stream()
-                        .map(provider -> providerView(provider))
+                Arrays.stream(MemberPlatform.values())
+                        .filter(provider -> provider != MemberPlatform.AFDIAN)
+                        .map(this::providerView)
                         .toList(),
                 exchangeRateService.baseCurrency(),
                 exchangeRateService.apiUrl()
@@ -111,15 +98,14 @@ public class MemberPlatformService {
             ProviderUpdateRequest request,
             @Nullable Long operatorId
     ) throws BusinessException {
-        requireGeneric(provider);
+        MemberPlatformAdapter adapter = requireAdapter(provider);
         if (request == null) {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Member platform configuration is required");
         }
-        String apiUrl = validateOptionalUrl(request.apiUrl());
         String currency = exchangeRateService.validateCurrency(
                 request.currency() == null || request.currency().isBlank()
-                        ? "CNY"
+                        ? adapter.defaultCurrency()
                         : request.currency()
         );
         BigDecimal exchangeRate;
@@ -138,12 +124,7 @@ public class MemberPlatformService {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Fallback exchange rate must be greater than zero");
         }
-        String accessToken = request.accessToken();
-        boolean clearAccessToken = Boolean.TRUE.equals(request.clearAccessToken());
-        String authHeader = validateAuthHeader(request.authHeader());
-        String authScheme = validateAuthScheme(request.authScheme());
-        String webhookToken = request.webhookToken();
-        boolean clearWebhookToken = Boolean.TRUE.equals(request.clearWebhookToken());
+
         MemberPlatformConfig config = configMapper.selectById(provider.name());
         boolean insert = config == null;
         if (insert) {
@@ -151,31 +132,40 @@ public class MemberPlatformService {
                     .setProvider(provider.name());
         }
         config.setEnabled(request.enabled())
-                .setApiUrl(blankToNull(apiUrl))
-                .setAccountId(blankToNull(request.accountId()))
-                .setAuthHeader(authHeader)
-                .setAuthScheme(authScheme)
                 .setCurrency(currency)
                 .setExchangeRate(exchangeRate)
                 .setUpdatedAt(OffsetDateTime.now())
                 .setUpdatedBy(operatorId);
-        if (clearAccessToken) {
-            config.setAccessToken(null);
-        } else if (accessToken != null && !accessToken.isBlank()) {
-            if (accessToken.length() > 4_096) {
-                throw new BusinessException(HttpStatus.BAD_REQUEST,
-                        "Member platform access credential is too long");
-            }
-            config.setAccessToken(accessToken.trim());
+        if (adapter.configFields().contains("accountId")) {
+            config.setAccountId(validatedText(
+                    request.accountId(),
+                    255,
+                    "Member account or campaign ID is too long"
+            ));
         }
-        if (clearWebhookToken) {
-            config.setWebhookToken(null);
-        } else if (webhookToken != null && !webhookToken.isBlank()) {
-            if (webhookToken.length() > 4_096) {
-                throw new BusinessException(HttpStatus.BAD_REQUEST,
-                        "Member platform webhook token is too long");
+        if (adapter.configFields().contains("accessToken")) {
+            if (Boolean.TRUE.equals(request.clearAccessToken())) {
+                config.setAccessToken(null);
+            } else if (request.accessToken() != null
+                    && !request.accessToken().isBlank()) {
+                config.setAccessToken(validatedText(
+                        request.accessToken(),
+                        4_096,
+                        "Member platform access credential is too long"
+                ));
             }
-            config.setWebhookToken(webhookToken.trim());
+        }
+        if (adapter.configFields().contains("webhookToken")) {
+            if (Boolean.TRUE.equals(request.clearWebhookToken())) {
+                config.setWebhookToken(null);
+            } else if (request.webhookToken() != null
+                    && !request.webhookToken().isBlank()) {
+                config.setWebhookToken(validatedText(
+                        request.webhookToken(),
+                        4_096,
+                        "Webhook verification token is too long"
+                ));
+            }
         }
         if (insert) {
             configMapper.insert(config);
@@ -188,7 +178,10 @@ public class MemberPlatformService {
     public List<ProviderBindingView> userProviders(long userId) {
         List<ProviderBindingView> values = new ArrayList<>();
         values.add(bindingView(userId, MemberPlatform.AFDIAN, false));
-        for (MemberPlatform provider : GENERIC_PROVIDERS) {
+        for (MemberPlatform provider : MemberPlatform.values()) {
+            if (provider == MemberPlatform.AFDIAN) {
+                continue;
+            }
             values.add(bindingView(userId, provider, true));
         }
         return values.stream()
@@ -199,7 +192,12 @@ public class MemberPlatformService {
     public boolean anyConfigured() {
         return configMapper.selectList(
                 new QueryWrapper<MemberPlatformConfig>().eq("enabled", true)
-        ).stream().anyMatch(entity -> integrationReady(mapConfig(entity)));
+        ).stream().anyMatch(entity -> {
+            MemberPlatformAdapter adapter = adapter(
+                    MemberPlatform.parse(entity.getProvider()).orElse(null)
+            );
+            return adapter != null && ready(adapter, mapConfig(entity));
+        });
     }
 
     public ProviderBindingView bind(
@@ -207,25 +205,40 @@ public class MemberPlatformService {
             MemberPlatform provider,
             String proof
     ) throws BusinessException {
-        requireGeneric(provider);
+        MemberPlatformAdapter adapter = requireAdapter(provider);
         ConfigRow config = config(provider);
-        if (config == null || !integrationReady(config)) {
+        if (config == null || !ready(adapter, config)) {
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
                     provider.name() + " integration is not configured");
         }
         String normalizedProof = proof == null ? "" : proof.trim();
-        if (normalizedProof.isBlank() || normalizedProof.length() > 255) {
+        if (normalizedProof.length() < 3 || normalizedProof.length() > 255) {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "A valid order or transaction proof is required");
+                    "A valid order, receipt, or account identifier is required");
         }
         TransactionRow transaction = transactionByProof(provider, normalizedProof);
         if (transaction == null) {
-            syncProvider(provider, config);
+            PlatformTransaction resolved = adapter.resolveProof(
+                    credentials(adapter, config),
+                    normalizedProof
+            );
+            if (resolved != null) {
+                ledgerService.applyWebhook(toEntity(provider, config, resolved));
+                transaction = new TransactionRow(
+                        resolved.externalUserId(),
+                        resolved.externalUserName(),
+                        resolved.status()
+                );
+            }
+        }
+        if (transaction == null && adapter.supportsHistorySync()) {
+            syncProvider(provider);
             transaction = transactionByProof(provider, normalizedProof);
         }
         if (transaction == null) {
             throw new BusinessException(HttpStatus.NOT_FOUND,
-                    "The transaction was not found in the cached " + provider.name() + " history");
+                    "No matching " + provider.name()
+                            + " transaction was found in the cached history");
         }
         if (!completed(transaction.status())) {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
@@ -248,7 +261,7 @@ public class MemberPlatformService {
     }
 
     public void unbind(long userId, MemberPlatform provider) throws BusinessException {
-        requireGeneric(provider);
+        requireAdapter(provider);
         if (bindingMapper.delete(
                 new QueryWrapper<MemberPlatformBinding>()
                         .eq("provider", provider.name())
@@ -259,37 +272,52 @@ public class MemberPlatformService {
         }
     }
 
-    public void ingestWebhook(
+    public int ingestWebhook(
             MemberPlatform provider,
-            String token,
-            JsonNode payload
+            @Nullable String token,
+            @Nullable String rawBody,
+            JsonNode payload,
+            Map<String, String> headers
     ) throws BusinessException {
-        requireGeneric(provider);
+        MemberPlatformAdapter adapter = requireAdapter(provider);
+        if (!adapter.supportsWebhook()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    provider.name() + " does not send webhooks");
+        }
         ConfigRow config = config(provider);
-        if (config == null) {
+        if (config == null || !ready(adapter, config)) {
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
                     provider.name() + " integration is not configured");
         }
-        String effectiveToken = token;
-        if ((effectiveToken == null || effectiveToken.isBlank())
-                && provider == MemberPlatform.KOFI) {
-            effectiveToken = text(payload, "verification_token", "verificationToken");
+        Map<String, String> mergedHeaders = new java.util.HashMap<>(headers);
+        if (token != null && !token.isBlank()) {
+            mergedHeaders.putIfAbsent("x-sparkle-token", token);
         }
-        if (!constantEquals(config.webhookToken(), effectiveToken)) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED,
-                    "Invalid integration token");
+        List<PlatformTransaction> transactions = adapter.parseWebhook(
+                credentials(adapter, config),
+                rawBody,
+                payload,
+                mergedHeaders
+        );
+        int accepted = 0;
+        for (PlatformTransaction transaction : transactions) {
+            ledgerService.applyWebhook(toEntity(provider, config, transaction));
+            accepted++;
         }
-        ingestPayload(provider, config, payload);
+        return accepted;
     }
 
-    private boolean syncProvider(MemberPlatform provider, @Nullable ConfigRow config)
-            throws BusinessException {
-        requireGeneric(provider);
-        ConfigRow resolved = config == null ? config(provider) : config;
-        if (resolved == null || !integrationReady(resolved)
-                || resolved.apiUrl() == null || resolved.apiUrl().isBlank()) {
+    public SyncOutcome syncProvider(MemberPlatform provider) throws BusinessException {
+        MemberPlatformAdapter adapter = requireAdapter(provider);
+        if (!adapter.supportsHistorySync()) {
+            throw new BusinessException(HttpStatus.CONFLICT,
+                    provider.name() + " only delivers real-time webhooks; "
+                            + "there is no history API to synchronize");
+        }
+        ConfigRow config = config(provider);
+        if (config == null || !ready(adapter, config)) {
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
-                    provider.name() + " API URL is not configured");
+                    provider.name() + " API is not configured");
         }
         ReentrantLock lock = syncLocks.computeIfAbsent(
                 provider,
@@ -300,76 +328,45 @@ public class MemberPlatformService {
                     provider.name() + " synchronization is already running");
         }
         try {
-            return synchronizeProviderSnapshot(provider, resolved);
+            return synchronizeProvider(provider, adapter, config);
         } finally {
             lock.unlock();
         }
     }
 
-    private boolean synchronizeProviderSnapshot(
+    private SyncOutcome synchronizeProvider(
             MemberPlatform provider,
+            MemberPlatformAdapter adapter,
             ConfigRow config
     ) throws BusinessException {
         MemberTransactionLedgerService.SyncSession session =
                 ledgerService.begin(provider);
-        boolean paginated = config.apiUrl().contains("{page}");
-        int page = 1;
-        Set<String> seenTransactions = new java.util.HashSet<>();
         try {
-            while (page <= MAX_SYNC_PAGES) {
-                JsonNode root = fetchProviderPage(provider, config, page);
-                ledgerService.recordPage(session);
-                List<JsonNode> records = transactionNodes(provider, root);
-                if (records.isEmpty()) {
-                    break;
-                }
-                int accepted = 0;
-                for (JsonNode node : records) {
-                    String identity = transactionIdentity(node);
-                    if (identity.isBlank()) {
-                        throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                                provider.name()
-                                        + " returned a transaction without an ID");
-                    }
-                    if (!seenTransactions.add(identity)) {
-                        continue;
-                    }
-                    if (!ingestNode(provider, config, node, session)) {
-                        throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                                provider.name()
-                                        + " returned an incomplete transaction");
-                    }
-                    accepted++;
-                }
-                int nextPage = nextPage(root, page);
-                if (!paginated || nextPage <= page) {
-                    break;
-                }
-                if (accepted == 0) {
-                    String reason = provider.name()
-                            + " pagination repeated a page without new transactions";
-                    ledgerService.incomplete(
-                            session,
-                            reason
-                    );
-                    markBindingsFailed(provider, reason);
-                    return false;
-                }
-                page = nextPage;
+            MemberPlatformSnapshot snapshot = adapter.fetchHistory(
+                    credentials(adapter, config)
+            );
+            for (PlatformTransaction transaction : snapshot.transactions()) {
+                ledgerService.apply(session, toEntity(provider, config, transaction));
             }
-            if (page > MAX_SYNC_PAGES) {
-                String reason = provider.name() + " pagination exceeded the "
-                        + MAX_SYNC_PAGES + " page safety limit";
-                ledgerService.incomplete(
-                        session,
-                        reason
-                );
-                markBindingsFailed(provider, reason);
-                return false;
+            if ((config.accountId() == null || config.accountId().isBlank())
+                    && snapshot.discoveredAccountId() != null
+                    && !snapshot.discoveredAccountId().isBlank()) {
+                configMapper.update(null,
+                        new LambdaUpdateWrapper<MemberPlatformConfig>()
+                                .set(MemberPlatformConfig::getAccountId,
+                                        snapshot.discoveredAccountId())
+                                .set(MemberPlatformConfig::getUpdatedAt,
+                                        OffsetDateTime.now())
+                                .eq(MemberPlatformConfig::getProvider, provider.name()));
             }
             ledgerService.complete(session);
             markBindingsSynced(provider);
-            return true;
+            return new SyncOutcome(
+                    provider.name(),
+                    true,
+                    session.recordsSeen(),
+                    null
+            );
         } catch (BusinessException exception) {
             ledgerService.fail(session, exception);
             markBindingsFailed(provider, exception.getMessage());
@@ -379,134 +376,6 @@ public class MemberPlatformService {
             markBindingsFailed(provider, exception.getMessage());
             throw exception;
         }
-    }
-
-    private JsonNode fetchProviderPage(
-            MemberPlatform provider,
-            ConfigRow config,
-            int page
-    ) throws BusinessException {
-        HttpRequest.Builder builder;
-        try {
-            String url = config.apiUrl()
-                    .replace("{accountId}", encode(config.accountId()))
-                    .replace("{page}", Integer.toString(page))
-                    .replace("{perPage}", Integer.toString(PAGE_SIZE));
-            URI uri = URI.create(url);
-            builder = HttpRequest.newBuilder(uri)
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Accept", "application/json")
-                    .header("User-Agent", "SparkleBTN-MemberPlatforms");
-            if (config.accessToken() != null && !config.accessToken().isBlank()) {
-                String credential = config.authScheme() == null
-                        || config.authScheme().isBlank()
-                        ? config.accessToken()
-                        : config.authScheme() + " " + config.accessToken();
-                builder.header(
-                        config.authHeader() == null
-                                || config.authHeader().isBlank()
-                                ? "Authorization"
-                                : config.authHeader(),
-                        credential
-                );
-            }
-            if (config.accountId() != null && !config.accountId().isBlank()) {
-                builder.header("X-Account-Id", config.accountId());
-            }
-            builder.GET();
-        } catch (Exception exception) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    provider.name() + " API URL is invalid");
-        }
-        HttpResponse<String> response;
-        try {
-            response = httpClient.send(
-                    builder.build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
-        } catch (Exception exception) {
-            throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                    "Unable to sync " + provider.name() + ": " + exception.getMessage());
-        }
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                    provider.name() + " API returned HTTP " + response.statusCode());
-        }
-        try {
-            return objectMapper.readTree(response.body());
-        } catch (Exception exception) {
-            throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                    "Invalid " + provider.name() + " API response");
-        }
-    }
-
-    private List<JsonNode> transactionNodes(
-            MemberPlatform provider,
-            JsonNode root
-    ) throws BusinessException {
-        if (root.isArray()) {
-            return iterable(root);
-        }
-        for (String field : TRANSACTION_ARRAY_FIELDS) {
-            if (root.path(field).isArray()) {
-                return iterable(root.path(field));
-            }
-        }
-        if (root.path("data").isArray()) {
-            return iterable(root.path("data"));
-        }
-        for (String container : List.of("data", "result", "response")) {
-            JsonNode nested = root.path(container);
-            for (String field : TRANSACTION_ARRAY_FIELDS) {
-                if (nested.path(field).isArray()) {
-                    return iterable(nested.path(field));
-                }
-            }
-        }
-        JsonNode data = root.path("data");
-        if (data.isObject()) {
-            return List.of(data);
-        }
-        if (root.isObject() && looksLikeTransaction(root)) {
-            return List.of(root);
-        }
-        if (root.isObject() && root.isEmpty()) {
-            return List.of();
-        }
-        throw new BusinessException(HttpStatus.BAD_REQUEST,
-                provider.name() + " response must contain transactions");
-    }
-
-    private int nextPage(JsonNode root, int currentPage) {
-        JsonNode metadata = root.path("pagination");
-        int next = metadata.path("next_page").asInt(
-                root.path("next_page").asInt(
-                        root.path("meta").path("next_page").asInt(0)
-                )
-        );
-        if (next > currentPage) {
-            return next;
-        }
-        JsonNode hasMoreNode = metadata.path("has_more");
-        if (hasMoreNode.isMissingNode()) {
-            hasMoreNode = root.path("has_more");
-        }
-        if (hasMoreNode.isMissingNode()) {
-            hasMoreNode = root.path("meta").path("pagination").path("has_more");
-        }
-        if (hasMoreNode.isBoolean() && !hasMoreNode.booleanValue()) {
-            return 0;
-        }
-        int total = metadata.path("total").asInt(
-                root.path("total").asInt(
-                        root.path("meta").path("total").asInt(0)
-                )
-        );
-        int perPage = metadata.path("per_page").asInt(PAGE_SIZE);
-        if (total > 0 && currentPage * perPage >= total) {
-            return 0;
-        }
-        return currentPage + 1;
     }
 
     @Scheduled(fixedDelay = 21_600_000, initialDelay = 120_000)
@@ -547,14 +416,17 @@ public class MemberPlatformService {
 
     public int syncAll() {
         int syncedCount = 0;
-        for (MemberPlatform provider : GENERIC_PROVIDERS) {
+        for (MemberPlatform provider : MemberPlatform.values()) {
+            MemberPlatformAdapter adapter = adapter(provider);
+            if (adapter == null || !adapter.supportsHistorySync()) {
+                continue;
+            }
             ConfigRow config = config(provider);
-            if (config == null || !integrationReady(config)
-                    || config.apiUrl() == null || config.apiUrl().isBlank()) {
+            if (config == null || !ready(adapter, config)) {
                 continue;
             }
             try {
-                if (syncProvider(provider, config)) {
+                if (syncProvider(provider).success()) {
                     syncedCount++;
                 }
             } catch (Exception exception) {
@@ -570,12 +442,13 @@ public class MemberPlatformService {
             MemberPlatform provider,
             boolean generic
     ) {
+        MemberPlatformAdapter adapter = generic ? adapter(provider) : null;
         ConfigRow config = generic ? config(provider) : null;
         boolean configured = generic
-                ? config != null && integrationReady(config)
+                ? adapter != null && ready(adapter, config)
                 : afdianConfigured();
-        BindingRow binding = binding(userId, provider);
-        if (binding == null) {
+        List<BindingRow> bindings = bindings(userId, provider);
+        if (bindings.isEmpty()) {
             return new ProviderBindingView(
                     configured,
                     false,
@@ -592,40 +465,54 @@ public class MemberPlatformService {
                     exchangeRateService.baseCurrency(),
                     0,
                     0,
+                    0,
                     List.of()
             );
         }
-        List<TransactionView> transactions = transactions(provider, binding.externalUserId());
-        BigDecimal total = transactions.stream()
-                .filter(item -> item.remotePresent() && "DONATION".equals(item.type()))
-                .map(item -> new BigDecimal(item.amountBase()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalCny = transactions.stream()
-                .filter(item -> item.remotePresent() && "DONATION".equals(item.type()))
+        List<String> externalIds = bindings.stream()
+                .map(BindingRow::externalUserId)
+                .distinct()
+                .toList();
+        List<TransactionView> transactions = transactions(provider, externalIds);
+        List<TransactionView> paid = transactions.stream()
+                .filter(item -> item.remotePresent() && completed(item.status()))
+                .toList();
+        BigDecimal totalCny = paid.stream()
                 .map(item -> new BigDecimal(item.amountCny()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalBase = paid.stream()
+                .map(item -> new BigDecimal(item.amountBase()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BindingRow single = bindings.size() == 1 ? bindings.getFirst() : null;
         return new ProviderBindingView(
                 configured,
                 true,
                 provider.name(),
-                binding.externalUserId(),
-                binding.externalUserName(),
-                binding.externalUserAvatar(),
-                binding.proof(),
-                binding.boundAt(),
-                binding.lastSyncedAt(),
-                binding.lastError(),
+                single == null ? null : single.externalUserId(),
+                single == null ? null : single.externalUserName(),
+                single == null ? null : single.externalUserAvatar(),
+                single == null ? null : single.proof(),
+                bindings.stream()
+                        .map(BindingRow::boundAt)
+                        .filter(java.util.Objects::nonNull)
+                        .min(OffsetDateTime::compareTo)
+                        .orElse(null),
+                bindings.stream()
+                        .map(BindingRow::lastSyncedAt)
+                        .filter(java.util.Objects::nonNull)
+                        .max(OffsetDateTime::compareTo)
+                        .orElse(null),
+                bindings.stream()
+                        .map(BindingRow::lastError)
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst()
+                        .orElse(null),
                 totalCny.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
-                total.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+                totalBase.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
                 exchangeRateService.baseCurrency(),
-                transactions.stream()
-                        .filter(item -> item.remotePresent()
-                                && "DONATION".equals(item.type()))
-                        .count(),
-                transactions.stream()
-                        .filter(item -> item.remotePresent()
-                                && "PRODUCT".equals(item.type()))
-                        .count(),
+                paid.stream().filter(item -> "DONATION".equals(item.type())).count(),
+                paid.stream().filter(item -> "PRODUCT".equals(item.type())).count(),
+                bindings.size(),
                 transactions
         );
     }
@@ -636,139 +523,26 @@ public class MemberPlatformService {
                         "Unsupported member platform"));
     }
 
-    private void ingestPayload(
+    private MemberTransaction toEntity(
             MemberPlatform provider,
             ConfigRow config,
-            JsonNode root
+            PlatformTransaction transaction
     ) throws BusinessException {
-        for (JsonNode node : transactionNodes(provider, root)) {
-            ingestNode(provider, config, node, null);
-        }
-    }
-
-    private boolean ingestNode(
-            MemberPlatform provider,
-            ConfigRow config,
-            JsonNode node,
-            @Nullable MemberTransactionLedgerService.SyncSession session
-    ) throws BusinessException {
-        if (provider != MemberPlatform.KOFI) {
-            return upsertCanonical(provider, config, node, session);
-        }
-        JsonNode items = node.path("shop_items");
-        if (!items.isArray() || items.isEmpty()) {
-            return upsertCanonical(provider, config, node, session);
-        }
-        String baseId = transactionIdentity(node);
-        if (baseId.isBlank()) {
+        if (transaction.transactionId() == null
+                || transaction.transactionId().isBlank()
+                || transaction.externalUserId() == null
+                || transaction.externalUserId().isBlank()) {
             throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                    "Ko-fi shop order is missing its transaction ID");
+                    provider.name() + " returned an incomplete transaction");
         }
-        BigDecimal orderAmount = decimal(node, "amount", "total_amount", "totalAmount");
-        String currency = text(node, "currency");
-        boolean accepted = false;
-        for (int index = 0; index < items.size(); index++) {
-            JsonNode item = items.get(index);
-            String sku = text(item,
-                    "direct_link_code", "directLinkCode", "item_id", "itemId", "id");
-            ObjectNode product = node.deepCopy();
-            product.put(
-                    "transactionId",
-                    baseId + ":"
-                            + (sku.isBlank() ? "item" : sku)
-                            + ":" + (index + 1)
-            );
-            product.put("type", "PRODUCT");
-            if (!sku.isBlank()) {
-                product.put("sku", sku);
-            }
-            String name = text(item, "variation_name", "variationName",
-                    "product_name", "productName", "name");
-            if (!name.isBlank()) {
-                product.put("productName", name);
-            }
-            BigDecimal itemAmount = decimal(item,
-                    "item_total", "itemTotal", "amount", "price");
-            if (itemAmount.signum() == 0 && index == 0) {
-                itemAmount = orderAmount;
-            }
-            product.set("amount", DecimalNode.valueOf(itemAmount));
-            if (!currency.isBlank()) {
-                product.put("currency", currency);
-            }
-            accepted |= upsertCanonical(provider, config, product, session);
-        }
-        return accepted;
-    }
-
-    private boolean upsertCanonical(
-            MemberPlatform provider,
-            ConfigRow config,
-            JsonNode node,
-            @Nullable MemberTransactionLedgerService.SyncSession session
-    ) throws BusinessException {
-        String transactionId = text(node,
-                "transactionId", "transaction_id", "orderId", "order_id",
-                "out_trade_no", "kofi_transaction_id", "id");
-        String externalUserId = text(node,
-                "externalUserId", "external_user_id", "userId", "user_id",
-                "patronId", "patron_id", "buyerId", "buyer_id", "email");
-        if (externalUserId.isBlank()) {
-            externalUserId = relationshipId(node, "user", "patron");
-        }
-        if (externalUserId.isBlank() && provider == MemberPlatform.KOFI) {
-            externalUserId = text(node, "from_email", "fromEmail");
-        }
-        if (transactionId.isBlank() || externalUserId.isBlank()) {
-            throw new BusinessException(HttpStatus.BAD_GATEWAY,
-                    provider.name()
-                            + " transaction is missing its transaction or user ID");
-        }
-        String externalUserName = text(node,
-                "externalUserName", "userName", "user_name", "from_name",
-                "fromName", "patronName", "buyerName", "name");
-        String sku = text(node, "sku", "planId", "plan_id", "tierId",
-                "tier_id", "productId", "product_id", "direct_link_code");
-        if (sku.isBlank()) {
-            sku = relationshipId(node, "currently_entitled_tier", "tier");
-        }
-        String productName = text(node, "productName", "product_name",
-                "planTitle", "plan_title", "tierName", "tier_name",
-                "variation_name");
-        String type = text(node, "type", "kind").toUpperCase(Locale.ROOT);
-        if (!"PRODUCT".equals(type) && !"DONATION".equals(type)) {
-            if ((provider == MemberPlatform.PATREON || provider == MemberPlatform.KOFI)
-                    && (type.contains("MEMBER") || type.contains("SUBSCRIPTION")
-                    || type.contains("PLEDGE"))) {
-                type = "DONATION";
-            } else if (type.contains("SHOP") || type.contains("PRODUCT")
-                    || type.contains("ORDER") && !type.contains("DONATION")) {
-                type = "PRODUCT";
-            } else {
-                type = sku.isBlank() ? "DONATION" : "PRODUCT";
-            }
-        }
-        BigDecimal amount = decimal(node,
-                "amount", "total_amount", "totalAmount", "show_amount", "paid");
-        if (amount.signum() == 0) {
-            amount = centsDecimal(node,
-                    "currently_entitled_amount_cents",
-                    "amount_cents",
-                    "total_amount_cents");
-        }
-        String currency = text(node, "currency");
-        if (currency.isBlank()) {
-            currency = config.currency() == null ? "CNY" : config.currency();
-        }
-        currency = exchangeRateService.validateCurrency(currency);
-        BigDecimal amountBase;
-        if (node.path("amountBase").isNumber()) {
-            amountBase = node.path("amountBase").decimalValue();
-        } else if (node.path("amount_base").isNumber()) {
-            amountBase = node.path("amount_base").decimalValue();
-        } else {
-            amountBase = convertWithFallback(amount, currency, config);
-        }
+        BigDecimal amount = transaction.amount() == null
+                ? BigDecimal.ZERO
+                : transaction.amount();
+        String currency = transaction.currency() == null
+                || transaction.currency().isBlank()
+                ? config.currency()
+                : exchangeRateService.validateCurrency(transaction.currency());
+        BigDecimal amountBase = convertWithFallback(amount, currency, config);
         String baseCurrency = exchangeRateService.baseCurrency();
         BigDecimal amountCny;
         if ("CNY".equals(currency)) {
@@ -778,38 +552,31 @@ public class MemberPlatformService {
         } else {
             amountCny = exchangeRateService.convert(amount, "CNY");
         }
-        String status = text(node,
-                "status", "state", "orderStatus", "patron_status",
-                "payment_status");
-        if (status.isBlank()) {
-            status = "COMPLETED";
-        }
-        OffsetDateTime occurredAt = time(node);
+        String status = transaction.status() == null
+                || transaction.status().isBlank()
+                ? "COMPLETED"
+                : transaction.status();
         try {
-            MemberTransaction entity = new MemberTransaction()
+            return new MemberTransaction()
                     .setProvider(provider.name())
-                    .setExternalTransactionId(transactionId)
-                    .setExternalUserId(externalUserId)
-                    .setExternalUserName(blankToNull(externalUserName))
-                    .setTransactionType(type)
-                    .setSku(blankToNull(sku))
-                    .setProductName(blankToNull(productName))
+                    .setExternalTransactionId(transaction.transactionId().trim())
+                    .setExternalUserId(transaction.externalUserId().trim())
+                    .setExternalUserName(blankToNull(transaction.externalUserName()))
+                    .setTransactionType(transaction.type())
+                    .setSku(blankToNull(transaction.sku()))
+                    .setProductName(blankToNull(transaction.productName()))
                     .setAmount(amount)
                     .setCurrency(currency)
                     .setAmountCny(amountCny)
                     .setAmountBase(amountBase)
                     .setBaseCurrency(baseCurrency)
                     .setTransactionStatus(status)
-                    .setOccurredAt(occurredAt)
-                    .setRawData(objectMapper.writeValueAsString(node))
+                    .setOccurredAt(transaction.occurredAt())
+                    .setRawData(transaction.raw() == null
+                            ? null
+                            : objectMapper.writeValueAsString(transaction.raw()))
                     .setSyncedAt(OffsetDateTime.now())
                     .setLicenseConsumed(false);
-            if (session == null) {
-                ledgerService.applyWebhook(entity);
-            } else {
-                ledgerService.apply(session, entity);
-            }
-            return true;
         } catch (Exception exception) {
             throw new BusinessException(HttpStatus.BAD_GATEWAY,
                     "Unable to store " + provider.name() + " transaction: "
@@ -817,51 +584,44 @@ public class MemberPlatformService {
         }
     }
 
-    private String transactionIdentity(JsonNode node) {
-        return text(node,
-                "transactionId", "transaction_id", "orderId", "order_id",
-                "out_trade_no", "kofi_transaction_id", "id");
-    }
-
-    private boolean looksLikeTransaction(JsonNode node) {
-        return !transactionIdentity(node).isBlank()
-                && (!text(node, "externalUserId", "user_id", "email",
-                "from_email", "from_name").isBlank()
-                || !relationshipId(node, "user", "patron").isBlank());
-    }
-
-    private List<JsonNode> iterable(JsonNode array) {
-        List<JsonNode> values = new ArrayList<>(array.size());
-        array.forEach(values::add);
-        return values;
-    }
-
     private TransactionRow transactionByProof(
             MemberPlatform provider,
-            String transactionId
+            String proof
     ) {
+        String normalized = proof.trim();
+        String lower = normalized.toLowerCase(Locale.ROOT);
         MemberTransaction entity = transactionMapper.selectOne(
                 new QueryWrapper<MemberTransaction>()
                         .eq("provider", provider.name())
-                        .eq("external_transaction_id", transactionId)
                         .eq("remote_present", true)
+                        .and(query -> query
+                                .eq("external_transaction_id", normalized)
+                                .or()
+                                .likeRight("external_transaction_id", normalized + ":")
+                                .or()
+                                .eq("external_user_id", lower)
+                                .or()
+                                .eq("external_user_name", normalized))
+                        .orderByDesc("occurred_at")
+                        .last("LIMIT 1")
         );
-        return entity == null ? null : new TransactionRow(
-                entity.getExternalTransactionId(),
+        if (entity == null) {
+            return null;
+        }
+        return new TransactionRow(
                 entity.getExternalUserId(),
                 entity.getExternalUserName(),
                 entity.getTransactionStatus()
         );
     }
 
-    private BindingRow binding(long userId, MemberPlatform provider) {
-        MemberPlatformBinding entity = bindingMapper.selectOne(
+    private List<BindingRow> bindings(long userId, MemberPlatform provider) {
+        return bindingMapper.selectList(
                 new QueryWrapper<MemberPlatformBinding>()
                         .eq("provider", provider.name())
                         .eq("btn_user_id", userId)
-        );
-        return entity == null ? null : new BindingRow(
-                provider,
+                        .orderByAsc("bound_at")
+        ).stream().map(entity -> new BindingRow(
                 entity.getExternalUserId(),
                 entity.getExternalUserName(),
                 entity.getExternalUserAvatar(),
@@ -869,17 +629,20 @@ public class MemberPlatformService {
                 entity.getBoundAt(),
                 entity.getLastSyncedAt(),
                 entity.getLastError()
-        );
+        )).toList();
     }
 
     private List<TransactionView> transactions(
             MemberPlatform provider,
-            String externalUserId
+            List<String> externalUserIds
     ) {
+        if (externalUserIds.isEmpty()) {
+            return List.of();
+        }
         return transactionMapper.selectList(
                 new QueryWrapper<MemberTransaction>()
                         .eq("provider", provider.name())
-                        .eq("external_user_id", externalUserId)
+                        .in("external_user_id", externalUserIds)
                         .orderByDesc("occurred_at")
                         .orderByDesc("external_transaction_id")
         ).stream().map(entity -> new TransactionView(
@@ -905,11 +668,19 @@ public class MemberPlatformService {
     }
 
     private ProviderView providerView(MemberPlatform provider) {
+        MemberPlatformAdapter adapter = adapter(provider);
         MemberPlatformConfig entity = configMapper.selectById(provider.name());
         ConfigRow config = entity == null
-                ? new ConfigRow(provider, false, null, null, null,
-                "Authorization", "Bearer", null,
-                exchangeRateService.baseCurrency(), BigDecimal.ONE)
+                ? new ConfigRow(
+                false,
+                null,
+                null,
+                null,
+                adapter == null
+                        ? exchangeRateService.baseCurrency()
+                        : adapter.defaultCurrency(),
+                BigDecimal.ONE
+        )
                 : mapConfig(entity);
         long bindings = bindingMapper.selectCount(
                 new QueryWrapper<MemberPlatformBinding>()
@@ -926,20 +697,32 @@ public class MemberPlatformService {
                         .last("LIMIT 1")
         );
         OffsetDateTime lastSyncedAt = latest == null ? null : latest.getSyncedAt();
+        MemberPlatformSyncRun run = syncRunMapper.selectOne(
+                new QueryWrapper<MemberPlatformSyncRun>()
+                        .eq("provider", provider.name())
+                        .orderByDesc("started_at")
+                        .last("LIMIT 1")
+        );
         return new ProviderView(
                 provider.name(),
-                config.enabled(),
-                config.apiUrl(),
+                adapter != null,
+                Boolean.TRUE.equals(config.enabled()),
+                adapter != null && adapter.supportsHistorySync(),
+                adapter != null && adapter.supportsWebhook(),
+                adapter == null ? null : adapter.documentationUrl(),
+                adapter == null ? List.of() : adapter.configFields(),
                 config.accountId(),
                 config.accessToken() != null && !config.accessToken().isBlank(),
-                config.authHeader(),
-                config.authScheme(),
                 config.webhookToken() != null && !config.webhookToken().isBlank(),
+                adapter != null && ready(adapter, config),
                 config.currency(),
                 config.exchangeRate().toPlainString(),
                 bindings,
                 transactions,
-                lastSyncedAt
+                lastSyncedAt,
+                run == null ? null : run.getStatus(),
+                run == null ? null : run.getStartedAt(),
+                run == null ? null : run.getErrorMessage()
         );
     }
 
@@ -950,55 +733,78 @@ public class MemberPlatformService {
 
     private ConfigRow mapConfig(MemberPlatformConfig entity) {
         return new ConfigRow(
-                MemberPlatform.parse(entity.getProvider())
-                        .orElse(MemberPlatform.PATREON),
                 Boolean.TRUE.equals(entity.getEnabled()),
-                entity.getApiUrl(),
                 entity.getAccountId(),
                 entity.getAccessToken(),
-                entity.getAuthHeader() == null || entity.getAuthHeader().isBlank()
-                        ? "Authorization"
-                        : entity.getAuthHeader(),
-                entity.getAuthScheme() == null
-                        ? "Bearer"
-                        : entity.getAuthScheme(),
                 entity.getWebhookToken(),
                 entity.getCurrency(),
                 entity.getExchangeRate()
         );
     }
 
-    private boolean afdianConfigured() {
-        return afdianSettingsService.configured();
+    private MemberPlatformCredentials credentials(
+            MemberPlatformAdapter adapter,
+            ConfigRow config
+    ) {
+        return new MemberPlatformCredentials(
+                adapter.provider(),
+                config.accessToken(),
+                config.accountId(),
+                config.webhookToken(),
+                config.currency() == null || config.currency().isBlank()
+                        ? adapter.defaultCurrency()
+                        : config.currency(),
+                config.exchangeRate() == null
+                        ? BigDecimal.ONE
+                        : config.exchangeRate()
+        );
     }
 
-    private void requireGeneric(MemberPlatform provider) throws BusinessException {
-        if (provider == MemberPlatform.AFDIAN) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Afdian uses its dedicated integration");
+    private boolean ready(
+            MemberPlatformAdapter adapter,
+            @Nullable ConfigRow config
+    ) {
+        if (adapter == null || config == null || !config.enabled()) {
+            return false;
         }
+        for (String field : adapter.requiredConfigFields()) {
+            String value = switch (field) {
+                case "accessToken" -> config.accessToken();
+                case "accountId" -> config.accountId();
+                case "webhookToken" -> config.webhookToken();
+                default -> null;
+            };
+            if (value == null || value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    private String validateOptionalUrl(String value) throws BusinessException {
-        String normalized = value == null ? "" : value.trim();
-        if (normalized.isBlank()) {
+    @Nullable
+    private MemberPlatformAdapter adapter(@Nullable MemberPlatform provider) {
+        if (provider == null) {
             return null;
         }
-        URI uri;
-        try {
-            uri = URI.create(normalized.replace("{accountId}", "account"));
-        } catch (IllegalArgumentException exception) {
+        return adapters.stream()
+                .filter(candidate -> candidate.provider() == provider)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private MemberPlatformAdapter requireAdapter(MemberPlatform provider)
+            throws BusinessException {
+        MemberPlatformAdapter adapter = adapter(provider);
+        if (adapter == null) {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Member platform API URL is invalid");
+                    provider.name()
+                            + " does not provide a public sales API; it cannot be integrated");
         }
-        if (uri.getScheme() == null
-                || !("https".equalsIgnoreCase(uri.getScheme())
-                || "http".equalsIgnoreCase(uri.getScheme()))
-                || uri.getHost() == null) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Member platform API URL must be HTTP(S)");
-        }
-        return normalized;
+        return adapter;
+    }
+
+    private boolean afdianConfigured() {
+        return afdianSettingsService.configured();
     }
 
     private boolean completed(String status) {
@@ -1025,124 +831,16 @@ public class MemberPlatformService {
         }
     }
 
-    private BigDecimal decimal(JsonNode node, String... fields) {
-        for (String field : fields) {
-            for (JsonNode candidate : nodes(node)) {
-                JsonNode value = candidate.path(field);
-                if (value.isNumber()) {
-                    return value.decimalValue();
-                }
-                String text = value.asText("");
-                if (!text.isBlank()) {
-                    try {
-                        return new BigDecimal(text);
-                    } catch (NumberFormatException ignored) {
-                        // Try the next alias.
-                    }
-                }
-            }
+    private String validatedText(
+            @Nullable String value,
+            int maxLength,
+            String errorMessage
+    ) throws BusinessException {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.length() > maxLength) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, errorMessage);
         }
-        return BigDecimal.ZERO;
-    }
-
-    private BigDecimal centsDecimal(JsonNode node, String... fields) {
-        BigDecimal cents = decimal(node, fields);
-        return cents.divide(
-                new BigDecimal("100"),
-                2,
-                java.math.RoundingMode.HALF_UP
-        );
-    }
-
-    private String text(JsonNode node, String... fields) {
-        for (String field : fields) {
-            for (JsonNode candidate : nodes(node)) {
-                String value = candidate.path(field).asText("");
-                if (!value.isBlank()) return value.trim();
-            }
-        }
-        return "";
-    }
-
-    private OffsetDateTime time(JsonNode node) {
-        for (String field : List.of(
-                "occurredAt", "occurred_at", "createdAt", "created_at",
-                "create_time", "timestamp", "pledge_relationship_start",
-                "last_charge_date", "signed_up_at", "created"
-        )) {
-            for (JsonNode candidate : nodes(node)) {
-                JsonNode value = candidate.path(field);
-                if (value.isMissingNode() || value.isNull()) continue;
-                if (value.isNumber()) {
-                    long timestamp = value.asLong();
-                    if (timestamp > 10_000_000_000L) {
-                        return OffsetDateTime.ofInstant(
-                                Instant.ofEpochMilli(timestamp),
-                                ZoneOffset.UTC
-                        );
-                    }
-                    return OffsetDateTime.ofInstant(
-                            Instant.ofEpochSecond(timestamp),
-                            ZoneOffset.UTC
-                    );
-                }
-                String text = value.asText("");
-                if (!text.isBlank()) {
-                    try {
-                        return OffsetDateTime.parse(text);
-                    } catch (Exception ignored) {
-                        try {
-                            return OffsetDateTime.ofInstant(
-                                    Instant.parse(text),
-                                    ZoneOffset.UTC
-                            );
-                        } catch (Exception ignoredAgain) {
-                            // Try the next alias.
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private List<JsonNode> nodes(JsonNode node) {
-        List<JsonNode> values = new ArrayList<>(3);
-        values.add(node);
-        if (node.path("attributes").isObject()) {
-            values.add(node.path("attributes"));
-        }
-        if (node.path("data").isObject()) {
-            values.add(node.path("data"));
-        }
-        return values;
-    }
-
-    private String relationshipId(JsonNode node, String... relationships) {
-        for (String relationship : relationships) {
-            JsonNode data = node.path("relationships")
-                    .path(relationship)
-                    .path("data");
-            if (data.isArray() && !data.isEmpty()) {
-                data = data.get(0);
-            }
-            if (data.isObject()) {
-                String id = data.path("id").asText("");
-                if (!id.isBlank()) {
-                    return id;
-                }
-            }
-        }
-        return "";
-    }
-
-    private boolean integrationReady(ConfigRow config) {
-        return config != null
-                && config.enabled()
-                && config.apiUrl() != null
-                && !config.apiUrl().isBlank()
-                && config.accessToken() != null
-                && !config.accessToken().isBlank();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private void markBindingsSynced(MemberPlatform provider) {
@@ -1167,54 +865,14 @@ public class MemberPlatformService {
         );
     }
 
-    private boolean constantEquals(String expected, String provided) {
-        if (expected == null || expected.isBlank()) return false;
-        return java.security.MessageDigest.isEqual(
-                expected.getBytes(StandardCharsets.UTF_8),
-                provided == null
-                        ? new byte[0]
-                        : provided.getBytes(StandardCharsets.UTF_8)
-        );
-    }
-
-    private String encode(String value) {
-        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8)
-                .replace("+", "%20");
-    }
-
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private String validateAuthHeader(String value) throws BusinessException {
-        String normalized = value == null || value.isBlank()
-                ? "Authorization"
-                : value.trim();
-        if (!normalized.matches("[A-Za-z0-9-]{1,128}")) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Credential header name is invalid");
-        }
-        return normalized;
-    }
-
-    private String validateAuthScheme(String value) throws BusinessException {
-        String normalized = value == null ? "Bearer" : value.trim();
-        if (normalized.length() > 64
-                || !normalized.matches("[A-Za-z0-9._-]*")) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "Credential scheme is invalid");
-        }
-        return normalized;
-    }
-
     private record ConfigRow(
-            MemberPlatform provider,
             boolean enabled,
-            String apiUrl,
             String accountId,
             String accessToken,
-            String authHeader,
-            String authScheme,
             String webhookToken,
             String currency,
             BigDecimal exchangeRate
@@ -1222,7 +880,6 @@ public class MemberPlatformService {
     }
 
     private record TransactionRow(
-            String transactionId,
             String externalUserId,
             String externalUserName,
             String status
@@ -1230,7 +887,6 @@ public class MemberPlatformService {
     }
 
     private record BindingRow(
-            MemberPlatform provider,
             String externalUserId,
             String externalUserName,
             String externalUserAvatar,

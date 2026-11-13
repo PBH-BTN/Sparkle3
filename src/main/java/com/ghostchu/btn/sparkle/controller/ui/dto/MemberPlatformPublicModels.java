@@ -44,6 +44,7 @@ public final class MemberPlatformPublicModels {
             String baseCurrency,
             long donationCount,
             long productCount,
+            long bindingCount,
             List<TransactionView> transactions
     ) {
     }
