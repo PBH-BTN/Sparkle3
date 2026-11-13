@@ -358,6 +358,9 @@ export interface NotificationPreferencesResponse {
 }
 
 export interface InboxMessage {
+  outgoing: boolean
+  peerUserId: string | null
+  peerDisplayName: string
   id: number
   senderDisplayName: string
   senderKind: 'USER' | 'SYSTEM' | string

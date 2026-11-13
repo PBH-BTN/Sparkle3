@@ -118,6 +118,8 @@ export const uiApi = {
     request<InboxPage>(
       `/api/ui/messages?page=${page}&size=${size}&unreadOnly=${unreadOnly}`,
     ),
+  messageConversation: (id: number, page = 1) =>
+    request<InboxPage>(`/api/ui/messages/${id}/conversation?page=${page}&size=20`),
   unreadMessageCount: () =>
     request<UnreadMessageCount>('/api/ui/messages/unread-count'),
   markMessageRead: (id: number) =>

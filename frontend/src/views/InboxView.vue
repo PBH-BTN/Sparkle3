@@ -24,6 +24,51 @@ const pageSize = ref(20)
 const unreadOnly = ref(false)
 const selected = ref<InboxMessage | null>(null)
 const detailVisible = ref(false)
+const conversation = ref<InboxMessage[]>([])
+const conversationPage = ref(1)
+const conversationPages = ref(0)
+const conversationLoading = ref(false)
+const reply = ref('')
+const sending = ref(false)
+let conversationRequest = 0
+
+async function loadConversation(older = false) {
+  if (!selected.value) return
+  const requestId = ++conversationRequest
+  const id = selected.value.id
+  const nextPage = older ? conversationPage.value + 1 : 1
+  conversationLoading.value = true
+  try {
+    const result = await uiApi.messageConversation(id, nextPage)
+    if (requestId !== conversationRequest) return
+    const messages = [...result.records].reverse()
+    conversation.value = older ? [...messages, ...conversation.value] : messages
+    conversationPage.value = result.current
+    conversationPages.value = result.pages
+    const unread = result.records.filter((item) => !item.outgoing && !item.read)
+    await Promise.all(unread.map((item) => uiApi.markMessageRead(item.id)))
+    if (requestId === conversationRequest) await load()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.loadFailed')))
+  } finally {
+    if (requestId === conversationRequest) conversationLoading.value = false
+  }
+}
+
+async function sendReply() {
+  const message = selected.value
+  if (!message?.peerUserId || !reply.value.trim() || sending.value) return
+  sending.value = true
+  try {
+    await uiApi.sendMessage(message.peerUserId, message.subject, reply.value.trim())
+    reply.value = ''
+    await loadConversation()
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    sending.value = false
+  }
+}
 
 const totalUnread = ref(0)
 
@@ -50,17 +95,11 @@ async function load() {
 async function open(message: InboxMessage) {
   selected.value = message
   detailVisible.value = true
-  if (!message.read) {
-    try {
-      await uiApi.markMessageRead(message.id)
-      message.read = true
-      message.readAt = new Date().toISOString()
-      totalUnread.value = Math.max(0, totalUnread.value - 1)
-      window.dispatchEvent(new CustomEvent('sparkle:messages-changed'))
-    } catch (error) {
-      Message.error(errorMessage(error, t('common.requestFailed')))
-    }
-  }
+  conversation.value = []
+  conversationPage.value = 1
+  conversationPages.value = 0
+  reply.value = ''
+  await loadConversation()
 }
 
 async function markAllRead() {
@@ -77,7 +116,11 @@ async function markAllRead() {
 async function remove(message: InboxMessage) {
   try {
     await uiApi.deleteMessage(message.id)
-    detailVisible.value = false
+    conversation.value = conversation.value.filter((item) => item.id !== message.id)
+    if (selected.value?.id === message.id) {
+      selected.value = conversation.value[conversation.value.length - 1] ?? null
+      if (!selected.value) detailVisible.value = false
+    }
     Message.success(t('inbox.deleted'))
     await load()
   } catch (error) {
@@ -96,7 +139,7 @@ onMounted(load)
   <div class="inbox-page">
     <PageHeader :title="t('inbox.title')" :description="t('inbox.description')">
       <template #actions>
-        <a-radio-group v-model="unreadOnly" type="button" @change="load">
+        <a-radio-group v-model="unreadOnly" type="button" @change="() => { page = 1; load() }">
           <a-radio :value="false">{{ t('inbox.all') }}</a-radio>
           <a-radio :value="true">{{ t('inbox.unreadOnly') }}</a-radio>
         </a-radio-group>
@@ -110,13 +153,14 @@ onMounted(load)
       </template>
     </PageHeader>
 
-    <a-card class="surface-card inbox-card">
-      <a-spin :loading="loading">
+    <section class="inbox-list">
+      <a-spin :loading="loading" class="inbox-spin">
         <div v-if="records.length" class="message-list">
           <button
             v-for="message in records"
             :key="message.id"
             type="button"
+            :disabled="sending"
             class="message-row"
             :class="{ 'message-row--unread': !message.read }"
             @click="open(message)"
@@ -125,6 +169,7 @@ onMounted(load)
               <IconNotification v-if="message.senderKind === 'SYSTEM'" />
               <IconEmail v-else />
             </span>
+            <span class="message-sender">{{ message.peerDisplayName }}</span>
             <span class="message-main">
               <span class="message-heading">
                 <strong>{{ message.subject }}</strong>
@@ -135,11 +180,9 @@ onMounted(load)
                   {{ t('inbox.system') }}
                 </a-tag>
               </span>
-              <span class="message-preview">{{ message.content }}</span>
-              <span class="message-sender">
-                {{ message.senderDisplayName }} · {{ formatDate(message.createdAt) }}
-              </span>
+              <span class="message-preview"><template v-if="message.outgoing">{{ t('inbox.you') }}: </template>{{ message.content }}</span>
             </span>
+            <time class="message-time" :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
             <span v-if="!message.read" class="unread-dot" />
           </button>
         </div>
@@ -154,34 +197,45 @@ onMounted(load)
         @change="(value) => { page = value; load() }"
         @page-size-change="(value) => { pageSize = value; page = 1; load() }"
       />
-    </a-card>
+    </section>
 
     <a-modal
       v-model:visible="detailVisible"
-      :title="selected?.subject"
+      :title="selected?.peerDisplayName"
       :footer="false"
-      width="760px"
+      :closable="!sending"
+      :mask-closable="!sending"
+      :esc-to-close="!sending"
+      width="min(760px, calc(100vw - 32px))"
     >
       <div v-if="selected" class="message-detail">
-        <div class="detail-meta">
-          <a-tag color="arcoblue">{{ categoryLabel(selected.category) }}</a-tag>
-          <span>{{ selected.senderDisplayName }}</span>
-          <span>{{ formatDate(selected.createdAt) }}</span>
-          <a-tag v-if="selected.emailForced" color="orange">
-            {{ t('inbox.forcedEmail') }}
-          </a-tag>
-        </div>
-        <div class="detail-content">{{ selected.content }}</div>
-        <div class="detail-actions">
-          <a-popconfirm :content="t('inbox.deleteConfirm')" @ok="remove(selected)">
-            <a-button status="danger">
-              <template #icon><IconDelete /></template>
-              {{ t('admin.common.delete') }}
-            </a-button>
-          </a-popconfirm>
-          <a-button type="primary" @click="detailVisible = false">
-            {{ t('common.close') }}
+        <a-spin :loading="conversationLoading" class="conversation-spin">
+          <a-button v-if="conversationPage < conversationPages" :disabled="conversationLoading" @click="loadConversation(true)">
+            {{ t('inbox.older') }}
           </a-button>
+          <div class="conversation-messages">
+            <div v-for="message in conversation" :key="message.id" class="conversation-message" :class="{ 'conversation-message--outgoing': message.outgoing }">
+              <div class="detail-meta">
+                <strong>{{ message.outgoing ? t('inbox.you') : message.senderDisplayName }}</strong>
+                <time :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
+                <a-tag v-if="message.emailForced" size="small" color="orange">{{ t('inbox.forcedEmail') }}</a-tag>
+                <a-popconfirm v-if="!message.outgoing" :content="t('inbox.deleteConfirm')" @ok="remove(message)">
+                  <a-button size="mini" status="danger" :aria-label="t('admin.common.delete')">
+                    <template #icon><IconDelete /></template>
+                  </a-button>
+                </a-popconfirm>
+              </div>
+              <strong class="conversation-subject">{{ message.subject }}</strong>
+              <div class="detail-content">{{ message.content }}</div>
+            </div>
+          </div>
+        </a-spin>
+        <div v-if="selected.peerUserId" class="reply-form">
+          <a-textarea v-model="reply" :placeholder="t('inbox.replyPlaceholder')" :max-length="20000" :auto-size="{ minRows: 3, maxRows: 8 }" :disabled="sending" />
+          <a-button type="primary" :loading="sending" :disabled="!reply.trim() || conversationLoading" @click="sendReply">{{ t('inbox.reply') }}</a-button>
+        </div>
+        <div class="detail-actions">
+          <a-button @click="detailVisible = false">{{ t('common.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -190,22 +244,32 @@ onMounted(load)
 
 <style scoped>
 .inbox-page {
-  width: min(1100px, 100%);
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
-
-.message-list {
-  display: flex;
-  flex-direction: column;
+.inbox-list {
+  width: 100%;
+  min-width: 0;
+  border-top: 1px solid var(--color-border-2);
 }
-
+.inbox-spin, .conversation-spin {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+}
+.message-list {
+  width: 100%;
+  min-width: 0;
+  background: var(--color-bg-2);
+}
 .message-row {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 20px minmax(80px, 140px) minmax(0, 1fr) auto 8px;
+  align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 17px 12px;
+  padding: 12px 16px;
   color: inherit;
   text-align: left;
   background: transparent;
@@ -213,77 +277,81 @@ onMounted(load)
   border-bottom: 1px solid var(--color-border-2);
   cursor: pointer;
 }
-
-.message-row:last-child {
-  border-bottom: 0;
-}
-
-.message-row:hover,
-.message-row--unread {
+.message-row:hover, .message-row--unread {
   background: var(--color-fill-1);
 }
-
+.message-row:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: -2px;
+}
 .message-icon {
   display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
   color: rgb(var(--primary-6));
   font-size: 18px;
-  background: rgb(var(--primary-1));
-  border-radius: 10px;
 }
-
 .message-main {
   display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
+  align-items: center;
   min-width: 0;
-  gap: 5px;
+  gap: 12px;
 }
-
 .message-heading {
   display: flex;
-  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 65%;
   align-items: center;
   gap: 8px;
 }
-
+.message-heading :deep(.arco-tag) {
+  flex-shrink: 0;
+}
 .message-heading strong {
+  overflow: hidden;
   color: var(--color-text-1);
   font-size: 14px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
+.message-row--unread strong, .message-row--unread .message-sender {
+  font-weight: 600;
+}
 .message-preview {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  color: var(--color-text-2);
+  color: var(--color-text-3);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .message-sender {
-  color: var(--color-text-3);
-  font-size: 11px;
+  overflow: hidden;
+  color: var(--color-text-2);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
+.message-time {
+  color: var(--color-text-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .unread-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  margin-top: 8px;
+  grid-column: 5;
+  width: 6px;
+  height: 6px;
   background: rgb(var(--primary-6));
   border-radius: 50%;
 }
-
+.inbox-list :deep(.table-pagination) {
+  padding: 16px 0;
+}
 .message-detail {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-
 .detail-meta {
   display: flex;
   flex-wrap: wrap;
@@ -292,20 +360,82 @@ onMounted(load)
   color: var(--color-text-3);
   font-size: 12px;
 }
-
 .detail-content {
-  min-height: 180px;
-  padding: 18px;
+  padding: 12px 0;
   line-height: 1.8;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: var(--color-fill-1);
-  border-radius: 8px;
 }
-
 .detail-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.conversation-messages {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+.conversation-message {
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border-2);
+  border-left: 3px solid transparent;
+}
+.conversation-message--outgoing {
+  background: var(--color-fill-1);
+  border-left-color: rgb(var(--primary-6));
+}
+.conversation-subject {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.reply-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+@media (max-width: 980px) {
+  .message-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .message-heading {
+    max-width: 100%;
+  }
+}
+@media (max-width: 720px) {
+  .message-row {
+    grid-template-columns: 18px minmax(0, 1fr) auto 8px;
+    gap: 8px;
+    padding: 12px;
+  }
+  .message-icon {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .message-sender {
+    grid-column: 2;
+  }
+  .message-time {
+    grid-column: 3;
+    font-size: 11px;
+  }
+  .message-main {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .unread-dot {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .message-heading {
+    flex-wrap: wrap;
+  }
+  .message-heading strong {
+    flex: 1 1 100%;
+  }
 }
 </style>
