@@ -152,7 +152,7 @@ onMounted(async () => {
           </a-alert>
         </a-card>
 
-        <LifetimeTrafficCard :traffic="profile.lifetimeTraffic" class="profile-traffic" />
+        <LifetimeTrafficCard :user-id="profile.user.id" :traffic="profile.lifetimeTraffic" class="profile-traffic" />
 
         <a-card class="surface-card details-card">
           <a-descriptions :column="1" layout="horizontal" bordered>

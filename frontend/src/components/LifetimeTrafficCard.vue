@@ -1,23 +1,42 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { uiApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import type { LifetimeTraffic } from '@/api/types'
 import { useFormatters } from '@/utils/format'
 
-const props = defineProps<{ traffic: LifetimeTraffic | null; hidden?: boolean }>()
+const props = defineProps<{ userId: string; traffic: LifetimeTraffic | null; hidden?: boolean }>()
+const career = ref<Awaited<ReturnType<typeof uiApi.career>>>(null)
+const failed = ref(false)
+watch(() => props.userId, async (uid) => {
+  career.value = null
+  failed.value = false
+  try { career.value = await uiApi.career(uid) } catch { failed.value = true }
+}, { immediate: true })
+const counters = ['days', 'ban', 'feature', 'swarm', 'banRecent', 'featureRecent', 'swarmRecent', 'seeding', 'downloading', 'observation']
 const { t } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const metrics = [
-  { field: 'sentTrafficSelfReport', label: 'ranking.sentSelf' },
-  { field: 'receivedTrafficSelfReport', label: 'ranking.receivedSelf' },
-  { field: 'sentTrafficOtherAck', label: 'ranking.sentAck' },
-  { field: 'receivedTrafficOtherAck', label: 'ranking.receivedAck' },
+  { field: 'sentTrafficSelfReport', label: 'career.upload' },
+  { field: 'receivedTrafficSelfReport', label: 'career.download' },
+  { field: 'sentTrafficOtherAck', label: 'career.uploadAck' },
+  { field: 'receivedTrafficOtherAck', label: 'career.downloadAck' },
 ] as const
 const empty = computed(() => props.traffic && metrics.every(({ field }) => props.traffic?.[field] === '0'))
 </script>
 
 <template>
   <a-card class="surface-card lifetime-traffic-card" :title="t('lifetimeTraffic.title')">
+    <p class="traffic-note">{{ t('career.disclaimer') }}</p>
+    <p class="traffic-note">{{ t('career.method') }}</p>
+    <p v-if="failed" class="traffic-note">{{ t('lifetimeTraffic.unavailable') }}</p>
+    <dl v-if="career" class="traffic-metrics">
+      <div v-for="key in counters" :key="key" class="traffic-metric">
+        <dt>{{ t('career.' + key) }}</dt>
+        <dd>{{ key === 'seeding' || key === 'downloading' ? (Number(career.metrics[key] || '0') / 3600).toFixed(2) + ' h' : BigInt(career.metrics[key] || '0').toLocaleString() }}</dd>
+      </div>
+    </dl>
+    <p v-if="career?.lastObservedAt" class="traffic-note">{{ t('career.latest', { time: formatDate(career.lastObservedAt), name: career.observerName || t('common.anonymous') }) }}</p>
     <template v-if="traffic">
       <dl class="traffic-metrics">
         <div v-for="metric in metrics" :key="metric.field" class="traffic-metric">

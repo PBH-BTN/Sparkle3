@@ -175,7 +175,7 @@ onMounted(load)
         </a-card>
 
         <LifetimeTrafficCard
-          :traffic="profile.lifetimeTraffic"
+          :user-id="profile.id" :traffic="profile.lifetimeTraffic"
           :hidden="!profile.self && profile.privacy.lifetimeTrafficVisibility === 'HIDDEN'"
         />
 

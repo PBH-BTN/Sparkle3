@@ -82,6 +82,7 @@ export const uiApi = {
       `/api/ui/statistics/bittorrent-traffic?days=${days}`,
     ),
   rulePreview: () => request<RulePreviewResponse>('/api/ui/rules/preview'),
+  career: (uid: string) => request<{ metrics: Record<string, string>; lastObservedAt: string | null; observerName: string | null } | null>(`/api/ui/user/career/${uid}`),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   pointsOverview: () => request<PointsOverview>('/api/ui/points/overview'),
   pointsLogs: (page: number, size: number) =>
