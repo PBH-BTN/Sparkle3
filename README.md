@@ -74,7 +74,8 @@ pnpm --dir frontend build
 - 存储与策略：查看普通表与 TimescaleDB hypertable 占用，显示压缩/列存前后大小和 chunk 状态，管理自动压缩、列存和自动淘汰策略。
 - `ban_history` 维护：按 cutoff 预览并删除完整旧 chunks；删除需要输入确认文本，避免误操作。
 - 版本提醒：基于客户端产品名、User-Agent 和 NPM 语义化版本范围配置邮件通知，支持启停、编辑、匹配测试、真实测试邮件和发送记录。
-- 会员平台与许可证：配置爱发电、Patreon、Ko-fi、面包多的官方接入凭据，查看同步运行记录、远端缺失对账和交易账本，并维护 PBHLicense 签发规则。
+- 会员平台与许可证：在“捐赠支持”页统一配置爱发电、Patreon、Ko-fi、面包多的官方接入凭据，
+  查看同步运行记录、远端缺失对账和交易账本，并维护所有平台共用的 PBHLicense 签发规则。
 
 主机指标每分钟采样一次并保存到 Redis key `sparkle:admin:metrics:host:history`，保留 8 天。
 后台运行设置保存在 PostgreSQL 表 `app_config_entries`，并保留 `application.yaml` 中的值作为默认值。
@@ -99,15 +100,17 @@ chunk 删除历史数据，因此手动 cutoff 的实际边界可能早于所选
 “命中规则的 IP”改为每条有效命中直接计奖，仍受每日上限约束，不再按 IP 去重；
 `point_claims` 继续用于活跃应用每日领取。
 
-## 会员平台与 PBHLicense
+## 捐赠支持与 PBHLicense
 
-会员平台统一写入 `member_transactions` 账本，用户通过 `member_platform_bindings` 关联账号。
+爱发电、Patreon、Ko-fi、面包多都是“捐赠支持”的组成部分，统一写入 `member_transactions`
+账本，用户通过 `member_platform_bindings` 关联账号。用户设置中只有一个“捐赠支持与许可证”
+入口，后台也只有一个“捐赠支持”页，不再单独展示爱发电。
 许可证槽位由 `PbhLicenseService` 按同一套规则计算：商品交易按订单产生槽位，捐赠/订阅按
-结算货币累计，每达到配置金额产生一个槽位。
+结算货币累计，每达到配置金额产生一个槽位；签发规则由所有平台共用。
 
 各平台接入方式：
 
-- **爱发电**：在后台“爱发电与许可证”页面填写用户 ID 和 Access Key。订单通过
+- **爱发电**：在后台“捐赠支持”页填写用户 ID 和 Access Key。订单通过
   `product_type` 自动区分商品与赞助方案，不需要再手工维护 Plan ID 列表；商品订单直接产生
   许可证槽位。
 - **Patreon**：填写 Patreon 开发者门户中的 Creator Access Token（需要
