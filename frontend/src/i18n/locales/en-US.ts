@@ -402,8 +402,8 @@ export default {
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',
-      trafficPeerIds: 'Top 50 PeerID traffic',
-      trafficClients: 'Top 50 client name traffic',
+      trafficPeerIds: 'Top 100 PeerID traffic',
+      trafficClients: 'Top 100 client name traffic',
       trafficToPeer: 'BTN users → Peer',
       trafficFromPeer: 'Peer → BTN users',
       trafficRankingsNote: 'Combined ban and swarm data, ranked by total traffic in both directions. Updated every 12 hours.',
@@ -1254,7 +1254,7 @@ export default {
         },
         'bittorrent-traffic-rankings': {
           name: 'Peer traffic rankings',
-          description: 'Refresh Top 50 PeerID and client traffic for 1, 3 and 7 days every 12 hours.',
+          description: 'Refresh Top 100 PeerID and client traffic for 1, 3 and 7 days every 12 hours.',
         },
         'bittorrent-traffic': {
           name: 'BitTorrent traffic statistics',
