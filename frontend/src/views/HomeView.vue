@@ -280,6 +280,13 @@ async function loadHomeStats() {
   loading.value = true
   try {
     stats.value = await uiApi.home()
+    if (stats.value.bittorrentTrafficEnabled) {
+      void loadTrafficStats()
+    } else {
+      trafficRequestId++
+      trafficStats.value = null
+      trafficLoading.value = false
+    }
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
@@ -307,6 +314,7 @@ async function loadNetworkStats() {
 }
 
 async function loadTrafficStats() {
+  if (stats.value?.bittorrentTrafficEnabled !== true) return
   const requestId = ++trafficRequestId
   trafficLoading.value = true
   try {
@@ -341,7 +349,6 @@ watch(trafficDays, loadTrafficStats)
 
 onMounted(() => {
   loadHomeStats()
-  loadTrafficStats()
   loadNetworkStats()
   loadCompanionStats()
 })
@@ -436,7 +443,7 @@ onMounted(() => {
       </a-spin>
     </section>
 
-    <section class="stats-section">
+    <section v-if="stats?.bittorrentTrafficEnabled" class="stats-section">
       <div class="section-heading">
         <div>
           <h2>{{ t('home.statistics.trafficTitle') }}</h2>

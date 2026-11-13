@@ -98,6 +98,7 @@ export interface HomeStats {
   banHistory: HomeStatWindows
   userApps: HomeStatWindows
   swarmTracker: HomeStatWindows
+  bittorrentTrafficEnabled: boolean
 }
 
 export interface ChartDatum {

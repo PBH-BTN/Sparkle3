@@ -1167,11 +1167,12 @@ export default {
       refreshAll: '刷新全部',
       hotReloadTitle: '配置即时生效',
       hotReloadText:
-        '启用状态和刷新间隔保存后立即生效，后台调度器每 30 秒检查一次到期任务。手动刷新不受自动刷新开关限制。',
+        '启用状态和刷新间隔保存后立即生效，后台调度器每 30 秒检查一次到期任务。BitTorrent 流量模块关闭后停止更新并在前台隐藏；其他模块仍可手动刷新。',
       tasks: '刷新任务',
       runningCount: '正在刷新 {count} 项',
       allIdle: '当前空闲',
       enabled: '自动刷新',
+      updateAndDisplay: '更新与首页显示',
       interval: '刷新间隔',
       minutes: '分钟',
       running: '刷新中',
@@ -1213,7 +1214,7 @@ export default {
         'bittorrent-traffic': {
           name: 'BitTorrent 流量统计',
           description:
-            '按连接去重刷新封禁流量、种群流量小时快照与 Top 30 GeoIP 城市。',
+            '按连接去重刷新封禁流量、种群流量小时快照与 Top 30 GeoIP 城市；关闭后停止数据更新并在首页隐藏。',
         },
       },
     },

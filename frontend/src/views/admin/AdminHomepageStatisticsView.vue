@@ -30,6 +30,7 @@ const runningCount = computed(
   () => data.value?.modules.filter((module) => module.running).length ?? 0,
 )
 const anyRunning = computed(() => runningCount.value > 0)
+const anyEnabled = computed(() => configs.value.some((module) => module.enabled))
 
 function moduleLabel(module: string, field: 'name' | 'description') {
   return t(`admin.homepageStatistics.modules.${module}.${field}`)
@@ -144,7 +145,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
           <template #icon><IconSave /></template>
           {{ t('admin.common.save') }}
         </a-button>
-        <a-button :loading="refreshingAll" @click="refresh()">
+        <a-button :loading="refreshingAll" :disabled="!anyEnabled" @click="refresh()">
           <template #icon><IconRefresh /></template>
           {{ t('admin.homepageStatistics.refreshAll') }}
         </a-button>
@@ -188,7 +189,13 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 
             <div class="task-settings">
               <label>
-                <span>{{ t('admin.homepageStatistics.enabled') }}</span>
+                <span>
+                  {{
+                    config.module === 'bittorrent-traffic'
+                      ? t('admin.homepageStatistics.updateAndDisplay')
+                      : t('admin.homepageStatistics.enabled')
+                  }}
+                </span>
                 <a-switch v-model="config.enabled" />
               </label>
               <label>
@@ -252,7 +259,10 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
               <a-button
                 type="outline"
                 :loading="refreshingModule === config.module"
-                :disabled="moduleStatus(config.module)?.running"
+                :disabled="
+                  moduleStatus(config.module)?.running ||
+                  (config.module === 'bittorrent-traffic' && !config.enabled)
+                "
                 @click="refresh(config.module)"
               >
                 <template #icon><IconRefresh /></template>

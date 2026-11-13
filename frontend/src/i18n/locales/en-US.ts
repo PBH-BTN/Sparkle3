@@ -1195,11 +1195,12 @@ export default {
       refreshAll: 'Refresh all',
       hotReloadTitle: 'Configuration applies immediately',
       hotReloadText:
-        'Enabled states and intervals apply immediately. The scheduler checks due jobs every 30 seconds. Manual refreshes work even when automatic refresh is disabled.',
+        'Enabled states and intervals apply immediately. The scheduler checks due jobs every 30 seconds. Disabling BitTorrent traffic stops updates and hides the section from the homepage; other modules can still be refreshed manually.',
       tasks: 'Refresh jobs',
       runningCount: 'Refreshing {count} jobs',
       allIdle: 'All idle',
       enabled: 'Scheduled refresh',
+      updateAndDisplay: 'Updates & homepage display',
       interval: 'Refresh interval',
       minutes: 'min',
       running: 'Refreshing',
@@ -1241,7 +1242,7 @@ export default {
         'bittorrent-traffic': {
           name: 'BitTorrent traffic statistics',
           description:
-            'Refresh connection-deduplicated ban traffic, hourly swarm snapshots, and Top 30 GeoIP cities.',
+            'Refresh connection-deduplicated ban traffic, hourly swarm snapshots, and Top 30 GeoIP cities. When disabled, data updates stop and the section is hidden from the homepage.',
         },
       },
     },
