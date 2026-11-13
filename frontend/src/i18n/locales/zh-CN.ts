@@ -229,6 +229,7 @@ export default {
     generated: '许可证已生成。',
     generateFailed: '许可证生成失败。',
     licenseCopied: '许可证已复制。',
+    revealLicense: '点击显示许可证',
     copyFailed: '无法自动复制许可证，请手动选择文本。',
     expiresAt: '到期：{time}',
     types: {

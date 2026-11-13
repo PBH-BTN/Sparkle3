@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Message, Modal } from '@arco-design/web-vue'
 import {
   IconCopy,
+  IconEye,
   IconLink,
   IconRefresh,
   IconSafe,
@@ -23,6 +24,7 @@ const loading = ref(true)
 const providers = ref<MemberProviderBinding[]>([])
 const licenses = ref<PbhLicenseAvailability | null>(null)
 const proofs = reactive<Record<string, string>>({})
+const revealedLicenses = reactive<Record<string, boolean>>({})
 const busyProvider = ref('')
 const generating = ref(false)
 
@@ -115,6 +117,14 @@ function generateLicense() {
       }
     },
   })
+}
+
+function isLicenseRevealed(license: PbhLicense) {
+  return revealedLicenses[license.licenseId] === true
+}
+
+function revealLicense(license: PbhLicense) {
+  revealedLicenses[license.licenseId] = true
 }
 
 async function copy(license: PbhLicense) {
@@ -215,7 +225,21 @@ onMounted(load)
               <span>{{ formatDate(license.issuedAt) }}</span>
               <span>{{ t('memberships.expiresAt', { time: formatDate(license.expireAt) }) }}</span>
             </div>
-            <code>{{ license.licenseKey }}</code>
+            <div
+              class="license-key"
+              :class="{ 'is-masked': !isLicenseRevealed(license) }"
+            >
+              <code>{{ license.licenseKey }}</code>
+              <button
+                v-if="!isLicenseRevealed(license)"
+                type="button"
+                class="license-reveal"
+                @click="revealLicense(license)"
+              >
+                <IconEye />
+                {{ t('memberships.revealLicense') }}
+              </button>
+            </div>
             <a-button size="small" @click="copy(license)">
               <template #icon><IconCopy /></template>
               {{ t('common.copy') }}
@@ -446,10 +470,56 @@ onMounted(load)
   font-size: 11px;
 }
 
-.license-item code {
+.license-key {
+  position: relative;
   grid-column: 1 / -1;
+  border-radius: 6px;
+}
+
+.license-key code {
+  display: block;
   overflow-wrap: anywhere;
   font-size: 11px;
+  line-height: 1.55;
+  transition: filter 0.15s ease;
+}
+
+.license-key.is-masked code {
+  filter: blur(7px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.license-reveal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  color: var(--color-text-2);
+  font: inherit;
+  font-size: 12px;
+  background: var(--color-fill-2);
+  background: color-mix(in srgb, var(--color-fill-2) 62%, transparent);
+  border: 1px dashed var(--color-border-2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.license-reveal:hover {
+  border-color: var(--color-border-3);
+  background: var(--color-fill-2);
+  background: color-mix(in srgb, var(--color-fill-2) 78%, transparent);
+}
+
+.license-reveal:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
 }
 
 .provider-tabs :deep(.arco-tabs-content) {

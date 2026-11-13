@@ -233,6 +233,7 @@ export default {
     generated: 'License generated.',
     generateFailed: 'Unable to generate the license.',
     licenseCopied: 'License copied.',
+    revealLicense: 'Click to reveal license',
     copyFailed: 'Unable to copy automatically. Select the license text manually.',
     expiresAt: 'Expires {time}',
     types: {
