@@ -93,6 +93,11 @@ chunk 删除历史数据，因此手动 cutoff 的实际边界可能早于所选
 `sparkle:admin:version-alerts:rules`，发送记录保存在
 `sparkle:admin:version-alerts:deliveries`。
 
+积分不再发放“一次性积分”和“新 IP 地址”奖励。升级到 Flyway `V58` 会删除这两类积分来源的
+配置和历史分类计数，并移除 `point_known_ips`、`point_daily_ips` 及对应去重函数。
+“命中规则的 IP”改为每条有效命中直接计奖，仍受每日上限约束，不再按 IP 去重；
+`point_claims` 继续用于活跃应用每日领取。
+
 ## Flarum 2 集成
 
 仓库内的 [`flarum/extensions/sparkle-btn`](flarum/extensions/sparkle-btn/README.md)
