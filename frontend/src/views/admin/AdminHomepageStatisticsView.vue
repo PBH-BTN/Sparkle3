@@ -256,8 +256,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
                 type="outline"
                 :loading="refreshingModule === config.module"
                 :disabled="
-                  moduleStatus(config.module)?.running ||
-                  (config.module === 'bittorrent-traffic' && !config.enabled)
+                  moduleStatus(config.module)?.running
                 "
                 @click="refresh(config.module)"
               >

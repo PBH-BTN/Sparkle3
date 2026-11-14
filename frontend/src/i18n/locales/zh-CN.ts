@@ -406,28 +406,6 @@ export default {
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
-      trafficPeerIds: 'Top 100 PeerID 流量',
-      trafficClients: 'Top 100 客户端名称流量',
-      trafficToPeer: 'BTN 用户 → Peer',
-      trafficFromPeer: 'Peer → BTN 用户',
-      trafficRankingsNote: '合并封禁记录与种群检视，按双向总流量排序，每 12 小时更新。',
-      trafficTitle: 'BitTorrent 流量承载',
-      trafficDescription: 'BTN 网络监视的流量承载情况。',
-      trafficGeoUnknownNote:
-        'GeoIP 未知的流量仍计入总流量，但不会参与城市排行和城市饼图。',
-      last3Days: '3 天',
-      totalTransfer: '总传输流量',
-      totalTransferHint: '上传流量与下载流量的累计总和',
-      totalDownload: '总下载流量',
-      totalDownloadHint: 'from_peer_traffic：作为 Leecher 从 Peer 下载的流量',
-      totalUpload: '总上传流量',
-      totalUploadHint:
-        'to_peer_traffic：作为 Seeder 上传，或 Leecher 下载过程中上传的流量',
-      topUploadCities: 'Top 30 上传流量 GeoIP 城市（BTN用户 → Peer）',
-      topDownloadCities: 'Top 30 下载流量 GeoIP 城市（Peer → BTN用户）',
-      top30: 'TOP 30',
-      topFifteenPlusOther: 'TOP 15 + 其他',
-      viewTop30: '查看完整 Top 30 排行',
       networkTitle: '网络统计数据',
       networkDescription: '查看 Peer ID、客户端、GeoIP 城市和地址栈的近期分布。',
       range: '统计区间',
@@ -1163,10 +1141,6 @@ export default {
           description:
             '定期重新审核待审核和审核失败的 IP 评论；已有进行中审核任务的评论会被跳过。',
         },
-        'bittorrent-traffic-rankings': {
-          name: 'Peer 流量排行',
-          description: '每 12 小时刷新最近 1、3、7 天的 PeerID 和客户端流量前 100 名。',
-        },
         'ai-moderation-worker': {
           name: 'AI 审核队列处理',
           description: '分批处理等待审核的内容。',
@@ -1324,7 +1298,7 @@ export default {
       refreshAll: '刷新全部',
       hotReloadTitle: '配置即时生效',
       hotReloadText:
-        '开关和刷新间隔保存后立即生效。关闭模块后停止自动刷新，并在重新加载首页时隐藏对应统计；BitTorrent 流量模块同时停止手动更新，其他模块仍可手动刷新。',
+        '开关和刷新间隔保存后立即生效。关闭模块后停止自动刷新，并在重新加载首页时隐藏对应统计；仍可手动刷新。',
       tasks: '刷新任务',
       runningCount: '正在刷新 {count} 项',
       allIdle: '当前空闲',
@@ -1367,11 +1341,6 @@ export default {
         'companion-charts': {
           name: '同伴统计图表',
           description: '刷新 BTN 客户端版本、地址栈和 GeoIP 分布。',
-        },
-        'bittorrent-traffic': {
-          name: 'BitTorrent 流量统计',
-          description:
-            '按连接去重刷新封禁流量、种群流量小时快照与 Top 30 GeoIP 城市；关闭后停止数据更新并在首页隐藏。',
         },
       },
     },

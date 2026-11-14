@@ -420,28 +420,6 @@ export default {
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',
-      trafficPeerIds: 'Top 100 PeerID traffic',
-      trafficClients: 'Top 100 client name traffic',
-      trafficToPeer: 'BTN users → Peer',
-      trafficFromPeer: 'Peer → BTN users',
-      trafficRankingsNote: 'Combined ban and swarm data, ranked by total traffic in both directions. Updated every 12 hours.',
-      trafficTitle: 'BitTorrent traffic carried',
-      trafficDescription: 'Traffic carried through the BTN monitoring network.',
-      trafficGeoUnknownNote:
-        'Traffic with unknown GeoIP still contributes to totals but is excluded from city rankings and city charts.',
-      last3Days: '3 days',
-      totalTransfer: 'Total transferred',
-      totalTransferHint: 'Cumulative upload and download traffic',
-      totalDownload: 'Total downloaded',
-      totalDownloadHint: 'from_peer_traffic: downloaded from peers as a leecher',
-      totalUpload: 'Total uploaded',
-      totalUploadHint:
-        'to_peer_traffic: uploaded as a seeder or while downloading as a leecher',
-      topUploadCities: 'Top 30 upload GeoIP cities (BTN user → peer)',
-      topDownloadCities: 'Top 30 download GeoIP cities (peer → BTN user)',
-      top30: 'TOP 30',
-      topFifteenPlusOther: 'TOP 15 + OTHER',
-      viewTop30: 'View the complete Top 30 ranking',
       networkTitle: 'Network statistics',
       networkDescription:
         'Inspect recent Peer ID, client, GeoIP city, and address-stack distributions.',
@@ -1185,10 +1163,6 @@ export default {
           description:
             'Periodically re-reviews pending and failed IP comments. Comments that already have an active review job are skipped.',
         },
-        'bittorrent-traffic-rankings': {
-          name: 'Peer traffic rankings',
-          description: 'Refresh Top 100 PeerID and client traffic for 1, 3 and 7 days every 12 hours.',
-        },
         'ai-moderation-worker': {
           name: 'AI moderation worker',
           description: 'Processes pending moderation jobs in batches.',
@@ -1349,7 +1323,7 @@ export default {
       refreshAll: 'Refresh all',
       hotReloadTitle: 'Configuration applies immediately',
       hotReloadText:
-        'Switches and intervals apply immediately after saving. Disabling a module stops scheduled refreshes and hides its statistics when the homepage is reloaded. BitTorrent traffic also stops manual updates; other modules can still be refreshed manually.',
+        'Switches and intervals apply immediately after saving. Disabling a module stops scheduled refreshes and hides its statistics when the homepage is reloaded. Manual refresh remains available.',
       tasks: 'Refresh jobs',
       runningCount: 'Refreshing {count} jobs',
       allIdle: 'All idle',
@@ -1392,11 +1366,6 @@ export default {
         'companion-charts': {
           name: 'Companion statistics charts',
           description: 'Refresh BTN client versions, address stacks, and GeoIP distribution.',
-        },
-        'bittorrent-traffic': {
-          name: 'BitTorrent traffic statistics',
-          description:
-            'Refresh connection-deduplicated ban traffic, hourly swarm snapshots, and Top 30 GeoIP cities. When disabled, data updates stop and the section is hidden from the homepage.',
         },
       },
     },

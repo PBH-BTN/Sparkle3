@@ -101,7 +101,6 @@ export interface HomeStats {
   banHistory: HomeStatWindows
   userApps: HomeStatWindows
   swarmTracker: HomeStatWindows
-  bittorrentTrafficEnabled: boolean
 }
 
 export interface ChartDatum {
@@ -141,30 +140,6 @@ export interface HomeCompanionStatisticsResponse {
   companionIpVersions: DistributionChart
   companionGeoIp: DistributionChart
   generatedAt: string
-}
-
-export interface TrafficTotals {
-  uploadBytes: string
-  downloadBytes: string
-  transferBytes: string
-}
-
-export interface TrafficCityDatum {
-  name: string
-  bytes: string
-}
-
-export interface TrafficDistribution {
-  data: TrafficCityDatum[]
-  totalBytes: string
-}
-
-export interface HomeBittorrentTrafficResponse {
-  days: number
-  totals: TrafficTotals
-  topUploadCities: TrafficDistribution
-  topDownloadCities: TrafficDistribution
-  generatedAt: string | null
 }
 
 export type RulePreviewType =
@@ -913,18 +888,6 @@ export interface SubmissionRecord {
   torrentId: string | null
   uploaded: string | null
   downloaded: string | null
-}
-
-export interface TrafficRankingDatum {
-  name: string
-  uploadBytes: string
-  downloadBytes: string
-}
-export interface TrafficRankingsResponse {
-  days: number
-  peerIds: TrafficRankingDatum[]
-  clientNames: TrafficRankingDatum[]
-  generatedAt: string | null
 }
 
 export interface MailUnsubscribeOption {

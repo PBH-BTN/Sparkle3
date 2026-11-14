@@ -87,6 +87,5 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     TablePager: typeof import('./components/TablePager.vue')['default']
     ThemeSwitcher: typeof import('./components/ThemeSwitcher.vue')['default']
-    TrafficRankings: typeof import('./components/TrafficRankings.vue')['default']
   }
 }

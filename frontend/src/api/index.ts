@@ -17,7 +17,6 @@ import type {
   GithubCommunityStatus,
   CommunityGroup,
   FeatureAvailability,
-  HomeBittorrentTrafficResponse,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
   HomeStats,
@@ -77,10 +76,6 @@ export const uiApi = {
     ),
   homeCompanionStatistics: () =>
     request<HomeCompanionStatisticsResponse>('/api/ui/statistics/companion'),
-  homeBittorrentTrafficStatistics: (days: number) =>
-    request<HomeBittorrentTrafficResponse>(
-      `/api/ui/statistics/bittorrent-traffic?days=${days}`,
-    ),
   rulePreview: () => request<RulePreviewResponse>('/api/ui/rules/preview'),
   career: (uid: string) => request<{ metrics: Record<string, string>; lastObservedAt: string | null; observerName: string | null } | null>(`/api/ui/user/career/${uid}`),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
@@ -239,12 +234,6 @@ export const historyApi = {
     request<SwarmPeerInsightsResponse>(`/api/ui/peer-insights/swarm?days=${days}`),
   banPeerInsights: (days: number) =>
     request<BanPeerInsightsResponse>(`/api/ui/peer-insights/ban?days=${days}`),
-}
-
-export function homeTrafficRankings(days: number) {
-  return request<import('./types').TrafficRankingsResponse>(
-    '/api/ui/statistics/bittorrent-traffic-rankings?days=' + days,
-  )
 }
 
 export const mailUnsubscribeApi = {

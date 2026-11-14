@@ -7,39 +7,29 @@ import type { EChartsCoreOption } from 'echarts/core'
 import { Message } from '@arco-design/web-vue'
 import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
-import TrafficRankings from '@/components/TrafficRankings.vue'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
 import { uiApi } from '@/api'
 import type {
   ChartDatum,
   DistributionChart,
-  HomeBittorrentTrafficResponse,
   HomeCompanionStatisticsResponse,
   HomeNetworkStatisticsResponse,
   HomeStats,
   StackedAreaChart,
   StatisticsSource,
-  TrafficCityDatum,
-  TrafficDistribution,
 } from '@/api/types'
+import { errorMessage } from '@/utils/format'
 import { useSessionStore } from '@/stores/session'
 import {
-  CHART_COLORS,
-  CHART_TEXT_STYLE,
   distributionPieOption,
   stackedAreaChartOption,
 } from '@/utils/charts'
-import { errorMessage, useFormatters } from '@/utils/format'
 
 const router = useRouter()
 const session = useSessionStore()
 const { t } = useI18n()
-const { formatBytes } = useFormatters()
 const stats = ref<HomeStats | null>(null)
 const loading = ref(true)
-const trafficStats = ref<HomeBittorrentTrafficResponse | null>(null)
-const trafficLoading = ref(false)
-const trafficDays = ref(7)
 const networkStats = ref<HomeNetworkStatisticsResponse | null>(null)
 const networkLoading = ref(false)
 const companionStats = ref<HomeCompanionStatisticsResponse | null>(null)
@@ -47,7 +37,6 @@ const companionLoading = ref(false)
 const selectedDays = ref(7)
 const networkSource = ref<StatisticsSource>('ban')
 let statisticsRequestId = 0
-let trafficRequestId = 0
 
 function moduleEnabled(module: string) {
   return stats.value?.enabledModules?.[module] === true
@@ -91,13 +80,6 @@ const companionIpOption = computed<EChartsCoreOption>(() =>
 const companionGeoIpOption = computed<EChartsCoreOption>(() =>
   pieOption(companionStats.value?.companionGeoIp),
 )
-const trafficUploadCitiesOption = computed<EChartsCoreOption>(() =>
-  trafficPieOption(trafficStats.value?.topUploadCities),
-)
-const trafficDownloadCitiesOption = computed<EChartsCoreOption>(() =>
-  trafficPieOption(trafficStats.value?.topDownloadCities),
-)
-
 function chartLabel(name: string) {
   if (name === 'Unknown') return t('home.statistics.unknown')
   if (name === 'Other') return t('home.statistics.other')
@@ -114,156 +96,12 @@ function hasStackedData(chart: StackedAreaChart | undefined) {
   )
 }
 
-function hasTrafficDistribution(chart: TrafficDistribution | undefined) {
-  return Boolean(
-    chart?.data.some((item) => {
-      if (item.name === 'Unknown' || item.name === 'Other') return false
-      try {
-        return BigInt(item.bytes) > 0n
-      } catch {
-        return false
-      }
-    }),
-  )
-}
-
-function compactTrafficCities(chart: TrafficDistribution | undefined) {
-  const items = chart?.data ?? []
-  const named = items.filter((item) => item.name !== 'Other' && item.name !== 'Unknown')
-  const visible = named.slice(0, 15)
-  let total = 0n
-  let unknown = 0n
-  try {
-    total = BigInt(chart?.totalBytes ?? '0')
-  } catch {
-    // Fall through to zero when a stale cache entry has an invalid total.
-  }
-  for (const item of items) {
-    try {
-      if (item.name === 'Unknown') {
-        unknown += BigInt(item.bytes)
-      }
-    } catch {
-      // Ignore malformed cache entries and keep the remaining chart usable.
-    }
-  }
-  const knownTotal = total - unknown
-  let shown = 0n
-  for (const item of visible) {
-    try {
-      shown += BigInt(item.bytes)
-    } catch {
-      // Ignore malformed cache entries and keep the remaining chart usable.
-    }
-  }
-  const otherBytes = knownTotal - shown
-  const compact: TrafficCityDatum[] = visible.map((item) => ({ ...item }))
-  if (otherBytes > 0n) {
-    compact.push({ name: 'Other', bytes: otherBytes.toString() })
-  }
-  return compact
-}
-
-function trafficTopRows(chart: TrafficDistribution | undefined) {
-  return (chart?.data ?? [])
-    .filter((item) => item.name !== 'Other' && item.name !== 'Unknown')
-    .slice(0, 30)
-}
-
 function pieOption(chart: DistributionChart | undefined): EChartsCoreOption {
   const data: ChartDatum[] = (chart?.data ?? []).map((item) => ({
     name: chartLabel(item.name),
     value: item.value,
   }))
   return distributionPieOption('', data)
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
-
-function trafficPieOption(chart: TrafficDistribution | undefined): EChartsCoreOption {
-  const compact = compactTrafficCities(chart)
-  const values = compact.map((item) => {
-    try {
-      return BigInt(item.bytes)
-    } catch {
-      return 0n
-    }
-  })
-  const maximum = values.reduce((current, value) => (value > current ? value : current), 0n)
-  // Pie slices only need relative values. Keeping them below 2^31 also avoids
-  // ECharts internal integer-conversion warnings for very large byte counts.
-  const safeMaximum = 1_000_000_000n
-  let divisor = 1n
-  while (maximum / divisor > safeMaximum) {
-    divisor *= 1024n
-  }
-
-  const data = compact.map((item, index) => ({
-    name: chartLabel(item.name),
-    value: Number(values[index]) / Number(divisor),
-    bytes: item.bytes,
-  }))
-  return {
-    color: CHART_COLORS,
-    textStyle: CHART_TEXT_STYLE,
-    tooltip: {
-      trigger: 'item',
-      confine: true,
-      formatter: (params: unknown) => {
-        const item = params as {
-          name?: string
-          percent?: number
-          marker?: string
-          data?: { bytes?: string }
-        }
-        return `${item.marker ?? ''}${escapeHtml(item.name ?? '')}<br/>${formatBytes(
-          item.data?.bytes,
-        )} (${item.percent ?? 0}%)`
-      },
-    },
-    legend: {
-      type: 'scroll',
-      bottom: 0,
-      left: 8,
-      right: 8,
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        color: '#4E5969',
-        fontSize: 11,
-      },
-    },
-    series: [
-      {
-        type: 'pie',
-        radius: ['38%', '62%'],
-        center: ['50%', '43%'],
-        avoidLabelOverlap: true,
-        itemStyle: {
-          borderColor: '#FFFFFF',
-          borderWidth: 2,
-          borderRadius: 5,
-        },
-        label: {
-          show: false,
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontWeight: 600,
-          },
-        },
-        data,
-      },
-    ],
-  }
 }
 
 function formatBucket(value: string) {
@@ -287,13 +125,6 @@ async function loadHomeStats() {
     stats.value = await uiApi.home()
     if (moduleEnabled('network-charts')) void loadNetworkStats()
     if (moduleEnabled('companion-charts')) void loadCompanionStats()
-    if (stats.value.bittorrentTrafficEnabled) {
-      void loadTrafficStats()
-    } else {
-      trafficRequestId++
-      trafficStats.value = null
-      trafficLoading.value = false
-    }
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
@@ -321,26 +152,6 @@ async function loadNetworkStats() {
   }
 }
 
-async function loadTrafficStats() {
-  if (stats.value?.bittorrentTrafficEnabled !== true) return
-  const requestId = ++trafficRequestId
-  trafficLoading.value = true
-  try {
-    const result = await uiApi.homeBittorrentTrafficStatistics(trafficDays.value)
-    if (requestId === trafficRequestId) {
-      trafficStats.value = result
-    }
-  } catch (error) {
-    if (requestId === trafficRequestId) {
-      Message.error(errorMessage(error, t('home.statistics.loadFailed')))
-    }
-  } finally {
-    if (requestId === trafficRequestId) {
-      trafficLoading.value = false
-    }
-  }
-}
-
 async function loadCompanionStats() {
   if (!moduleEnabled('companion-charts')) return
   companionLoading.value = true
@@ -354,7 +165,6 @@ async function loadCompanionStats() {
 }
 
 watch([selectedDays, networkSource], loadNetworkStats)
-watch(trafficDays, loadTrafficStats)
 
 onMounted(() => {
   loadHomeStats()
@@ -448,132 +258,6 @@ onMounted(() => {
           </a-col>
         </a-row>
       </a-spin>
-    </section>
-
-    <section v-if="stats?.bittorrentTrafficEnabled" class="stats-section">
-      <div class="section-heading">
-        <div>
-          <h2>{{ t('home.statistics.trafficTitle') }}</h2>
-          <p>{{ t('home.statistics.trafficDescription') }}</p>
-          <p class="traffic-geo-note">
-            {{ t('home.statistics.trafficGeoUnknownNote') }}
-          </p>
-        </div>
-      </div>
-
-      <a-card class="surface-card chart-controls">
-        <div class="chart-control-row">
-          <div class="chart-control">
-            <span>{{ t('home.statistics.range') }}</span>
-            <a-radio-group v-model="trafficDays" type="button">
-              <a-radio :value="7">{{ t('home.last7Days') }}</a-radio>
-              <a-radio :value="3">{{ t('home.statistics.last3Days') }}</a-radio>
-              <a-radio :value="1">{{ t('home.last24Hours') }}</a-radio>
-            </a-radio-group>
-          </div>
-          <span v-if="trafficStats?.generatedAt" class="chart-updated">
-            {{
-              t('home.statistics.updatedAt', {
-                time: dayjs(trafficStats.generatedAt).format('HH:mm:ss'),
-              })
-            }}
-          </span>
-        </div>
-      </a-card>
-
-      <a-spin :loading="trafficLoading" class="traffic-spin">
-        <a-row :gutter="[16, 16]">
-          <a-col :xs="24" :md="8">
-            <a-card class="surface-card traffic-metric traffic-metric--total">
-              <span class="traffic-metric-label">{{ t('home.statistics.totalTransfer') }}</span>
-              <strong>{{ formatBytes(trafficStats?.totals.transferBytes) }}</strong>
-              <span class="traffic-metric-hint">
-                {{ t('home.statistics.totalTransferHint') }}
-              </span>
-            </a-card>
-          </a-col>
-          <a-col :xs="24" :md="8">
-            <a-card class="surface-card traffic-metric traffic-metric--download">
-              <span class="traffic-metric-label">{{ t('home.statistics.totalDownload') }}</span>
-              <strong>{{ formatBytes(trafficStats?.totals.downloadBytes) }}</strong>
-              <span class="traffic-metric-hint">
-                {{ t('home.statistics.totalDownloadHint') }}
-              </span>
-            </a-card>
-          </a-col>
-          <a-col :xs="24" :md="8">
-            <a-card class="surface-card traffic-metric traffic-metric--upload">
-              <span class="traffic-metric-label">{{ t('home.statistics.totalUpload') }}</span>
-              <strong>{{ formatBytes(trafficStats?.totals.uploadBytes) }}</strong>
-              <span class="traffic-metric-hint">
-                {{ t('home.statistics.totalUploadHint') }}
-              </span>
-            </a-card>
-          </a-col>
-
-          <a-col :xs="24" :xl="12">
-            <a-card
-              class="surface-card chart-card traffic-chart-card"
-              :title="t('home.statistics.topUploadCities')"
-            >
-              <template #extra>
-                <a-tag color="arcoblue">{{ t('home.statistics.topFifteenPlusOther') }}</a-tag>
-              </template>
-              <EChart
-                v-if="hasTrafficDistribution(trafficStats?.topUploadCities)"
-                :option="trafficUploadCitiesOption"
-                height="370px"
-                :loading="trafficLoading"
-                :loading-text="t('common.loading')"
-              />
-              <a-empty v-else :description="t('home.statistics.noData')" />
-              <details v-if="hasTrafficDistribution(trafficStats?.topUploadCities)">
-                <summary>{{ t('home.statistics.viewTop30') }}</summary>
-                <ol class="traffic-ranking-list">
-                  <li
-                    v-for="(item, index) in trafficTopRows(trafficStats?.topUploadCities)"
-                    :key="item.name"
-                  >
-                    <span>{{ index + 1 }}. {{ chartLabel(item.name) }}</span>
-                    <strong>{{ formatBytes(item.bytes) }}</strong>
-                  </li>
-                </ol>
-              </details>
-            </a-card>
-          </a-col>
-          <a-col :xs="24" :xl="12">
-            <a-card
-              class="surface-card chart-card traffic-chart-card"
-              :title="t('home.statistics.topDownloadCities')"
-            >
-              <template #extra>
-                <a-tag color="green">{{ t('home.statistics.topFifteenPlusOther') }}</a-tag>
-              </template>
-              <EChart
-                v-if="hasTrafficDistribution(trafficStats?.topDownloadCities)"
-                :option="trafficDownloadCitiesOption"
-                height="370px"
-                :loading="trafficLoading"
-                :loading-text="t('common.loading')"
-              />
-              <a-empty v-else :description="t('home.statistics.noData')" />
-              <details v-if="hasTrafficDistribution(trafficStats?.topDownloadCities)">
-                <summary>{{ t('home.statistics.viewTop30') }}</summary>
-                <ol class="traffic-ranking-list">
-                  <li
-                    v-for="(item, index) in trafficTopRows(trafficStats?.topDownloadCities)"
-                    :key="item.name"
-                  >
-                    <span>{{ index + 1 }}. {{ chartLabel(item.name) }}</span>
-                    <strong>{{ formatBytes(item.bytes) }}</strong>
-                  </li>
-                </ol>
-              </details>
-            </a-card>
-          </a-col>
-        </a-row>
-      </a-spin>
-      <TrafficRankings :days="trafficDays" />
     </section>
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">
@@ -921,102 +605,9 @@ body[arco-theme='dark'] .hero-dot {
 }
 
 .stats-spin,
-.network-spin,
-.traffic-spin {
+.network-spin {
   display: block;
   width: 100%;
-}
-
-.traffic-metric :deep(.arco-card-body) {
-  display: flex;
-  flex-direction: column;
-  min-height: 142px;
-  padding: 22px;
-}
-
-.traffic-geo-note {
-  color: rgb(var(--orange-6));
-  font-size: 12px;
-}
-
-.traffic-metric-label {
-  color: var(--color-text-3);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.traffic-metric strong {
-  margin: 12px 0 8px;
-  color: var(--color-text-1);
-  font-size: clamp(24px, 3vw, 34px);
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-
-.traffic-metric-hint {
-  color: var(--color-text-3);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.traffic-metric--total strong {
-  color: rgb(var(--primary-6));
-}
-
-.traffic-metric--download strong {
-  color: rgb(var(--primary-5));
-}
-
-.traffic-metric--upload strong {
-  color: rgb(var(--green-6));
-}
-
-.traffic-chart-card :deep(.arco-card-body) {
-  min-height: 300px;
-}
-
-.traffic-chart-card details {
-  margin-top: 10px;
-  border-top: 1px solid var(--color-border-2);
-}
-
-.traffic-chart-card summary {
-  padding: 12px 2px 4px;
-  color: rgb(var(--primary-6));
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.traffic-ranking-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px 24px;
-  max-height: 280px;
-  padding: 8px 2px 4px 22px;
-  margin: 0;
-  overflow: auto;
-  color: var(--color-text-2);
-  font-size: 12px;
-}
-
-.traffic-ranking-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
-
-.traffic-ranking-list span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.traffic-ranking-list strong {
-  flex: 0 0 auto;
-  color: var(--color-text-1);
-  font-weight: 500;
 }
 
 .stats-title {
@@ -1134,9 +725,6 @@ body[arco-theme='dark'] .hero-dot {
     margin-left: 0;
   }
 
-  .traffic-ranking-list {
-    grid-template-columns: 1fr;
-  }
 
 }
 </style>
