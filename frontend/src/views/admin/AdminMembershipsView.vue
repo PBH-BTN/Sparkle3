@@ -9,6 +9,7 @@ import {
   IconSync,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import LicenseRevocations from '@/components/LicenseRevocations.vue'
 import AfdianMessageImport from '@/components/AfdianMessageImport.vue'
 import { adminApi } from '@/api/admin'
 import type {
@@ -44,6 +45,7 @@ const savingCurrency = ref(false)
 const syncing = ref(false)
 const settings = ref<MemberPlatformSettings | null>(null)
 const afdianData = ref<AfdianSettings | null>(null)
+const revocationPanel = ref<InstanceType<typeof LicenseRevocations> | null>(null)
 const licenseData = ref<LicenseSettings | null>(null)
 const transactionPage = ref<MemberTransactionPage | null>(null)
 const licensePage = ref<MemberLicensePage | null>(null)
@@ -114,6 +116,7 @@ const licenseColumns = (): TableColumnData[] => [
   { title: t('admin.memberships.licenseStatus'), slotName: 'licenseStatus', width: 120 },
   { title: t('admin.memberships.issuedAt'), slotName: 'licenseIssuedAt', width: 165 },
   { title: t('admin.memberships.expireAt'), slotName: 'licenseExpireAt', width: 165 },
+  { title: t('admin.memberships.revokeLicense'), slotName: 'licenseActions', width: 130 },
   { title: t('admin.memberships.revoked'), slotName: 'licenseRevoked', width: 210 },
 ]
 
@@ -1051,6 +1054,11 @@ onMounted(load)
           <template #licenseExpireAt="{ record }">
             {{ formatDate(record.expireAt) }}
           </template>
+          <template #licenseActions="{ record }">
+            <a-button status="danger" :disabled="!!record.revokedAt" @click="revocationPanel?.open(record.licenseId)">
+              {{ t('admin.memberships.revokeLicense') }}
+            </a-button>
+          </template>
           <template #licenseRevoked="{ record }">
             <div v-if="record.revokedAt" class="stack-cell">
               <strong>{{ formatDate(record.revokedAt) }}</strong>
@@ -1068,6 +1076,8 @@ onMounted(load)
           @change="changeLicensePage"
         />
       </a-card>
+
+      <LicenseRevocations ref="revocationPanel" @revoked="searchLicenses" />
 
       <a-card class="surface-card">
         <template #title>{{ t('admin.memberships.reconciliationTitle') }}</template>

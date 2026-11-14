@@ -1,5 +1,7 @@
 import { request } from './http'
 import type {
+  LicenseRevocationInput,
+  LicenseRevocationPage,
   Announcement,
   AnnouncementInput,
   AiModerationAdmin,
@@ -575,6 +577,12 @@ export const adminApi = {
       `/api/admin/memberships/reconciliation?${search.toString()}`,
     )
   },
+  revokeLicense: (body: LicenseRevocationInput) =>
+    request<void>('/api/admin/memberships/license-revocations', { method: 'POST', body: JSON.stringify(body) }),
+  licenseRevocations: (page: number) =>
+    request<LicenseRevocationPage>(
+      '/api/admin/memberships/license-revocations?page=' + page,
+    ),
   memberPlatformLicenses: (params: {
     provider?: string
     keyword?: string

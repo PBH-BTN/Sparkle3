@@ -1175,3 +1175,16 @@ export interface AdminCommentUpdateInput {
   moderationStatus?: string
   moderationReason?: string
 }
+
+export interface LicenseRevocationInput {
+  licenseId?: string
+  licenseKey?: string
+  reason: string
+}
+
+export interface LicenseRevocationPage {
+  items: { fingerprint: string; reason: string; revokedAt: string; revokedBy: string }[]
+  total: number
+  page: number
+  size: number
+}
