@@ -18,6 +18,7 @@ public class SpaController {
             "/user/profile",
             "/user/points",
             "/user/submissions",
+            "/user/traffic",
             "/user/inbox",
             "/user/profile/{uid}",
             "/user/privacy-mode",

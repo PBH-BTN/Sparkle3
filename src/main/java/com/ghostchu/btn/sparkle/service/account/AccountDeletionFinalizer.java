@@ -174,6 +174,7 @@ public class AccountDeletionFinalizer {
         userMapper.updateById(userEntity);
         careerMapper.deleteEvents(userId);
         careerMapper.deleteDaily(userId);
+        careerMapper.deleteTrafficDaily(userId);
         careerMapper.deleteTime(userId);
         lifetimeTrafficMapper.deleteCheckpoints(userId);
         lifetimeTrafficMapper.deleteTotals(userId);

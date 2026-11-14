@@ -33,6 +33,8 @@ public interface UserCareerMapper {
 
     @Delete("DELETE FROM user_career_events WHERE user_id = #{uid}")
     void deleteEvents(@Param("uid") long uid);
+    @Delete("DELETE FROM user_traffic_daily WHERE user_id = #{uid}")
+    void deleteTrafficDaily(@Param("uid") long uid);
     @Delete("DELETE FROM user_career_daily WHERE user_id = #{uid}")
     void deleteDaily(@Param("uid") long uid);
     @Delete("DELETE FROM user_career_torrent_time WHERE user_id = #{uid}")

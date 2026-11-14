@@ -50,7 +50,7 @@
         ), latest AS (
             SELECT DISTINCT ON (user_id,torrent_id) user_id,torrent_id,at,seeding FROM input
             ORDER BY user_id,torrent_id,at DESC,session_key
-        )
+        ), time_update AS (
         INSERT INTO user_career_torrent_time AS a(user_id,torrent_id,last_seen,was_seeding)
         SELECT user_id,torrent_id,at,seeding FROM latest ORDER BY user_id,torrent_id
         ON CONFLICT(user_id,torrent_id) DO UPDATE SET
@@ -60,10 +60,46 @@
                 THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+(#{activityWindowMillis}::bigint * interval '1 millisecond')),'[)')) ELSE '{}'::tstzmultirange END,
             was_seeding=CASE WHEN EXCLUDED.last_seen>a.last_seen THEN EXCLUDED.was_seeding ELSE a.was_seeding END,
             last_seen=GREATEST(a.last_seen,EXCLUDED.last_seen)
+        RETURNING new.user_id,
+            new.seeding-COALESCE(old.seeding,'{}'::tstzmultirange) AS seed_added,
+            (new.downloading-new.seeding)-COALESCE(old.downloading-old.seeding,'{}'::tstzmultirange) AS down_added,
+            COALESCE(old.downloading-old.seeding,'{}'::tstzmultirange)-(new.downloading-new.seeding) AS down_removed
+        ), time_delta AS (
+            SELECT t.user_id,m.seed,m.sign,period FROM time_update t
+            CROSS JOIN LATERAL (VALUES (TRUE,1,t.seed_added),(FALSE,1,t.down_added),(FALSE,-1,t.down_removed)) m(seed,sign,ranges)
+            CROSS JOIN LATERAL unnest(m.ranges) period
+        ), daily_values AS (
+            SELECT c.user_id,(i.at AT TIME ZONE 'UTC')::date AS day,c.upload_delta::numeric AS upload,
+                c.download_delta::numeric AS download,0::numeric AS upload_ack,0::numeric AS download_ack,
+                0::numeric AS loss,0::numeric AS seeding,0::numeric AS downloading
+            FROM checkpoint c JOIN input i USING(user_id,session_key)
+            UNION ALL
+            SELECT p.owner,(p.at AT TIME ZONE 'UTC')::date,0,0,c.download_delta,c.upload_delta,0,0,0
+            FROM peers p JOIN checkpoint c USING(session_key)
+            UNION ALL
+            SELECT t.user_id,days.day,0,0,0,0,0,
+                CASE WHEN t.seed THEN t.sign*extract(epoch FROM upper(clipped.period)-lower(clipped.period)) ELSE 0 END,
+                CASE WHEN NOT t.seed THEN t.sign*extract(epoch FROM upper(clipped.period)-lower(clipped.period)) ELSE 0 END
+            FROM time_delta t
+            CROSS JOIN LATERAL (
+                SELECT (lower(t.period) AT TIME ZONE 'UTC')::date+n AS day
+                FROM generate_series(0,(upper(t.period) AT TIME ZONE 'UTC')::date-(lower(t.period) AT TIME ZONE 'UTC')::date) n
+            ) days
+            CROSS JOIN LATERAL (SELECT t.period * tstzrange(days.day::timestamp AT TIME ZONE 'UTC',
+                (days.day+1)::timestamp AT TIME ZONE 'UTC','[)') AS period) clipped
+            WHERE NOT isempty(clipped.period)
+        )
+        INSERT INTO user_traffic_daily AS d(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
+        SELECT user_id,day,SUM(upload),SUM(download),SUM(upload_ack),SUM(download_ack),SUM(loss),SUM(seeding),SUM(downloading)
+        FROM daily_values GROUP BY user_id,day ORDER BY user_id,day
+        ON CONFLICT(user_id,day) DO UPDATE SET
+            upload=d.upload+EXCLUDED.upload,download=d.download+EXCLUDED.download,
+            upload_ack=d.upload_ack+EXCLUDED.upload_ack,download_ack=d.download_ack+EXCLUDED.download_ack,
+            loss=d.loss+EXCLUDED.loss,seeding=d.seeding+EXCLUDED.seeding,downloading=d.downloading+EXCLUDED.downloading
     </insert>
     <insert id="bans">
-        WITH input(user_id,fingerprint,at,ip) AS MATERIALIZED (
-            VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet)</foreach>
+        WITH input(user_id,fingerprint,at,ip,upload,download) AS MATERIALIZED (
+            VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet,#{r.upload}::bigint,#{r.download}::bigint)</foreach>
         ), observed AS (
             SELECT DISTINCT ua.owner,i.fingerprint,i.at,i.user_id AS reporter
             FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-(#{heartbeatWindowMillis}::bigint * interval '1 millisecond')
@@ -73,7 +109,21 @@
             INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,reporter_id)
             SELECT user_id,'ban',fingerprint,at,NULL::bigint FROM input
             UNION ALL SELECT owner,'observation',fingerprint,at,reporter FROM observed
-            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+            ON CONFLICT DO NOTHING RETURNING user_id,kind,fingerprint,observed_at
+        ), traffic_daily AS (
+            INSERT INTO user_traffic_daily AS d(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
+            SELECT a.user_id,(a.observed_at AT TIME ZONE 'UTC')::date,
+                SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END),
+                SUM(CASE WHEN a.kind='ban' THEN i.download ELSE 0 END),
+                SUM(CASE WHEN a.kind='observation' THEN i.download ELSE 0 END),
+                SUM(CASE WHEN a.kind='observation' THEN i.upload ELSE 0 END),
+                SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END),0,0
+            FROM added a JOIN (SELECT DISTINCT ON (fingerprint) * FROM input ORDER BY fingerprint) i USING(fingerprint)
+            GROUP BY 1,2 ORDER BY 1,2
+        ON CONFLICT(user_id,day) DO UPDATE SET
+            upload=d.upload+EXCLUDED.upload,download=d.download+EXCLUDED.download,
+            upload_ack=d.upload_ack+EXCLUDED.upload_ack,download_ack=d.download_ack+EXCLUDED.download_ack,
+            loss=d.loss+EXCLUDED.loss,seeding=d.seeding+EXCLUDED.seeding,downloading=d.downloading+EXCLUDED.downloading
         )
         INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
         SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2

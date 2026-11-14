@@ -70,7 +70,10 @@ public class CareerIngestionService {
         var values = new java.util.ArrayList<Map<String,Object>>();
         for (var row : rows) {
             var p=event(uid,"ban",row.getUserappsId()+":"+row.getTorrentId()+":"+row.getPeerIp().getHostAddress()+":"+row.getPeerPort()+":"+row.getPopulateTime().toInstant()+":"+row.getModuleName()+":"+row.getRule(),row.getPopulateTime());
-            p.put("ip",row.getPeerIp().getHostAddress()); values.add(p);
+            p.put("ip",row.getPeerIp().getHostAddress());
+            p.put("upload",row.getToPeerTraffic() == null ? 0 : Math.max(0,row.getToPeerTraffic()));
+            p.put("download",row.getFromPeerTraffic() == null ? 0 : Math.max(0,row.getFromPeerTraffic()));
+            values.add(p);
         }
         submit(uid,values,false);
     }

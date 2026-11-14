@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper">
+    <select id="daily" resultType="map">
+        SELECT day::text AS day,upload::text AS upload,download::text AS download,
+               upload_ack::text AS "uploadAck",download_ack::text AS "downloadAck",
+               loss::text AS loss,loss_ratio::text AS "lossRatio",
+               seeding::text AS seeding,downloading::text AS downloading
+        FROM user_traffic_daily WHERE user_id=#{uid}
+        ORDER BY day DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+</mapper>
