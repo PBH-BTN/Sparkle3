@@ -54,8 +54,6 @@ public class DatabaseConfigService {
             "sparkle.homepage-statistics-refresh.modules.network-charts.refresh-interval-minutes",
             "sparkle.homepage-statistics-refresh.modules.companion-charts.enabled",
             "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes",
-            "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled",
-            "sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.refresh-interval-minutes",
             "sparkle.analyse.geoip-city-blacklist.enabled",
             "sparkle.analyse.geoip-city-blacklist.schedule",
             "sparkle.analyse.mass-download-monitor.enabled",
@@ -295,6 +293,7 @@ public class DatabaseConfigService {
         return key.startsWith("sparkle.machine-learning.")
                 || key.startsWith("sparkle.tracker.")
                 || key.startsWith("sparkle.statistics.")
+                || key.startsWith("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.")
                 || "sparkle.analyse.overdownload-analyse.threshold".equals(key)
                 || "sparkle.ranking.database-type".equals(key)
                 || "sparkle.swarm-statistics-track.cron".equals(key)

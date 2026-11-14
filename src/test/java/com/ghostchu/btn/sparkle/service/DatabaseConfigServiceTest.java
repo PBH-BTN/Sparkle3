@@ -29,6 +29,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DatabaseConfigServiceTest {
+    @Test
+    void retiredTrafficSettingsAreNotImportedAgainFromLegacyYaml() {
+        assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled"));
+        assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.refresh-interval-minutes"));
+        assertFalse(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.network-charts.enabled"));
+    }
+
     private static final String ROOT_URL = "sparkle.root-url";
     private static final String FOOTER_CONFIG = "sparkle.footer.config";
     private static final String INTEGRATION_TOKEN = "sparkle.github-sync.token";

@@ -116,7 +116,6 @@ public final class UiModels {
             Map<String, Long> banHistory,
             Map<String, Long> userApps,
             Map<String, Long> swarmTracker,
-            boolean bittorrentTrafficEnabled,
             Map<String, Boolean> enabledModules
     ) {
     }

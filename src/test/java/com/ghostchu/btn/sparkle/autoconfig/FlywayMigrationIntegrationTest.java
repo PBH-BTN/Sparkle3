@@ -107,21 +107,28 @@ class FlywayMigrationIntegrationTest {
                           'analyse_ban_history_daily_base',
                           'dashboard_ban_daily_peer',
                           'dashboard_ban_daily_client',
-                          'dashboard_ban_daily_geo',
-                          'dashboard_ban_hourly_traffic_city'
+                          'dashboard_ban_daily_geo'
                       )
                     """)) {
                 assertTrue(result.next());
-                assertEquals(6, result.getInt(1));
+                assertEquals(5, result.getInt(1));
             }
 
             try (var result = statement.executeQuery("""
                     SELECT
-                        to_regclass('public.dashboard_swarm_hourly_traffic') IS NOT NULL
-                        AND to_regclass('public.dashboard_ban_city_traffic') IS NOT NULL
-                        AND to_regclass('public.dashboard_ban_connection_traffic') IS NOT NULL
-                        AND to_regclass('public.dashboard_ban_city_hourly_traffic') IS NOT NULL
-                        AND to_regclass('public.dashboard_bittorrent_traffic_refresh_state') IS NOT NULL
+                        to_regclass('public.dashboard_ban_hourly_traffic_city') IS NULL
+                        AND to_regclass('public.dashboard_swarm_hourly_traffic') IS NULL
+                        AND to_regclass('public.dashboard_ban_city_traffic') IS NULL
+                        AND to_regclass('public.dashboard_ban_connection_traffic') IS NULL
+                        AND to_regclass('public.dashboard_ban_city_hourly_traffic') IS NULL
+                        AND to_regclass('public.dashboard_bittorrent_traffic_refresh_state') IS NULL
+                        AND to_regprocedure('public.refresh_dashboard_ban_city_hourly_traffic()') IS NULL
+                        AND NOT EXISTS (SELECT 1 FROM public.app_config_entries
+                            WHERE config_key LIKE 'sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.%')
+                        AND to_regclass('public.ban_history') IS NOT NULL
+                        AND to_regclass('public.swarm_tracker') IS NOT NULL
+                        AND to_regclass('public.user_lifetime_traffic') IS NOT NULL
+                        AND to_regclass('public.user_career_daily') IS NOT NULL
                     """)) {
                 assertTrue(result.next());
                 assertTrue(result.getBoolean(1));

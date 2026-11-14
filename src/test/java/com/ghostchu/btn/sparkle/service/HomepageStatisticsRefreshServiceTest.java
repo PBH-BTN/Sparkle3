@@ -13,8 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HomepageStatisticsRefreshServiceTest {
@@ -28,47 +26,26 @@ class HomepageStatisticsRefreshServiceTest {
         ));
         HomepageStatisticsRefreshService service = new HomepageStatisticsRefreshService(
                 mock(StatisticsRefreshServiceImpl.class), mock(HomeStatisticsService.class),
-                mock(BittorrentTrafficStatisticsService.class), mock(BittorrentTrafficFeatureService.class),
                 config, mock(TaskStatusService.class), mock(TaskManualExecutionService.class));
 
         assertEquals(Map.of(
                 "ban-history", false, "active-apps", true, "swarm-tracker", true,
-                "torrents", true, "network-charts", false, "companion-charts", false,
-                "bittorrent-traffic", true
+                "torrents", true, "network-charts", false, "companion-charts", false
         ), service.enabledModules());
     }
 
     @Test
-    void manualRefreshRejectsDisabledBitTorrentTraffic() throws BusinessException {
-        StatisticsRefreshServiceImpl statisticsRefreshService =
-                mock(StatisticsRefreshServiceImpl.class);
-        HomeStatisticsService homeStatisticsService = mock(HomeStatisticsService.class);
-        BittorrentTrafficStatisticsService trafficStatisticsService =
-                mock(BittorrentTrafficStatisticsService.class);
-        BittorrentTrafficFeatureService featureService =
-                mock(BittorrentTrafficFeatureService.class);
-        DatabaseConfigService databaseConfigService = mock(DatabaseConfigService.class);
-        when(databaseConfigService.getRawValues(anyList())).thenReturn(
-                Map.of(BittorrentTrafficFeatureService.ENABLED_CONFIG_KEY, "false")
-        );
-        when(featureService.isEnabled()).thenReturn(false);
-        HomepageStatisticsRefreshService refreshService =
-                new HomepageStatisticsRefreshService(
-                        statisticsRefreshService,
-                        homeStatisticsService,
-                        trafficStatisticsService,
-                        featureService,
-                        databaseConfigService,
-                        mock(TaskStatusService.class),
-                        mock(TaskManualExecutionService.class)
-                );
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> refreshService.requestRefresh("bittorrent-traffic", null)
-        );
-
-        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
-        verify(trafficStatisticsService, never()).refresh();
+    void removedTrafficModuleCannotBeRefreshedOrConfigured() throws Exception {
+        DatabaseConfigService config = mock(DatabaseConfigService.class);
+        when(config.getRawValues(anyList())).thenReturn(Map.of());
+        HomepageStatisticsRefreshService service = new HomepageStatisticsRefreshService(
+                mock(StatisticsRefreshServiceImpl.class), mock(HomeStatisticsService.class),
+                config, mock(TaskStatusService.class), mock(TaskManualExecutionService.class));
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(BusinessException.class,
+                () -> service.requestRefresh("bittorrent-traffic", null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(BusinessException.class,
+                () -> service.updateConfig(new com.ghostchu.btn.sparkle.controller.admin.dto.HomepageStatisticsModels.ConfigUpdate(
+                        java.util.List.of(new com.ghostchu.btn.sparkle.controller.admin.dto.HomepageStatisticsModels.ModuleConfig(
+                                "bittorrent-traffic", true, 60))), null)).getStatusCode());
     }
 }
