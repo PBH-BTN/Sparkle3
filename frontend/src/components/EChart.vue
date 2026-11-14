@@ -9,6 +9,24 @@ import {
   TooltipComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
+import { useTheme } from '@/composables/useTheme'
+const { isDark } = useTheme()
+
+// Canvas options cannot resolve CSS variables; map shared neutral colors at render time.
+function themedOption(value: unknown): unknown {
+  if (typeof value === 'string' && isDark.value) {
+    const colors: Record<string, string> = {
+      '#4e5969': '#c9cdd4', '#86909c': '#a9aeb8', '#c9cdd4': '#484849',
+      '#e5e6eb': '#373739', '#ffffff': '#232324',
+    }
+    return colors[value.toLowerCase()] ?? value
+  }
+  if (Array.isArray(value)) return value.map(themedOption)
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, themedOption(item)]))
+  }
+  return value
+}
 
 use([
   BarChart,
@@ -40,7 +58,7 @@ let chart: EChartsType | null = null
 let resizeObserver: ResizeObserver | null = null
 
 function renderOption() {
-  chart?.setOption(props.option, true)
+  chart?.setOption({ ...themedOption(props.option) as EChartsCoreOption, backgroundColor: 'transparent' }, true)
 }
 
 function renderLoading() {
@@ -49,8 +67,8 @@ function renderLoading() {
     chart.showLoading('default', {
       text: props.loadingText,
       color: '#165DFF',
-      textColor: '#4E5969',
-      maskColor: 'rgba(255, 255, 255, 0.72)',
+      textColor: isDark.value ? '#c9cdd4' : '#4E5969',
+      maskColor: isDark.value ? 'rgba(35, 35, 36, 0.72)' : 'rgba(255, 255, 255, 0.72)',
     })
   } else {
     chart.hideLoading()
@@ -59,13 +77,20 @@ function renderLoading() {
 
 onMounted(() => {
   if (!container.value) return
-  chart = init(container.value)
+  chart = init(container.value, isDark.value ? 'dark' : undefined, {})
   renderOption()
   renderLoading()
   resizeObserver = new ResizeObserver(() => chart?.resize())
   resizeObserver.observe(container.value)
 })
 
+watch(isDark, () => {
+  if (!container.value || !chart) return
+  chart.dispose()
+  chart = init(container.value, isDark.value ? 'dark' : undefined)
+  renderOption()
+  renderLoading()
+})
 watch(() => props.option, renderOption, { deep: true })
 watch(() => props.loading, renderLoading)
 

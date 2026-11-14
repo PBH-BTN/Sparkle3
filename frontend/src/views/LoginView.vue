@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { IconFire, IconGithub, IconLock } from '@arco-design/web-vue/es/icon'
 import { useI18n } from 'vue-i18n'
 import AppFooter from '@/components/AppFooter.vue'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const { t } = useI18n()
@@ -22,6 +23,7 @@ function loginWithGitHub() {
 <template>
   <main class="login-page">
     <div class="login-language">
+      <ThemeSwitcher />
       <LanguageSwitcher />
     </div>
     <section class="login-panel">
@@ -139,7 +141,7 @@ function loginWithGitHub() {
   justify-content: center;
   gap: 10px;
   height: 44px;
-  color: var(--color-white);
+  color: var(--color-bg-2);
   font-weight: 600;
   background: var(--color-text-1);
   border-radius: 6px;
@@ -150,7 +152,7 @@ function loginWithGitHub() {
 
 .github-login.arco-btn:hover,
 .github-login.arco-btn:not(.arco-btn-disabled):active {
-  color: var(--color-white);
+  color: var(--color-bg-2);
   background: var(--color-text-1);
   opacity: 0.9;
   transform: translateY(-1px);

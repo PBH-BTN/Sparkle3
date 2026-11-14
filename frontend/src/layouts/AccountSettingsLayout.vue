@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   IconArrowLeft,
+  IconPalette,
   IconHeart,
   IconLock,
   IconNotification,
@@ -24,6 +25,7 @@ const features = ref<FeatureAvailability>({
 })
 
 const items = computed(() => [
+  { key: '/user/settings/personalization', label: t('settings.menu.personalization'), icon: IconPalette },
   {
     key: '/user/settings/privacy',
     label: t('settings.menu.privacy'),

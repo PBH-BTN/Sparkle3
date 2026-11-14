@@ -295,11 +295,19 @@ export default {
       LIANDONG: '链动小铺',
     },
   },
+  appearance: {
+    theme: '外观',
+    system: '跟随系统',
+    light: '亮色模式',
+    dark: '暗色模式',
+    description: '立即生效，保存在当前浏览器。跟随系统时会随设备的外观设置自动切换。',
+  },
   settings: {
     title: '设置',
     description: '管理账户安全、注销申请、公开资料隐私与通知提醒。',
     backToProfile: '返回个人资料',
     menu: {
+      personalization: '个性化',
       account: '账户注销',
       privacy: '隐私设置',
       notifications: '通知与提醒',

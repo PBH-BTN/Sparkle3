@@ -27,6 +27,7 @@ import {
   IconTrophy,
   IconUser,
 } from '@arco-design/web-vue/es/icon'
+import ThemeSwitcher from './ThemeSwitcher.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 import AppFooter from './AppFooter.vue'
 import { useSessionStore } from '@/stores/session'
@@ -173,6 +174,7 @@ onBeforeUnmount(() => {
         </nav>
 
         <div class="header-actions">
+          <ThemeSwitcher />
           <LanguageSwitcher />
           <a-badge :count="unreadMessages" :max-count="99" :offset="[-4, 4]">
             <a-button
@@ -533,5 +535,11 @@ onBeforeUnmount(() => {
     gap: 20px;
   }
 
+}
+@media (max-width: 480px) {
+  .brand-copy { display: none; }
+  .app-header-inner { gap: 8px; }
+  .header-actions { gap: 4px; }
+  .user-trigger { padding: 4px; }
 }
 </style>

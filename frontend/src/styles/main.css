@@ -20,7 +20,12 @@ body,
   margin: 0;
 }
 
+html[data-theme="dark"] {
+  background: #17171a;
+}
+
 body {
+  color: var(--color-text-1);
   background: var(--color-fill-2);
 }
 

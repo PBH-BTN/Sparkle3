@@ -56,8 +56,8 @@ footer { margin-top: auto; }
 .metric-card--red { color: rgb(var(--red-6)); }
 .metric-card--blue { color: rgb(var(--blue-6)); }
 .metric-card--green { color: rgb(var(--green-6)); }
-.metric-card--cyan { color: #0891b2; }
-.metric-card--purple { color: #7c3aed; }
+.metric-card--cyan { color: rgb(var(--cyan-6)); }
+.metric-card--purple { color: rgb(var(--purple-6)); }
 .metric-card--orange { color: rgb(var(--orange-6)); }
 @media (max-width: 720px) {
   .metric-card { padding: 16px; min-height: 148px; }

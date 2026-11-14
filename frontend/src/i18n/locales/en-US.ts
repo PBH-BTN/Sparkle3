@@ -299,12 +299,20 @@ export default {
       LIANDONG: 'Liandong',
     },
   },
+  appearance: {
+    theme: 'Appearance',
+    system: 'System',
+    light: 'Light',
+    dark: 'Dark',
+    description: 'Applies immediately and is saved in this browser. System mode follows your device appearance.',
+  },
   settings: {
     title: 'Settings',
     description:
       'Manage account security, deletion requests, public profile privacy, and notification reminders.',
     backToProfile: 'Back to profile',
     menu: {
+      personalization: 'Personalization',
       account: 'Delete account',
       privacy: 'Privacy settings',
       notifications: 'Notifications & reminders',

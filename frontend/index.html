@@ -8,6 +8,16 @@
     <title>Sparkle BTN</title>
   </head>
   <body>
+    <script>
+      (() => {
+        let mode = 'system'
+        try { mode = localStorage.getItem('sparkle:theme') || 'system' } catch {}
+        const dark = mode === 'dark' || (mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.body.setAttribute('arco-theme', 'dark')
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
