@@ -236,7 +236,7 @@ export default {
     bindingCount: '{count} orders linked',
     bindHints: {
       AFDIAN:
-        'Enter a completed Afdian order number. Sparkle resolves the Afdian user who placed it and syncs that user’s history after linking.',
+        'Enter a completed Afdian order number to link the buyer and sync their history. You can also leave your BTN sign-in email in the purchase remark; Sparkle will try to link the account when the order syncs.',
       PATREON:
         'Enter the email you use for Patreon. Linking imports that membership and its cumulative support, converted from the campaign currency.',
       KOFI:
