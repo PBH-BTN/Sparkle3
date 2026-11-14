@@ -30,8 +30,8 @@ const { formatBytes, formatDate } = useFormatters()
 const metrics = [
   { field: 'sentTrafficSelfReport', label: 'career.upload', color: 'green', hint: 'upload' },
   { field: 'receivedTrafficSelfReport', label: 'career.download', color: 'cyan', hint: 'download' },
-  { field: 'sentTrafficOtherAck', label: 'career.uploadAck', color: 'green', hint: 'confirmed' },
-  { field: 'receivedTrafficOtherAck', label: 'career.downloadAck', color: 'cyan', hint: 'confirmed' },
+  { field: 'sentTrafficOtherAck', label: 'career.uploadAck', color: 'green', hint: 'uploadAck' },
+  { field: 'receivedTrafficOtherAck', label: 'career.downloadAck', color: 'cyan', hint: 'downloadAck' },
 ] as const
 const trafficCards = computed(() => props.traffic ? metrics.map(metric => {
   const formatted = formatBytes(props.traffic?.[metric.field])
@@ -57,21 +57,21 @@ const shareRatio = computed(() => {
     <p v-if="failed" class="traffic-note">{{ t('lifetimeTraffic.unavailable') }}</p>
     <div v-if="career" class="contribution-grid">
       <div class="metric-stack metric-stack--intro">
-        <CareerMetricCard :label="t('career.days')" :value="counterValue('days')" :unit="t('careerUnits.days')" color="blue" />
-        <CareerMetricCard :label="t('career.seeding')" :value="counterValue('seeding')" :unit="t('careerUnits.hours')" color="green" />
+        <CareerMetricCard :label="t('career.days')" :description="t('careerHelp.days')" :value="counterValue('days')" :unit="t('careerUnits.days')" color="blue" />
+        <CareerMetricCard :label="t('career.seeding')" :description="t('careerHelp.seeding')" :value="counterValue('seeding')" :unit="t('careerUnits.hours')" color="green" />
       </div>
       <div v-for="group in contributionGroups" :key="group.total" class="metric-stack">
-        <CareerMetricCard :label="t('career.' + group.total)" :value="counterValue(group.total)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
-        <CareerMetricCard :label="t('career.' + group.recent)" :value="counterValue(group.recent)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
+        <CareerMetricCard :label="t('career.' + group.total)" :description="t('careerHelp.' + group.total)" :value="counterValue(group.total)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
+        <CareerMetricCard :label="t('career.' + group.recent)" :description="t('careerHelp.' + group.recent)" :value="counterValue(group.recent)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
       </div>
     </div>
     <div v-if="career || traffic" class="other-metrics">
       <template v-if="career">
-        <CareerMetricCard :label="t('career.downloading')" :value="counterValue('downloading')" :unit="t('careerUnits.hours')" color="cyan" />
-        <CareerMetricCard :label="t('career.observation')" :value="counterValue('observation')" :unit="t('careerUnits.times')" color="blue" />
+        <CareerMetricCard :label="t('career.downloading')" :description="t('careerHelp.downloading')" :value="counterValue('downloading')" :unit="t('careerUnits.hours')" color="cyan" />
+        <CareerMetricCard :label="t('career.observation')" :description="t('careerHelp.observation')" :value="counterValue('observation')" :unit="t('careerUnits.times')" color="blue" />
       </template>
-      <CareerMetricCard v-for="metric in trafficCards" :key="metric.field" :label="t(metric.label)" :value="metric.value" :unit="metric.unit" :color="metric.color" />
-      <CareerMetricCard v-if="traffic" :label="t('career.shareRatio')" :value="shareRatio" :unit="t('career.shareRatioHint')" color="purple" />
+      <CareerMetricCard v-for="metric in trafficCards" :key="metric.field" :label="t(metric.label)" :description="t('careerHelp.' + metric.hint)" :value="metric.value" :unit="metric.unit" :color="metric.color" />
+      <CareerMetricCard v-if="traffic" :label="t('career.shareRatio')" :description="t('careerHelp.shareRatio')" :value="shareRatio" :unit="t('career.shareRatioHint')" color="purple" />
     </div>
     <p v-if="career?.lastObservedAt" class="traffic-note">{{ t('career.latest', { time: formatDate(career.lastObservedAt), name: career.observerName || t('common.anonymous') }) }}</p>
     <template v-if="traffic">

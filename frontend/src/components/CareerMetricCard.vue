@@ -1,10 +1,24 @@
 <script setup lang="ts">
-defineProps<{ label: string; value: string; unit: string; color: string }>()
+import { IconInfoCircle } from '@arco-design/web-vue/es/icon'
+import { useI18n } from 'vue-i18n'
+
+defineProps<{ label: string; value: string; unit: string; color: string; description?: string }>()
+const { t } = useI18n()
 </script>
 
 <template>
   <article class="metric-card" :class="'metric-card--' + color" :aria-label="`${label}: ${value} ${unit}`">
-    <header>{{ label }}</header>
+    <header>
+      <span>{{ label }}</span>
+      <a-popover v-if="description" :trigger="['hover', 'click', 'focus']" position="top">
+        <button type="button" class="metric-help" :aria-label="t('careerHelp.button', { label })">
+          <IconInfoCircle />
+        </button>
+        <template #content>
+          <p class="metric-description">{{ description }}</p>
+        </template>
+      </a-popover>
+    </header>
     <strong>{{ value }}</strong>
     <footer>{{ unit }}</footer>
   </article>
@@ -51,6 +65,43 @@ strong {
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.metric-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-4);
+  font-size: 14px;
+  cursor: pointer;
+}
+.metric-help:hover,
+.metric-help:focus-visible {
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+}
+.metric-help:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
+}
+.metric-description {
+  max-width: min(320px, calc(100vw - 64px));
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 footer { margin-top: auto; }
 .metric-card--red { color: rgb(var(--red-6)); }
