@@ -8,8 +8,10 @@ import {
   TitleComponent,
   TooltipComponent,
 } from 'echarts/components'
+import type { TooltipComponentOption } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { useTheme } from '@/composables/useTheme'
+import { formatAxisTooltip, formatItemTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 const { isDark } = useTheme()
 
 // Canvas options cannot resolve CSS variables; map shared neutral colors at render time.
@@ -58,7 +60,27 @@ let chart: EChartsType | null = null
 let resizeObserver: ResizeObserver | null = null
 
 function renderOption() {
-  chart?.setOption({ ...themedOption(props.option) as EChartsCoreOption, backgroundColor: 'transparent' }, true)
+  const option = themedOption(props.option) as EChartsCoreOption
+  const tooltip = (option.tooltip ?? {}) as TooltipComponentOption
+  const formatter = tooltip.formatter
+  chart?.setOption({
+    ...option,
+    backgroundColor: 'transparent',
+    tooltip: {
+      ...tooltip,
+      order: 'valueDesc',
+      formatter: (params: unknown, ...args: unknown[]) => {
+        const items = sortedTooltipItems(params)
+        if (!items.length) return ''
+        if (typeof formatter === 'function') {
+          return (formatter as (...values: unknown[]) => unknown)(Array.isArray(params) ? items : items[0], ...args)
+        }
+        return tooltip.trigger === 'axis'
+          ? formatAxisTooltip(items, tooltip.valueFormatter)
+          : formatItemTooltip(items[0], tooltip.valueFormatter)
+      },
+    },
+  }, true)
 }
 
 function renderLoading() {
