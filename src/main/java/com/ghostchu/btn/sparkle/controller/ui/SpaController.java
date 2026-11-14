@@ -23,6 +23,7 @@ public class SpaController {
             "/user/privacy-mode",
             "/user/settings",
             "/user/settings/account",
+            "/user/settings/personalization",
             "/user/settings/privacy",
             "/user/settings/notifications",
             "/user/settings/community-groups",

@@ -20,6 +20,7 @@ class SpaControllerTest {
                 "/mail-unsubscribe",
                 "/user/profile/42",
                 "/user/submissions",
+                "/user/settings/personalization",
                 "/ip-query",
                 "/admin/ai-moderation",
                 "/ping/queryIp/widget"
