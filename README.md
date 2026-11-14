@@ -169,6 +169,11 @@ Flyway `V60` 允许许可证在尚未绑定 Sparkle 用户时保存，并新增�
 升级会短暂锁定 `pbh_licenses` 并扫描该表创建索引；许可证数量较多的部署应预留维护窗口。
 不回填或重写历史交易，现有签发记录及凭据配置保持原有语义。
 
+Flyway `V67` 将许可证的平台账号统一为 `pbh_licenses.userid`，由 `provider` 区分平台；
+迁移保留通用账号值，缺失时使用旧爱发电账号补齐，随后移除重复的 `afdian_user_id`。
+现有平台账号联合索引继续有效。升级需要短暂的表级排他锁，并可能扫描许可证表，
+请预留维护窗口，停止旧版本实例后再升级，避免旧版本继续访问已更名的列。
+
 ## Flarum 2 集成
 
 仓库内的 [`flarum/extensions/sparkle-btn`](flarum/extensions/sparkle-btn/README.md)
