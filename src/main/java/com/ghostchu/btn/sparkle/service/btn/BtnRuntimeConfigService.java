@@ -7,6 +7,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -118,6 +119,21 @@ public class BtnRuntimeConfigService {
             parsed = Math.min(definition.max(), parsed);
         }
         return parsed;
+    }
+
+    public String routeUrl(String isp, String province) {
+        Map<String, String> values = values();
+        boolean optimized = Boolean.parseBoolean(values.get(BtnConfigCatalog.key("rootUrls", "autoRouteEnabled")))
+                && (matchesRoute(values.get(BtnConfigCatalog.key("rootUrls", "chnRouteIsps")), isp)
+                || matchesRoute(values.get(BtnConfigCatalog.key("rootUrls", "chnRouteProvinces")), province));
+        return values.get(BtnConfigCatalog.key("rootUrls", optimized ? "chnRootUrl" : "rootUrl"));
+    }
+
+    private boolean matchesRoute(String keywords, String value) {
+        return value != null && keywords != null && Arrays.stream(keywords.split("[,\r\n]"))
+                .map(String::trim)
+                .filter(keyword -> !keyword.isEmpty())
+                .anyMatch(value::contains);
     }
 
     public String defaultValue(String key) {

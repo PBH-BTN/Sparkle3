@@ -14,6 +14,31 @@ import static org.mockito.Mockito.when;
 
 class BtnRuntimeConfigServiceTest {
     @Test
+    void routingUsesConfigAndRefreshesAfterChanges() {
+        DatabaseConfigService database = mock(DatabaseConfigService.class);
+        Environment environment = mock(Environment.class);
+        when(environment.getProperty(anyString(), anyString())).thenAnswer(i -> i.getArgument(1));
+        when(database.getRawValues(any())).thenReturn(Map.of());
+        BtnRuntimeConfigService service = new BtnRuntimeConfigService(database, environment);
+        String primary = service.text("rootUrls", "rootUrl");
+        String optimized = service.text("rootUrls", "chnRootUrl");
+        assertEquals(optimized, service.routeUrl("中国移动", null));
+        assertEquals(optimized, service.routeUrl(null, "福建省"));
+        assertEquals(primary, service.routeUrl(null, null));
+        assertEquals(primary, service.routeUrl("中国电信", "北京市"));
+        when(database.getRawValues(any())).thenReturn(Map.of(
+                BtnConfigCatalog.key("rootUrls", "chnRouteIsps"), " 电信\n联通 ",
+                BtnConfigCatalog.key("rootUrls", "chnRouteProvinces"), ""));
+        service.invalidate();
+        assertEquals(optimized, service.routeUrl("中国电信", null));
+        assertEquals(primary, service.routeUrl("中国移动", "福建省"));
+        when(database.getRawValues(any())).thenReturn(Map.of(
+                BtnConfigCatalog.key("rootUrls", "autoRouteEnabled"), "false"));
+        service.invalidate();
+        assertEquals(primary, service.routeUrl("中国移动", "福建省"));
+    }
+
+    @Test
     void externalOverridesRemainMoreImportantThanDatabaseValues() {
         DatabaseConfigService databaseConfigService = mock(DatabaseConfigService.class);
         Environment environment = mock(Environment.class);

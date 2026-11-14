@@ -62,6 +62,9 @@ public final class BtnConfigValidator {
             }
             return value;
         }
+        if (isRouteList(definition)) {
+            return normalizeList(definition, value);
+        }
         if (value.isEmpty()) {
             throw invalid(definition, "value must not be empty");
         }
@@ -233,10 +236,16 @@ public final class BtnConfigValidator {
                 .distinct()
                 .reduce((left, right) -> left + "," + right)
                 .orElse("");
-        if (normalized.isEmpty()) {
+        if (normalized.isEmpty() && !isRouteList(definition)) {
             throw invalid(definition, "value must not be empty");
         }
         return normalized;
+    }
+
+    private static boolean isRouteList(BtnConfigCatalog.Definition definition) {
+        return definition.section().equals("rootUrls")
+                && (definition.field().equals("chnRouteIsps")
+                || definition.field().equals("chnRouteProvinces"));
     }
 
     private static String normalizeTimeZone(

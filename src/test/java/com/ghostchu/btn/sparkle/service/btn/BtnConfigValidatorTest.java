@@ -11,6 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BtnConfigValidatorTest {
     @Test
+    void routeListsAllowClearingAndNormalizeKeywords() throws Exception {
+        String isps = BtnConfigCatalog.key("rootUrls", "chnRouteIsps");
+        String provinces = BtnConfigCatalog.key("rootUrls", "chnRouteProvinces");
+        Map<String, String> result = BtnConfigValidator.validate(
+                Map.of(isps, " 移动,移动\n电信 ", provinces, " , \n"), defaults());
+        assertEquals("移动,电信", result.get(isps));
+        assertEquals("", result.get(provinces));
+    }
+
+    @Test
     void acceptsRootUrlEndpointsAndDisabledCron() throws Exception {
         Map<String, String> values = new LinkedHashMap<>();
         values.put(

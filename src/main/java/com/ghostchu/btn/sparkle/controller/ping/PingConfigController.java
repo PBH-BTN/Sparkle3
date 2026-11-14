@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.InetAddress;
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -64,25 +63,15 @@ public class PingConfigController extends BasePingController {
                 .body(objectMapper.writeValueAsString(config).replace("{rooturl}", routeUrl));
     }
 
-    private final static List<String> cnOptimizeProvinces = List.of(
-            "福建", "江苏", "浙江", "四川", "重庆", "河南", "湖北"
-    );
-
     private String detectRoute(InetAddress inetAddress) {
+        if (!configService.booleanValue("rootUrls", "autoRouteEnabled")) {
+            return configService.text("rootUrls", "rootUrl");
+        }
         var geoData = ipdb.queryIPDB(inetAddress).geoData().get();
-        if (geoData.getNetwork() != null && geoData.getNetwork().getIsp() != null) {
-            if (geoData.getNetwork().getIsp().contains("移动")) {
-                return configService.text("rootUrls", "chnRootUrl");
-            }
-        }
-        if (geoData.getCity() != null && geoData.getCity().getCnProvince() != null) {
-            for (String cnOptimizeProvince : cnOptimizeProvinces) {
-                if(geoData.getCity().getCnProvince().contains(cnOptimizeProvince)){
-                    return configService.text("rootUrls", "chnRootUrl");
-                }
-            }
-        }
-        return configService.text("rootUrls", "rootUrl");
+        return configService.routeUrl(
+                geoData == null || geoData.getNetwork() == null ? null : geoData.getNetwork().getIsp(),
+                geoData == null || geoData.getCity() == null ? null : geoData.getCity().getCnProvince()
+        );
     }
 
     @Component

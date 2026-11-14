@@ -324,6 +324,9 @@ public final class BtnConfigCatalog {
 
             Definition.url("rootUrls", "rootUrl", "https://sparkle.pbh-btn.com"),
             Definition.url("rootUrls", "chnRootUrl", "https://sparkle.ghostchu.com"),
+            Definition.bool("rootUrls", "autoRouteEnabled", true),
+            Definition.list("rootUrls", "chnRouteIsps", "移动"),
+            Definition.list("rootUrls", "chnRouteProvinces", "福建,江苏,浙江,四川,重庆,河南,湖北"),
 
             Definition.text(
                     "captchaPow",
