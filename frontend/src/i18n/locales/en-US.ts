@@ -610,6 +610,8 @@ export default {
     saveSuccess: 'Privacy settings saved.',
   },
   banHistory: {
+    fromPeerTraffic: 'Traffic from peer',
+    toPeerTraffic: 'Traffic to peer',
     title: 'Ban history',
     description: 'Inspect peer bans reported across the BTN network.',
     torrentId: 'Torrent ID',

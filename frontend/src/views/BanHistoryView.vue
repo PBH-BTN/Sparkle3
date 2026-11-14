@@ -33,7 +33,7 @@ const router = useRouter()
 const session = useSessionStore()
 const {
   formatDate,
-  formatNumber,
+  formatBytes,
   formatProgress,
 } = useFormatters()
 const moduleNames = ref<string[]>([])
@@ -163,6 +163,8 @@ const columns = computed<TableColumnData[]>(() => {
     width: 100,
     sortable: { sortDirections: ['ascend', 'descend'] },
     },
+    { title: t('banHistory.fromPeerTraffic'), slotName: 'fromPeerTraffic', width: 170 },
+    { title: t('banHistory.toPeerTraffic'), slotName: 'toPeerTraffic', width: 170 },
     { title: t('banHistory.geoIp'), slotName: 'geoIp', width: 170, ellipsis: true },
     {
     title: t('banHistory.moduleName'),
@@ -402,7 +404,7 @@ onMounted(async () => {
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: session.user?.admin || session.user?.moderator ? 2280 : 2050 }"
+        :scroll="{ x: session.user?.admin || session.user?.moderator ? 2620 : 2390 }"
         row-key="id"
         stripe
         @sorter-change="changeSort"
@@ -458,6 +460,8 @@ onMounted(async () => {
           </span>
         </template>
         <template #progress="{ record }">{{ formatProgress(record.peerProgress) }}</template>
+        <template #fromPeerTraffic="{ record }">{{ formatBytes(record.fromPeerTraffic) }}</template>
+        <template #toPeerTraffic="{ record }">{{ formatBytes(record.toPeerTraffic) }}</template>
         <template #geoIp="{ record }">
           <span class="geoip-text table-cell-ellipsis" :title="geoIp(record)">
             {{ geoIp(record) }}

@@ -23,7 +23,7 @@ const { t } = useI18n()
 const router = useRouter()
 const {
   formatDate,
-  formatNumber,
+  formatBytes,
   formatProgress,
 } = useFormatters()
 const insights = ref<SwarmPeerInsightsResponse | null>(null)
@@ -113,14 +113,14 @@ const columns = computed<TableColumnData[]>(() => [
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
-    title: t('swarmTracker.fromPeerTraffic'),
+    title: t('banHistory.fromPeerTraffic'),
     dataIndex: 'from_peer_traffic',
     slotName: 'fromPeerTraffic',
     width: 170,
     sortable: { sortDirections: ['ascend', 'descend'] },
   },
   {
-    title: t('swarmTracker.toPeerTraffic'),
+    title: t('banHistory.toPeerTraffic'),
     dataIndex: 'to_peer_traffic',
     slotName: 'toPeerTraffic',
     width: 170,
@@ -424,10 +424,10 @@ onMounted(() => {
           {{ formatProgress(record.peerProgress) }}
         </template>
         <template #fromPeerTraffic="{ record }">
-          {{ formatNumber(record.fromPeerTraffic) }}
+          {{ formatBytes(record.fromPeerTraffic) }}
         </template>
         <template #toPeerTraffic="{ record }">
-          {{ formatNumber(record.toPeerTraffic) }}
+          {{ formatBytes(record.toPeerTraffic) }}
         </template>
         <template #flags="{ record }">
           <code class="mono">{{ record.flags || 'N/A' }}</code>

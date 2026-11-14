@@ -592,6 +592,8 @@ export default {
     saveSuccess: '隐私设置已保存。',
   },
   banHistory: {
+    fromPeerTraffic: '从 Peer 获取流量',
+    toPeerTraffic: '发送到 Peer 流量',
     title: '封禁记录',
     description: '查询 BTN 网络中的 Peer 封禁事件。',
     torrentId: '种子 ID',
