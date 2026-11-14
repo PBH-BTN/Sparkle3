@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { scrollBehavior } from './scrollBehavior'
 
 const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior,
   routes: [
     {
       path: '/mail-unsubscribe',
