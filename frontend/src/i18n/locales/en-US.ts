@@ -1822,6 +1822,74 @@ export default {
         'dynamic-torrent-size-gib': 'Torrent size unit (GiB)',
       },
       items: {
+        'ai-moderation-worker': {
+          name: 'AI moderation worker',
+          description: 'Processes pending moderation jobs in batches.',
+        },
+        'database-config-migration': {
+          name: 'Startup configuration migration',
+          description: 'Migrates business configuration during startup.',
+        },
+        'mail-config-migration': {
+          name: 'Legacy mail configuration migration',
+          description: 'Migrates legacy mail settings during startup.',
+        },
+        'account-deletion-restore': {
+          name: 'Restore account deletion markers',
+          description: 'Restores pending account deletion markers during startup.',
+        },
+        'analysis-schedule-startup': {
+          name: 'Initialize analysis schedules',
+          description: 'Registers analysis module schedules during startup.',
+        },
+        'btn-schedule-startup': {
+          name: 'Initialize BTN schedules',
+          description: 'Registers BTN background schedules during startup.',
+        },
+        'avatar-schedule-startup': {
+          name: 'Initialize avatar cleanup schedule',
+          description: 'Registers the avatar cache cleanup schedule during startup.',
+        },
+        'avatar-schedule-poll': {
+          name: 'Check avatar cleanup schedule',
+          description: 'Updates the avatar cleanup schedule when settings change.',
+        },
+        'avatar-cache-cleanup': {
+          name: 'Avatar cache cleanup',
+          description: 'Removes expired avatar cache files on the current schedule.',
+        },
+        'mail-reply-poll': {
+          name: 'Check email reply scan schedule',
+          description: 'Triggers due reply scans using mailbox settings.',
+        },
+        'mail-reply-scan': {
+          name: 'Scan email replies',
+          description: 'Scans the mailbox and imports valid replies.',
+        },
+        'message-mail-dispatch': {
+          name: 'Send notification emails',
+          description: 'Sends requested email notifications after messages are committed.',
+        },
+        'profile-moderation-enqueue': {
+          name: 'Queue profile moderation',
+          description: 'Queues moderation after profile updates are committed.',
+        },
+        'account-deletion-notify': {
+          name: 'Send account deletion notifications',
+          description: 'Sends notifications when account deletion status changes.',
+        },
+        'account-deletion-cleanup': {
+          name: 'Account deletion cleanup',
+          description: 'Clears avatar cache and revokes sessions after account deletion.',
+        },
+        'geoip-database-startup': {
+          name: 'Initialize IP geolocation databases',
+          description: 'Checks, downloads, and loads IP geolocation databases during startup.',
+        },
+        'geoip-blacklist-startup': {
+          name: 'Initialize city blacklist output',
+          description: 'Checks city blacklist output and requests generation when needed during startup.',
+        },
         'untrusted-vote': {
           name: 'Untrusted vote aggregation',
           description:
