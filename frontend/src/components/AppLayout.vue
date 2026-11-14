@@ -203,6 +203,10 @@ onBeforeUnmount(() => {
                 <template #icon><IconFire /></template>
                 {{ t('nav.points') }}
               </a-doption>
+              <a-doption @click="navigate('/user/traffic')">
+                <template #icon><IconDashboard /></template>
+                {{ t('traffic.title') }}
+              </a-doption>
               <a-doption @click="navigate('/user/submissions')">
                 <template #icon><IconList /></template>
                 {{ t('nav.submissions') }}
@@ -288,6 +292,10 @@ onBeforeUnmount(() => {
         <a-menu-item key="/user/points">
           <template #icon><IconFire /></template>
           {{ t('nav.points') }}
+        </a-menu-item>
+        <a-menu-item key="/user/traffic">
+          <template #icon><IconDashboard /></template>
+          {{ t('traffic.title') }}
         </a-menu-item>
         <a-menu-item key="/user/submissions">
           <template #icon><IconList /></template>

@@ -59,6 +59,11 @@ const router = createRouter({
       component: () => import('@/views/PointsView.vue'),
     },
     {
+      path: '/user/traffic',
+      name: 'traffic',
+      component: () => import('@/views/TrafficStatisticsView.vue'),
+    },
+    {
       path: '/user/submissions',
       name: 'submissions',
       component: () => import('@/views/SubmissionsView.vue'),

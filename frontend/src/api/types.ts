@@ -1,3 +1,8 @@
+export interface DailyTraffic {
+  day: string
+  metrics: Record<string, string>
+}
+
 export type AvatarVisibility = 'ORIGINAL' | 'BLURRED' | 'HIDDEN'
 export type UsernameVisibility = 'FULL' | 'BLURRED'
 export type PointsVisibility = 'SHOW' | 'HIDDEN'

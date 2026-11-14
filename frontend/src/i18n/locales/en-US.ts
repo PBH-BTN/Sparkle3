@@ -1,4 +1,5 @@
 export default {
+  traffic: {"title":"Traffic statistics","heading":"My traffic statistics","description":"Daily reported and confirmed traffic, activity time, and traffic lost before bans.","note":"Grouped by UTC calendar day, including ban reports and swarm inspections. Daily statistics start from this feature’s launch, with no historical backfill. Days without reports are omitted. Today’s results update as reports arrive.","timeNote":"Activity time is sampled and summed per torrent using the BTN career statistics method. It does not represent downloader uptime.","loss":"Traffic lost before bans","lossRatio":"Loss percentage","lossHelp":"Bytes already uploaded in ban reports, divided by the day’s reported upload. The percentage is 0% when reported upload is zero.","day":"Date (UTC)","empty":"No traffic statistics yet","failed":"Unable to load traffic statistics. Please try again.","refresh":"Refresh","hours":"{value} hours"},
   submissions: {
     title: 'My submissions',
     description: 'View records submitted by your applications.',
