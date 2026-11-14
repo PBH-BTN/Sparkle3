@@ -16,8 +16,9 @@ class AfdianMessageImportServiceTest {
     private final TaskStatusService tasks = mock(TaskStatusService.class);
     private final TaskStatusService.TaskExecution execution = mock(TaskStatusService.TaskExecution.class);
     private final ObjectMapper json = new ObjectMapper();
+    private final AfdianEmailBindingService emailBinding = mock(AfdianEmailBindingService.class);
     private final AfdianMessageImportService service = new AfdianMessageImportService(
-            client, new PbhLicenseDecoder(), writer, mock(AfdianSettingsService.class), tasks);
+            client, new PbhLicenseDecoder(), writer, mock(AfdianSettingsService.class), tasks, emailBinding);
 
     @Test
     void scansEveryDialogAndEveryMessagePageIncludingOverlappingPages() throws Exception {
@@ -92,6 +93,20 @@ class AfdianMessageImportServiceTest {
     private String message(int id, String content) throws Exception {
         return "{\"type\":\"send\",\"message\":{\"msg_id\":" + id + ",\"type\":4,\"content\":"
                 + json.writeValueAsString(content) + "}}";
+    }
+
+    @Test
+    void receiptRemarkCanLinkAnAccountEvenWithoutLicenseMessages() throws Exception {
+        when(tasks.begin(anyString(), anyString())).thenReturn(execution);
+        when(client.dialogs("token", 1)).thenReturn(json.readTree("{\"total_page\":1,\"list\":[{\"user\":{\"user_id\":\"a\"}}]}"));
+        when(client.messages("token", "a", "0")).thenReturn(json.readTree("""
+                {"has_more":0,"list":[{"type":"receive","message":{"msg_id":10,"type":2,"content":{
+                  "out_trade_no":"order-1","total_amount":"50.00","remark":"请绑定 buyer@example.test"}}}]}
+                """));
+        service.run("token", List.of(), 42L);
+        assertEquals("COMPLETED", service.status().state());
+        verify(emailBinding).bind("a", "order-1", "请绑定 buyer@example.test");
+        verifyNoInteractions(writer);
     }
 
     @Test

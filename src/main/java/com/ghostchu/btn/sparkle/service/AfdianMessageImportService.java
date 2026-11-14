@@ -32,6 +32,7 @@ public class AfdianMessageImportService {
     private final AfdianMessageLicenseWriter writer;
     private final AfdianSettingsService settings;
     private final TaskStatusService tasks;
+    private final AfdianEmailBindingService emailBinding;
     private volatile ImportStatus status = new ImportStatus("IDLE", 0, 0, 0, 0, 0, 0, 0);
 
     public ImportStatus status() { return status; }
@@ -122,7 +123,15 @@ public class AfdianMessageImportService {
                 added++;
                 counts.messages++;
                 if (AfdianMessageReceipt.isOrderCard(entry)) {
-                    associate(awaitingCard, licenses, AfdianMessageReceipt.from(entry), counts);
+                    AfdianMessageReceipt receipt = AfdianMessageReceipt.from(entry);
+                    if (receipt != null) {
+                        try {
+                            emailBinding.bind(userId, receipt.orderId(), receipt.remark());
+                        } catch (BusinessException | org.springframework.dao.DataAccessException exception) {
+                            log.warn("Afdian remark binding skipped during message scan ({})", exception.getClass().getSimpleName());
+                        }
+                    }
+                    associate(awaitingCard, licenses, receipt, counts);
                 }
                 scanContent(message.path("content"), id, keys, awaitingCard);
             }

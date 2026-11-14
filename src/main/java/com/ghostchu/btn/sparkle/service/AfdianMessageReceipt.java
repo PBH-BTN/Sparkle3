@@ -5,7 +5,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /** A structured order card returned by Afdian, never JSON supplied in ordinary chat text. */
-public record AfdianMessageReceipt(String orderId, String sourceType, String sku, BigDecimal amountCny) {
+public record AfdianMessageReceipt(String orderId, String sourceType, String sku, BigDecimal amountCny, String remark) {
+    public AfdianMessageReceipt(String orderId, String sourceType, String sku, BigDecimal amountCny) {
+        this(orderId, sourceType, sku, amountCny, null);
+    }
     public static boolean isOrderCard(JsonNode entry) {
         return "receive".equals(entry.path("type").asText())
                 && entry.path("message").path("type").asInt(-1) == 2;
@@ -34,7 +37,8 @@ public record AfdianMessageReceipt(String orderId, String sourceType, String sku
                 }
             }
             if (sku.length() > 255) return null;
-            return new AfdianMessageReceipt(orderId, product ? "PRODUCT" : "DONATION", sku.isBlank() ? null : sku, amount);
+            return new AfdianMessageReceipt(orderId, product ? "PRODUCT" : "DONATION", sku.isBlank() ? null : sku,
+                    amount, content.path("remark").asText(null));
         } catch (NumberFormatException exception) {
             return null;
         }

@@ -60,6 +60,7 @@ public class AfdianIntegrationService {
     private final PbhLicenseService licenseService;
     private final ExchangeRateService exchangeRateService;
     private final MemberTransactionLedgerService ledgerService;
+    private final AfdianEmailBindingService emailBinding;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public SettingsView settings() {
@@ -262,6 +263,13 @@ public class AfdianIntegrationService {
                     upsertDonation(order, session);
                     if (order.status() == COMPLETED) {
                         completed++;
+                        try {
+                            if (emailBinding.bind(order.afdianUserId(), order.outTradeNo(), order.remark())) {
+                                boundUsers.add(order.afdianUserId());
+                            }
+                        } catch (BusinessException | org.springframework.dao.DataAccessException exception) {
+                            log.warn("Afdian remark binding skipped during order sync ({})", exception.getClass().getSimpleName());
+                        }
                         latestDonations.put(
                                 order.afdianUserId(),
                                 order

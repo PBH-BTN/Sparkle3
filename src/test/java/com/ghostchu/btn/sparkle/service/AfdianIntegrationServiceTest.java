@@ -37,6 +37,7 @@ class AfdianIntegrationServiceTest {
             mock(ExchangeRateService.class);
     private final MemberTransactionLedgerService ledgerService =
             mock(MemberTransactionLedgerService.class);
+    private final AfdianEmailBindingService emailBinding = mock(AfdianEmailBindingService.class);
     private final AfdianIntegrationService service =
             new AfdianIntegrationService(
                     bindingMapper,
@@ -49,7 +50,8 @@ class AfdianIntegrationServiceTest {
                     new ObjectMapper(),
                     licenseService,
                     exchangeRateService,
-                    ledgerService
+                    ledgerService,
+                    emailBinding
             );
 
     @Test
@@ -116,5 +118,25 @@ class AfdianIntegrationServiceTest {
                 .setAmountCny(new BigDecimal(amount))
                 .setTransactionStatus(status)
                 .setRemotePresent(remotePresent);
+    }
+
+    @Test
+    void completedNewAndHistoricalOrdersTryEmailBindingDuringEverySync() throws Exception {
+        when(settingsService.configured()).thenReturn(true);
+        when(bindingMapper.selectList(any())).thenReturn(List.of());
+        var raw = new ObjectMapper().createObjectNode();
+        var paid = new AfdianClient.AfdianOrder("paid-order", "afdian-user", "Buyer", null,
+                "plan", "Product", BigDecimal.TEN, BigDecimal.TEN, 2, "buyer@example.test",
+                java.time.OffsetDateTime.now(), 1, raw.arrayNode(), raw);
+        var unpaid = new AfdianClient.AfdianOrder("unpaid-order", "other-user", "Other", null,
+                "plan", "Product", BigDecimal.TEN, BigDecimal.TEN, 0, "other@example.test",
+                java.time.OffsetDateTime.now(), 1, raw.arrayNode(), raw);
+        when(afdianClient.queryOrders(any())).thenReturn(new AfdianClient.OrderPage(List.of(paid, unpaid), 2, 1));
+        service.syncNow();
+        service.syncNow();
+        org.mockito.Mockito.verify(emailBinding, org.mockito.Mockito.times(2))
+                .bind("afdian-user", "paid-order", "buyer@example.test");
+        org.mockito.Mockito.verify(emailBinding, org.mockito.Mockito.never())
+                .bind("other-user", "unpaid-order", "other@example.test");
     }
 }
