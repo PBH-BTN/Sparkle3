@@ -25,7 +25,7 @@ function counterValue(key: string) {
     ? (Number(value) / 3600).toFixed(2)
     : BigInt(value).toLocaleString()
 }
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const metrics = [
   { field: 'sentTrafficSelfReport', label: 'career.upload', color: 'green', hint: 'upload' },
@@ -39,6 +39,14 @@ const trafficCards = computed(() => props.traffic ? metrics.map(metric => {
   return { ...metric, value: formatted.slice(0, split), unit: formatted.slice(split + 1) }
 }) : [])
 const empty = computed(() => props.traffic && metrics.every(({ field }) => props.traffic?.[field] === '0'))
+const shareRatio = computed(() => {
+  if (!props.traffic) return ''
+  const upload = BigInt(props.traffic.sentTrafficSelfReport)
+  const download = BigInt(props.traffic.receivedTrafficSelfReport)
+  if (download === 0n) return upload > 0n ? '∞' : '0.00'
+  const hundredths = (upload * 100n + download / 2n) / download
+  return `${(hundredths / 100n).toLocaleString(locale.value)}.${(hundredths % 100n).toString().padStart(2, '0')}`
+})
 </script>
 
 <template>
@@ -63,6 +71,7 @@ const empty = computed(() => props.traffic && metrics.every(({ field }) => props
         <CareerMetricCard :label="t('career.observation')" :value="counterValue('observation')" :unit="t('careerUnits.times')" color="blue" />
       </template>
       <CareerMetricCard v-for="metric in trafficCards" :key="metric.field" :label="t(metric.label)" :value="metric.value" :unit="metric.unit" :color="metric.color" />
+      <CareerMetricCard v-if="traffic" :label="t('career.shareRatio')" :value="shareRatio" :unit="t('career.shareRatioHint')" color="purple" />
     </div>
     <p v-if="career?.lastObservedAt" class="traffic-note">{{ t('career.latest', { time: formatDate(career.lastObservedAt), name: career.observerName || t('common.anonymous') }) }}</p>
     <template v-if="traffic">
