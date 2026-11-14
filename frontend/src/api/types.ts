@@ -1,3 +1,8 @@
+export interface ApplicationBypassIp {
+  ip: string
+  peerGeoip: BanHistoryRecord['peerGeoip']
+}
+
 export interface DailyTraffic {
   day: string
   metrics: Record<string, string>

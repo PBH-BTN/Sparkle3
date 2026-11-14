@@ -453,6 +453,13 @@ export default {
     moreSoon: 'More capabilities are on the way',
   },
   userApps: {
+    applyBypass: 'Apply for BTN Bypass',
+    linkedIps: '{count} linked IPs',
+    bypassIpsTitle: 'Linked IPs for {name}',
+    bypassIpsNote: 'IP addresses linked by heartbeats in the past hour, with their locations.',
+    bypassIpsFailed: 'Unable to load linked IPs. Please try again.',
+    ipAddress: 'IP address',
+    geoIp: 'GeoIP location',
     title: 'Application management',
     description: 'Use a dedicated application credential for every client.',
     create: 'Create application',

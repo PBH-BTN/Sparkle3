@@ -437,6 +437,13 @@ export default {
     moreSoon: '更多功能正在建设中',
   },
   userApps: {
+    applyBypass: '申请 BTN Bypass',
+    linkedIps: '已关联 {count} 个 IP',
+    bypassIpsTitle: '{name} 的关联 IP',
+    bypassIpsNote: '显示最近 1 小时通过心跳关联的 IP 地址及其属地。',
+    bypassIpsFailed: '关联 IP 加载失败，请重试。',
+    ipAddress: 'IP 地址',
+    geoIp: 'GeoIP 属地',
     title: '用户应用管理',
     description: '每个客户端都应使用独立的用户应用凭据。',
     create: '创建新应用',

@@ -175,6 +175,7 @@ export const uiApi = {
     request<void>('/api/ui/logout', {
       method: 'POST',
     }),
+  userAppBypassIps: (appId: string) => request<import('./types').ApplicationBypassIp[]>(`/api/ui/userapps/${encodeURIComponent(appId)}/bypass-ips`),
   userApps: () => request<UserApplication[]>('/api/ui/userapps'),
   createUserApp: (comment: string) =>
     request<ApplicationCredentials>('/api/ui/userapps', {

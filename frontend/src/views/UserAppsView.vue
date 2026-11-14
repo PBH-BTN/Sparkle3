@@ -12,8 +12,9 @@ import {
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { uiApi } from '@/api'
-import type { ApplicationCredentials, UserApplication } from '@/api/types'
+import type { ApplicationBypassIp, ApplicationCredentials, UserApplication } from '@/api/types'
 import { errorMessage, useFormatters } from '@/utils/format'
+import { geoIp } from '@/utils/peerRecords'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -36,6 +37,34 @@ const columns = computed<TableColumnData[]>(() => [
   { title: t('common.actions'), slotName: 'actions', width: 220, fixed: 'right' },
 ])
 
+const bypassApplication = ref<UserApplication | null>(null)
+const bypassVisible = ref(false)
+const bypassLoading = ref(false)
+const bypassFailed = ref(false)
+const bypassIps = ref<ApplicationBypassIp[]>([])
+let bypassRequest = 0
+const bypassColumns = computed<TableColumnData[]>(() => [
+  { title: t('userApps.ipAddress'), slotName: 'ip', width: 280 },
+  { title: t('userApps.geoIp'), slotName: 'geoIp', width: 260 },
+])
+async function showBypassIps(application: UserApplication) {
+  const request = ++bypassRequest
+  bypassApplication.value = application
+  bypassVisible.value = true
+  bypassLoading.value = true
+  bypassFailed.value = false
+  bypassIps.value = []
+  try {
+    const result = await uiApi.userAppBypassIps(application.appId)
+    if (request === bypassRequest) bypassIps.value = result
+  } catch {
+    if (request === bypassRequest) bypassFailed.value = true
+  } finally {
+    if (request === bypassRequest) bypassLoading.value = false
+  }
+}
+
+const bypassApplyUrl = 'https://bbs.pbh-btn.com/d/58'
 const credentialStorageKey = 'sparkle-application-credentials'
 
 async function loadApplications() {
@@ -133,44 +162,12 @@ onMounted(loadApplications)
           </template>
 
           <template #exemptIps="{ record }">
-            <div v-if="record.exemptIps.length" class="exempt-ip-cell">
-              <a-tooltip
-                v-for="ip in record.exemptIps.slice(0, 2)"
-                :key="ip"
-                :content="ip"
-              >
-                <a-tag color="arcoblue" class="exempt-ip-tag">
-                  {{ ip }}
-                </a-tag>
-              </a-tooltip>
-              <a-popover
-                v-if="record.exemptIps.length > 2"
-                trigger="click"
-                position="br"
-              >
-                <a-tag color="gray" class="exempt-ip-more">
-                  +{{ record.exemptIps.length - 2 }}
-                </a-tag>
-                <template #content>
-                  <div class="exempt-ip-popover">
-                    <a-tag
-                      v-for="ip in record.exemptIps"
-                      :key="ip"
-                      color="arcoblue"
-                    >
-                      {{ ip }}
-                    </a-tag>
-                  </div>
-                </template>
-              </a-popover>
-            </div>
-            <span v-else class="exempt-ip-empty">
-              {{
-                record.btnBypass
-                  ? t('userApps.noExemptIps')
-                  : t('userApps.bypassNotEnabled')
-              }}
-            </span>
+            <a-button v-if="record.btnBypass" size="small" @click="showBypassIps(record)">
+              {{ t('userApps.linkedIps', { count: record.exemptIps.length }) }}
+            </a-button>
+            <a-button v-else size="small" :href="bypassApplyUrl" target="_blank" rel="noopener noreferrer">
+              {{ t('userApps.applyBypass') }}
+            </a-button>
           </template>
 
           <template #status="{ record }">
@@ -268,22 +265,13 @@ onMounted(loadApplications)
 
               <div class="mobile-field">
                 <span>{{ t('userApps.exemptIps') }}</span>
-                <div v-if="application.exemptIps.length" class="mobile-exempt-ips">
-                  <a-tag
-                    v-for="ip in application.exemptIps"
-                    :key="ip"
-                    color="arcoblue"
-                  >
-                    {{ ip }}
-                  </a-tag>
-                </div>
-                <strong v-else class="exempt-ip-empty">
-                  {{
-                    application.btnBypass
-                      ? t('userApps.noExemptIps')
-                      : t('userApps.bypassNotEnabled')
-                  }}
-                </strong>
+                <a-button
+                  :href="application.btnBypass ? undefined : bypassApplyUrl"
+                  target="_blank" rel="noopener noreferrer"
+                  @click="application.btnBypass && showBypassIps(application)"
+                >
+                  {{ application.btnBypass ? t('userApps.linkedIps', { count: application.exemptIps.length }) : t('userApps.applyBypass') }}
+                </a-button>
               </div>
 
               <a-alert
@@ -332,10 +320,25 @@ onMounted(loadApplications)
         </a-spin>
       </div>
     </a-card>
+    <a-modal v-model:visible="bypassVisible" :title="t('userApps.bypassIpsTitle', { name: bypassApplication?.comment || '' })" :footer="false" width="min(720px, calc(100vw - 32px))">
+      <p class="bypass-ip-note">{{ t('userApps.bypassIpsNote') }}</p>
+      <a-alert v-if="bypassFailed" type="error">
+        {{ t('userApps.bypassIpsFailed') }}
+        <template #action>
+          <a-button v-if="bypassApplication" size="small" @click="showBypassIps(bypassApplication)">{{ t('common.retry') }}</a-button>
+        </template>
+      </a-alert>
+      <a-table v-else :columns="bypassColumns" :data="bypassIps" :loading="bypassLoading" :pagination="false" :scroll="{ x: 540, y: 360 }" row-key="ip">
+        <template #ip="{ record }"><code class="mono">{{ record.ip }}</code></template>
+        <template #geoIp="{ record }">{{ geoIp(record) }}</template>
+        <template #empty><EmptyState :title="t('userApps.noExemptIps')" /></template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
 <style scoped>
+.bypass-ip-note { color: var(--color-text-3); line-height: 1.6; }
 .app-id-cell {
   display: flex;
   align-items: center;
@@ -348,38 +351,6 @@ onMounted(loadApplications)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.exempt-ip-cell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.exempt-ip-tag {
-  max-width: 145px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.exempt-ip-more {
-  cursor: pointer;
-}
-
-.exempt-ip-popover {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  max-width: 440px;
-  max-height: 300px;
-  overflow: auto;
-}
-
-.exempt-ip-empty {
-  color: var(--color-text-3);
-  font-size: 12px;
 }
 
 .mobile-applications {
@@ -461,12 +432,6 @@ onMounted(loadApplications)
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.6;
-}
-
-.mobile-exempt-ips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .mobile-ban-reason {
