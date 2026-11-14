@@ -1381,6 +1381,7 @@ export default {
       token: 'Afdian auth_token',
       key: 'Verification private key (optional; otherwise use the configured key and official public key)',
       keySelected: 'Temporary verification key selected.',
+      selectKey: 'Select private key file',
       invalidKey: 'Unable to read the private key file. Select a valid file.',
       start: 'Scan and import',
       failed: 'The scan did not finish. Imported records were retained. Check the credential and retry.',

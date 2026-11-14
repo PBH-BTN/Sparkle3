@@ -72,6 +72,7 @@ declare module 'vue' {
     ATimeline: typeof import('@arco-design/web-vue')['Timeline']
     ATimelineItem: typeof import('@arco-design/web-vue')['TimelineItem']
     ATooltip: typeof import('@arco-design/web-vue')['Tooltip']
+    AUpload: typeof import('@arco-design/web-vue')['Upload']
     CareerMetricCard: typeof import('./components/CareerMetricCard.vue')['default']
     EChart: typeof import('./components/EChart.vue')['default']
     EmptyState: typeof import('./components/EmptyState.vue')['default']

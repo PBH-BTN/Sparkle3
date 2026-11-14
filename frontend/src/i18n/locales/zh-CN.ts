@@ -1355,6 +1355,7 @@ export default {
       token: '爱发电 auth_token',
       key: '校验私钥（可选，留空使用已配置私钥及官方公钥）',
       keySelected: '已选择临时校验私钥。',
+      selectKey: '选择私钥文件',
       invalidKey: '无法读取私钥文件，请选择有效文件。',
       start: '扫描并导入',
       failed: '扫描未完成，已导入记录已保留。请检查凭据后重试。',

@@ -46,19 +46,16 @@ async function resolve(licenseId: string) {
   }
 }
 
-async function selectKey(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+async function selectKey(file: File): Promise<false> {
   try {
     if (file.size > 16384) throw new Error(t('admin.afdianMessageImport.invalidKey'))
     privateKey.value = await file.text()
   } catch (error) {
     privateKey.value = ''
     Message.error(errorMessage(error, t('admin.afdianMessageImport.invalidKey')))
-  } finally {
-    input.value = ''
   }
+  // Read locally; the upload component must never send the private key file.
+  return false
 }
 
 async function start() {
@@ -94,10 +91,17 @@ onUnmounted(() => {
       <a-input-password v-model="authToken" autocomplete="off" :max-length="512"
         :placeholder="t('admin.afdianMessageImport.token')"
         :disabled="status?.state === 'RUNNING'" />
-      <label class="verification-key">
-        {{ t('admin.afdianMessageImport.key') }}
-        <input type="file" accept=".pem,.key,.txt" :disabled="status?.state === 'RUNNING'" @change="selectKey" />
-      </label>
+      <div class="verification-key">
+        <span id="verification-key-label">{{ t('admin.afdianMessageImport.key') }}</span>
+        <a-upload accept=".pem,.key,.txt" :show-file-list="false"
+          :disabled="starting || status?.state === 'RUNNING'" :on-before-upload="selectKey">
+          <template #upload-button>
+            <a-button :disabled="starting || status?.state === 'RUNNING'" aria-describedby="verification-key-label">
+              {{ t('admin.afdianMessageImport.selectKey') }}
+            </a-button>
+          </template>
+        </a-upload>
+      </div>
       <span v-if="privateKey">{{ t('admin.afdianMessageImport.keySelected') }}</span>
       <div class="filter-actions">
         <a-button type="primary" :loading="starting || status?.state === 'RUNNING'"
@@ -134,7 +138,7 @@ onUnmounted(() => {
   gap: 12px;
   align-items: center;
 }
-.verification-key input {
+.verification-key :deep(.arco-upload) {
   max-width: 100%;
 }
 .pending-match {
