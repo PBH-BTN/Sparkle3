@@ -338,3 +338,24 @@ V64 删除本功能表的外键和 CHECK，保留 ON CONFLICT 所必需的主键
 不新增存储过程或触发器，不回填历史，也不修改已执行迁移。
 
 统计采样窗口统一从 BtnRuntimeConfigService 读取：种子活动与 IP 查询并发种子窗口采用 syncSwarm.interval + syncSwarm.randomInitialDelay；确认流量和其它用户观测的心跳匹配窗口采用 heartbeat.interval + heartbeat.randomInitialDelay。后台调整后跟随运行配置缓存刷新生效；已累计历史不重算。缓存 TTL 和近七天统计周期不属于客户端汇报间隔。
+
+## PBH Plus 许可证吊销
+
+管理员可在会员管理页对已签发许可证执行“吊销许可证”，或粘贴完整密钥吊销不在列表中的独立许可证。
+必须填写原因并确认；吊销记录永久保存字段摘要、原因、操作时间和管理员 UID，不保存独立许可证明文。
+独立许可证必须可由官方公钥或当前配置的签发密钥验证。重复吊销保留首次吊销记录，不提供撤销操作。
+
+- `POST /api/admin/memberships/license-revocations`：接收 `licenseId` 或 `licenseKey`（二选一），以及 `reason`（最多 500 字符）。仅管理员可用，保留 SPA CSRF 校验。
+- `GET /api/admin/memberships/license-revocations?page=1&size=20`：分页查询吊销记录，最大每页 100 条。
+- `GET /peerbanhelper/v1/licenses/checkRevoke`：匿名客户端查询，直接返回 `{"revoked":true}` 或 `{"revoked":false}`，没有响应包装。
+
+客户端按原始 UTF-8 字段计算小写 SHA-256，参数为 `licenseTo`、`description`、`orderId`、
+`paymentOrderId`、`paymentGateway`、`sku`、`source`、`type`；null 字段省略，空字符串仍参与校验。
+服务端精确匹配完整字段摘要集合，兼容 V1 的默认 `type=afdian` 和 V1 不提供的订单字段。
+没有匹配吊销记录时始终返回未吊销，包括不在签发列表中的许可证；缺失授权对象或摘要格式不合法时也返回未吊销。
+协议不包含密钥本身、签发时间和隐藏字段，因此具有相同校验字段的多份许可证无法单独区分，会一并失效。
+PeerBanHelper 将检查结果缓存 24 小时，并周期检查；吊销不会立即推送到客户端。部署须确保
+`api.pbh-btn.com` 上述固定路径转发到本应用，不能要求登录，也不能重写为 SPA 页面。
+
+Flyway `V66` 新建独立吊销表，不修改签发记录结构、不回填历史吊销状态，不扫描已有大表，通常无需维护窗口。
+现有许可证的吊销状态和新增吊销记录在同一事务内写入；独立许可证不消耗签发名额、不新增签发记录。
