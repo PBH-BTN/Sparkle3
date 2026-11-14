@@ -2,7 +2,7 @@
 import { IconInfoCircle } from '@arco-design/web-vue/es/icon'
 import { useI18n } from 'vue-i18n'
 
-defineProps<{ label: string; value: string; unit: string; color: string; description?: string }>()
+defineProps<{ label: string; value: string; unit: string; color: string; description?: string; inlineUnit?: boolean }>()
 const { t } = useI18n()
 </script>
 
@@ -19,8 +19,8 @@ const { t } = useI18n()
         </template>
       </a-popover>
     </header>
-    <strong>{{ value }}</strong>
-    <footer>{{ unit }}</footer>
+    <strong>{{ value }}<span v-if="inlineUnit" class="inline-unit"> {{ unit }}</span></strong>
+    <footer v-if="!inlineUnit">{{ unit }}</footer>
   </article>
 </template>
 
@@ -103,6 +103,7 @@ header {
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
+.inline-unit { font-size: 0.65em; letter-spacing: 0; white-space: nowrap; }
 footer { margin-top: auto; }
 .metric-card--red { color: rgb(var(--red-6)); }
 .metric-card--blue { color: rgb(var(--blue-6)); }
