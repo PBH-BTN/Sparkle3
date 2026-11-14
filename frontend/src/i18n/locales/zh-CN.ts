@@ -1158,6 +1158,83 @@ export default {
         AFTER_DELETE: '删除后刷新',
       },
       items: {
+        'ip-query-comment-reaudit': {
+          name: 'IP 评论复审',
+          description:
+            '定期重新审核待审核和审核失败的 IP 评论；已有进行中审核任务的评论会被跳过。',
+        },
+        'bittorrent-traffic-rankings': {
+          name: 'Peer 流量排行',
+          description: '每 12 小时刷新最近 1、3、7 天的 PeerID 和客户端流量前 100 名。',
+        },
+        'ai-moderation-worker': {
+          name: 'AI 审核队列处理',
+          description: '分批处理等待审核的内容。',
+        },
+        'database-config-migration': {
+          name: '启动配置迁移',
+          description: '启动时迁移业务配置。',
+        },
+        'mail-config-migration': {
+          name: '旧邮件配置迁移',
+          description: '启动时迁移旧邮件设置。',
+        },
+        'account-deletion-restore': {
+          name: '恢复注销标记',
+          description: '启动时恢复冷静期内的账户注销标记。',
+        },
+        'analysis-schedule-startup': {
+          name: '初始化分析计划',
+          description: '启动时注册分析模块执行计划。',
+        },
+        'btn-schedule-startup': {
+          name: '初始化 BTN 计划',
+          description: '启动时注册 BTN 后台执行计划。',
+        },
+        'avatar-schedule-startup': {
+          name: '初始化头像清理计划',
+          description: '启动时注册头像缓存清理计划。',
+        },
+        'avatar-schedule-poll': {
+          name: '检查头像清理计划',
+          description: '检测设置变化并更新头像清理计划。',
+        },
+        'avatar-cache-cleanup': {
+          name: '清理头像缓存',
+          description: '按当前计划删除过期头像缓存。',
+        },
+        'mail-reply-poll': {
+          name: '检查邮件回复扫描计划',
+          description: '按邮箱设置触发到期的回复扫描。',
+        },
+        'mail-reply-scan': {
+          name: '扫描邮件回复',
+          description: '扫描邮箱并导入有效回复。',
+        },
+        'message-mail-dispatch': {
+          name: '发送通知邮件',
+          description: '消息提交后发送已请求的邮件通知。',
+        },
+        'profile-moderation-enqueue': {
+          name: '提交资料审核',
+          description: '资料更新提交后创建审核任务。',
+        },
+        'account-deletion-notify': {
+          name: '发送注销通知',
+          description: '账户注销状态变化后发送通知。',
+        },
+        'account-deletion-cleanup': {
+          name: '注销后清理',
+          description: '注销完成后清理头像缓存并撤销会话。',
+        },
+        'geoip-database-startup': {
+          name: '初始化 IP 地理数据库',
+          description: '启动时检查、下载并加载 IP 地理数据库。',
+        },
+        'geoip-blacklist-startup': {
+          name: '初始化城市封禁输出',
+          description: '启动时检查封禁输出并按需触发生成。',
+        },
         'account-deletion-finalize': {
           name: '账号注销冷静期处理',
           description: '处理已到期的账号注销申请，停用应用并匿名化账户资料。',
@@ -1290,10 +1367,6 @@ export default {
         'companion-charts': {
           name: '同伴统计图表',
           description: '刷新 BTN 客户端版本、地址栈和 GeoIP 分布。',
-        },
-        'bittorrent-traffic-rankings': {
-          name: 'Peer 流量排行',
-          description: '每 12 小时刷新最近 1、3、7 天的 PeerID 和客户端流量前 100 名。',
         },
         'bittorrent-traffic': {
           name: 'BitTorrent 流量统计',
@@ -1785,74 +1858,6 @@ export default {
         'dynamic-torrent-size-gib': '种子体积单位（GiB）',
       },
       items: {
-        'ai-moderation-worker': {
-          name: 'AI 审核队列处理',
-          description: '分批处理等待审核的内容。',
-        },
-        'database-config-migration': {
-          name: '启动配置迁移',
-          description: '启动时迁移业务配置。',
-        },
-        'mail-config-migration': {
-          name: '旧邮件配置迁移',
-          description: '启动时迁移旧邮件设置。',
-        },
-        'account-deletion-restore': {
-          name: '恢复注销标记',
-          description: '启动时恢复冷静期内的账户注销标记。',
-        },
-        'analysis-schedule-startup': {
-          name: '初始化分析计划',
-          description: '启动时注册分析模块执行计划。',
-        },
-        'btn-schedule-startup': {
-          name: '初始化 BTN 计划',
-          description: '启动时注册 BTN 后台执行计划。',
-        },
-        'avatar-schedule-startup': {
-          name: '初始化头像清理计划',
-          description: '启动时注册头像缓存清理计划。',
-        },
-        'avatar-schedule-poll': {
-          name: '检查头像清理计划',
-          description: '检测设置变化并更新头像清理计划。',
-        },
-        'avatar-cache-cleanup': {
-          name: '清理头像缓存',
-          description: '按当前计划删除过期头像缓存。',
-        },
-        'mail-reply-poll': {
-          name: '检查邮件回复扫描计划',
-          description: '按邮箱设置触发到期的回复扫描。',
-        },
-        'mail-reply-scan': {
-          name: '扫描邮件回复',
-          description: '扫描邮箱并导入有效回复。',
-        },
-        'message-mail-dispatch': {
-          name: '发送通知邮件',
-          description: '消息提交后发送已请求的邮件通知。',
-        },
-        'profile-moderation-enqueue': {
-          name: '提交资料审核',
-          description: '资料更新提交后创建审核任务。',
-        },
-        'account-deletion-notify': {
-          name: '发送注销通知',
-          description: '账户注销状态变化后发送通知。',
-        },
-        'account-deletion-cleanup': {
-          name: '注销后清理',
-          description: '注销完成后清理头像缓存并撤销会话。',
-        },
-        'geoip-database-startup': {
-          name: '初始化 IP 地理数据库',
-          description: '启动时检查、下载并加载 IP 地理数据库。',
-        },
-        'geoip-blacklist-startup': {
-          name: '初始化城市封禁输出',
-          description: '启动时检查封禁输出并按需触发生成。',
-        },
         'untrusted-vote': {
           name: '不受信任投票聚合',
           description: '汇总多个 BTN 用户应用对同一 Peer IP 的封禁投票并生成聚合规则。',
@@ -1924,11 +1929,6 @@ export default {
           name: '动态积分规则',
           description:
             '调整做种上传、任务下载和热点 Peer 的积分奖励、流量比例、种子体积单位及热点 Top 数量。',
-        },
-        'ip-query-comment-reaudit': {
-          name: 'IP 评论复审',
-          description:
-            '定期重新审核待审核和审核失败的 IP 评论；已有进行中审核任务的评论会被跳过。',
         },
       },
     },
