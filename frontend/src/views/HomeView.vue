@@ -754,6 +754,35 @@ onMounted(() => {
   border-radius: var(--app-radius);
 }
 
+/* Keep the blue identity without a bright surface against the dark page. */
+body[arco-theme='dark'] .hero-card {
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, rgb(var(--primary-7)) 35%, var(--color-bg-2)),
+    color-mix(in srgb, rgb(var(--primary-5)) 38%, var(--color-bg-2))
+  );
+}
+
+body[arco-theme='dark'] .hero-eyebrow,
+body[arco-theme='dark'] .hero-copy :deep(.arco-btn) {
+  color: var(--color-text-1);
+  background: var(--color-bg-2);
+  border-color: var(--color-border-3);
+}
+
+body[arco-theme='dark'] .hero-copy :deep(.arco-btn:hover) {
+  background: var(--color-fill-3);
+}
+
+body[arco-theme='dark'] .hero-ring {
+  border-color: rgb(255 255 255 / 12%);
+}
+
+body[arco-theme='dark'] .hero-dot {
+  background: var(--color-text-3);
+  box-shadow: 0 0 0 8px rgb(255 255 255 / 5%);
+}
+
 .hero-card :deep(.arco-card-body) {
   position: relative;
   min-height: 260px;
