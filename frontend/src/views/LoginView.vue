@@ -57,7 +57,6 @@ function loginWithGitHub() {
         {{ t('auth.securityNote') }}
       </p>
     </section>
-    <AppFooter :show-brand="false" centered />
   </main>
 </template>
 
