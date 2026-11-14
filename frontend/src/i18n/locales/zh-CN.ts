@@ -529,7 +529,7 @@ export default {
     messageSent: '站内信已发送，今天还可发送 {remaining} 条。',
     messageSendFailed: '站内信发送失败。',
   },
-  career: {"days":"已来到 BTN","ban":"累计提交封禁","feature":"累计发现新特征","swarm":"累计同步种群","banRecent":"近 7 天提交封禁","featureRecent":"近 7 天发现新特征","swarmRecent":"近 7 天同步种群","seeding":"总做种时长","downloading":"总下载时长","observation":"BTN 其它用户观测次数","upload":"总上传量","download":"总汇报下载量","uploadAck":"总确认上传量","downloadAck":"总确认下载量","latest":"最后一次观测于 {time}，由 {name}","disclaimer":"以下数据基于用户汇报和 BTN 其它用户观测，因此可能并不完整或准确，仅供参考。","method":"近 7 天按 UTC 自然日统计。Peer 按会话去重；时长自功能上线后采样，每个种子单独累计，失联间隔按当前汇报周期及浮动范围限制，历史时长无法恢复。"},
+  career: {"days":"已来到 BTN","ban":"累计提交封禁","feature":"累计发现新特征","swarm":"累计同步种群","banRecent":"近 7 天提交封禁","featureRecent":"近 7 天发现新特征","swarmRecent":"近 7 天同步种群","seeding":"总做种时长","downloading":"总下载时长","observation":"BTN 其它用户观测次数","upload":"总汇报上传量","download":"总汇报下载量","uploadAck":"总确认上传量","downloadAck":"总确认下载量","latest":"最后一次观测于 {time}，由 {name}","disclaimer":"以下数据基于用户汇报和 BTN 其它用户观测，因此可能并不完整或准确，仅供参考。","method":"近 7 天按 UTC 自然日统计。Peer 按会话去重；时长自功能上线后采样，每个种子单独累计，失联间隔按当前汇报周期及浮动范围限制，历史时长无法恢复。"},
   careerUnits: {
     days: '天',
     records: '条',
