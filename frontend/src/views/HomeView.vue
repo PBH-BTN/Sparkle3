@@ -471,7 +471,7 @@ onMounted(() => {
               <a-radio :value="1">{{ t('home.last24Hours') }}</a-radio>
             </a-radio-group>
           </div>
-          <span v-if="trafficStats" class="chart-updated">
+          <span v-if="trafficStats?.generatedAt" class="chart-updated">
             {{
               t('home.statistics.updatedAt', {
                 time: dayjs(trafficStats.generatedAt).format('HH:mm:ss'),

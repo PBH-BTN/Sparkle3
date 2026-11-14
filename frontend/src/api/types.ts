@@ -164,7 +164,7 @@ export interface HomeBittorrentTrafficResponse {
   totals: TrafficTotals
   topUploadCities: TrafficDistribution
   topDownloadCities: TrafficDistribution
-  generatedAt: string
+  generatedAt: string | null
 }
 
 export type RulePreviewType =
