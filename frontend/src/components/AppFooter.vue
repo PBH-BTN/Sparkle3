@@ -16,7 +16,7 @@ const props = withDefaults(
   },
 )
 
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
 const { formatRatio } = useFormatters()
 const data = ref<FooterResponse | null>(null)
 const now = ref(Date.now())
@@ -54,19 +54,20 @@ const worldClockText = computed(() => {
   if (!worldTime) return ''
   const instant = new Date(now.value + serverOffset.value)
   const zones = [
-    [t('siteFooter.worldTime.server'), worldTime.serverTimeZone],
-    [t('siteFooter.worldTime.beijing'), 'Asia/Shanghai'],
-    [t('siteFooter.worldTime.tokyo'), 'Asia/Tokyo'],
-    [t('siteFooter.worldTime.unitedStates'), 'America/New_York'],
-    [t('siteFooter.worldTime.germany'), 'Europe/Berlin'],
-    [
-      t('siteFooter.worldTime.browser'),
-      Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-    ],
-  ] as const
+    worldTime.serverTimeZone,
+    'Asia/Shanghai',
+    'Asia/Tokyo',
+    'America/New_York',
+    'Europe/Berlin',
+    Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+  ]
 
   return zones
-    .map(([label, timeZone]) => {
+    .map((timeZone) => {
+      const canonicalZone = new Intl.DateTimeFormat('en', { timeZone }).resolvedOptions().timeZone
+      const city = canonicalZone.split('/').at(-1) ?? canonicalZone
+      const cityKey = 'siteFooter.worldTime.' + city
+      const label = te(cityKey) ? t(cityKey) : city.replaceAll('_', ' ')
       const time = new Intl.DateTimeFormat(locale.value, {
         timeZone,
         month: '2-digit',
