@@ -43,6 +43,8 @@ export default {
     },
   },
   common: {
+    networkError: 'The request could not be completed. Check your connection and try again.',
+    invalidResponse: 'The server returned an invalid response. Please try again later.',
     query: 'Search',
     reset: 'Reset',
     loading: 'Loading…',

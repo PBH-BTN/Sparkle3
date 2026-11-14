@@ -9,6 +9,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import { adminApi } from '@/api/admin'
+import { ApiError } from '@/api/http'
 import type { BtnConfigField, BtnConfigView } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
@@ -78,7 +79,7 @@ async function load() {
     applyConfig(await adminApi.btnConfig())
   } catch (error) {
     loadError.value = errorMessage(error, t('common.loadFailed'))
-    Message.error(loadError.value)
+    if (!(error instanceof ApiError)) Message.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -116,7 +117,9 @@ async function save() {
     applyConfig(result)
     Message.success(t('admin.btn.saved'))
   } catch (error) {
-    Message.error(errorMessage(error, t('common.requestFailed')))
+    if (!(error instanceof ApiError)) {
+      Message.error(errorMessage(error, t('common.requestFailed')))
+    }
   } finally {
     saving.value = false
   }

@@ -1,3 +1,6 @@
+import { Message } from '@arco-design/web-vue'
+import i18n from '@/i18n'
+
 export class ApiError extends Error {
   status: number
   payload: unknown
@@ -20,7 +23,7 @@ function readCookie(name: string) {
   return entry ? entry.slice(prefix.length) : null
 }
 
-export async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+async function performRequest<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
   if (init.body && !headers.has('Content-Type')) {
@@ -40,15 +43,24 @@ export async function request<T>(url: string, init: RequestInit = {}): Promise<T
     credentials: 'same-origin',
   })
 
-  const payload = isJsonResponse(response) ? await response.json() : null
-  if (!response.ok) {
-    if (response.status === 401) {
-      window.dispatchEvent(new CustomEvent('sparkle:unauthorized'))
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('sparkle:unauthorized'))
+  }
+
+  let payload: unknown = null
+  if (response.status !== 204 && isJsonResponse(response)) {
+    try {
+      payload = await response.json()
+    } catch {
+      throw new ApiError(i18n.global.t('common.invalidResponse'), response.status)
     }
+  }
+  if (!response.ok) {
     const message =
       payload && typeof payload === 'object' && 'message' in payload
+        && typeof payload.message === 'string' && payload.message.trim()
         ? String(payload.message)
-        : `HTTP ${response.status}`
+        : i18n.global.t('common.requestFailed')
     throw new ApiError(message, response.status, payload)
   }
 
@@ -56,4 +68,21 @@ export async function request<T>(url: string, init: RequestInit = {}): Promise<T
     return undefined as T
   }
   return payload as T
+}
+
+export async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+  try {
+    return await performRequest<T>(url, init)
+  } catch (error) {
+    const failure = error instanceof ApiError
+      ? error
+      : new ApiError(i18n.global.t('common.networkError'), 0)
+    Message.error({
+      id: 'api-request-error',
+      content: failure.message,
+      duration: 5000,
+      closable: true,
+    })
+    throw failure
+  }
 }

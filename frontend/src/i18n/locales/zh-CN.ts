@@ -42,6 +42,8 @@ export default {
     },
   },
   common: {
+    networkError: '请求未完成，请检查网络连接后重试。',
+    invalidResponse: '服务器响应异常，请稍后重试。',
     query: '查询',
     reset: '重置',
     loading: '加载中…',
