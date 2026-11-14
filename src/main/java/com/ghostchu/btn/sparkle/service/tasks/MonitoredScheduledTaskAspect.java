@@ -20,11 +20,13 @@ public class MonitoredScheduledTaskAspect {
         taskStatusService.ensure(monitoredTask);
         TaskStatusService.TaskExecution execution = taskStatusService.begin(
                 monitoredTask.id(),
-                taskStatusService.consumeScheduledTrigger(monitoredTask.id())
+                monitoredTask.scheduleType() == TaskScheduleType.STARTUP ? "STARTUP"
+                        : monitoredTask.scheduleType() == TaskScheduleType.EVENT ? "EVENT"
+                        : taskStatusService.consumeScheduledTrigger(monitoredTask.id())
         );
-        try {
+        try (var outcome = new MonitoredTaskOutcome()) {
             Object result = joinPoint.proceed();
-            execution.success();
+            outcome.finish(execution);
             return result;
         } catch (Throwable throwable) {
             execution.failure(throwable);

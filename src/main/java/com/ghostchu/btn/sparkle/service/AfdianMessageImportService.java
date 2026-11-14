@@ -35,6 +35,13 @@ public class AfdianMessageImportService {
     private final AfdianEmailBindingService emailBinding;
     private volatile ImportStatus status = new ImportStatus("IDLE", 0, 0, 0, 0, 0, 0, 0);
 
+    @jakarta.annotation.PostConstruct
+    void registerTask() {
+        tasks.ensure(TaskDefinition.event(TASK_ID, TaskGroup.SYNC,
+                "admin.tasks.items.afdian-message-license-import.name",
+                "admin.tasks.items.afdian-message-license-import.description"));
+    }
+
     public ImportStatus status() { return status; }
 
     public synchronized ImportStatus start(ImportRequest request, Long operatorId) throws BusinessException {

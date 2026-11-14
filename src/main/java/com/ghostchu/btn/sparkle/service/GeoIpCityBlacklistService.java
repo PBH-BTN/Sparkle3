@@ -199,6 +199,11 @@ public class GeoIpCityBlacklistService
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask(
+            id = "geoip-blacklist-startup", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.geoip-blacklist-startup.name",
+            descriptionKey = "admin.tasks.items.geoip-blacklist-startup.description",
+            scheduleType = com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType.STARTUP)
     public void initializeGeneratedContent() {
         try {
             if (!moduleConfigService.isEnabled(MODULE_ID)) {
@@ -212,6 +217,7 @@ public class GeoIpCityBlacklistService
                 requestRefresh(null);
             }
         } catch (Exception exception) {
+            com.ghostchu.btn.sparkle.service.tasks.MonitoredTaskOutcome.failure("Unable to initialize blacklist output");
             log.warn("Unable to initialize GeoIP city blacklist output: {}",
                     exception.getMessage());
         }

@@ -1,5 +1,11 @@
 package com.ghostchu.btn.sparkle.service.mail;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredTaskOutcome;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.entity.MailInboundMessage;
 import com.ghostchu.btn.sparkle.entity.User;
@@ -40,6 +46,7 @@ public class MailReplyIngestionService {
     private static final String LOCK_KEY = "sparkle:mail:pop3:poll";
     private static final Duration LOCK_TTL = Duration.ofMinutes(10);
 
+    private final TaskStatusService tasks;
     private final MailSettingsService settingsService;
     private final InboundMailParser parser;
     private final MailInboundMessageMapper inboundMapper;
@@ -53,6 +60,7 @@ public class MailReplyIngestionService {
     private volatile OffsetDateTime nextAutomaticScanAt;
 
     public MailReplyIngestionService(
+            TaskStatusService tasks,
             MailSettingsService settingsService,
             InboundMailParser parser,
             MailInboundMessageMapper inboundMapper,
@@ -61,6 +69,9 @@ public class MailReplyIngestionService {
             IUserService userService,
             @Qualifier("stringStringRedisTemplate") RedisTemplate<String, String> redisTemplate
     ) {
+        this.tasks = tasks;
+        tasks.ensure(TaskDefinition.event("mail-reply-scan", TaskGroup.SYNC,
+                "admin.tasks.items.mail-reply-scan.name", "admin.tasks.items.mail-reply-scan.description"));
         this.settingsService = settingsService;
         this.parser = parser;
         this.inboundMapper = inboundMapper;
@@ -71,19 +82,26 @@ public class MailReplyIngestionService {
     }
 
     @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
+    @MonitoredScheduledTask(id = "mail-reply-poll", group = TaskGroup.SYNC,
+            nameKey = "admin.tasks.items.mail-reply-poll.name",
+            descriptionKey = "admin.tasks.items.mail-reply-poll.description",
+            scheduleType = TaskScheduleType.FIXED_DELAY, intervalMillis = 15000, initialDelayMillis = 15000)
     public void scheduledScan() {
         MailRuntimeSettings settings = settingsService.get();
         if (!settingsService.pop3Configured(settings)) {
+            MonitoredTaskOutcome.skipped("Mailbox polling is not configured");
             return;
         }
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime next = nextAutomaticScanAt;
         if (next != null && now.isBefore(next)) {
+            MonitoredTaskOutcome.skipped("Mailbox scan is not due");
             return;
         }
         try {
             scanNow(false);
         } catch (BusinessException exception) {
+            MonitoredTaskOutcome.failure("Mailbox scan did not complete; see server logs");
             log.debug("POP3 scheduled scan deferred: {}", exception.getMessage());
         }
     }
@@ -127,6 +145,7 @@ public class MailReplyIngestionService {
             }
             return status();
         }
+        var execution = tasks.begin("mail-reply-scan", manual ? "MANUAL" : "SCHEDULED");
         MailIngestionStatus previous = status.get();
         OffsetDateTime startedAt = OffsetDateTime.now();
         status.set(new MailIngestionStatus(
@@ -158,8 +177,14 @@ public class MailReplyIngestionService {
                     safeTotalImported(),
                     lastError
             ));
+            if (failed > 0) {
+                execution.failure(new IllegalStateException("Some email replies could not be imported"));
+            } else {
+                execution.success();
+            }
             return status.get();
         } catch (Exception exception) {
+            execution.failure(new IllegalStateException("Unable to poll mailbox; see server logs"));
             nextAutomaticScanAt = OffsetDateTime.now().plusSeconds(15);
             String error = safeError(exception);
             log.warn("Unable to poll POP3 mailbox: {}", error);

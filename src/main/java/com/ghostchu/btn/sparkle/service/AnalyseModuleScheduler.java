@@ -53,6 +53,10 @@ public class AnalyseModuleScheduler {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @MonitoredScheduledTask(id = "analysis-schedule-startup", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.analysis-schedule-startup.name",
+            descriptionKey = "admin.tasks.items.analysis-schedule-startup.description",
+            scheduleType = TaskScheduleType.STARTUP)
     public void initialize() {
         refreshSchedules();
     }

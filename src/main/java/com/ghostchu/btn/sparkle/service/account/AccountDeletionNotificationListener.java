@@ -1,5 +1,9 @@
 package com.ghostchu.btn.sparkle.service.account;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredTaskOutcome;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
@@ -29,6 +33,10 @@ public class AccountDeletionNotificationListener {
             phase = TransactionPhase.AFTER_COMMIT,
             fallbackExecution = true
     )
+    @MonitoredScheduledTask(id = "account-deletion-notify", group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.account-deletion-notify.name",
+            descriptionKey = "admin.tasks.items.account-deletion-notify.description",
+            scheduleType = TaskScheduleType.EVENT)
     public void send(AccountDeletionNotificationEvent event) {
         if (event != null) {
             try {
@@ -40,6 +48,7 @@ public class AccountDeletionNotificationListener {
                         false
                 );
             } catch (Exception exception) {
+                MonitoredTaskOutcome.failure("One or more operations failed; see server logs");
                 log.warn("Unable to publish account security inbox notification for user {}: {}",
                         event.userId(), exception.getMessage());
             }
@@ -62,6 +71,7 @@ public class AccountDeletionNotificationListener {
             log.info("Sent {} account deletion notification for user {}",
                     event.kind(), event.userId());
         } catch (Exception exception) {
+            MonitoredTaskOutcome.failure("One or more operations failed; see server logs");
             log.error("Unable to send {} account deletion notification for user {}: {}",
                     event.kind(), event.userId(), exception.getMessage(), exception);
         }

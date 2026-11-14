@@ -27,20 +27,27 @@ public class IPDBManager {
     @Nullable
     private IPDB ipdb = null;
 
-    public IPDBManager() {
-        setupIPDB();
+    public IPDBManager(com.ghostchu.btn.sparkle.service.tasks.TaskStatusService tasks) {
+        tasks.ensure(com.ghostchu.btn.sparkle.service.tasks.TaskDefinition.startup(
+                "geoip-database-startup", com.ghostchu.btn.sparkle.service.tasks.TaskGroup.STARTUP,
+                "admin.tasks.items.geoip-database-startup.name",
+                "admin.tasks.items.geoip-database-startup.description"));
+        var execution = tasks.begin("geoip-database-startup", "STARTUP");
+        try {
+            setupIPDB();
+            execution.success();
+        } catch (Exception exception) {
+            execution.failure(exception);
+            log.error("Unable to setup IPDB", exception);
+        }
     }
 
-    private void setupIPDB() {
-        try {
-            String databaseCity = "GeoLite2-City";
-            String databaseASN = "GeoLite2-ASN";
-            String databaseGeoCN = "GeoCN";
-            this.ipdb = new IPDB(new File("data/geoip"), "", "",
-                    databaseCity, databaseASN, databaseGeoCN, true, "Sparkle/2.1");
-        } catch (Exception e) {
-            log.error("Unable to setup IPDB", e);
-        }
+    private void setupIPDB() throws java.io.IOException {
+        String databaseCity = "GeoLite2-City";
+        String databaseASN = "GeoLite2-ASN";
+        String databaseGeoCN = "GeoCN";
+        this.ipdb = new IPDB(new File("data/geoip"), "", "",
+                databaseCity, databaseASN, databaseGeoCN, true, "Sparkle/2.1");
     }
 
     public IPDBResponse queryIPDB(InetAddress address) {

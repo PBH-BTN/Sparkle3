@@ -1,5 +1,8 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import com.ghostchu.btn.sparkle.controller.admin.dto.DatabaseConfigModels.MigrationResult;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -46,6 +49,10 @@ public class DatabaseConfigMigrationService implements ApplicationRunner {
     }
 
     @Override
+    @MonitoredScheduledTask(id = "database-config-migration", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.database-config-migration.name",
+            descriptionKey = "admin.tasks.items.database-config-migration.description",
+            scheduleType = TaskScheduleType.STARTUP)
     public void run(ApplicationArguments args) {
         MigrationResult result = migrateNow();
         log.info("Database config migration scanned {} YAML entries, inserted {} new keys, skipped {}",

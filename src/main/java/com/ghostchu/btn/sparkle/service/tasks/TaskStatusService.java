@@ -51,13 +51,16 @@ public class TaskStatusService {
         return new TaskDefinition(
                 annotation.id(),
                 annotation.group(),
-                TaskKind.SCHEDULED,
+                annotation.scheduleType() == TaskScheduleType.EVENT || annotation.scheduleType() == TaskScheduleType.STARTUP
+                        ? TaskKind.ASYNC : TaskKind.SCHEDULED,
                 annotation.nameKey(),
                 annotation.descriptionKey(),
                 annotation.scheduleType(),
                 annotation.expression(),
-                annotation.intervalMillis(),
-                annotation.initialDelayMillis(),
+                annotation.intervalExpression().isBlank() ? annotation.intervalMillis()
+                        : Long.parseLong(resolve(annotation.intervalExpression())),
+                annotation.initialDelayExpression().isBlank() ? annotation.initialDelayMillis()
+                        : Long.parseLong(resolve(annotation.initialDelayExpression())),
                 null,
                 annotation.enabled()
         );

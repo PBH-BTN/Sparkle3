@@ -324,6 +324,10 @@ public class UserAccountDeletionService {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @MonitoredScheduledTask(id = "account-deletion-restore", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.account-deletion-restore.name",
+            descriptionKey = "admin.tasks.items.account-deletion-restore.description",
+            scheduleType = TaskScheduleType.STARTUP)
     public void restorePendingDeletionMarkers() {
         List<PendingMarker> markers = requestMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query

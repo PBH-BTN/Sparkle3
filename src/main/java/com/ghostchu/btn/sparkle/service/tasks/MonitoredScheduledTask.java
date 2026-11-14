@@ -20,6 +20,10 @@ public @interface MonitoredScheduledTask {
 
     String expression() default "";
 
+    String intervalExpression() default "";
+
+    String initialDelayExpression() default "";
+
     long intervalMillis() default 0;
 
     long initialDelayMillis() default 0;

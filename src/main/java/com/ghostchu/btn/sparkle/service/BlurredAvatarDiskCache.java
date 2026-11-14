@@ -1,5 +1,12 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.TaskDefinition;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskKind;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
+import com.ghostchu.btn.sparkle.service.tasks.TaskStatusService;
+import com.ghostchu.btn.sparkle.service.tasks.TaskManualExecutionService;
 import com.google.common.hash.Hashing;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +45,7 @@ public class BlurredAvatarDiskCache {
 
     private final DatabaseConfigService databaseConfigService;
     private final TaskScheduler taskScheduler;
+    private final TaskStatusService tasks;
     private final String defaultDirectory;
     private final long defaultTtlMillis;
     private final String defaultCleanupCron;
@@ -48,12 +56,15 @@ public class BlurredAvatarDiskCache {
 
     public BlurredAvatarDiskCache(
             DatabaseConfigService databaseConfigService,
+            TaskStatusService tasks,
             @Qualifier("taskScheduler") TaskScheduler taskScheduler,
             @Value("${sparkle.user-avatar.cache-directory:data/avatar-cache}") String directory,
             @Value("${sparkle.user-avatar.cache-duration:2592000000}") long ttlMillis,
             @Value("${sparkle.user-avatar.cleanup-cron:0 30 4 * * *}") String cleanupCron
     ) throws IOException {
         this.databaseConfigService = databaseConfigService;
+        this.tasks = tasks;
+        tasks.ensure(cleanupDefinition(cleanupCron, true));
         this.taskScheduler = taskScheduler;
         this.defaultDirectory = directory;
         this.defaultTtlMillis = ttlMillis;
@@ -109,16 +120,40 @@ public class BlurredAvatarDiskCache {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @MonitoredScheduledTask(id = "avatar-schedule-startup", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.avatar-schedule-startup.name",
+            descriptionKey = "admin.tasks.items.avatar-schedule-startup.description",
+            scheduleType = TaskScheduleType.STARTUP)
     public void initializeCleanupSchedule() {
         refreshCleanupSchedule();
     }
 
     @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
+    @MonitoredScheduledTask(id = "avatar-schedule-poll", group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.avatar-schedule-poll.name",
+            descriptionKey = "admin.tasks.items.avatar-schedule-poll.description",
+            scheduleType = TaskScheduleType.FIXED_DELAY, intervalMillis = 15000, initialDelayMillis = 15000)
     public void pollCleanupSchedule() {
         refreshCleanupSchedule();
     }
 
     public void cleanupExpired() {
+        var execution = tasks.begin("avatar-cache-cleanup", tasks.consumeScheduledTrigger("avatar-cache-cleanup"));
+        try {
+            cleanExpiredFiles();
+            execution.success();
+        } catch (Exception exception) {
+            execution.failure(exception);
+            log.warn("Unable to clean avatar cache", exception);
+        }
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void registerManualCleanup(TaskManualExecutionService manualTasks) {
+        manualTasks.registerRunner("avatar-cache-cleanup", this::cleanupExpired);
+    }
+
+    private void cleanExpiredFiles() throws IOException {
         RuntimeConfig config = runtimeConfig();
         Path directory = config.directory();
         long cutoff = System.currentTimeMillis() - config.ttl().toMillis();
@@ -127,8 +162,9 @@ public class BlurredAvatarDiskCache {
         } catch (IOException exception) {
             log.warn("Unable to create avatar cache directory {}: {}",
                     directory, exception.getMessage());
-            return;
+            throw exception;
         }
+        IOException failure = null;
         try (DirectoryStream<Path> files = Files.newDirectoryStream(directory)) {
             for (Path file : files) {
                 try {
@@ -139,14 +175,13 @@ public class BlurredAvatarDiskCache {
                         Files.deleteIfExists(file);
                     }
                 } catch (IOException exception) {
+                    failure = exception;
                     log.debug("Unable to clean avatar cache file {}: {}",
                             file, exception.getMessage());
                 }
             }
-        } catch (IOException exception) {
-            log.warn("Unable to scan avatar cache directory {}: {}",
-                    directory, exception.getMessage());
         }
+        if (failure != null) throw failure;
     }
 
     Path cacheFile(long userId, @Nullable String avatarUrl) {
@@ -192,6 +227,7 @@ public class BlurredAvatarDiskCache {
         String cron = config.cleanupCron();
         if (cron == null || cron.isBlank() || "-".equals(cron)) {
             cancelCleanupSchedule();
+            tasks.configure(cleanupDefinition(null, false));
             return;
         }
         if (Objects.equals(cron, scheduledCron)
@@ -205,11 +241,20 @@ public class BlurredAvatarDiskCache {
             cancelCleanupSchedule();
             cleanupFuture = taskScheduler.schedule(this::cleanupExpired, new CronTrigger(cron));
             scheduledCron = cron;
+            tasks.configure(cleanupDefinition(cron, true));
             log.info("Scheduled blurred avatar cache cleanup with cron '{}'", cron);
         } catch (IllegalArgumentException exception) {
             cancelCleanupSchedule();
+            tasks.configure(cleanupDefinition(cron, false));
+            tasks.configurationError("avatar-cache-cleanup", "Invalid cleanup schedule");
             log.error("Invalid avatar cache cleanup cron '{}'", cron, exception);
         }
+    }
+
+    private TaskDefinition cleanupDefinition(String cron, boolean enabled) {
+        return TaskDefinition.cron("avatar-cache-cleanup", TaskGroup.MAINTENANCE, TaskKind.SCHEDULED,
+                "admin.tasks.items.avatar-cache-cleanup.name",
+                "admin.tasks.items.avatar-cache-cleanup.description", cron, enabled);
     }
 
     private void cancelCleanupSchedule() {

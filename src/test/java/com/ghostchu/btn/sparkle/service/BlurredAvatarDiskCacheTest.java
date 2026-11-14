@@ -29,6 +29,28 @@ class BlurredAvatarDiskCacheTest {
     Path temporaryDirectory;
 
     @Test
+    void dynamicCallbackRecordsSuccessAndFilesystemFailure() throws Exception {
+        DatabaseConfigService configuration = mock(DatabaseConfigService.class);
+        when(configuration.getRawValues(anyList())).thenReturn(Map.of());
+        var tasks = new com.ghostchu.btn.sparkle.service.tasks.TaskStatusService(
+                new org.springframework.mock.env.MockEnvironment());
+        TaskScheduler scheduler = mock(TaskScheduler.class);
+        BlurredAvatarDiskCache cache = new BlurredAvatarDiskCache(configuration, tasks, scheduler,
+                temporaryDirectory.toString(), 1000, "0 30 4 * * *");
+        cache.initializeCleanupSchedule();
+        var callback = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(scheduler).schedule(callback.capture(), any(CronTrigger.class));
+        callback.getValue().run();
+        org.junit.jupiter.api.Assertions.assertEquals("SUCCESS", tasks.task("avatar-cache-cleanup").lastResult());
+
+        Files.delete(temporaryDirectory);
+        Files.writeString(temporaryDirectory, "Not a directory");
+        callback.getValue().run();
+        org.junit.jupiter.api.Assertions.assertEquals("FAILED", tasks.task("avatar-cache-cleanup").lastResult());
+        org.junit.jupiter.api.Assertions.assertEquals(0, tasks.task("avatar-cache-cleanup").runningCount());
+    }
+
+    @Test
     void storesAndReadsImagesFromDisk() throws Exception {
         BlurredAvatarDiskCache cache = cache(60_000);
         byte[] image = {1, 2, 3, 4};
@@ -86,6 +108,7 @@ class BlurredAvatarDiskCacheTest {
 
         BlurredAvatarDiskCache cache = new BlurredAvatarDiskCache(
                 configService,
+                new com.ghostchu.btn.sparkle.service.tasks.TaskStatusService(new org.springframework.mock.env.MockEnvironment()),
                 scheduler,
                 temporaryDirectory.toString(),
                 60_000,
@@ -105,6 +128,7 @@ class BlurredAvatarDiskCacheTest {
         ));
         return new BlurredAvatarDiskCache(
                 configService,
+                new com.ghostchu.btn.sparkle.service.tasks.TaskStatusService(new org.springframework.mock.env.MockEnvironment()),
                 mock(TaskScheduler.class),
                 temporaryDirectory.toString(),
                 ttlMillis,

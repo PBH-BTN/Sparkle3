@@ -80,6 +80,10 @@ public class BtnDynamicScheduler {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @MonitoredScheduledTask(id = "btn-schedule-startup", group = TaskGroup.STARTUP,
+            nameKey = "admin.tasks.items.btn-schedule-startup.name",
+            descriptionKey = "admin.tasks.items.btn-schedule-startup.description",
+            scheduleType = TaskScheduleType.STARTUP)
     public void initialize() {
         refreshSchedules();
     }

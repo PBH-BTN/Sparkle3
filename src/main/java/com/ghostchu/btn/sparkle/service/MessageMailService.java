@@ -1,5 +1,9 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredTaskOutcome;
+import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
+import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -28,6 +32,10 @@ public class MessageMailService {
     private final SmtpMailService smtpMailService;
     private final MailSettingsService mailSettingsService;
 
+    @MonitoredScheduledTask(id = "message-mail-dispatch", group = TaskGroup.MAINTENANCE,
+            nameKey = "admin.tasks.items.message-mail-dispatch.name",
+            descriptionKey = "admin.tasks.items.message-mail-dispatch.description",
+            scheduleType = TaskScheduleType.EVENT)
     public void deliverDispatch(UUID dispatchId) {
         List<UserMessage> messages = messageMapper.selectList(
                 new QueryWrapper<UserMessage>()
@@ -87,10 +95,12 @@ public class MessageMailService {
             );
             mark(row.id(), "SENT", null, true);
         } catch (MailDeliveryException exception) {
+            MonitoredTaskOutcome.failure("One or more operations failed; see server logs");
             log.warn("Unable to deliver email notification for message {}: {}",
                     row.id(), exception.getMessage());
             mark(row.id(), "FAILED", truncate(exception.getMessage(), 2_000), false);
         } catch (Exception exception) {
+            MonitoredTaskOutcome.failure("One or more operations failed; see server logs");
             log.warn("Unable to deliver email notification for message {}: {}",
                     row.id(), exception.getMessage());
             mark(row.id(), "FAILED", truncate(exception.getMessage(), 2_000), false);
