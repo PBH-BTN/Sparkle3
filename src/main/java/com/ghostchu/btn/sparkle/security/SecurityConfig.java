@@ -42,6 +42,7 @@ public class SecurityConfig {
                         ))
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
                         authorizationManagerRequestMatcherRegistry
+                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/peerbanhelper/v1/licenses/checkRevoke").permitAll()
                                 .requestMatchers("/error").permitAll()
                                 .requestMatchers("/", "/index.html", "/login", "/register").permitAll()
                                 .requestMatchers("/assets/**").permitAll()
