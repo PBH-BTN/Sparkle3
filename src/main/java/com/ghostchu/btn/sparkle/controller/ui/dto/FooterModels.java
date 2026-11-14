@@ -18,6 +18,9 @@ public final class FooterModels {
     ) {
     }
 
+    public record FooterSupportButton(String labelZh, String labelEn, String href, String iconUrl) {
+    }
+
     public record FooterColumnView(
             String titleZh,
             String titleEn,
@@ -42,7 +45,8 @@ public final class FooterModels {
             FooterAudience columnsAudience,
             FooterAudience timeAudience,
             FooterAudience loginAudience,
-            List<FooterMetricSetting> performanceMetrics
+            List<FooterMetricSetting> performanceMetrics,
+            List<FooterSupportButton> supportButtons
     ) {
     }
 
@@ -104,7 +108,8 @@ public final class FooterModels {
             List<FooterColumnView> columns,
             WorldTimeView worldTime,
             FooterPerformanceView performance,
-            VisitorView visitor
+            VisitorView visitor,
+            List<FooterSupportButton> supportButtons
     ) {
     }
 }

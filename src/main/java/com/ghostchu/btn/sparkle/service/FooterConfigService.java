@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterColumnView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterConfigView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterLinkView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterMetricSetting;
+import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterSupportButton;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -92,7 +93,8 @@ public class FooterConfigService {
                 FooterAudience.AUTHENTICATED,
                 FooterAudience.AUTHENTICATED,
                 FooterAudience.AUTHENTICATED,
-                List.copyOf(metricSettings)
+                List.copyOf(metricSettings),
+                defaultSupportButtons()
         );
     }
 
@@ -166,8 +168,52 @@ public class FooterConfigService {
                 audience(config.columnsAudience(), FooterAudience.AUTHENTICATED),
                 audience(config.timeAudience(), FooterAudience.AUTHENTICATED),
                 audience(config.loginAudience(), FooterAudience.AUTHENTICATED),
-                normalizeMetricSettings(config.performanceMetrics())
+                normalizeMetricSettings(config.performanceMetrics()),
+                normalizeSupportButtons(config.supportButtons())
         );
+    }
+
+    private List<FooterSupportButton> defaultSupportButtons() {
+        return List.of(new FooterSupportButton("在爱发电支持我们", "Support us on Afdian",
+                "https://ifdian.net/a/Ghost_chu", "/img/afdian-support.svg"));
+    }
+
+    private List<FooterSupportButton> normalizeSupportButtons(List<FooterSupportButton> buttons)
+            throws BusinessException {
+        if (buttons == null) return defaultSupportButtons();
+        if (buttons.size() > 12) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "最多添加 12 个支持按钮");
+        }
+        List<FooterSupportButton> normalized = new ArrayList<>();
+        for (FooterSupportButton button : buttons) {
+            if (button == null) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "请填写支持按钮内容");
+            }
+            String zh = bounded(button.labelZh(), 100, "Chinese button label");
+            String en = bounded(button.labelEn(), 100, "English button label");
+            String href = bounded(button.href(), 2048, "Button link");
+            String icon = bounded(button.iconUrl(), 2048, "Button icon");
+            if (zh.isBlank() && en.isBlank()) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "请填写按钮图片说明");
+            }
+            validateButtonUrl(href);
+            validateButtonUrl(icon);
+            normalized.add(new FooterSupportButton(zh, en, href, icon));
+        }
+        return List.copyOf(normalized);
+    }
+
+    private void validateButtonUrl(String value) throws BusinessException {
+        try {
+            URI uri = URI.create(value);
+            boolean internal = value.startsWith("/") && !value.startsWith("//");
+            boolean external = ("https".equalsIgnoreCase(uri.getScheme())
+                    || "http".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null && uri.getUserInfo() == null;
+            if (value.contains("\\") || (!internal && !external)) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "请使用有效的站内路径或 HTTP(S) 地址");
+        }
     }
 
     private List<FooterColumnView> normalizeColumns(List<FooterColumnView> columns)

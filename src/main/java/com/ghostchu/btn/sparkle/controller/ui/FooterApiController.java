@@ -73,7 +73,8 @@ public class FooterApiController {
                 )
                         : null,
                 performance,
-                loginVisible ? visitorService.visitor(request) : null
+                loginVisible ? visitorService.visitor(request) : null,
+                config.supportButtons() == null ? List.of() : config.supportButtons()
         );
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())

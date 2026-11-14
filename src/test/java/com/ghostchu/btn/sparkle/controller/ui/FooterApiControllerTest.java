@@ -4,6 +4,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterAudience;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterConfigView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterMetricSetting;
 import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterPerformanceView;
+import com.ghostchu.btn.sparkle.controller.ui.dto.FooterModels.FooterSupportButton;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.FooterConfigService;
@@ -23,6 +24,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class FooterApiControllerTest {
+    @Test
+    void anonymousVisitorsReceiveSupportImagesInConfiguredOrder() {
+        FooterConfigService configService = mock(FooterConfigService.class);
+        var buttons = List.of(new FooterSupportButton("支持", "Support", "/support", "/images/a.svg"),
+                new FooterSupportButton("爱发电", "Afdian", "https://ifdian.net/a/Ghost_chu", "/images/b.svg"));
+        when(configService.get()).thenReturn(new FooterConfigView("", "", FooterAudience.ADMIN,
+                "", FooterAudience.ADMIN, List.of(), FooterAudience.ADMIN, FooterAudience.ADMIN,
+                FooterAudience.ADMIN, List.of(), buttons));
+        var controller = new FooterApiController(configService, mock(FooterMetricsService.class),
+                mock(FooterVisitorService.class));
+        var response = controller.footer(null, mock(HttpServletRequest.class));
+        assertNotNull(response.getBody());
+        assertEquals(buttons, response.getBody().supportButtons());
+    }
+
     @Test
     void adminAuthorityCanViewAdminOnlyMetricsWithStaleUserRole() {
         FooterConfigService configService = mock(FooterConfigService.class);
@@ -44,7 +60,8 @@ class FooterApiControllerTest {
                 FooterAudience.ADMIN,
                 FooterAudience.ADMIN,
                 FooterAudience.ADMIN,
-                List.of(new FooterMetricSetting("loadAverage", true, FooterAudience.ADMIN))
+                List.of(new FooterMetricSetting("loadAverage", true, FooterAudience.ADMIN)),
+                List.of()
         ));
         when(metricsService.snapshot()).thenReturn(new FooterPerformanceView(
                 1.0, 2.0, 3.0,
