@@ -11,6 +11,7 @@ import { useFormatters } from '@/utils/format'
 
 const { t, locale } = useI18n()
 const { formatBytes } = useFormatters()
+const statisticsStartedOn = '2026/11/15'
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
@@ -29,7 +30,7 @@ const metrics = [
   ['lossRatio', 'traffic.lossRatio', 'traffic.lossHelp'],
 ] as const
 const columns = computed<TableColumnData[]>(() => [
-  { title: t('traffic.day'), dataIndex: 'day', width: 145, fixed: 'left' },
+  { title: t('traffic.day'), slotName: 'day', width: 145, fixed: 'left' },
   ...metrics.map(([key, label]) => ({ title: t(label), slotName: key, width: 180 })),
 ])
 function formatMetric(row: DailyTraffic, key: string) {
@@ -62,16 +63,19 @@ watch([page, size], load, { immediate: true })
   <div class="page-stack">
     <PageHeader :title="t('traffic.heading')" :description="t('traffic.description')" />
     <a-card class="surface-card table-card">
-      <div class="filter-actions"><a-button :loading="loading" @click="load">{{ t('traffic.refresh') }}</a-button></div>
-      <p class="traffic-note">{{ t('traffic.note') }}</p>
+      <div class="traffic-toolbar">
+        <p class="traffic-note">{{ t('traffic.note', { date: statisticsStartedOn }) }}</p>
+        <a-button :loading="loading" @click="load">{{ t('traffic.refresh') }}</a-button>
+      </div>
       <p class="traffic-note">{{ t('traffic.timeNote') }}</p>
       <p class="traffic-note">{{ t('traffic.lossHelp') }}</p>
       <a-alert v-if="failed" type="error">{{ t('traffic.failed') }}</a-alert>
       <a-table v-else :columns="columns" :data="records" :loading="loading" :pagination="false" :scroll="{ x: 1585 }" row-key="day">
+        <template #day="{ record }">{{ record.day.replaceAll('-', '/') }}</template>
         <template v-for="[key, , help] in metrics" :key="key" #[key]="{ record }">
           <a-tooltip :content="t(help)">{{ formatMetric(record, key) }}</a-tooltip>
         </template>
-        <template #empty><EmptyState :title="t('traffic.empty')" /></template>
+        <template #empty><EmptyState :title="t('traffic.empty')" :description="t('traffic.emptyDescription')" /></template>
       </a-table>
       <TablePager :current="page" :page-size="size" :total="total" :records-length="records.length" @change="page = $event" @page-size-change="changeSize" />
     </a-card>
@@ -80,7 +84,9 @@ watch([page, size], load, { immediate: true })
 
 <style scoped>
 .traffic-note { color: var(--color-text-3); line-height: 1.7; margin: 12px 0; }
-.filter-actions { display: flex; justify-content: flex-end; }
+.traffic-toolbar { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.traffic-toolbar .traffic-note { flex: 1; min-width: 0; margin: 0; }
+.traffic-toolbar :deep(.arco-btn) { flex-shrink: 0; }
 @media (max-width: 980px) { .traffic-note { font-size: 13px; } }
-@media (max-width: 720px) { .filter-actions :deep(.arco-btn) { width: 100%; } }
+@media (max-width: 720px) { .traffic-toolbar { gap: 12px; } }
 </style>
