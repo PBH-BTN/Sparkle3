@@ -70,7 +70,7 @@ class UserLifetimeTrafficIntegrationTest {
                     var connection=session.getConnection();
                     var totals=session.getMapper(UserLifetimeTrafficMapper.class);
                     var career=session.getMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
-                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class));
+                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig());
 
                     assertTotals(connection,1,"0","0","0","0");
                     assertTrue(career.counts(1).isEmpty());
@@ -110,7 +110,7 @@ class UserLifetimeTrafficIntegrationTest {
                     try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
                         var futures = java.util.stream.IntStream.range(0,3).mapToObj(i -> executor.submit(() -> {
                             try (var concurrent = factory.openSession()) {
-                                var worker=new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class));
+                                var worker=new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig());
 
                                 worker.swarm(1,row);
                                 concurrent.commit();
@@ -150,6 +150,12 @@ class UserLifetimeTrafficIntegrationTest {
                 statement.execute("DROP DATABASE " + database + " WITH (FORCE)");
             }
         }
+    }
+
+    private com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService runtimeConfig() {
+        var config = org.mockito.Mockito.mock(com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService.class);
+        org.mockito.Mockito.when(config.reportingWindowMillis(org.mockito.ArgumentMatchers.anyString())).thenReturn(915000L);
+        return config;
     }
 
     private String trackerInsert(long upload, long download, String firstSeen) {

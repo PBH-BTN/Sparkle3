@@ -76,13 +76,7 @@ public class QueryIpServiceImpl {
                 "torrentsCountingDuration"
         );
         long syncSwarmInterval = btnConfigService.longValue("syncSwarm", "interval");
-        long syncSwarmRandomInitialDelay = btnConfigService.longValue(
-                "syncSwarm",
-                "randomInitialDelay"
-        );
-        long concurrentDownloadWindow = syncSwarmInterval
-                + syncSwarmRandomInitialDelay
-                + 120_000;
+        long concurrentDownloadWindow = btnConfigService.reportingWindowMillis("syncSwarm");
         IpQueryResult result = new IpQueryResult();
         result.setColor("#808080");
         result.setLabels(new ArrayList<>());

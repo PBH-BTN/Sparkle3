@@ -22,7 +22,7 @@
         ), peers AS MATERIALIZED (
             SELECT DISTINCT ua.owner,i.session_key,i.at,i.observation_key
             FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip
-                AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-interval '5 minutes'
+                AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-(#{heartbeatWindowMillis}::bigint * interval '1 millisecond')
             JOIN userapp ua ON ua.id=hb.userapp_id
             WHERE NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
         ), contributions AS (
@@ -55,9 +55,9 @@
         SELECT user_id,torrent_id,at,seeding FROM latest ORDER BY user_id,torrent_id
         ON CONFLICT(user_id,torrent_id) DO UPDATE SET
             seeding=a.seeding+CASE WHEN a.was_seeding AND EXCLUDED.last_seen>a.last_seen
-                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+interval '5 minutes'),'[)')) ELSE '{}'::tstzmultirange END,
+                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+(#{activityWindowMillis}::bigint * interval '1 millisecond')),'[)')) ELSE '{}'::tstzmultirange END,
             downloading=a.downloading+CASE WHEN NOT a.was_seeding AND EXCLUDED.last_seen>a.last_seen
-                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+interval '5 minutes'),'[)')) ELSE '{}'::tstzmultirange END,
+                THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+(#{activityWindowMillis}::bigint * interval '1 millisecond')),'[)')) ELSE '{}'::tstzmultirange END,
             was_seeding=CASE WHEN EXCLUDED.last_seen>a.last_seen THEN EXCLUDED.was_seeding ELSE a.was_seeding END,
             last_seen=GREATEST(a.last_seen,EXCLUDED.last_seen)
     </insert>
@@ -66,7 +66,7 @@
             VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet)</foreach>
         ), observed AS (
             SELECT DISTINCT ua.owner,i.fingerprint,i.at,i.user_id AS reporter
-            FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at
+            FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-(#{heartbeatWindowMillis}::bigint * interval '1 millisecond')
             JOIN userapp ua ON ua.id=hb.userapp_id WHERE ua.owner &lt;> i.user_id
               AND NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
         ), added AS (

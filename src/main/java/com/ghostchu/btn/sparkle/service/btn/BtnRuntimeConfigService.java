@@ -76,6 +76,11 @@ public class BtnRuntimeConfigService {
         return Boolean.parseBoolean(text(section, field));
     }
 
+    /** Maximum configured reporting gap, including the client's randomized delay. */
+    public long reportingWindowMillis(String section) {
+        return Math.addExact(longValue(section,"interval"),longValue(section,"randomInitialDelay"));
+    }
+
     public long longValue(String section, String field) {
         BtnConfigCatalog.Definition definition = definition(section, field);
         String value = text(section, field);

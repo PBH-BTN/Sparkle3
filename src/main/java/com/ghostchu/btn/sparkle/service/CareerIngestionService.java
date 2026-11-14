@@ -18,6 +18,7 @@ public class CareerIngestionService {
     @org.springframework.beans.factory.annotation.Autowired
     private CareerRedisCache cache;
     private final com.ghostchu.btn.sparkle.mapper.CareerBatchMapper batchMapper;
+    private final com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService runtimeConfig;
 
     private String key(String value) {
         return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8)).toString();
@@ -34,6 +35,8 @@ public class CareerIngestionService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void swarmBatch(long uid, java.util.List<SwarmTracker> rows) {
+        long activityWindow = runtimeConfig.reportingWindowMillis("syncSwarm");
+        long heartbeatWindow = runtimeConfig.reportingWindowMillis("heartbeat");
         for (int offset=0; offset<rows.size(); offset+=500) {
             var values = new java.util.ArrayList<Map<String,Object>>();
             var identities = new java.util.ArrayList<String>();
@@ -50,9 +53,9 @@ public class CareerIngestionService {
                 values.add(p);
             }
             java.util.Collections.sort(identities);
-            String delivery=key(uid+":"+String.join(";",identities));
+            String delivery=key(uid+":"+activityWindow+":"+heartbeatWindow+":"+String.join(";",identities));
             if (cache != null && cache.alreadyCommitted(delivery)) continue;
-            batchMapper.swarm(uid,values);
+            batchMapper.swarm(uid,values,activityWindow,heartbeatWindow);
             if (cache != null) cache.markAfterCommit(delivery);
         }
     }
@@ -86,12 +89,13 @@ public class CareerIngestionService {
     }
 
     private void submit(long uid,java.util.List<Map<String,Object>> rows,boolean feature) {
+        long heartbeatWindow = runtimeConfig.reportingWindowMillis("heartbeat");
         for (int offset=0;offset<rows.size();offset+=500) {
             var chunk=rows.subList(offset,Math.min(offset+500,rows.size()));
             var keys=chunk.stream().map(p -> p.get("key").toString()).sorted().toList();
-            String delivery=key(uid+":"+feature+":"+String.join(";",keys));
+            String delivery=key(uid+":"+feature+":"+heartbeatWindow+":"+String.join(";",keys));
             if (cache != null && cache.alreadyCommitted(delivery)) continue;
-            if (feature) batchMapper.features(uid,chunk); else batchMapper.bans(uid,chunk);
+            if (feature) batchMapper.features(uid,chunk); else batchMapper.bans(uid,chunk,heartbeatWindow);
             if (cache != null) cache.markAfterCommit(delivery);
         }
     }
