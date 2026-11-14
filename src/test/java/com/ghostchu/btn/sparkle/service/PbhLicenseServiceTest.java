@@ -101,6 +101,8 @@ class PbhLicenseServiceTest {
         LicenseView result = service.generate(42L);
 
         verify(licenseMapper).lockKey("sparkle:pbh-license:42");
+        assertEquals("PATREON", capturedLicense.get().getProvider());
+        assertEquals("patron-42", capturedLicense.get().getExternalUserId());
         assertEquals("DONATION", result.sourceType());
         assertTrue(result.consumedAmount().startsWith("50"));
         JsonNode payload = decrypt(result.licenseKey(), keyPair.getPublic());
@@ -236,7 +238,7 @@ class PbhLicenseServiceTest {
         ArgumentCaptor<QueryWrapper<PbhLicense>> query = ArgumentCaptor.forClass(QueryWrapper.class);
         verify(licenseMapper).selectList(query.capture());
         assertTrue(query.getValue().getSqlSegment().contains("member_platform_bindings"));
-        assertTrue(query.getValue().getSqlSegment().contains("b.external_user_id = pbh_licenses.external_user_id"));
+        assertTrue(query.getValue().getSqlSegment().contains("b.external_user_id = pbh_licenses.userid"));
     }
 
     private PbhLicense license(

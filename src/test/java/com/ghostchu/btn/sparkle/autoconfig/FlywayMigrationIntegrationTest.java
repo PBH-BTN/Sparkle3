@@ -53,6 +53,15 @@ class FlywayMigrationIntegrationTest {
         try (var connection = DriverManager.getConnection(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""
+                    SELECT COUNT(*) FILTER (WHERE column_name = 'userid') = 1
+                        AND COUNT(*) FILTER (WHERE column_name IN ('afdian_user_id', 'external_user_id')) = 0
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'pbh_licenses'
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+            try (var result = statement.executeQuery("""
                     SELECT COUNT(*) = 4
                         AND bool_and(CASE WHEN column_name = 'btn_user_id' THEN is_nullable = 'YES' ELSE TRUE END)
                     FROM information_schema.columns

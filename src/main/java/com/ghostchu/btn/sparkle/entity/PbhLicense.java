@@ -25,10 +25,8 @@ public class PbhLicense {
     @TableField("btn_user_id")
     private Long btnUserId;
     private String provider;
-    @TableField("external_user_id")
+    @TableField("userid")
     private String externalUserId;
-    @TableField("afdian_user_id")
-    private String afdianUserId;
     @TableField("source_type")
     private String sourceType;
     @TableField("source_order_no")

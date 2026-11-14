@@ -186,11 +186,6 @@ public class PbhLicenseService {
                 .setBtnUserId(btnUserId)
                 .setProvider(licenseAccount.getProvider())
                 .setExternalUserId(licenseAccount.getExternalUserId())
-                .setAfdianUserId(
-                        "AFDIAN".equals(licenseAccount.getProvider())
-                                ? licenseAccount.getExternalUserId()
-                                : null
-                )
                 .setSourceType(sourceType)
                 .setSourceOrderNo(sourceOrderNo)
                 .setPlanId(planId)
@@ -222,7 +217,7 @@ public class PbhLicenseService {
                     license.getLicenseId().toString(),
                     license.getBtnUserId(),
                     user == null ? null : user.getNickname(),
-                    license.getAfdianUserId(),
+                    "AFDIAN".equals(license.getProvider()) ? license.getExternalUserId() : null,
                     license.getSourceType(),
                     license.getSourceOrderNo(),
                     license.getPlanId(),
@@ -252,13 +247,13 @@ public class PbhLicenseService {
             query.and(nested -> {
                 nested.apply("license_id::text LIKE {0}", "%" + term + "%")
                         .or().like("source_order_no", term)
-                        .or().like("external_user_id", term)
+                        .or().like("userid", term)
                         .or().like("plan_id", term);
                 if (userId != null) {
                     nested.or().eq("btn_user_id", userId);
                     nested.or().apply("btn_user_id IS NULL AND provider = 'AFDIAN' AND EXISTS "
                             + "(SELECT 1 FROM member_platform_bindings b WHERE b.provider = pbh_licenses.provider "
-                            + "AND b.external_user_id = pbh_licenses.external_user_id AND b.btn_user_id = {0})", userId);
+                            + "AND b.external_user_id = pbh_licenses.userid AND b.btn_user_id = {0})", userId);
                 }
             });
         }
@@ -395,7 +390,7 @@ public class PbhLicenseService {
                         .and(query -> query.eq("btn_user_id", btnUserId).or().apply(
                                 "import_fingerprint IS NOT NULL AND EXISTS (SELECT 1 FROM member_platform_bindings b "
                                         + "WHERE b.btn_user_id = {0} AND b.provider = pbh_licenses.provider "
-                                        + "AND b.external_user_id = pbh_licenses.external_user_id)", btnUserId))
+                                        + "AND b.external_user_id = pbh_licenses.userid)", btnUserId))
                         .orderByDesc("issued_at")
         ).stream().map(this::mapPublicLicense).toList();
     }

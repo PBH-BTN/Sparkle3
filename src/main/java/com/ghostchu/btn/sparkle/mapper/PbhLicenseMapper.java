@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Select;
 public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
     @Select("""
             SELECT COUNT(*) FROM pbh_licenses l JOIN member_platform_bindings b
-              ON b.provider = l.provider AND b.external_user_id = l.external_user_id
+              ON b.provider = l.provider AND b.external_user_id = l.userid
             WHERE b.btn_user_id = #{userId} AND l.import_match = 'UNMATCHED'
             """)
     int countUnmatchedImports(@Param("userId") long userId);
@@ -22,15 +22,15 @@ public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
 
     @Insert("""
             INSERT INTO pbh_licenses (
-                license_id, btn_user_id, provider, external_user_id,
-                afdian_user_id, source_type, source_order_no, plan_id,
+                license_id, btn_user_id, provider, userid,
+                source_type, source_order_no, plan_id,
                 consumed_amount, license_key, license_payload,
                 start_at, expire_at
             )
             VALUES (
                 #{licenseId,typeHandler=com.ghostchu.btn.sparkle.converter.UuidTypeHandler},
                 #{btnUserId}, #{provider}, #{externalUserId},
-                #{afdianUserId}, #{sourceType}, #{sourceOrderNo}, #{planId},
+                #{sourceType}, #{sourceOrderNo}, #{planId},
                 #{consumedAmount}, #{licenseKey}, CAST(#{licensePayload} AS jsonb),
                 #{startAt}, #{expireAt}
             )
