@@ -21,6 +21,26 @@ import static org.mockito.Mockito.when;
 
 class UserApplicationApiControllerTest {
     @Test
+    void bypassDetailsRequireTheApplicationOwner() throws Exception {
+        var apps=mock(IUserappService.class);
+        var bypass=mock(com.ghostchu.btn.sparkle.service.UserApplicationBypassService.class);
+        var controller=new UserApplicationApiController(apps,mock(IUserappsHeartbeatService.class),bypass);
+        var principal=mock(SparkleUserDetails.class);
+        when(principal.getUserId()).thenReturn(10L);
+        var app=new Userapp().setOwner(10L).setAppId("own");
+        when(apps.getUserAppByAppId("own")).thenReturn(app);
+        when(bypass.list(app)).thenReturn(List.of());
+        assertEquals(List.of(),controller.bypassIps("own",principal));
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> controller.bypassIps("own",null));
+        when(apps.getUserAppByAppId("other")).thenReturn(new Userapp().setOwner(11L));
+        org.junit.jupiter.api.Assertions.assertThrows(com.ghostchu.btn.sparkle.exception.AccessDeniedException.class,
+                () -> controller.bypassIps("other",principal));
+        verify(bypass).list(app);
+        org.mockito.Mockito.verifyNoMoreInteractions(bypass);
+    }
+
+    @Test
     void listsOnlyCurrentIpsForActiveBypassApplications() {
         IUserappService userappService = mock(IUserappService.class);
         IUserappsHeartbeatService heartbeatService = mock(IUserappsHeartbeatService.class);
@@ -64,7 +84,8 @@ class UserApplicationApiControllerTest {
         ));
 
         UserApplicationApiController controller =
-                new UserApplicationApiController(userappService, heartbeatService);
+                new UserApplicationApiController(userappService, heartbeatService,
+                        mock(com.ghostchu.btn.sparkle.service.UserApplicationBypassService.class));
         var result = controller.list(principal);
 
         @SuppressWarnings("unchecked")

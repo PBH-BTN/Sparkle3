@@ -35,6 +35,7 @@ import java.util.Objects;
 public class UserApplicationApiController {
     private final IUserappService userappService;
     private final IUserappsHeartbeatService heartbeatService;
+    private final com.ghostchu.btn.sparkle.service.UserApplicationBypassService bypassService;
 
     @GetMapping
     public List<UserApplicationDto> list(@AuthenticationPrincipal SparkleUserDetails userDetails) {
@@ -74,6 +75,13 @@ public class UserApplicationApiController {
                         ))
                 ))
                 .toList();
+    }
+
+    @GetMapping("/{appId}/bypass-ips")
+    public List<com.ghostchu.btn.sparkle.service.UserApplicationBypassService.BypassIp> bypassIps(
+            @PathVariable String appId, @AuthenticationPrincipal SparkleUserDetails userDetails)
+            throws UserApplicationNotFoundException, AccessDeniedException {
+        return bypassService.list(requireOwnedApplication(appId,userDetails));
     }
 
     @PostMapping
