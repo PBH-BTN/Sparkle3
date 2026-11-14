@@ -33,6 +33,8 @@ class DatabaseConfigServiceTest {
     void retiredTrafficSettingsAreNotImportedAgainFromLegacyYaml() {
         assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled"));
         assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.refresh-interval-minutes"));
+        assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic-data.enabled"));
+        assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic-rankings.enabled"));
         assertFalse(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.network-charts.enabled"));
     }
 

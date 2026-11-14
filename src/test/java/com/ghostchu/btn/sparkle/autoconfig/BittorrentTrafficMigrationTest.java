@@ -10,6 +10,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BittorrentTrafficMigrationTest {
     @Test
+    void deployedV68ChecksumStaysUnchanged() throws Exception {
+        var crc = new java.util.zip.CRC32();
+        try (var input = getClass().getClassLoader().getResourceAsStream(
+                "db/migration/V68__incremental_traffic_sources.sql")) {
+            assertNotNull(input);
+            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(input, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) crc.update(line.getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(-1348056337, (int) crc.getValue());
+    }
+
+    @Test
     void migrationDoesNotRaceWithContinuousAggregatePolicy() throws Exception {
         String resource = "db/migration/V33__bittorrent_traffic_statistics.sql";
         try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {

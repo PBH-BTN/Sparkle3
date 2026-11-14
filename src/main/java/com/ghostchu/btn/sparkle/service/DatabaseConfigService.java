@@ -294,6 +294,8 @@ public class DatabaseConfigService {
                 || key.startsWith("sparkle.tracker.")
                 || key.startsWith("sparkle.statistics.")
                 || key.startsWith("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.")
+                || key.startsWith("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic-data.")
+                || key.startsWith("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic-rankings.")
                 || "sparkle.analyse.overdownload-analyse.threshold".equals(key)
                 || "sparkle.ranking.database-type".equals(key)
                 || "sparkle.swarm-statistics-track.cron".equals(key)

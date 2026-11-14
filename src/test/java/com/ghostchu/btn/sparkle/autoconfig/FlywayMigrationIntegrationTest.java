@@ -336,6 +336,53 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void upgradesAnAlreadyAppliedIncrementalV68WithoutRepair() throws Exception {
+        String url = System.getenv("SPARKLE_FLYWAY_TEST_URL");
+        String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
+        String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
+        try (var connection = connect(url, username, password)) {
+            requireDisposableDatabase(connection);
+        }
+        Flyway.configure().dataSource(url, username, password).target("68")
+                .locations("classpath:db/migration").load().migrate();
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("SELECT checksum FROM flyway_schema_history WHERE version = '68' AND success")) {
+                assertTrue(result.next());
+                assertEquals(-1348056337, result.getInt(1));
+            }
+            statement.execute("INSERT INTO dashboard_traffic_counts VALUES ('ban', NOW(), 'peer', 'fixture', 1)");
+            statement.execute("INSERT INTO dashboard_traffic_swarm_changes VALUES (1, NOW())");
+        }
+        Flyway latest = Flyway.configure().dataSource(url, username, password)
+                .locations("classpath:db/migration").validateOnMigrate(true).load();
+        latest.migrate();
+        latest.validate();
+        assertEquals("69", latest.info().current().getVersion().getVersion());
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("""
+                    SELECT NOT EXISTS (SELECT 1 FROM pg_class WHERE relnamespace = 'public'::regnamespace
+                        AND relname LIKE 'dashboard_traffic_%')
+                      AND NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.swarm_tracker'::regclass
+                        AND tgname IN ('dashboard_swarm_insert_changes', 'dashboard_swarm_update_changes',
+                                       'dashboard_swarm_remove_contributions'))
+                      AND to_regprocedure('public.mark_dashboard_swarm_changes()') IS NULL
+                      AND to_regprocedure('public.remove_dashboard_swarm_contributions()') IS NULL
+                      AND NOT EXISTS (SELECT 1 FROM app_config_entries
+                        WHERE config_key LIKE 'sparkle.homepage-statistics-refresh.modules.bittorrent-traffic%')
+                      AND (SELECT COUNT(*) = 3 FROM timescaledb_information.jobs
+                        WHERE proc_name = 'policy_refresh_continuous_aggregate'
+                          AND hypertable_schema = 'public' AND hypertable_name IN
+                          ('dashboard_ban_daily_peer', 'dashboard_ban_daily_client', 'dashboard_ban_daily_geo'))
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
+        }
+    }
+
+    @Test
     void adoptsTheCurrentProductionSchemaWithoutReplayingHistoricalMigrations() throws Exception {
         String url = System.getenv("SPARKLE_FLYWAY_TEST_URL");
         String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
