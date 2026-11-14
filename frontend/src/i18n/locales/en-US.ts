@@ -28,6 +28,7 @@ export default {
     shortName: 'Sparkle BTN',
     footer: 'Sparkle · BTN v3.1',
     footerBy: 'Built by the PBH-BTN Community',
+    footerSupport: 'Buy us a coffee',
     disclaimer: {
       operator:
         'Sparkle BTN is a BitTorrent threat intelligence network operated and maintained by PBH-BTN.',

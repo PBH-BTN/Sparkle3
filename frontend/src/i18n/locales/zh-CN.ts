@@ -28,6 +28,7 @@ export default {
     shortName: 'Sparkle BTN',
     footer: 'Sparkle (花火) · BTN v3.1',
     footerBy: '由 PBH-BTN 社区构建',
+    footerSupport: '请我们喝一杯奶茶',
     disclaimer: {
       operator: 'Sparkle BTN 是由 PBH-BTN 运营和维护的 BitTorrent 威胁情报网络。',
       contribution:
