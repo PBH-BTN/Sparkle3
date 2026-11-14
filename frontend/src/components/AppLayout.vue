@@ -187,7 +187,7 @@ onBeforeUnmount(() => {
               <template #icon><IconEmail /></template>
             </a-button>
           </a-badge>
-          <a-dropdown trigger="click">
+          <a-dropdown trigger="click" popup-container=".app-header">
             <button class="user-trigger" type="button">
               <a-avatar :size="32" :image-url="session.user?.avatarUrl">
                 <IconUser />
