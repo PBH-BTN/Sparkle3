@@ -89,16 +89,11 @@ public class BittorrentTrafficStatisticsService {
             return cached;
         }
 
-        Object cacheLock = cacheLocks.computeIfAbsent(cacheKey, ignored -> new Object());
-        synchronized (cacheLock) {
-            cached = readCache(cacheKey);
-            if (cached != null) {
-                return cached;
-            }
-            HomeBittorrentTrafficResponse response = calculate(days);
-            writeCache(cacheKey, response);
-            return response;
-        }
+        // Requests must not start expensive queries during startup or cache outages.
+        return new HomeBittorrentTrafficResponse(days,
+                new TrafficTotals("0", "0", "0"),
+                new TrafficDistribution(List.of(), "0"),
+                new TrafficDistribution(List.of(), "0"), null);
     }
 
     public void refresh() throws BusinessException {
@@ -107,20 +102,11 @@ public class BittorrentTrafficStatisticsService {
             return;
         }
         snapshotService.refresh();
-        String defaultKey = cacheKey(7);
-        synchronized (cacheLocks.computeIfAbsent(defaultKey, ignored -> new Object())) {
-            writeCache(defaultKey, calculate(7));
-        }
-        List<String> staleKeys = ALLOWED_DAYS.stream()
-                .filter(days -> days != 7)
-                .map(this::cacheKey)
-                .toList();
-        localCache.keySet().removeAll(staleKeys);
-        try {
-            redisTemplate.delete(staleKeys);
-        } catch (Exception exception) {
-            log.warn("Unable to evict BitTorrent traffic cache entries: {}",
-                    exception.getMessage());
+        for (int days : List.of(7, 3, 1)) {
+            String key = cacheKey(days);
+            synchronized (cacheLocks.computeIfAbsent(key, ignored -> new Object())) {
+                writeCache(key, calculate(days));
+            }
         }
     }
 
@@ -207,6 +193,10 @@ public class BittorrentTrafficStatisticsService {
         BigInteger download = BigInteger.ZERO;
         Map<String, TrafficAmounts> cities = new HashMap<>();
         for (DashboardTrafficRowDto row : rows) {
+            // MyBatis maps the all-NULL aggregate row for an empty window to null.
+            if (row == null) {
+                continue;
+            }
             BigInteger rowUpload = parse(row.getUploadBytes());
             BigInteger rowDownload = parse(row.getDownloadBytes());
             if (row.getCity() == null) {
@@ -363,13 +353,10 @@ public class BittorrentTrafficStatisticsService {
         if (local != null && local.expiresAt() > now) {
             return (HomeBittorrentTrafficResponse) local.response();
         }
-        if (local != null) {
-            localCache.remove(key, local);
-        }
         try {
             String value = redisTemplate.opsForValue().get(key);
             if (value == null) {
-                return null;
+                return local == null ? null : (HomeBittorrentTrafficResponse) local.response();
             }
             HomeBittorrentTrafficResponse response = objectMapper.readValue(
                     value,
@@ -378,7 +365,7 @@ public class BittorrentTrafficStatisticsService {
             localCache.put(key, new LocalCacheEntry(response, now + CACHE_TTL.toMillis()));
             return response;
         } catch (Exception exception) {
-            return null;
+            return local == null ? null : (HomeBittorrentTrafficResponse) local.response();
         }
     }
 
@@ -390,8 +377,7 @@ public class BittorrentTrafficStatisticsService {
         try {
             redisTemplate.opsForValue().set(
                     key,
-                    objectMapper.writeValueAsString(response),
-                    CACHE_TTL
+                    objectMapper.writeValueAsString(response)
             );
         } catch (Exception ignored) {
             // Statistics remain available when Redis is temporarily unavailable.
