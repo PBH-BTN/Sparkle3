@@ -58,7 +58,7 @@ const retryable = computed(() => route.query.retryable !== 'false')
 .error-card {
   width: min(680px, 100%);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 .error-actions {
@@ -75,9 +75,9 @@ const retryable = computed(() => route.query.retryable !== 'false')
   margin: 0 0 16px;
   color: var(--color-text-2);
   overflow-wrap: anywhere;
-  background: rgb(var(--red-1));
+  background: var(--color-danger-light-1);
   border: 1px solid rgb(var(--red-2));
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .error-message strong {

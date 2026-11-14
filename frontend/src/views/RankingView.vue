@@ -327,7 +327,7 @@ onMounted(() => {
   color: var(--color-text-3);
   font-size: 11px;
   border: 1px solid var(--color-border-3);
-  border-radius: 50%;
+  border-radius: var(--app-radius);
   cursor: help;
 }
 
@@ -350,7 +350,7 @@ onMounted(() => {
   padding: 20px;
   color: var(--color-white);
   background: rgb(var(--primary-6));
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .self-rank span {
@@ -378,7 +378,7 @@ onMounted(() => {
   justify-content: center;
   padding: 12px 16px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .self-stats span,
@@ -443,17 +443,17 @@ onMounted(() => {
   padding: 3px 9px;
   font-size: 12px;
   font-weight: 500;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 
 .traffic-value--up {
   color: rgb(var(--blue-6));
-  background: rgb(var(--blue-1));
+  background: var(--color-primary-light-1);
 }
 
 .traffic-value--down {
   color: rgb(var(--green-6));
-  background: rgb(var(--green-1));
+  background: var(--color-success-light-1);
 }
 
 .points-ranking-value {

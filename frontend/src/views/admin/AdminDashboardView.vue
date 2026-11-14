@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
   height: 34px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .metric-value {
@@ -313,7 +313,7 @@ h3 {
   min-width: 0;
   padding: 14px;
   background: var(--color-fill-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .module-card div {

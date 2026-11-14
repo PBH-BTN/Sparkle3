@@ -179,7 +179,6 @@ onBeforeUnmount(() => {
           <a-badge :count="unreadMessages" :max-count="99" :offset="[-4, 4]">
             <a-button
               class="inbox-trigger"
-              shape="circle"
               type="text"
               :aria-label="t('inbox.open')"
               @click="navigate('/user/inbox')"
@@ -355,7 +354,7 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 19px;
   background: rgb(var(--primary-6));
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 .brand-mark--small {
@@ -421,7 +420,7 @@ onBeforeUnmount(() => {
   color: var(--color-text-1);
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   cursor: pointer;
   transition: background-color 0.2s;
 }

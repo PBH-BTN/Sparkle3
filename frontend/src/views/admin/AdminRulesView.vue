@@ -394,7 +394,7 @@ onMounted(load)
   text-align: left;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
   cursor: pointer;
 }
 
@@ -423,7 +423,7 @@ onMounted(load)
   height: 32px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .content-preview {
@@ -458,7 +458,7 @@ onMounted(load)
   line-height: 1.65;
   white-space: pre-wrap;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 @media (max-width: 1100px) {

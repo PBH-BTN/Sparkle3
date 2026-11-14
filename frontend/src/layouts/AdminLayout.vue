@@ -166,7 +166,7 @@ function navigate(key: string) {
   padding: 16px 12px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .admin-title {
@@ -186,7 +186,7 @@ function navigate(key: string) {
   color: var(--color-white);
   font-size: 18px;
   background: rgb(var(--primary-6));
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .admin-title div {
@@ -209,7 +209,7 @@ function navigate(key: string) {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .admin-sidebar :deep(.arco-menu-inner) {
@@ -246,7 +246,7 @@ function navigate(key: string) {
     overflow: hidden;
     background: var(--color-bg-2);
     border: 1px solid var(--color-border-2);
-    border-radius: 8px;
+    border-radius: var(--app-radius);
   }
 }
 </style>

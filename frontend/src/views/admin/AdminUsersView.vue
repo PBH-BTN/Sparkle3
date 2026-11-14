@@ -651,7 +651,7 @@ onMounted(load)
   margin-bottom: 18px;
   padding: 14px 16px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .points-adjust-current > div {

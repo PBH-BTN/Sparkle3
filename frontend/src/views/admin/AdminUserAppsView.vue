@@ -612,7 +612,7 @@ onMounted(load)
   gap: 12px;
   padding: 14px;
   background: var(--color-fill-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .credentials span {

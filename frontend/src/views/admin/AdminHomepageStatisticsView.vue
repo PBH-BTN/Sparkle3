@@ -302,7 +302,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   padding: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .task-heading {
@@ -338,7 +338,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   height: 34px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .task-settings {

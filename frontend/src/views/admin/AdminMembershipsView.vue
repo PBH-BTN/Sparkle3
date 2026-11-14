@@ -1165,7 +1165,7 @@ onMounted(load)
   padding: 9px;
   color: var(--color-text-3);
   background: var(--color-fill-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
   font-size: 11px;
 }
 

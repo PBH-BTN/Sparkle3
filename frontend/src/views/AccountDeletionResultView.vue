@@ -74,7 +74,7 @@ function login() {
   min-height: 100vh;
   padding: 32px 20px;
   background:
-    radial-gradient(circle at 12% 12%, rgb(var(--primary-1)) 0, transparent 32%),
+    radial-gradient(circle at 12% 12%, var(--color-primary-light-1) 0, transparent 32%),
     var(--color-fill-2);
 }
 
@@ -87,7 +87,7 @@ function login() {
 .result-card {
   width: min(700px, 100%);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   box-shadow: 0 12px 40px rgb(0 0 0 / 7%);
 }
 

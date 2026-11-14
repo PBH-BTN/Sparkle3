@@ -535,7 +535,7 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   font-size: 18px;
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .tone-blue .summary-icon {
@@ -545,17 +545,17 @@ onBeforeUnmount(() => {
 
 .tone-cyan .summary-icon {
   color: rgb(var(--cyan-6));
-  background: rgb(var(--cyan-1));
+  background: rgb(var(--cyan-6) / 12%);
 }
 
 .tone-purple .summary-icon {
   color: rgb(var(--purple-6));
-  background: rgb(var(--purple-1));
+  background: rgb(var(--purple-6) / 12%);
 }
 
 .tone-orange .summary-icon {
   color: rgb(var(--orange-6));
-  background: rgb(var(--orange-1));
+  background: var(--color-warning-light-1);
 }
 
 .card-title {
@@ -594,7 +594,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .task-header {
@@ -614,7 +614,7 @@ onBeforeUnmount(() => {
   color: var(--color-text-3);
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .task-icon.running {
@@ -784,7 +784,7 @@ onBeforeUnmount(() => {
   padding: 3px 7px;
   color: var(--color-text-3);
   font-size: 11px;
-  border-radius: 5px;
+  border-radius: var(--app-radius);
 }
 
 .run-row:nth-child(odd) {

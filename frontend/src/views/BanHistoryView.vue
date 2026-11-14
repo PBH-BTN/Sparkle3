@@ -609,6 +609,6 @@ onMounted(async () => {
   line-height: 1.6;
   white-space: pre-wrap;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 </style>

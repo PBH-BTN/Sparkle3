@@ -228,9 +228,9 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 24px;
   padding: 16px 18px;
-  background: rgb(var(--red-1) / 55%);
+  background: var(--color-danger-light-1);
   border: 1px solid rgb(var(--red-2));
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .danger-row strong {
@@ -266,9 +266,9 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  background: rgb(var(--red-1));
+  background: var(--color-danger-light-1);
   border: 1px solid rgb(var(--red-2));
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .warning-icon {
@@ -313,7 +313,7 @@ onMounted(async () => {
 .confirm-checkbox {
   padding: 12px 14px;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .modal-actions {

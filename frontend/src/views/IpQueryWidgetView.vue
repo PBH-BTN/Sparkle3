@@ -380,7 +380,7 @@ onMounted(load)
   display: inline-block;
   width: 12px;
   height: 46px;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .ip-label {
@@ -437,22 +437,22 @@ onMounted(load)
   height: 32px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .section-icon--danger {
   color: rgb(var(--red-6));
-  background: rgb(var(--red-1));
+  background: var(--color-danger-light-1);
 }
 
 .section-icon--info {
   color: rgb(var(--blue-6));
-  background: rgb(var(--blue-1));
+  background: var(--color-primary-light-1);
 }
 
 .section-icon--success {
   color: rgb(var(--green-6));
-  background: rgb(var(--green-1));
+  background: var(--color-success-light-1);
 }
 
 .section-icon--primary {
@@ -476,7 +476,7 @@ onMounted(load)
   flex-direction: column;
   padding: 14px 16px;
   background: var(--color-fill-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .metric-box > span {

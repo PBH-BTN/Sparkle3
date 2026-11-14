@@ -401,7 +401,7 @@ onMounted(loadApplications)
   padding: 16px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .mobile-app-header {
@@ -452,7 +452,7 @@ onMounted(loadApplications)
   gap: 8px;
   padding: 10px;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .mobile-app-id code {

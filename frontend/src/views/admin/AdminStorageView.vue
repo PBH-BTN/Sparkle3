@@ -620,7 +620,7 @@ onMounted(load)
   padding: 15px 16px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .summary-card span {
@@ -718,7 +718,7 @@ onMounted(load)
   margin-top: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .cleanup-preview p {

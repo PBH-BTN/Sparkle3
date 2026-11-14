@@ -749,10 +749,9 @@ onMounted(() => {
 .hero-card {
   position: relative;
   overflow: hidden;
-  color: var(--color-white);
-  background:
-    linear-gradient(120deg, rgb(var(--primary-7)), rgb(var(--primary-5)));
-  border-radius: 10px;
+  color: var(--app-feature-text);
+  background: var(--app-feature-bg);
+  border-radius: var(--app-radius);
 }
 
 .hero-card :deep(.arco-card-body) {
@@ -773,13 +772,13 @@ onMounted(() => {
   color: rgb(var(--primary-7));
   font-size: 12px;
   font-weight: 600;
-  background: rgb(255 255 255 / 88%);
-  border-radius: 20px;
+  background: var(--color-bg-2);
+  border-radius: var(--app-radius);
 }
 
 .hero-copy h1 {
   margin: 18px 0 2px;
-  color: var(--color-white);
+  color: var(--app-feature-text);
   font-size: 40px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -787,7 +786,7 @@ onMounted(() => {
 
 .hero-copy h2 {
   margin: 0 0 14px;
-  color: var(--color-white);
+  color: var(--app-feature-text);
   font-size: 20px;
   font-weight: 500;
   opacity: 0.9;
@@ -795,7 +794,7 @@ onMounted(() => {
 
 .hero-copy p {
   margin: 0 0 28px;
-  color: var(--color-white);
+  color: var(--app-feature-text);
   font-size: 15px;
   line-height: 1.7;
   opacity: 0.88;
@@ -803,8 +802,8 @@ onMounted(() => {
 
 .hero-copy :deep(.arco-btn) {
   color: rgb(var(--primary-6));
-  background: white;
-  border-color: white;
+  background: var(--color-bg-2);
+  border-color: var(--color-border-2);
 }
 
 .hero-copy :deep(.arco-btn .arco-icon) {
@@ -822,7 +821,7 @@ onMounted(() => {
 
 .hero-ring {
   position: absolute;
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 1px solid rgb(var(--primary-6) / 18%);
   border-radius: 50%;
 }
 
@@ -844,9 +843,9 @@ onMounted(() => {
   position: absolute;
   width: 10px;
   height: 10px;
-  background: white;
+  background: var(--color-bg-2);
   border-radius: 50%;
-  box-shadow: 0 0 0 8px rgb(255 255 255 / 10%);
+  box-shadow: 0 0 0 8px rgb(var(--primary-6) / 10%);
 }
 
 .hero-dot--one {
@@ -1005,12 +1004,12 @@ onMounted(() => {
   height: 28px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .stats-icon--apps {
   color: rgb(var(--green-6));
-  background: rgb(var(--green-1));
+  background: var(--color-success-light-1);
 }
 
 .stats-card :deep(.arco-statistic-title) {

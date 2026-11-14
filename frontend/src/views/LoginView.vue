@@ -72,8 +72,8 @@ function loginWithGitHub() {
   padding: 32px 20px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 10% 10%, rgb(var(--primary-1)) 0, transparent 32%),
-    radial-gradient(circle at 90% 80%, rgb(var(--primary-1)) 0, transparent 30%),
+    radial-gradient(circle at 10% 10%, var(--color-primary-light-1) 0, transparent 32%),
+    radial-gradient(circle at 90% 80%, var(--color-primary-light-1) 0, transparent 30%),
     var(--color-fill-2);
 }
 
@@ -88,7 +88,7 @@ function loginWithGitHub() {
   padding: 40px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 12px;
+  border-radius: var(--app-radius);
   box-shadow: 0 12px 40px rgb(0 0 0 / 8%);
 }
 
@@ -111,7 +111,7 @@ function loginWithGitHub() {
   color: white;
   font-size: 20px;
   background: rgb(var(--primary-6));
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 .login-heading h1 {
@@ -144,7 +144,7 @@ function loginWithGitHub() {
   color: var(--color-bg-2);
   font-weight: 600;
   background: var(--color-text-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   transition:
     transform 0.15s,
     opacity 0.15s;

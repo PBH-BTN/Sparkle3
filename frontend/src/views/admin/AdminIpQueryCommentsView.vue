@@ -895,7 +895,7 @@ onMounted(load)
   white-space: pre-wrap;
   word-break: break-word;
   background: var(--color-fill-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .revision-content {

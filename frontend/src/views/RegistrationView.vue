@@ -145,8 +145,8 @@ onMounted(async () => {
   min-height: 100vh;
   padding: 32px 20px;
   background:
-    radial-gradient(circle at 8% 10%, rgb(var(--primary-1)) 0, transparent 32%),
-    radial-gradient(circle at 92% 88%, rgb(var(--primary-1)) 0, transparent 30%),
+    radial-gradient(circle at 8% 10%, var(--color-primary-light-1) 0, transparent 32%),
+    radial-gradient(circle at 92% 88%, var(--color-primary-light-1) 0, transparent 30%),
     var(--color-fill-2);
 }
 
@@ -159,7 +159,7 @@ onMounted(async () => {
 .registration-card {
   width: min(520px, 100%);
   border: 1px solid var(--color-border-2);
-  border-radius: 12px;
+  border-radius: var(--app-radius);
   box-shadow: 0 16px 44px rgb(0 0 0 / 8%);
 }
 
@@ -183,7 +183,7 @@ onMounted(async () => {
   color: #fff;
   font-size: 20px;
   background: var(--color-text-1);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .registration-brand div {
@@ -237,7 +237,7 @@ onMounted(async () => {
   margin: 24px 0 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .profile-copy {

@@ -505,7 +505,7 @@ onMounted(load)
   height: 34px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .rule-cell > div {
@@ -530,7 +530,7 @@ onMounted(load)
   padding: 3px 7px;
   font-size: 12px;
   background: var(--color-fill-1);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 
 .recipient-cell {
@@ -579,7 +579,7 @@ onMounted(load)
   color: var(--color-text-2);
   font-size: 11px;
   background: var(--color-fill-2);
-  border-radius: 3px;
+  border-radius: var(--app-radius);
 }
 
 .modal-actions,

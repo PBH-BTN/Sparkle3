@@ -442,9 +442,9 @@ onMounted(refresh)
 
 .balance-card {
   overflow: hidden;
-  background: #155e75;
+  background: var(--app-feature-bg);
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--app-radius);
 }
 
 .balance-card :deep(.arco-card-body) {
@@ -453,10 +453,8 @@ onMounted(refresh)
   align-items: center;
   min-height: 190px;
   padding: 32px 36px;
-  color: #fff;
-  background:
-    radial-gradient(circle at 90% 20%, rgb(255 255 255 / 24%), transparent 28%),
-    linear-gradient(135deg, #0e7490, #155e75 52%, #164e63);
+  color: var(--app-feature-text);
+  background: var(--app-feature-bg);
   border-radius: 0;
 }
 
@@ -477,7 +475,7 @@ onMounted(refresh)
 }
 
 .balance-card .eyebrow {
-  color: rgb(255 255 255 / 68%);
+  color: var(--app-feature-muted);
 }
 
 .balance-copy > strong {
@@ -490,7 +488,7 @@ onMounted(refresh)
 .balance-copy p {
   max-width: 640px;
   margin: 18px 0 0;
-  color: rgb(255 255 255 / 74%);
+  color: var(--app-feature-muted);
   line-height: 1.7;
 }
 
@@ -502,14 +500,14 @@ onMounted(refresh)
 
 .balance-card .raw-value {
   margin-top: 8px;
-  color: rgb(255 255 255 / 58%);
+  color: var(--app-feature-muted);
 }
 
 .balance-mark {
   position: absolute;
   right: 32px;
   bottom: -36px;
-  color: rgb(255 255 255 / 8%);
+  color: rgb(var(--primary-6) / 8%);
   font-size: 190px;
   font-weight: 800;
   line-height: 1;
@@ -612,7 +610,7 @@ onMounted(refresh)
   gap: 6px 10px;
   padding: 10px 12px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .category-label {
@@ -656,7 +654,7 @@ onMounted(refresh)
   gap: 4px;
   padding: 10px 12px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .dynamic-breakdown span {
@@ -673,7 +671,7 @@ onMounted(refresh)
   height: 12px;
   margin-top: 4px;
   background: rgb(var(--green-6));
-  border-radius: 999px;
+  border-radius: 50%;
   box-shadow: 0 0 0 6px rgb(var(--green-2));
 }
 

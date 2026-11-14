@@ -238,8 +238,8 @@ async function send() {
   height: 42px;
   color: rgb(var(--green-6));
   font-size: 20px;
-  background: rgb(var(--green-1));
-  border-radius: 10px;
+  background: var(--color-success-light-1);
+  border-radius: var(--app-radius);
 }
 
 .result-summary div {

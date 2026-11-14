@@ -486,7 +486,7 @@ onMounted(load)
   padding: 16px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .group-type-icon {
@@ -498,8 +498,8 @@ onMounted(load)
   height: 42px;
   color: rgb(var(--primary-6));
   font-size: 21px;
-  background: rgb(var(--primary-1));
-  border-radius: 10px;
+  background: var(--color-primary-light-1);
+  border-radius: var(--app-radius);
 }
 
 .group-copy {

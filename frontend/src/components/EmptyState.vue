@@ -51,7 +51,7 @@ withDefaults(
   color: rgb(var(--primary-6));
   font-size: 28px;
   background: var(--color-primary-light-1);
-  border-radius: 50%;
+  border-radius: var(--app-radius);
 }
 
 p {

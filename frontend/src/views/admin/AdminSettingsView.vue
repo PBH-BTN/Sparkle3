@@ -1201,7 +1201,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   min-height: 62px;
   padding: 12px 14px;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .status-item > span {
@@ -1357,7 +1357,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   text-align: center;
   background: var(--color-fill-1);
   border: 1px dashed var(--color-border-2);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .footer-column-editor-list {
@@ -1369,7 +1369,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   padding: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .footer-column-editor-heading {
@@ -1412,7 +1412,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   min-height: 38px;
   padding: 6px 10px;
   background: var(--color-fill-1);
-  border-radius: 5px;
+  border-radius: var(--app-radius);
 }
 
 .metric-visibility-row > span {

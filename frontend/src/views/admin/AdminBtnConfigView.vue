@@ -340,7 +340,7 @@ onMounted(load)
   font-size: 12px;
   font-weight: 600;
   background: var(--color-primary-light-1);
-  border-radius: 50%;
+  border-radius: var(--app-radius);
 }
 
 .section-description {

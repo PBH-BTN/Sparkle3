@@ -304,7 +304,7 @@ onMounted(load)
   height: 30px;
   color: rgb(var(--primary-6));
   background: var(--color-primary-light-1);
-  border-radius: 7px;
+  border-radius: var(--app-radius);
 }
 
 .module-description {

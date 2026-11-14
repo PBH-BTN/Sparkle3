@@ -197,7 +197,7 @@ onMounted(load)
   width: 100%;
   padding: 9px 12px;
   background: var(--color-fill-1);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .endpoint-row code {

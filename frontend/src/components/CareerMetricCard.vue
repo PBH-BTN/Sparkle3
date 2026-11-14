@@ -21,7 +21,7 @@ defineProps<{ label: string; value: string; unit: string; color: string }>()
   overflow: hidden;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 12px;
+  border-radius: var(--app-radius);
 }
 .metric-card::after {
   position: absolute;

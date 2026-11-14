@@ -433,7 +433,7 @@ onMounted(load)
   gap: 5px;
   padding: 13px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .slot-grid span {
@@ -464,7 +464,7 @@ onMounted(load)
   gap: 9px;
   padding: 12px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .license-meta {
@@ -479,7 +479,7 @@ onMounted(load)
 .license-key {
   position: relative;
   grid-column: 1 / -1;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .license-key code {
@@ -510,7 +510,7 @@ onMounted(load)
   background: var(--color-fill-2);
   background: color-mix(in srgb, var(--color-fill-2) 62%, transparent);
   border: 1px dashed var(--color-border-2);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -565,13 +565,13 @@ onMounted(load)
   gap: 5px;
   min-width: 190px;
   padding: 16px 20px;
-  color: #fff;
-  background: linear-gradient(135deg, #d97706, #b45309);
-  border-radius: 12px;
+  color: var(--app-feature-text);
+  background: var(--app-feature-bg);
+  border-radius: var(--app-radius);
 }
 
 .account-total span {
-  color: rgb(255 255 255 / 74%);
+  color: var(--app-feature-muted);
   font-size: 11px;
 }
 
@@ -611,7 +611,7 @@ onMounted(load)
   gap: 16px;
   padding: 12px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .transaction-main,

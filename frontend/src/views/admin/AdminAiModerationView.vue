@@ -538,7 +538,7 @@ onMounted(load)
   padding: 16px 18px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .metric-card span {

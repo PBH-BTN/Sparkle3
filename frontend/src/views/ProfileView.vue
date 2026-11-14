@@ -250,13 +250,11 @@ onMounted(async () => {
   flex-direction: column;
   min-width: 250px;
   padding: 20px;
-  color: #fff;
+  color: var(--app-feature-text);
   text-align: left;
-  background:
-    radial-gradient(circle at 88% 12%, rgb(255 255 255 / 22%), transparent 34%),
-    linear-gradient(135deg, #0e7490, #155e75 60%, #164e63);
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgb(14 116 144 / 18%);
+  background: var(--app-feature-bg);
+  border-radius: var(--app-radius);
+  box-shadow: 0 12px 30px rgb(var(--primary-6) / 8%);
 }
 
 .score-topline {
@@ -268,42 +266,42 @@ onMounted(async () => {
 }
 
 .score-block strong {
-  color: #fff;
+  color: var(--app-feature-text);
   font-size: 30px;
   letter-spacing: -0.03em;
 }
 
 .score-raw {
   margin-top: 3px;
-  color: rgb(255 255 255 / 60%);
+  color: var(--app-feature-muted);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
 }
 
 .score-label {
-  color: rgb(255 255 255 / 76%);
+  color: var(--app-feature-muted);
   font-size: 12px;
   cursor: help;
 }
 
 .score-unit {
   padding: 2px 7px;
-  color: rgb(255 255 255 / 72%);
+  color: var(--app-feature-muted);
   font-size: 10px;
-  border: 1px solid rgb(255 255 255 / 24%);
-  border-radius: 999px;
+  border: 1px solid var(--color-border-3);
+  border-radius: var(--app-radius);
 }
 
 .score-action {
   margin-top: 16px;
-  color: #155e75;
-  background: rgb(255 255 255 / 92%);
+  color: rgb(var(--primary-6));
+  background: var(--color-bg-2);
   border-color: transparent;
 }
 
 .score-action:hover {
-  color: #155e75;
-  background: #fff;
+  color: rgb(var(--primary-6));
+  background: var(--color-bg-2);
 }
 
 .details-card {

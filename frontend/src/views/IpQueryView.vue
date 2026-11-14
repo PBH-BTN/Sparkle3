@@ -1052,7 +1052,7 @@ onMounted(() => {
   gap: 28px;
   padding: 24px 28px;
   background:
-    radial-gradient(circle at 95% 10%, rgb(var(--primary-1)) 0, transparent 34%),
+    radial-gradient(circle at 95% 10%, var(--color-primary-light-1) 0, transparent 34%),
     linear-gradient(135deg, var(--color-bg-2), var(--color-fill-1));
 }
 
@@ -1075,12 +1075,12 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 700;
   background: rgb(var(--primary-6));
-  border-radius: 14px;
+  border-radius: var(--app-radius);
   box-shadow: 0 10px 22px rgb(var(--primary-6) / 24%);
 }
 
 .family-mark--v6 {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: rgb(var(--primary-6));
 }
 
 .identity-copy {
@@ -1150,7 +1150,7 @@ onMounted(() => {
   text-align: left;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 button.metric-card {
@@ -1218,7 +1218,7 @@ button.metric-card {
   flex-direction: column;
   padding: 16px;
   background: var(--color-fill-1);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .geo-grid strong {
@@ -1325,7 +1325,7 @@ button.metric-card {
   gap: 18px;
   padding: 14px 16px;
   background: var(--color-fill-1);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .scope-switcher > div {
@@ -1361,7 +1361,7 @@ button.metric-card {
   padding: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 .reply-context {
@@ -1401,7 +1401,7 @@ button.metric-card {
   padding: 17px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
 }
 
 .comment-item--self {
@@ -1416,7 +1416,7 @@ button.metric-card {
   left: -1px;
   width: 3px;
   background: rgb(var(--primary-6));
-  border-radius: 3px;
+  border-radius: var(--app-radius);
   opacity: 0;
 }
 
@@ -1539,8 +1539,8 @@ button.metric-card {
   height: 56px;
   color: rgb(var(--primary-6));
   font-size: 25px;
-  background: rgb(var(--primary-1));
-  border-radius: 16px;
+  background: var(--color-primary-light-1);
+  border-radius: var(--app-radius);
 }
 
 .empty-query h2 {
@@ -1567,7 +1567,7 @@ button.metric-card {
   font-size: 12px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 999px;
+  border-radius: var(--app-radius);
   cursor: pointer;
 }
 
@@ -1585,7 +1585,7 @@ button.metric-card {
   gap: 10px;
   padding: 15px;
   background: var(--color-fill-1);
-  border-radius: 9px;
+  border-radius: var(--app-radius);
 }
 
 .history-heading span {

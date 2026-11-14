@@ -142,11 +142,11 @@ onMounted(async () => {
   padding: 10px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .settings-sidebar :deep(.arco-menu) {
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .settings-mobile-nav {
@@ -171,7 +171,7 @@ onMounted(async () => {
     overflow: hidden;
     background: var(--color-bg-2);
     border: 1px solid var(--color-border-2);
-    border-radius: 8px;
+    border-radius: var(--app-radius);
   }
 }
 </style>

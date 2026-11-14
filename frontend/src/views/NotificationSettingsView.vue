@@ -159,7 +159,7 @@ onMounted(load)
 }
 
 .preference-row--locked {
-  background: linear-gradient(90deg, rgb(var(--orange-1) / 35%), transparent 55%);
+  background: linear-gradient(90deg, var(--color-warning-light-1), transparent 55%);
 }
 
 .category-copy {

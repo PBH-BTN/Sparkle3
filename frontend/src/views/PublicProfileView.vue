@@ -264,12 +264,10 @@ onMounted(load)
   flex-direction: column;
   min-width: 250px;
   padding: 18px 20px;
-  color: #fff;
-  background:
-    radial-gradient(circle at 88% 12%, rgb(255 255 255 / 22%), transparent 34%),
-    linear-gradient(135deg, #0e7490, #155e75 60%, #164e63);
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgb(14 116 144 / 18%);
+  color: var(--app-feature-text);
+  background: var(--app-feature-bg);
+  border-radius: var(--app-radius);
+  box-shadow: 0 12px 30px rgb(var(--primary-6) / 8%);
 }
 
 .score-topline {
@@ -278,19 +276,19 @@ onMounted(load)
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 9px;
-  color: rgb(255 255 255 / 72%);
+  color: var(--app-feature-muted);
   font-size: 11px;
 }
 
 .score-block strong {
-  color: #fff;
+  color: var(--app-feature-text);
   font-size: 28px;
   letter-spacing: -0.03em;
 }
 
 .score-raw {
   margin-top: 3px;
-  color: rgb(255 255 255 / 60%);
+  color: var(--app-feature-muted);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
 }

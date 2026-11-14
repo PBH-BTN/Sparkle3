@@ -128,8 +128,8 @@ async function copy(value: string) {
   height: 44px;
   color: rgb(var(--green-6));
   font-size: 24px;
-  background: rgb(var(--green-1));
-  border-radius: 50%;
+  background: var(--color-success-light-1);
+  border-radius: var(--app-radius);
 }
 
 .success-heading h2 {
@@ -151,7 +151,7 @@ async function copy(value: string) {
   padding: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .credential-block--secret {

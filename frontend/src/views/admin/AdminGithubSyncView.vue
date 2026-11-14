@@ -508,7 +508,7 @@ onMounted(load)
   padding: 16px;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .target-heading {

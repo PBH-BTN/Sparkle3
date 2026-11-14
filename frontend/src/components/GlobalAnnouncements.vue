@@ -133,7 +133,7 @@ onMounted(async () => {
 }
 
 .global-announcement {
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 .global-announcements--hero {

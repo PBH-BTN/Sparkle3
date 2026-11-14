@@ -258,7 +258,7 @@ onMounted(load)
   padding: 20px;
   background: var(--color-bg-2);
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   box-shadow: 0 2px 10px rgb(0 0 0 / 3%);
 }
 
@@ -277,8 +277,8 @@ onMounted(load)
   height: 46px;
   color: rgb(var(--primary-6));
   font-size: 24px;
-  background: rgb(var(--primary-1));
-  border-radius: 12px;
+  background: var(--color-primary-light-1);
+  border-radius: var(--app-radius);
 }
 
 .group-icon--github {
@@ -312,7 +312,7 @@ onMounted(load)
   gap: 10px;
   padding: 14px;
   background: var(--color-fill-1);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 
 .github-meta > span,

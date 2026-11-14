@@ -480,7 +480,7 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
   overflow-wrap: anywhere;
   background: var(--color-fill-1);
   border: 1px solid var(--color-border-2);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 
 @media (max-width: 640px) {
