@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -25,6 +25,7 @@ const unreadOnly = ref(false)
 const selected = ref<InboxMessage | null>(null)
 const detailVisible = ref(false)
 const conversation = ref<InboxMessage[]>([])
+const conversationViewport = ref<HTMLDivElement>()
 const conversationPage = ref(1)
 const conversationPages = ref(0)
 const conversationLoading = ref(false)
@@ -41,10 +42,20 @@ async function loadConversation(older = false) {
   try {
     const result = await uiApi.messageConversation(id, nextPage)
     if (requestId !== conversationRequest) return
+    const viewport = conversationViewport.value
+    const previousHeight = viewport?.scrollHeight ?? 0
+    const previousTop = viewport?.scrollTop ?? 0
     const messages = [...result.records].reverse()
     conversation.value = older ? [...messages, ...conversation.value] : messages
     conversationPage.value = result.current
     conversationPages.value = result.pages
+    await nextTick()
+    if (requestId !== conversationRequest) return
+    if (conversationViewport.value) {
+      conversationViewport.value.scrollTop = older
+        ? previousTop + conversationViewport.value.scrollHeight - previousHeight
+        : conversationViewport.value.scrollHeight
+    }
     const unread = result.records.filter((item) => !item.outgoing && !item.read)
     await Promise.all(unread.map((item) => uiApi.markMessageRead(item.id)))
     if (requestId === conversationRequest) await load()
@@ -213,29 +224,31 @@ onMounted(load)
           <a-button v-if="conversationPage < conversationPages" :disabled="conversationLoading" @click="loadConversation(true)">
             {{ t('inbox.older') }}
           </a-button>
-          <div class="conversation-messages">
+          <div ref="conversationViewport" class="conversation-messages">
             <div v-for="message in conversation" :key="message.id" class="conversation-message" :class="{ 'conversation-message--outgoing': message.outgoing }">
               <div class="detail-meta">
                 <strong>{{ message.outgoing ? t('inbox.you') : message.senderDisplayName }}</strong>
-                <time :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
                 <a-tag v-if="message.emailForced" size="small" color="orange">{{ t('inbox.forcedEmail') }}</a-tag>
+              </div>
+              <strong class="conversation-subject">{{ message.subject }}</strong>
+              <div class="detail-content">{{ message.content }}</div>
+              <div class="bubble-footer">
+                <time :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
                 <a-popconfirm v-if="!message.outgoing" :content="t('inbox.deleteConfirm')" @ok="remove(message)">
                   <a-button size="mini" status="danger" :aria-label="t('admin.common.delete')">
                     <template #icon><IconDelete /></template>
                   </a-button>
                 </a-popconfirm>
               </div>
-              <strong class="conversation-subject">{{ message.subject }}</strong>
-              <div class="detail-content">{{ message.content }}</div>
             </div>
           </div>
         </a-spin>
         <div v-if="selected.peerUserId" class="reply-form">
           <a-textarea v-model="reply" :placeholder="t('inbox.replyPlaceholder')" :max-length="20000" :auto-size="{ minRows: 3, maxRows: 8 }" :disabled="sending" />
-          <a-button type="primary" :loading="sending" :disabled="!reply.trim() || conversationLoading" @click="sendReply">{{ t('inbox.reply') }}</a-button>
         </div>
         <div class="detail-actions">
-          <a-button @click="detailVisible = false">{{ t('common.close') }}</a-button>
+          <a-button v-if="selected.peerUserId" type="primary" :loading="sending" :disabled="!reply.trim() || conversationLoading" @click="sendReply">{{ t('inbox.reply') }}</a-button>
+          <a-button :disabled="sending" @click="detailVisible = false">{{ t('common.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -372,29 +385,61 @@ onMounted(load)
   gap: 8px;
 }
 .conversation-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   max-height: 50vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   margin-top: 12px;
+  padding: 16px;
+  background: var(--color-fill-1);
+  border-radius: var(--app-radius);
 }
 .conversation-message {
-  padding: 16px;
-  border-bottom: 1px solid var(--color-border-2);
-  border-left: 3px solid transparent;
+  align-self: flex-start;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 85%;
+  padding: 12px 14px 8px;
+  color: var(--color-text-1);
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-1);
+  border-radius: 14px 14px 14px 4px;
 }
 .conversation-message--outgoing {
-  background: var(--color-fill-1);
-  border-left-color: rgb(var(--primary-6));
+  align-self: flex-end;
+  background: var(--color-primary-light-1);
+  border-color: var(--color-primary-light-2);
+  border-radius: 14px 14px 4px 14px;
 }
 .conversation-subject {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.detail-meta strong {
+  min-width: 0;
+  color: rgb(var(--primary-6));
+  overflow-wrap: anywhere;
+}
+.bubble-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-3);
+  font-size: 11px;
+}
+.bubble-footer time {
   overflow-wrap: anywhere;
 }
 .reply-form {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .conversation-messages { padding: 10px; }
+  .conversation-message { max-width: 94%; }
 }
 @media (max-width: 980px) {
   .message-main {
