@@ -384,38 +384,20 @@ onBeforeUnmount(() => {
 
 .desktop-navigation {
   flex: 1 1 auto;
-  align-self: stretch;
   min-width: 0;
 }
 
 .desktop-navigation :deep(.arco-menu-horizontal) {
-  height: 100%;
   background: transparent;
   border-bottom: 0;
 }
 
 .desktop-navigation :deep(.arco-menu-inner) {
-  height: 100%;
-  padding: 0;
+  padding: 14px 0;
 }
 
-.desktop-navigation :deep(.arco-menu-overflow-wrap) {
-  height: 100%;
-}
-
-.desktop-navigation :deep(.arco-menu-horizontal .arco-menu-pop) {
-  height: 100%;
-}
-
-.desktop-navigation :deep(.arco-menu-horizontal .arco-menu-item),
-.desktop-navigation :deep(.arco-menu-horizontal .arco-menu-pop-header) {
-  display: inline-flex;
-  align-items: center;
-  height: 100%;
-  margin-top: 0;
-  margin-bottom: 0;
+.desktop-navigation :deep(.arco-menu-item) {
   padding: 0 8px;
-  line-height: normal;
 }
 
 .desktop-navigation :deep(.arco-menu-item .arco-menu-icon) {
