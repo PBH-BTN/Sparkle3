@@ -229,6 +229,7 @@ function navigate(key: string) {
 }
 
 .admin-content {
+  width: 100%;
   min-width: 0;
 }
 

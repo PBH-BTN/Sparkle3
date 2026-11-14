@@ -415,7 +415,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 
 <style scoped>
 .geoip-page {
-  width: min(1180px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .geoip-page--embedded {

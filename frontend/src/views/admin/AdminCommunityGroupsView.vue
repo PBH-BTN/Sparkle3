@@ -446,7 +446,8 @@ onMounted(load)
 
 <style scoped>
 .community-admin-page {
-  width: min(1120px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .community-spin {

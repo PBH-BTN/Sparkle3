@@ -274,7 +274,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 
 <style scoped>
 .homepage-statistics-page {
-  width: min(1180px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .statistics-spin {

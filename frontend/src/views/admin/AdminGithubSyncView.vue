@@ -476,7 +476,8 @@ onMounted(load)
 
 <style scoped>
 .github-sync-page {
-  width: min(1120px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .github-sync-spin {

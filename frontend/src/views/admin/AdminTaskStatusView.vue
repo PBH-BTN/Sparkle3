@@ -489,7 +489,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .task-status-page {
-  width: min(1320px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .updated-at,

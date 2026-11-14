@@ -197,7 +197,8 @@ async function send() {
 
 <style scoped>
 .admin-messages-page {
-  width: min(1040px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .message-composer :deep(.arco-card-body) {

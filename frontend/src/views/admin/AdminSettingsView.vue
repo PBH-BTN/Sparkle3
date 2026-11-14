@@ -1168,7 +1168,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
 
 <style scoped>
 .settings-page {
-  width: min(1080px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .settings-spin {

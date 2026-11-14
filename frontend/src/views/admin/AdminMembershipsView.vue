@@ -1107,7 +1107,8 @@ onMounted(load)
 
 <style scoped>
 .membership-admin-page {
-  width: min(1280px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .admin-spin {

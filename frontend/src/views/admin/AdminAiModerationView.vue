@@ -521,7 +521,8 @@ onMounted(load)
 
 <style scoped>
 .ai-moderation-page {
-  width: min(1180px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .metric-grid {
