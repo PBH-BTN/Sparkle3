@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import CareerMetricCard from '@/components/CareerMetricCard.vue'
 import { uiApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import type { LifetimeTraffic } from '@/api/types'
@@ -13,18 +14,17 @@ watch(() => props.userId, async (uid) => {
   failed.value = false
   try { career.value = await uiApi.career(uid) } catch { failed.value = true }
 }, { immediate: true })
-const counters = [
-  { key: 'days', color: 'blue', hint: 'member' },
-  { key: 'ban', color: 'red', hint: 'total' },
-  { key: 'feature', color: 'orange', hint: 'total' },
-  { key: 'swarm', color: 'purple', hint: 'total' },
-  { key: 'banRecent', color: 'red', hint: 'recent' },
-  { key: 'featureRecent', color: 'orange', hint: 'recent' },
-  { key: 'swarmRecent', color: 'purple', hint: 'recent' },
-  { key: 'seeding', color: 'green', hint: 'torrentTime' },
-  { key: 'downloading', color: 'cyan', hint: 'torrentTime' },
-  { key: 'observation', color: 'blue', hint: 'observed' },
+const contributionGroups = [
+  { total: 'ban', recent: 'banRecent', color: 'red', unit: 'records' },
+  { total: 'feature', recent: 'featureRecent', color: 'orange', unit: 'records' },
+  { total: 'swarm', recent: 'swarmRecent', color: 'purple', unit: 'peers' },
 ]
+function counterValue(key: string) {
+  const value = career.value?.metrics[key] || '0'
+  return key === 'seeding' || key === 'downloading'
+    ? (Number(value) / 3600).toFixed(2)
+    : BigInt(value).toLocaleString()
+}
 const { t } = useI18n()
 const { formatBytes, formatDate } = useFormatters()
 const metrics = [
@@ -33,6 +33,11 @@ const metrics = [
   { field: 'sentTrafficOtherAck', label: 'career.uploadAck', color: 'green', hint: 'confirmed' },
   { field: 'receivedTrafficOtherAck', label: 'career.downloadAck', color: 'cyan', hint: 'confirmed' },
 ] as const
+const trafficCards = computed(() => props.traffic ? metrics.map(metric => {
+  const formatted = formatBytes(props.traffic?.[metric.field])
+  const split = formatted.lastIndexOf(' ')
+  return { ...metric, value: formatted.slice(0, split), unit: formatted.slice(split + 1) }
+}) : [])
 const empty = computed(() => props.traffic && metrics.every(({ field }) => props.traffic?.[field] === '0'))
 </script>
 
@@ -42,22 +47,23 @@ const empty = computed(() => props.traffic && metrics.every(({ field }) => props
     <p class="traffic-note">{{ t('career.disclaimer') }}</p>
     <p class="traffic-note">{{ t('career.method') }}</p>
     <p v-if="failed" class="traffic-note">{{ t('lifetimeTraffic.unavailable') }}</p>
-    <dl v-if="career || traffic" class="traffic-metrics">
+    <div v-if="career" class="contribution-grid">
+      <div class="metric-stack metric-stack--intro">
+        <CareerMetricCard :label="t('career.days')" :value="counterValue('days')" :unit="t('careerUnits.days')" color="blue" />
+        <CareerMetricCard :label="t('career.seeding')" :value="counterValue('seeding')" :unit="t('careerUnits.hours')" color="green" />
+      </div>
+      <div v-for="group in contributionGroups" :key="group.total" class="metric-stack">
+        <CareerMetricCard :label="t('career.' + group.total)" :value="counterValue(group.total)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
+        <CareerMetricCard :label="t('career.' + group.recent)" :value="counterValue(group.recent)" :unit="t('careerUnits.' + group.unit)" :color="group.color" />
+      </div>
+    </div>
+    <div v-if="career || traffic" class="other-metrics">
       <template v-if="career">
-        <div v-for="metric in counters" :key="metric.key" class="traffic-metric" :class="'traffic-metric--' + metric.color">
-          <dt>{{ t('career.' + metric.key) }}</dt>
-          <dd>{{ metric.key === 'seeding' || metric.key === 'downloading' ? (Number(career.metrics[metric.key] || '0') / 3600).toFixed(2) + ' h' : BigInt(career.metrics[metric.key] || '0').toLocaleString() }}</dd>
-          <div class="metric-hint">{{ t('careerCard.' + metric.hint) }}</div>
-        </div>
+        <CareerMetricCard :label="t('career.downloading')" :value="counterValue('downloading')" :unit="t('careerUnits.hours')" color="cyan" />
+        <CareerMetricCard :label="t('career.observation')" :value="counterValue('observation')" :unit="t('careerUnits.times')" color="blue" />
       </template>
-      <template v-if="traffic">
-        <div v-for="metric in metrics" :key="metric.field" class="traffic-metric" :class="'traffic-metric--' + metric.color">
-          <dt>{{ t(metric.label) }}</dt>
-          <dd :title="traffic[metric.field] + ' ' + t('units.bytes')">{{ formatBytes(traffic[metric.field]) }}</dd>
-          <div class="metric-hint">{{ t('careerCard.' + metric.hint) }}</div>
-        </div>
-      </template>
-    </dl>
+      <CareerMetricCard v-for="metric in trafficCards" :key="metric.field" :label="t(metric.label)" :value="metric.value" :unit="metric.unit" :color="metric.color" />
+    </div>
     <p v-if="career?.lastObservedAt" class="traffic-note">{{ t('career.latest', { time: formatDate(career.lastObservedAt), name: career.observerName || t('common.anonymous') }) }}</p>
     <template v-if="traffic">
       <p v-if="empty" class="traffic-note">{{ t('lifetimeTraffic.empty') }}</p>
@@ -80,21 +86,46 @@ const empty = computed(() => props.traffic && metrics.every(({ field }) => props
 </template>
 
 <style scoped>
-.career-title { margin: 0 0 10px; color: var(--color-text-1); font-size: 18px; font-weight: 600; }
-.traffic-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 20px 0 16px; }
-.traffic-metric { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 158px; padding: 20px; overflow: hidden; background: var(--color-bg-2); border: 1px solid var(--color-border-2); border-radius: 12px; }
-.traffic-metric::after { position: absolute; right: -28px; bottom: -36px; width: 108px; height: 108px; border-radius: 50%; background: currentColor; opacity: 0.07; content: ''; pointer-events: none; }
-.traffic-metric dt { color: var(--color-text-3); font-size: 13px; line-height: 1.6; }
-.traffic-metric dd { z-index: 1; margin: 10px 0 24px; font-size: clamp(24px, 2.4vw, 30px); font-weight: 700; line-height: 1.25; letter-spacing: -0.03em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.metric-hint { z-index: 1; margin-top: auto; color: var(--color-text-3); font-size: 12px; line-height: 1.6; }
-.traffic-note { margin: 4px 0 0; color: var(--color-text-3); font-size: 13px; line-height: 1.7; }
-.traffic-metric--red { color: rgb(var(--red-6)); }
-.traffic-metric--blue { color: rgb(var(--blue-6)); }
-.traffic-metric--green { color: rgb(var(--green-6)); }
-.traffic-metric--cyan { color: #0891b2; }
-.traffic-metric--purple { color: #7c3aed; }
-.traffic-metric--orange { color: rgb(var(--orange-6)); }
-@media (max-width: 980px) { .traffic-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .traffic-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .traffic-metric { padding: 16px; min-height: 148px; } }
-@media (max-width: 360px) { .traffic-metrics { grid-template-columns: 1fr; } }
+.career-title {
+  margin: 0 0 10px;
+  color: var(--color-text-1);
+  font-size: 18px;
+  font-weight: 600;
+}
+.contribution-grid,
+.other-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0 16px;
+}
+.contribution-grid { grid-template-rows: repeat(2, minmax(158px, auto)); }
+.metric-stack {
+  grid-row: span 2;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  grid-template-rows: subgrid;
+}
+.traffic-note {
+  margin: 4px 0 0;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+@media (max-width: 980px) {
+  .contribution-grid,
+  .other-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric-stack--intro { grid-row: auto; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; }
+}
+@media (max-width: 720px) {
+  .contribution-grid,
+  .other-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric-stack { gap: 10px; }
+}
+@media (max-width: 360px) {
+  .contribution-grid,
+  .other-metrics,
+  .metric-stack--intro { grid-template-columns: 1fr; }
+}
 </style>
