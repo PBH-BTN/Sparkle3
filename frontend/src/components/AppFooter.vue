@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { IconFire } from '@arco-design/web-vue/es/icon'
 import { footerApi, type FooterResponse } from '@/api/footer'
 import { useFormatters } from '@/utils/format'
-import afdianLogo from '@/assets/afdian-logo.svg'
 
 const props = withDefaults(
   defineProps<{
@@ -247,6 +246,7 @@ const hasContent = computed(
     Boolean(disclaimer.value) ||
     Boolean(data.value?.icp) ||
     columns.value.length > 0 ||
+    (data.value?.supportButtons?.length ?? 0) > 0 ||
     Boolean(worldClockText.value) ||
     performanceItems.value.length > 0 ||
     httpPerformanceItems.value.length > 0 ||
@@ -324,10 +324,22 @@ onBeforeUnmount(() => {
         </section>
       </div>
 
-      <a class="footer-support" href="https://ifdian.net/a/Ghost_chu" target="_blank" rel="noopener noreferrer">
-        <img :src="afdianLogo" alt="" width="48" height="48" />
-        <span>{{ t('app.footerSupport') }}</span>
-      </a>
+      <div v-if="data?.supportButtons?.length" class="footer-support-buttons">
+        <a
+          v-for="(button, index) in data.supportButtons"
+          :key="index"
+          class="footer-support"
+          :href="button.href"
+          :target="button.href.startsWith('/') ? undefined : '_blank'"
+          rel="noopener noreferrer"
+        >
+          <img
+            :src="button.iconUrl"
+            :alt="locale.startsWith('zh') ? button.labelZh || button.labelEn : button.labelEn || button.labelZh"
+            referrerpolicy="no-referrer"
+          />
+        </a>
+      </div>
     </div>
 
     <p v-if="disclaimer" class="footer-text footer-disclaimer">
@@ -410,24 +422,21 @@ onBeforeUnmount(() => {
   gap: 32px;
 }
 
+.footer-support-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: 55%;
+  margin-left: auto;
+}
+
 .app-footer a.footer-support {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  gap: 10px;
-  margin-left: auto;
-  padding: 10px 22px 10px 10px;
-  border-radius: 12px;
-  background: #946ce6;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.app-footer a.footer-support:hover {
-  background: #8156d3;
+  max-width: 100%;
 }
 
 .footer-support:focus-visible {
@@ -436,8 +445,11 @@ onBeforeUnmount(() => {
 }
 
 .footer-support img {
-  flex-shrink: 0;
-  border-radius: 6px;
+  display: block;
+  width: 184px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .footer-columns {
@@ -504,7 +516,9 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
-.app-footer--centered a.footer-support {
+.app-footer--centered .footer-support-buttons {
+  justify-content: center;
+  max-width: 100%;
   margin-left: 0;
 }
 
@@ -515,13 +529,14 @@ onBeforeUnmount(() => {
     gap: 20px;
   }
 
-  .app-footer a.footer-support {
-    align-self: flex-start;
+  .footer-support-buttons {
+    justify-content: flex-start;
+    max-width: 100%;
     margin-left: 0;
   }
 
-  .app-footer--centered a.footer-support {
-    align-self: center;
+  .app-footer--centered .footer-support-buttons {
+    justify-content: center;
   }
 }
 

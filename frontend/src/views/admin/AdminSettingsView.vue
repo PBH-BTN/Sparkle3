@@ -119,6 +119,7 @@ const performanceMetricKeys: FooterMetricKey[] = [
   'httpOtherP99',
 ]
 const footerForm = reactive<FooterConfig>({
+  supportButtons: [],
   disclaimerZh: '',
   disclaimerEn: '',
   disclaimerAudience: 'AUTHENTICATED',
@@ -384,6 +385,7 @@ async function scanMailNow() {
 
 function applyFooterConfig(config: FooterConfig) {
   const normalized = structuredClone(config)
+  normalized.supportButtons ??= []
   const configuredMetrics = new Map(
     normalized.performanceMetrics.map((metric) => [metric.key, metric]),
   )
@@ -399,6 +401,14 @@ function applyFooterConfig(config: FooterConfig) {
 }
 
 function validateFooter() {
+  for (const button of footerForm.supportButtons) {
+    const validUrl = (value: string) => /^(\/(?!\/)[^\\\s]*|https?:\/\/[^\s\\]+)$/i.test(value.trim())
+    if ((!button.labelZh.trim() && !button.labelEn.trim()) || !validUrl(button.href) ||
+      !validUrl(button.iconUrl)) {
+      Message.warning(t('siteFooterAdmin.invalidSupportButton'))
+      return false
+    }
+  }
   for (const column of footerForm.columns) {
     if (!column.titleZh.trim() && !column.titleEn.trim()) {
       Message.warning(t('siteFooterAdmin.invalidColumn'))
@@ -417,6 +427,18 @@ function validateFooter() {
     }
   }
   return true
+}
+
+function addSupportButton() {
+  if (footerForm.supportButtons.length >= 12) return
+  footerForm.supportButtons.push({ labelZh: '', labelEn: '', href: '', iconUrl: '' })
+}
+
+function moveSupportButton(index: number, direction: number) {
+  const target = index + direction
+  if (target < 0 || target >= footerForm.supportButtons.length) return
+  const [button] = footerForm.supportButtons.splice(index, 1)
+  if (button) footerForm.supportButtons.splice(target, 0, button)
 }
 
 function addFooterColumn() {
@@ -960,6 +982,34 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
         </template>
 
         <a-form :model="footerForm" layout="vertical">
+          <section class="footer-settings-section">
+            <div class="footer-section-heading">
+              <div>
+                <strong>{{ t('siteFooterAdmin.supportTitle') }}</strong>
+                <p>{{ t('siteFooterAdmin.supportDescription') }}</p>
+              </div>
+              <a-button :disabled="footerForm.supportButtons.length >= 12" @click="addSupportButton">
+                {{ t('siteFooterAdmin.addSupportButton') }}
+              </a-button>
+            </div>
+            <p v-if="!footerForm.supportButtons.length">{{ t('siteFooterAdmin.noSupportButtons') }}</p>
+            <div class="footer-column-editor-list">
+              <div v-for="(button, index) in footerForm.supportButtons" :key="index" class="footer-column-editor">
+                <div class="settings-grid">
+                  <a-form-item :label="t('siteFooterAdmin.supportAltZh')"><a-input v-model="button.labelZh" :max-length="100" /></a-form-item>
+                  <a-form-item :label="t('siteFooterAdmin.supportAltEn')"><a-input v-model="button.labelEn" :max-length="100" /></a-form-item>
+                  <a-form-item :label="t('siteFooterAdmin.supportLink')"><a-input v-model="button.href" :max-length="2048" /></a-form-item>
+                  <a-form-item :label="t('siteFooterAdmin.supportIcon')"><a-input v-model="button.iconUrl" :max-length="2048" /></a-form-item>
+                </div>
+                <a-space wrap>
+                  <a-button :disabled="index === 0" @click="moveSupportButton(index, -1)">{{ t('siteFooterAdmin.moveEarlier') }}</a-button>
+                  <a-button :disabled="index === footerForm.supportButtons.length - 1" @click="moveSupportButton(index, 1)">{{ t('siteFooterAdmin.moveLater') }}</a-button>
+                  <a-button status="danger" @click="footerForm.supportButtons.splice(index, 1)">{{ t('siteFooterAdmin.removeLink') }}</a-button>
+                </a-space>
+              </div>
+            </div>
+          </section>
+          <a-divider />
           <section class="footer-settings-section">
             <div class="footer-section-heading">
               <div>

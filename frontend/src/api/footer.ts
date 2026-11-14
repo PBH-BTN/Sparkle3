@@ -8,6 +8,10 @@ export interface FooterLink {
   href: string
 }
 
+export interface FooterSupportButton extends FooterLink {
+  iconUrl: string
+}
+
 export interface FooterColumn {
   titleZh: string
   titleEn: string
@@ -39,6 +43,7 @@ export type FooterMetricKey =
   | 'httpOtherP99'
 
 export interface FooterConfig {
+  supportButtons: FooterSupportButton[]
   disclaimerZh: string
   disclaimerEn: string
   disclaimerAudience: FooterAudience
@@ -92,6 +97,7 @@ export interface FooterVisitor {
 }
 
 export interface FooterResponse {
+  supportButtons: FooterSupportButton[]
   disclaimerZh: string | null
   disclaimerEn: string | null
   icp: string | null
