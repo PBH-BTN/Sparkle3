@@ -417,6 +417,8 @@ export default {
     last7Days: '7 days',
     last24Hours: '24 hours',
     trafficWindow: 'Last {days} days',
+    networkTrafficTitle: 'BitTorrent Network Traffic',
+    networkTrafficDescription: 'Cumulative traffic, activity time, and blocking losses across all BTN users, by UTC date.',
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',

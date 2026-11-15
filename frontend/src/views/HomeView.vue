@@ -8,6 +8,7 @@ import { Message } from '@arco-design/web-vue'
 import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
+import HomeNetworkTraffic from '@/components/HomeNetworkTraffic.vue'
 import { uiApi } from '@/api'
 import type {
   ChartDatum,
@@ -259,6 +260,8 @@ onMounted(() => {
         </a-row>
       </a-spin>
     </section>
+
+    <HomeNetworkTraffic />
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">
       <div class="section-heading">

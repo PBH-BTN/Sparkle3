@@ -403,6 +403,8 @@ export default {
     last7Days: '7 天',
     last24Hours: '24 小时',
     trafficWindow: '最近 {days} 天流量',
+    networkTrafficTitle: 'BitTorrent 流量承载',
+    networkTrafficDescription: '按 UTC 日期累计 BTN 网络所有用户的流量、活动时长和拦截损失。',
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
