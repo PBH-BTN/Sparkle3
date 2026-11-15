@@ -10,7 +10,9 @@ import { stackedAreaChartOption } from '@/utils/charts'
 import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
 
+const props = defineProps<{ showTraffic: boolean; showTotalLoss: boolean }>()
 const { t } = useI18n()
+const sectionTitle = computed(() => t(props.showTraffic ? 'home.networkTrafficTitle' : 'home.networkTrafficTotalLoss'))
 const { formatBytes, formatHours } = useFormatters()
 const days = ref(30)
 const records = ref<DailyTraffic[]>([])
@@ -25,29 +27,31 @@ const metrics = {
   downloading: 'career.downloading',
   loss: 'home.networkTrafficAverageLoss',
   lossRatio: 'home.networkTrafficAverageLossRatio',
+  totalLoss: 'home.networkTrafficTotalLoss',
 } as const
 type Metric = keyof typeof metrics
 
 const cumulativeRows = computed(() => {
-  const totals = { upload: 0n, download: 0n, uploadAck: 0n, downloadAck: 0n, loss: 0n }
+  const totals = { upload: 0n, download: 0n, uploadAck: 0n, downloadAck: 0n, totalLoss: 0n }
   const keys = Object.keys(totals) as (keyof typeof totals)[]
   let seeding = 0
   let downloading = 0
   let lossRatios = 0
+  let averageLoss = 0n
   return records.value.slice(-days.value).map(({ day, metrics }, index) => {
     for (const key of keys) totals[key] += BigInt(metrics[key] ?? '0')
     seeding += Number(metrics.seeding ?? '0')
     downloading += Number(metrics.downloading ?? '0')
-    const upload = Number(metrics.upload ?? '0')
-    if (upload > 0) lossRatios += Number(metrics.loss ?? '0') / upload
+    averageLoss += BigInt(metrics.averageLoss ?? '0')
+    lossRatios += Number(metrics.lossRatio ?? '0')
     const elapsedDays = index + 1
     return {
       day,
       ...totals,
       seeding,
       downloading,
-      loss: (totals.loss + BigInt(Math.floor(elapsedDays / 2))) / BigInt(elapsedDays),
-      lossRatio: lossRatios * 100 / elapsedDays,
+      loss: (averageLoss + BigInt(Math.floor(elapsedDays / 2))) / BigInt(elapsedDays),
+      lossRatio: lossRatios / elapsedDays,
     }
   })
 })
@@ -100,12 +104,18 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
   return option
 }
 
-const charts = computed(() => [
-  { title: 'traffic.chartReported', option: chartOption(['upload', 'download'], 'bytes') },
-  { title: 'traffic.chartConfirmed', option: chartOption(['uploadAck', 'downloadAck'], 'bytes') },
-  { title: 'traffic.chartActivity', option: chartOption(['seeding', 'downloading'], 'hours') },
-  { title: 'home.networkTrafficLossChart', option: chartOption(['loss', 'lossRatio'], 'loss') },
-])
+const charts = computed(() => {
+  const visible = props.showTraffic ? [
+    { title: 'traffic.chartReported', option: chartOption(['upload', 'download'], 'bytes') },
+    { title: 'traffic.chartConfirmed', option: chartOption(['uploadAck', 'downloadAck'], 'bytes') },
+    { title: 'traffic.chartActivity', option: chartOption(['seeding', 'downloading'], 'hours') },
+    { title: 'home.networkTrafficLossChart', option: chartOption(['loss', 'lossRatio'], 'loss') },
+  ] : []
+  if (props.showTotalLoss) {
+    visible.push({ title: 'home.networkTrafficTotalLoss', option: chartOption(['totalLoss'], 'bytes') })
+  }
+  return visible
+})
 
 async function load() {
   loading.value = true
@@ -123,11 +133,11 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="network-traffic" :aria-label="t('home.networkTrafficTitle')">
+  <section class="network-traffic" :aria-label="sectionTitle">
     <div class="network-traffic-heading">
       <div>
-        <h2>{{ t('home.networkTrafficTitle') }}</h2>
-        <p>{{ t('home.networkTrafficDescription') }}</p>
+        <h2>{{ sectionTitle }}</h2>
+        <p v-if="showTraffic">{{ t('home.networkTrafficDescription') }}</p>
       </div>
       <a-radio-group v-model="days" type="button" :aria-label="t('home.statistics.range')">
         <a-radio :value="30">{{ t('home.last30Days') }}</a-radio>
@@ -144,7 +154,7 @@ onMounted(load)
       <a-empty v-else :description="t('home.statistics.noData')" />
     </a-card>
     <div v-else class="network-traffic-charts">
-      <a-card v-for="chart in charts" :key="chart.title" class="surface-card" :title="t(chart.title)">
+      <a-card v-for="chart in charts" :key="chart.title" class="surface-card" :title="showTraffic ? t(chart.title) : undefined">
         <EChart :option="chart.option" height="260px" />
       </a-card>
     </div>
@@ -180,6 +190,10 @@ onMounted(load)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.network-traffic-charts > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .network-traffic-state {

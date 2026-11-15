@@ -422,6 +422,7 @@ export default {
     networkTrafficLossChart: 'Daily Average Blocking Losses',
     networkTrafficAverageLoss: 'Average Traffic Lost Before Bans',
     networkTrafficAverageLossRatio: 'Average Blocking Loss Percentage',
+    networkTrafficTotalLoss: 'Total Traffic Lost Before Bans',
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',
@@ -1973,6 +1974,10 @@ export default {
       statisticsTitle: 'Seven-day traffic statistics',
       statisticsEnabled: 'Enable seven-day traffic statistics',
       homepageNetworkTrafficEnabled: 'Show BitTorrent network traffic on the homepage',
+      homepageNetworkTrafficAudience: 'BitTorrent network traffic visibility',
+      homepageTotalLossAudience: 'Total blocking loss visibility',
+      trafficAudienceSignedIn: 'Signed-in users',
+      trafficAudienceStaff: 'Administrators and moderators',
       refreshInterval: 'Refresh interval',
       windowDays: 'Statistics window',
       minutes: 'minutes',

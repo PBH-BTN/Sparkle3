@@ -273,6 +273,8 @@ export interface RuntimeConfig {
   swarmStatisticsRefreshMinutes: number
   swarmStatisticsWindowDays: number
   homepageNetworkTrafficEnabled: boolean
+  homepageNetworkTrafficStaffOnly: boolean
+  homepageTotalLossStaffOnly: boolean
   userContactEmailSubjectTemplate: string
   userContactEmailBodyTemplate: string
 }

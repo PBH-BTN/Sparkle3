@@ -54,6 +54,8 @@ const form = reactive<RuntimeConfig>({
   clientDiscoveryEnabled: false,
   swarmStatisticsEnabled: true,
   homepageNetworkTrafficEnabled: true,
+  homepageNetworkTrafficStaffOnly: false,
+  homepageTotalLossStaffOnly: true,
   swarmStatisticsRefreshMinutes: 60,
   swarmStatisticsWindowDays: 7,
   userContactEmailSubjectTemplate: '[Sparkle BTN] {{title}}',
@@ -618,6 +620,18 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
             </a-form-item>
             <a-form-item :label="t('admin.settings.homepageNetworkTrafficEnabled')">
               <a-switch v-model="form.homepageNetworkTrafficEnabled" />
+            </a-form-item>
+            <a-form-item :label="t('admin.settings.homepageNetworkTrafficAudience')">
+              <a-select v-model="form.homepageNetworkTrafficStaffOnly">
+                <a-option :value="false">{{ t('admin.settings.trafficAudienceSignedIn') }}</a-option>
+                <a-option :value="true">{{ t('admin.settings.trafficAudienceStaff') }}</a-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item :label="t('admin.settings.homepageTotalLossAudience')">
+              <a-select v-model="form.homepageTotalLossStaffOnly">
+                <a-option :value="false">{{ t('admin.settings.trafficAudienceSignedIn') }}</a-option>
+                <a-option :value="true">{{ t('admin.settings.trafficAudienceStaff') }}</a-option>
+              </a-select>
             </a-form-item>
             <a-form-item :label="t('admin.settings.refreshInterval')" required>
               <a-input-number

@@ -261,7 +261,11 @@ onMounted(() => {
       </a-spin>
     </section>
 
-    <HomeNetworkTraffic v-if="moduleEnabled('network-traffic')" />
+    <HomeNetworkTraffic
+      v-if="moduleEnabled('network-traffic') || moduleEnabled('network-total-loss')"
+      :show-traffic="moduleEnabled('network-traffic')"
+      :show-total-loss="moduleEnabled('network-total-loss')"
+    />
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">
       <div class="section-heading">

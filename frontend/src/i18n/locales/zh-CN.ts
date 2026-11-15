@@ -408,6 +408,7 @@ export default {
     networkTrafficLossChart: '日均拦截损失',
     networkTrafficAverageLoss: '平均拦截损失流量',
     networkTrafficAverageLossRatio: '平均拦截损失比例',
+    networkTrafficTotalLoss: '总计拦截损失流量',
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
@@ -1929,6 +1930,10 @@ export default {
       statisticsTitle: '最近 7 日流量统计',
       statisticsEnabled: '启用最近 7 日流量统计',
       homepageNetworkTrafficEnabled: '在首页显示 BitTorrent 流量承载',
+      homepageNetworkTrafficAudience: 'BitTorrent 流量承载可见范围',
+      homepageTotalLossAudience: '总计拦截损失可见范围',
+      trafficAudienceSignedIn: '登录用户',
+      trafficAudienceStaff: '管理员和协管',
       refreshInterval: '自动刷新间隔',
       windowDays: '统计窗口',
       minutes: '分钟',
