@@ -14,6 +14,7 @@ import com.ghostchu.btn.sparkle.mapper.IpQueryCommentRevisionMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.ai.OpenAiModerationClient.Verdict;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,7 @@ public class AiModerationService {
     private final AiModerationSettingsService settingsService;
     private final OpenAiModerationClient moderationClient;
     private final UserMessageService messageService;
+    private final ContentModerationService contentModeration;
 
     public boolean enabled() {
         return settingsService.get().enabled();
@@ -179,6 +181,10 @@ public class AiModerationService {
     }
 
     public Verdict review(AiModerationJob job) throws BusinessException {
+        if (("COMMENT".equals(job.getContentType()) || "USERNAME".equals(job.getContentType()))
+                && contentModeration.snapshot().matches(job.getTextContent())) {
+            return new Verdict(false, ContentModerationService.CONTENT_REJECTED, List.of(), 1, "{}");
+        }
         AiModerationSettings settings = settingsService.get();
         if (!settings.enabled()) {
             return new Verdict(
@@ -433,7 +439,7 @@ public class AiModerationService {
             notifyRejectedProfile(
                     job.getSubjectUserId(),
                     "用户名",
-                    reason(verdict)
+                    notificationReason(verdict)
             );
         }
         return updated > 0;
@@ -456,7 +462,7 @@ public class AiModerationService {
             notifyRejectedProfile(
                     job.getSubjectUserId(),
                     "头像",
-                    reason(verdict)
+                    notificationReason(verdict)
             );
         }
         return updated > 0;
@@ -618,7 +624,7 @@ public class AiModerationService {
                             审核原因：%s
 
                             你可以修改评论后重新提交审核，也可以自行删除该评论。
-                            """.formatted(comment.getNetwork(), reason(verdict)),
+                            """.formatted(comment.getNetwork(), notificationReason(verdict)),
                     false
             );
         } catch (Exception exception) {
@@ -677,6 +683,11 @@ public class AiModerationService {
                     : job.getTextContent());
         }
         return "Sparkle BTN 用户显示名称";
+    }
+
+    private String notificationReason(Verdict verdict) {
+        String reason = reason(verdict);
+        return ContentModerationService.CONTENT_REJECTED.equals(reason) ? "内容未通过词库审核" : reason;
     }
 
     private String reason(Verdict verdict) {

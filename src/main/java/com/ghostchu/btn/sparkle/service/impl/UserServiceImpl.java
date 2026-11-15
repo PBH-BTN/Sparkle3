@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.moderation.UserProfileChangedEvent;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import org.apache.ibatis.cursor.Cursor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +41,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private UserPrivacyService userPrivacyService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ContentModerationService contentModeration;
 
     @Override
     public @Nullable UserRel getUserRelByBindUserId(long btnUserId) {
@@ -64,9 +67,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Override
     public User userGithubOAuthLogin(@NotNull Authentication authentication, @NotNull InetAddress loginIp, @NotNull Long githubUid,
                                      @NotNull String githubLogin, @NotNull String githubAvatarUrl, @NotNull String githubName, @NotNull String githubEmail) {
+        boolean nicknameRejected = contentModeration.snapshot().matches(githubName);
         UserRel userRel = userRelMapper.findUserRelByPlatformUserId("github", String.valueOf(githubUid));
         if (userRel != null) {
-            User user = baseMapper.selectById(userRel.getBindUserId());
+            User user = baseMapper.selectForUpdate(userRel.getBindUserId());
             if (user == null) {
                 throw new IllegalStateException("User relation exists but the bound user does not exist, inconsistent database state.");
             }
@@ -74,11 +78,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             boolean avatarChanged = !Objects.equals(user.getAvatar(), githubAvatarUrl);
             long nicknameGeneration = value(user.getNicknameReviewGeneration());
             long avatarGeneration = value(user.getAvatarReviewGeneration());
-            if (nicknameChanged) {
+            boolean rejectExistingNickname = nicknameRejected && !"REJECTED".equals(user.getNicknameModerationStatus());
+            if (nicknameChanged || rejectExistingNickname) {
                 nicknameGeneration++;
                 user.setNickname(githubName)
-                        .setNicknameModerationStatus("PENDING")
-                        .setNicknameModerationReason(null)
+                        .setNicknameModerationStatus(nicknameRejected ? "REJECTED" : "PENDING")
+                        .setNicknameModerationReason(nicknameRejected ? ContentModerationService.CONTENT_REJECTED : null)
                         .setNicknameReviewGeneration(nicknameGeneration);
             }
             if (avatarChanged) {
@@ -91,12 +96,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             user.setEmail(githubEmail);
             user.setLastLoginAt(OffsetDateTime.now());
             baseMapper.updateById(user);
-            if (nicknameChanged || avatarChanged) {
+            if ((nicknameChanged && !nicknameRejected) || avatarChanged) {
                 eventPublisher.publishEvent(new UserProfileChangedEvent(
                         user.getId(),
                         nicknameGeneration,
                         avatarGeneration,
-                        nicknameChanged,
+                        nicknameChanged && !nicknameRejected,
                         avatarChanged,
                         githubName,
                         githubAvatarUrl
@@ -111,7 +116,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(OffsetDateTime.now())
                 .setRole("user")
-                .setNicknameModerationStatus("APPROVED")
+                .setNicknameModerationStatus(nicknameRejected ? "REJECTED" : "APPROVED")
+                .setNicknameModerationReason(nicknameRejected ? ContentModerationService.CONTENT_REJECTED : null)
                 .setAvatarModerationStatus("APPROVED")
                 .setNicknameReviewGeneration(0L)
                 .setAvatarReviewGeneration(0L)

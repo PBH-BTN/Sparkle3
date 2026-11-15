@@ -11,6 +11,7 @@ import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +31,8 @@ public class PingSwarmController extends BasePingController {
     private IClientDiscoveryService clientDiscoveryService;
     @Autowired
     private BtnRuntimeConfigService configService;
+    @Autowired
+    private ContentModerationService contentModeration;
 
 
     @PostMapping("/ping/syncSwarm")
@@ -40,19 +43,22 @@ public class PingSwarmController extends BasePingController {
         }
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
-        var it = swarms.iterator();
-        while (it.hasNext()) {
-            var swarm = it.next();
+        var dictionary = contentModeration.snapshot();
+        swarms.removeIf(swarm -> {
             if (!isAcceptablePublicIp(swarm.getPeerIp())) {
                 log.debug("Reject swarm peer with unacceptable IP: {}", swarm.getPeerIp());
-                it.remove();
-                continue;
+                return true;
             }
             swarm.setDownloader(sanitizeU0(swarm.getDownloader()));
             swarm.setPeerId(cutPeerId(sanitizeU0(swarm.getPeerId())));
             swarm.setClientName(sanitizeU0(swarm.getClientName()));
             swarm.setPeerLastFlags(sanitizeU0(swarm.getPeerLastFlags()));
-        }
+            if (dictionary.matches(swarm.getDownloader()) || dictionary.matches(swarm.getClientName())) {
+                contentModeration.recordSwarmHit();
+                return true;
+            }
+            return false;
+        });
         swarmTrackerService.syncSwarm(userapp.getId(), userapp.getOwner(), swarms);
         clientDiscoveryService.handleClientDiscovery(
                 userapp.getId(),

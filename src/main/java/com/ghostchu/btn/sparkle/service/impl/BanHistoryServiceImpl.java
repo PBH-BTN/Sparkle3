@@ -22,6 +22,7 @@ import com.ghostchu.btn.sparkle.service.points.PointRulesService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
+import com.ghostchu.btn.sparkle.service.moderation.BanStructuredData;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -101,16 +102,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }).filter(Objects::nonNull).toList();
         var list = banSubmissionGuard.filter(userAppId, candidates, nowTime).stream().map(candidate -> {
             var btnBan = candidate.ban();
-            Map<String, Object> structuredDataMap = Map.of();
-            if (btnBan.getStructuredData() != null && !btnBan.getStructuredData().isBlank()) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> parsed = objectMapper.readValue(btnBan.getStructuredData(), Map.class);
-                    structuredDataMap = parsed;
-                } catch (Exception e) {
-                    // Log error or handle it appropriately
-                    structuredDataMap = Map.of();
-                }
+            Map<String, Object> structuredDataMap = btnBan.getParsedStructuredData();
+            if (structuredDataMap == null) {
+                structuredDataMap = BanStructuredData.parse(objectMapper, btnBan.getStructuredData());
             }
             var inet = candidate.ip();
             TorrentRegistration registration = torrentService.getOrCreateTorrent(

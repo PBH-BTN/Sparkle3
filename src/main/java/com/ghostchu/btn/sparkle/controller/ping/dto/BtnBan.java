@@ -1,11 +1,13 @@
 package com.ghostchu.btn.sparkle.controller.ping.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -45,4 +47,6 @@ public final class BtnBan {
     private String description;
     @JsonProperty("structured_data")
     private String structuredData;
+    @JsonIgnore
+    private Map<String, Object> parsedStructuredData;
 }

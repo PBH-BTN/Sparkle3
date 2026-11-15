@@ -11,6 +11,9 @@ import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
+import com.ghostchu.btn.sparkle.service.moderation.BanStructuredData;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +33,10 @@ public class PingSubmitBansController extends BasePingController {
     private IClientDiscoveryService clientDiscoveryService;
     @Autowired
     private BtnRuntimeConfigService configService;
+    @Autowired
+    private ContentModerationService contentModeration;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @PostMapping("/ping/syncBanHistory")
     public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException, PowCaptchaFailureException {
@@ -39,13 +46,11 @@ public class PingSubmitBansController extends BasePingController {
         }
         Userapp userapp = verifyUserApplication();
         var bans = ping.getBans();
-        var it = bans.iterator();
-        while (it.hasNext()) {
-            var ban = it.next();
+        var dictionary = contentModeration.snapshot();
+        bans.removeIf(ban -> {
             if (!isAcceptablePublicIp(ban.getPeerIp())) {
                 log.debug("Reject ban entry with unacceptable IP: {}", ban.getPeerIp());
-                it.remove();
-                continue;
+                return true;
             }
             ban.setPeerId(cutPeerId(sanitizeU0(ban.getPeerId())));
             ban.setPeerClientName(sanitizeU0(ban.getPeerClientName()));
@@ -54,7 +59,21 @@ public class PingSubmitBansController extends BasePingController {
             ban.setPeerFlag(sanitizeU0(ban.getPeerFlag()));
             ban.setStructuredData(sanitizeU0(ban.getStructuredData()));
             ban.setDescription(sanitizeU0(ban.getDescription()));
-        }
+            if (dictionary.enabled()) {
+                if (dictionary.matches(ban.getPeerClientName()) || dictionary.matches(ban.getModule())
+                        || dictionary.matches(ban.getRule()) || dictionary.matches(ban.getDescription())) {
+                    contentModeration.recordBanHit();
+                    return true;
+                }
+                var structuredData = BanStructuredData.parse(objectMapper, ban.getStructuredData());
+                if (dictionary.matchesJson(structuredData)) {
+                    contentModeration.recordBanHit();
+                    return true;
+                }
+                ban.setParsedStructuredData(structuredData);
+            }
+            return false;
+        });
         clientDiscoveryService.handleClientDiscovery(
                 userapp.getId(),
                 bans.stream().map(ban -> Pair.of(ban.getPeerId(), ban.getPeerClientName())).toList()

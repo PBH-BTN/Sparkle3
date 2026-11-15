@@ -9,11 +9,13 @@ import com.ghostchu.btn.sparkle.entity.IpQueryCommentRevision;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.mapper.AiModerationJobMapper;
 import com.ghostchu.btn.sparkle.mapper.IpQueryCommentMapper;
+import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.IpQueryCommentRevisionMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.ai.OpenAiModerationClient.Verdict;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -46,6 +48,8 @@ class AiModerationServiceTest {
             mock(OpenAiModerationClient.class);
     private final UserMessageService messageService =
             mock(UserMessageService.class);
+    private final ContentModerationMapper dictionaryMapper = mock(ContentModerationMapper.class);
+    private final ContentModerationService dictionary = new ContentModerationService(dictionaryMapper);
     private final AiModerationService service = new AiModerationService(
             jobMapper,
             commentMapper,
@@ -53,7 +57,8 @@ class AiModerationServiceTest {
             userMapper,
             settingsService,
             moderationClient,
-            messageService
+            messageService,
+            dictionary
     );
 
     @BeforeAll
@@ -68,6 +73,18 @@ class AiModerationServiceTest {
         TableInfoHelper.initTableInfo(assistant, IpQueryComment.class);
         TableInfoHelper.initTableInfo(assistant, IpQueryCommentRevision.class);
         TableInfoHelper.initTableInfo(assistant, User.class);
+    }
+
+    @Test
+    void rejectsPreviouslyQueuedCommentBeforeCallingAi() throws Exception {
+        when(dictionaryMapper.read()).thenReturn(new ContentModerationMapper.Dictionary(1, true, "违规词"));
+        dictionary.run(null);
+        var verdict = service.review(new AiModerationJob()
+                .setContentType("COMMENT")
+                .setTextContent("评论包含违规词"));
+        assertEquals(false, verdict.approved());
+        assertEquals(ContentModerationService.CONTENT_REJECTED, verdict.reason());
+        verifyNoInteractions(moderationClient);
     }
 
     @Test

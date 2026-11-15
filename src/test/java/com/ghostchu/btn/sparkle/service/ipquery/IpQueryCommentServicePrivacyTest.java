@@ -11,6 +11,8 @@ import com.ghostchu.btn.sparkle.mapper.IpQueryCommentRevisionMapper;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.ai.AiModerationService;
+import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -50,7 +52,8 @@ class IpQueryCommentServicePrivacyTest {
             privacyService,
             settingsService,
             lookupService,
-            moderationService
+            moderationService,
+            new ContentModerationService(mock(ContentModerationMapper.class))
     );
 
     @Test

@@ -19,6 +19,7 @@ import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import com.ghostchu.btn.sparkle.service.ai.AiModerationService;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,7 @@ public class IpQueryCommentService {
     private final IpQuerySettingsService settingsService;
     private final IpQueryLookupService lookupService;
     private final AiModerationService moderationService;
+    private final ContentModerationService contentModeration;
 
     public CommentPage list(
             long viewerUserId,
@@ -124,6 +126,9 @@ public class IpQueryCommentService {
             throw badRequest("Comment data is required");
         }
         String content = normalizeContent(request.content(), settings.maxLength());
+        if (contentModeration.snapshot().matches(content)) {
+            throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, ContentModerationService.CONTENT_REJECTED);
+        }
         String network = commentScope(request.scope());
         IpQueryComment parent = null;
         if (request.parentId() != null) {
@@ -203,6 +208,9 @@ public class IpQueryCommentService {
             );
         }
         String content = normalizeContent(request.content(), settings.maxLength());
+        if (contentModeration.snapshot().matches(content)) {
+            throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, ContentModerationService.CONTENT_REJECTED);
+        }
         int nextRevision = comment.getRevision() + 1;
         long nextGeneration = value(comment.getReviewGeneration()) + 1;
         InetAddress ip = parseIp(remoteIp);

@@ -3,9 +3,13 @@ package com.ghostchu.btn.sparkle.autoconfig;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.ghostchu.btn.sparkle.controller.admin.AdminBanSubmissionController;
+import com.ghostchu.btn.sparkle.controller.admin.AdminContentModerationController;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
+import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
+import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard.Candidate;
@@ -45,10 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -90,6 +96,57 @@ class FlywayMigrationIntegrationTest {
         try (var connection = connect(sourceUrl, username, password);
              var statement = connection.createStatement()) {
             statement.execute("DROP DATABASE " + database);
+        }
+    }
+
+    @Test
+    void contentModerationDictionaryPublishesCommittedVersionsAndRejectsStaleEdits() throws Exception {
+        var flyway = Flyway.configure().dataSource(url, username, password)
+                .baselineVersion("76").target("77").load();
+        flyway.baseline();
+        assertEquals(1, flyway.migrate().migrationsExecuted);
+        flyway.validate();
+        var configuration = new Configuration(new Environment("content-review-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.addMapper(ContentModerationMapper.class);
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var primary = factory.openSession(true); var replica = factory.openSession(true)) {
+            var service = new ContentModerationService(primary.getMapper(ContentModerationMapper.class));
+            var secondInstance = new ContentModerationService(replica.getMapper(ContentModerationMapper.class));
+            service.run(null);
+            secondInstance.run(null);
+            String words = "# 说明\n第一条\n";
+            var mvc = MockMvcBuilders.standaloneSetup(new AdminContentModerationController(service))
+                    .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                    .build();
+            var admin = new SparkleUserDetails(new User().setId(100L).setRole("admin"), null);
+            SecurityContextHolder.getContext().setAuthentication(
+                    UsernamePasswordAuthenticationToken.authenticated(admin, null, admin.getAuthorities()));
+            try {
+                mvc.perform(put("/api/admin/content-moderation").contentType("application/json")
+                                .content("{\"version\":\"0\",\"enabled\":true,\"words\":\"# 说明\\n第一条\\n\"}"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.activeVersion").value("1"));
+                mvc.perform(get("/api/admin/content-moderation"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.words").value(words));
+            } finally {
+                SecurityContextHolder.clearContext();
+            }
+            assertEquals(words, service.settings().words());
+            assertTrue(service.snapshot().matches("第一条记录"));
+            assertFalse(secondInstance.snapshot().matches("第一条记录"));
+            replica.clearCache();
+            secondInstance.refresh();
+            assertTrue(secondInstance.snapshot().matchesJson(java.util.Map.of("nested", List.of("第一条"))));
+            assertThrows(BusinessException.class, () -> secondInstance.save("0", false, "", 100L));
+
+            var original = secondInstance.snapshot();
+            service.save("1", false, words, 100L);
+            replica.clearCache();
+            secondInstance.refresh();
+            assertFalse(secondInstance.snapshot().matches("第一条记录"));
+            assertTrue(original.matches("第一条记录"));
         }
     }
 
@@ -546,7 +603,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("76", latest.info().current().getVersion().getVersion());
+        assertEquals("77", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""
