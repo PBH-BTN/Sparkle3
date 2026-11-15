@@ -261,7 +261,7 @@ onMounted(() => {
       </a-spin>
     </section>
 
-    <HomeNetworkTraffic />
+    <HomeNetworkTraffic v-if="moduleEnabled('network-traffic')" />
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">
       <div class="section-heading">

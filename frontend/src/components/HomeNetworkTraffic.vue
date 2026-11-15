@@ -23,8 +23,8 @@ const metrics = {
   downloadAck: 'career.downloadAck',
   seeding: 'career.seeding',
   downloading: 'career.downloading',
-  loss: 'traffic.loss',
-  lossRatio: 'traffic.lossRatio',
+  loss: 'home.networkTrafficAverageLoss',
+  lossRatio: 'home.networkTrafficAverageLossRatio',
 } as const
 type Metric = keyof typeof metrics
 
@@ -33,15 +33,22 @@ const cumulativeRows = computed(() => {
   const keys = Object.keys(totals) as (keyof typeof totals)[]
   let seeding = 0
   let downloading = 0
-  return records.value.slice(-days.value).map(({ day, metrics }) => {
+  let lossRatios = 0
+  return records.value.slice(-days.value).map(({ day, metrics }, index) => {
     for (const key of keys) totals[key] += BigInt(metrics[key] ?? '0')
     seeding += Number(metrics.seeding ?? '0')
     downloading += Number(metrics.downloading ?? '0')
-    // Round the cumulative percentage to hundredths using integer arithmetic.
-    const lossRatio = totals.upload > 0n
-      ? (totals.loss * 10_000n + totals.upload / 2n) / totals.upload
-      : 0n
-    return { day, ...totals, seeding, downloading, lossRatio }
+    const upload = Number(metrics.upload ?? '0')
+    if (upload > 0) lossRatios += Number(metrics.loss ?? '0') / upload
+    const elapsedDays = index + 1
+    return {
+      day,
+      ...totals,
+      seeding,
+      downloading,
+      loss: (totals.loss + BigInt(Math.floor(elapsedDays / 2))) / BigInt(elapsedDays),
+      lossRatio: lossRatios * 100 / elapsedDays,
+    }
   })
 })
 
@@ -50,7 +57,7 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
   const names = keys.map(key => t(metrics[key]))
   const option = stackedAreaChartOption(rows.map(row => row.day), keys.map((key, index) => ({
     name: names[index]!,
-    values: rows.map(row => Number(row[key]) / (key === 'lossRatio' ? 100 : unit === 'hours' ? 3600 : 1)),
+    values: rows.map(row => Number(row[key]) / (unit === 'hours' ? 3600 : 1)),
   })))
   const axes: YAXisComponentOption[] = [{
     type: 'value',
@@ -85,7 +92,7 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
       const row = rows[item.dataIndex ?? 0]
       if (!key || !row) return ''
       const value = key === 'lossRatio'
-        ? `${Number(row[key]) / 100}%`
+        ? `${Number(row[key].toFixed(2))}%`
         : unit === 'hours' ? formatHours(Number(row[key])) : formatBytes(row[key])
       return formatAxisTooltip([{ ...item, axisValueLabel: index === 0 ? row.day : '', axisValue: '' }], () => value)
     }).join(''),
@@ -97,7 +104,7 @@ const charts = computed(() => [
   { title: 'traffic.chartReported', option: chartOption(['upload', 'download'], 'bytes') },
   { title: 'traffic.chartConfirmed', option: chartOption(['uploadAck', 'downloadAck'], 'bytes') },
   { title: 'traffic.chartActivity', option: chartOption(['seeding', 'downloading'], 'hours') },
-  { title: 'traffic.chartLoss', option: chartOption(['loss', 'lossRatio'], 'loss') },
+  { title: 'home.networkTrafficLossChart', option: chartOption(['loss', 'lossRatio'], 'loss') },
 ])
 
 async function load() {

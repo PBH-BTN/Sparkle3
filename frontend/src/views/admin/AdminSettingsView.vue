@@ -53,6 +53,7 @@ const form = reactive<RuntimeConfig>({
   queryIpPowCaptcha: false,
   clientDiscoveryEnabled: false,
   swarmStatisticsEnabled: true,
+  homepageNetworkTrafficEnabled: true,
   swarmStatisticsRefreshMinutes: 60,
   swarmStatisticsWindowDays: 7,
   userContactEmailSubjectTemplate: '[Sparkle BTN] {{title}}',
@@ -615,7 +616,9 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
             <a-form-item :label="t('admin.settings.statisticsEnabled')">
               <a-switch v-model="form.swarmStatisticsEnabled" />
             </a-form-item>
-            <div />
+            <a-form-item :label="t('admin.settings.homepageNetworkTrafficEnabled')">
+              <a-switch v-model="form.homepageNetworkTrafficEnabled" />
+            </a-form-item>
             <a-form-item :label="t('admin.settings.refreshInterval')" required>
               <a-input-number
                 v-model="form.swarmStatisticsRefreshMinutes"
