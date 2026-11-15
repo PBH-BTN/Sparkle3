@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.PageResult;
+import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.AppRank;
 import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.Event;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
@@ -171,6 +172,10 @@ public class BanSubmissionGuard {
     @Transactional
     public int clearEvents() {
         return mapper.clearEvents();
+    }
+
+    public List<AppRank> rankApplications() {
+        return mapper.rankApplications();
     }
 
     @Scheduled(cron = CLEANUP_CRON)

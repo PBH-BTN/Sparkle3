@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.mapper;
 
 import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.Event;
+import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.AppRank;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.OffsetDateTime;
@@ -29,6 +30,8 @@ public interface BanSubmissionGuardMapper {
     long countEvents(@Param("query") EventQuery query);
 
     int clearEvents();
+
+    List<AppRank> rankApplications();
 
     List<Event> listEvents(@Param("query") EventQuery query, @Param("offset") long offset, @Param("size") long size);
 

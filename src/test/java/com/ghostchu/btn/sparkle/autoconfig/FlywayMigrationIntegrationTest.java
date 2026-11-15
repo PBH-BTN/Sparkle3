@@ -96,11 +96,15 @@ class FlywayMigrationIntegrationTest {
     void banSubmissionGuardDeduplicatesAndDetectsAcrossWindows() throws Exception {
         try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
             statement.execute("CREATE EXTENSION IF NOT EXISTS timescaledb");
+            statement.execute("CREATE TABLE public.userapp (id bigint PRIMARY KEY, owner bigint)");
+            statement.execute("INSERT INTO public.userapp VALUES (10, 100)");
+            statement.execute(new org.springframework.core.io.ClassPathResource("db/migration/V23__app_config_entries.sql")
+                    .getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
         }
         var flyway = Flyway.configure().dataSource(url, username, password)
-                .baselineVersion("73").target("74").load();
+                .baselineVersion("73").target("76").load();
         flyway.baseline();
-        assertEquals(1, flyway.migrate().migrationsExecuted);
+        assertEquals(3, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
         var configuration = new Configuration(new Environment("ban-guard-test", new JdbcTransactionFactory(),
@@ -142,6 +146,14 @@ class FlywayMigrationIntegrationTest {
                     start.plusSeconds(40)).isEmpty());
             var blocked = guard.events(1, 20, 10L, null, "blocking", null, null).records().getFirst();
             assertEquals(1, blocked.suppressed());
+            var rank = guard.rankApplications().getFirst();
+            assertEquals("100", rank.ownerId());
+            assertEquals(2, rank.detectionHits());
+            assertEquals(1, rank.replays());
+            assertTrue(guard.filter(20, List.of(first, first, first), start.plusSeconds(40)).isEmpty());
+            var ranks = guard.rankApplications();
+            assertEquals(List.of("10", "20"), ranks.stream().map(row -> row.appId()).toList());
+            assertEquals(3, ranks.get(1).replays());
             var afterQuiet = start.plusHours(2);
             assertEquals(1, guard.filter(10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
             assertEquals(1, guard.events(1, 20, 10L, null, "quiet", null, null).total());
@@ -198,6 +210,7 @@ class FlywayMigrationIntegrationTest {
                 SecurityContextHolder.clearContext();
             }
             assertEquals(0, guard.events(1, 20, null, null, null, null, null).total());
+            assertTrue(guard.rankApplications().isEmpty());
             assertEquals(0, guard.clearEvents());
             assertTrue(guard.filter(30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
             assertEquals(1, guard.events(1, 20, 30L, "replay", null, null, null).total());
@@ -530,7 +543,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("75", latest.info().current().getVersion().getVersion());
+        assertEquals("76", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

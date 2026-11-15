@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.controller.admin;
 
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.PageResult;
+import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.AppRank;
 import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.ClearResult;
 import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.Event;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/ban-submissions")
@@ -41,5 +43,10 @@ public class AdminBanSubmissionController {
         int deleted = guard.clearEvents();
         log.info("Admin {} cleared {} duplicate ban submission events", principal.getUserId(), deleted);
         return new ClearResult(deleted);
+    }
+
+    @GetMapping("/ranking")
+    public List<AppRank> rankApplications() {
+        return guard.rankApplications();
     }
 }
