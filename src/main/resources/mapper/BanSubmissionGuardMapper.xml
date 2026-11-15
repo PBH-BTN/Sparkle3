@@ -124,7 +124,7 @@
             ORDER BY detections DESC, replays DESC, app_id
             LIMIT 100
         )
-        SELECT ranked.app_id::text AS app_id, app.owner::text AS owner_id,
+        SELECT ranked.app_id::text AS app_id, app.owner::text AS owner_id, app.last_user_agent,
             ranked.detections::bigint AS detection_hits, ranked.replays::bigint AS replays
         FROM ranked
         LEFT JOIN public.userapp AS app ON app.id = ranked.app_id
