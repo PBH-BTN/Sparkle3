@@ -57,7 +57,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "populate_time", "torrent_id", "peer_ip", "peer_port", "peer_id",
-            "peer_client_name", "peer_progress", "module_name", "rule"
+            "peer_client_name", "peer_progress", "module_name", "rule", "insert_time"
     );
     @Autowired
     private ITorrentService torrentService;
