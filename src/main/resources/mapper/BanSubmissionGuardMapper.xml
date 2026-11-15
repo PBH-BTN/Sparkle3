@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper">
+    <select id="insertFingerprints" resultType="string" affectData="true" flushCache="true" useCache="false">
+        INSERT INTO public.ban_submission_fingerprint (event_day, fingerprint) VALUES
+        <foreach collection="rows" item="row" separator=",">
+            (#{row.day}, CAST(#{row.hash} AS uuid))
+        </foreach>
+        ON CONFLICT (event_day, fingerprint) DO NOTHING
+        RETURNING fingerprint::text
+    </select>
+
+    <sql id="advancesWindow">
+        EXCLUDED.window_ban_at IS NOT NULL
+        AND (state.latest_ban_at IS NULL OR EXCLUDED.window_ban_at > state.latest_ban_at)
+        AND (state.window_seen IS NULL OR state.window_seen &lt;= #{previousWindow})
+        AND (state.window_ban_at IS NULL OR state.window_seen &lt;= #{quietCutoff}
+            OR EXCLUDED.window_ban_at >= state.window_ban_at + #{windowMillis} * INTERVAL '1 millisecond')
+    </sql>
+
+    <sql id="nextWindows">
+        CASE WHEN state.window_seen IS NULL OR state.window_seen &lt;= #{quietCutoff}
+            THEN 1 ELSE LEAST(state.windows + 1, 1000000) END
+    </sql>
+
+    <select id="observe" resultType="string" affectData="true" flushCache="true" useCache="false">
+        WITH observed AS (
+        INSERT INTO public.ban_submission_target AS state (
+            app_id, target, peer_network, peer_port, module_name, rule_name, first_seen, last_seen,
+            window_seen, window_ban_at, latest_ban_at, windows, peak_windows, replays
+        )
+        SELECT #{appId}, incoming.target,
+            network(set_masklen(incoming.ip, CASE family(incoming.ip) WHEN 4 THEN 24 ELSE 64 END))::text,
+            incoming.port, incoming.module, incoming.rule, #{now}, #{now},
+            CASE WHEN incoming.latest > #{quietCutoff} THEN #{now} END,
+            CASE WHEN incoming.latest > #{quietCutoff} THEN incoming.latest END,
+            incoming.latest,
+            CASE WHEN incoming.latest > #{quietCutoff} THEN 1 ELSE 0 END,
+            CASE WHEN incoming.latest > #{quietCutoff} THEN 1 ELSE 0 END,
+            incoming.replays
+        FROM (VALUES
+            <foreach collection="rows" item="row" separator=",">
+                (CAST(#{row.hash} AS uuid), CAST(#{row.ip} AS inet), #{row.port}, #{row.module},
+                 CAST(#{row.rule,jdbcType=VARCHAR} AS text), CAST(#{row.latest,jdbcType=TIMESTAMP_WITH_TIMEZONE} AS timestamptz),
+                 #{row.replays})
+            </foreach>
+        ) AS incoming(target, ip, port, module, rule, latest, replays)
+        ORDER BY incoming.target
+        ON CONFLICT (app_id, target) DO UPDATE SET
+            last_seen = GREATEST(state.last_seen, EXCLUDED.last_seen),
+            latest_ban_at = GREATEST(state.latest_ban_at, EXCLUDED.latest_ban_at),
+            window_seen = CASE WHEN <include refid="advancesWindow"/> THEN EXCLUDED.window_seen ELSE state.window_seen END,
+            window_ban_at = CASE WHEN <include refid="advancesWindow"/> THEN EXCLUDED.window_ban_at ELSE state.window_ban_at END,
+            windows = CASE WHEN <include refid="advancesWindow"/> THEN <include refid="nextWindows"/> ELSE state.windows END,
+            peak_windows = CASE WHEN <include refid="advancesWindow"/>
+                THEN GREATEST(state.peak_windows, <include refid="nextWindows"/>) ELSE state.peak_windows END,
+            detected = state.detected OR ((<include refid="advancesWindow"/>)
+                AND (<include refid="nextWindows"/>) >= #{threshold}),
+            replays = state.replays + EXCLUDED.replays
+        RETURNING target, windows, window_seen
+        )
+        SELECT target::text FROM observed
+        WHERE #{suppression} AND windows >= #{threshold} AND window_seen > #{quietCutoff}
+    </select>
+
+    <update id="recordSuppressed">
+        UPDATE public.ban_submission_target AS state
+        SET suppressed = state.suppressed + incoming.total
+        FROM (VALUES
+            <foreach collection="rows" item="row" separator=",">
+                (CAST(#{row.hash} AS uuid), #{row.count})
+            </foreach>
+        ) AS incoming(target, total)
+        WHERE state.app_id = #{appId} AND state.target = incoming.target
+    </update>
+
+    <sql id="status">
+        CASE
+            WHEN window_seen > #{query.quietCutoff} AND windows >= #{query.threshold}
+                THEN CASE WHEN #{query.suppression} THEN 'blocking' ELSE 'observing' END
+            WHEN detected THEN 'quiet'
+            ELSE 'replayed'
+        END
+    </sql>
+
+    <sql id="eventFilters">
+        WHERE (detected OR replays > 0)
+        <if test="query.appId != null">AND app_id = #{query.appId}</if>
+        <if test="query.since != null">AND last_seen >= #{query.since}</if>
+        <if test="query.until != null">AND last_seen &lt;= #{query.until}</if>
+        <if test="query.kind == 'replay'">AND replays > 0</if>
+        <if test="query.kind == 'repeated'">AND detected</if>
+        <if test="query.status != null and query.status != ''">AND (<include refid="status"/>) = #{query.status}</if>
+    </sql>
+
+    <select id="countEvents" resultType="long">
+        SELECT count(*) FROM public.ban_submission_target
+        <include refid="eventFilters"/>
+    </select>
+
+    <select id="listEvents" resultType="com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels$Event">
+        SELECT app_id::text || ':' || target::text AS id, app_id::text AS app_id,
+            peer_network, peer_port, module_name, rule_name, first_seen, last_seen, peak_windows, replays,
+            suppressed, (<include refid="status"/>) AS status
+        FROM public.ban_submission_target
+        <include refid="eventFilters"/>
+        ORDER BY last_seen DESC, app_id, target
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="dropExpiredFingerprints" resultType="string" affectData="true" flushCache="true" useCache="false">
+        SELECT drop_chunks('public.ban_submission_fingerprint', older_than => CAST(#{cutoff} AS timestamptz))::text
+    </select>
+
+    <delete id="deleteExpiredTargets">
+        WITH expired_state AS (
+            SELECT app_id, target FROM public.ban_submission_target
+            WHERE NOT detected AND replays = 0 AND last_seen &lt; #{stateCutoff}
+            ORDER BY last_seen
+            LIMIT #{limit}
+            FOR UPDATE SKIP LOCKED
+        ), expired_events AS (
+            SELECT app_id, target FROM public.ban_submission_target
+            WHERE (detected OR replays > 0) AND last_seen &lt; #{eventCutoff}
+            ORDER BY last_seen
+            LIMIT #{limit}
+            FOR UPDATE SKIP LOCKED
+        )
+        DELETE FROM public.ban_submission_target
+        WHERE (app_id, target) IN (
+            SELECT app_id, target FROM expired_state
+            UNION ALL
+            SELECT app_id, target FROM expired_events
+        )
+    </delete>
+</mapper>

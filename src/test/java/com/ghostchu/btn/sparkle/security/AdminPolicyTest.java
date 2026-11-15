@@ -31,6 +31,8 @@ class AdminPolicyTest {
         assertTrue(AdminPolicy.canAccessModeratorModule("/api/admin/userapps/91/ban"));
         assertTrue(AdminPolicy.canAccessModeratorModule("/api/admin/messages"));
         assertFalse(AdminPolicy.canAccessModeratorModule("/api/admin/users"));
+        assertFalse(AdminPolicy.canAccessModeratorModule("/api/admin/ban-submissions"));
+        assertFalse(AdminPolicy.canAccessModeratorModule("/admin/ban-submissions"));
         assertFalse(AdminPolicy.canAccessModeratorModule("/api/admin/settings"));
         assertFalse(AdminPolicy.canAccessModeratorModule("/api/admin/afdian/message-license-import"));
         assertFalse(AdminPolicy.canAccessModeratorModule("/api/admin/afdian/message-license-import/match"));

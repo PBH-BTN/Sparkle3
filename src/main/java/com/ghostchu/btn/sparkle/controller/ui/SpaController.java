@@ -43,6 +43,7 @@ public class SpaController {
             "/admin",
             "/admin/dashboard",
             "/admin/tasks",
+            "/admin/ban-submissions",
             "/admin/users",
             "/admin/userapps",
             "/admin/rules",

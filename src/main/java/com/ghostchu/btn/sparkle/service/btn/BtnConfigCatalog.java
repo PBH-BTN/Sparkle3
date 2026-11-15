@@ -254,6 +254,8 @@ public final class BtnConfigCatalog {
             Definition.integer("syncBanHistory", "interval", 900_000, 100, 86_400_000),
             Definition.integer("syncBanHistory", "randomInitialDelay", 15_000, 0, 86_400_000),
             Definition.bool("syncBanHistory", "powCaptcha", false),
+            Definition.bool("syncBanHistory", "repeatBanSuppression", false),
+            Definition.integer("syncBanHistory", "repeatBanWindows", 5, 3, 100),
 
             Definition.text("syncSwarm", "endpoint", "{rooturl}/ping/syncSwarm"),
             Definition.integer("syncSwarm", "interval", 900_000, 100, 86_400_000),

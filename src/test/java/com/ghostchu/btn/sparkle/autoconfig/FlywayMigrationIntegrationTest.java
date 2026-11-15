@@ -1,21 +1,49 @@
 package com.ghostchu.btn.sparkle.autoconfig;
 
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
+import com.ghostchu.btn.sparkle.controller.admin.AdminBanSubmissionController;
+import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
+import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
+import com.ghostchu.btn.sparkle.service.BanSubmissionGuard;
+import com.ghostchu.btn.sparkle.service.BanSubmissionGuard.Candidate;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
+import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
+import org.apache.ibatis.mapping.Environment;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.mock.env.MockEnvironment;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.net.InetAddress;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Runs against a disposable PostgreSQL database with TimescaleDB installed.
@@ -56,6 +84,108 @@ class FlywayMigrationIntegrationTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP DATABASE " + database);
         }
+    }
+
+    @Test
+    void banSubmissionGuardDeduplicatesAndDetectsAcrossWindows() throws Exception {
+        try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
+            statement.execute("CREATE EXTENSION IF NOT EXISTS timescaledb");
+        }
+        var flyway = Flyway.configure().dataSource(url, username, password)
+                .baselineVersion("73").target("74").load();
+        flyway.baseline();
+        assertEquals(1, flyway.migrate().migrationsExecuted);
+        flyway.validate();
+
+        var configuration = new Configuration(new Environment("ban-guard-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        var interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        configuration.addInterceptor(interceptor);
+        String resource = "mapper/BanSubmissionGuardMapper.xml";
+        try (var input = getClass().getResourceAsStream("/" + resource)) {
+            new XMLMapperBuilder(input, configuration, resource, configuration.getSqlFragments()).parse();
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        var config = mock(BtnRuntimeConfigService.class);
+        when(config.longValue("syncBanHistory", "interval")).thenReturn(10_000L);
+        when(config.longValue("syncBanHistory", "repeatBanWindows")).thenReturn(3L);
+        var start = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(10).withNano(0);
+        try (var session = factory.openSession()) {
+            var mapper = session.getMapper(BanSubmissionGuardMapper.class);
+            var guard = new BanSubmissionGuard(mapper, config);
+            var first = banCandidate(start, "2001:4860::8888");
+            assertEquals(1, guard.filter(10, List.of(first, banCandidate(start, "2001:4860:0:0:0:0:0:8888")), start).size());
+            session.rollback();
+            assertEquals(1, guard.filter(10, List.of(first), start).size());
+            session.commit();
+            assertTrue(guard.filter(10, List.of(first), start.plusSeconds(10)).isEmpty());
+            assertEquals(1, guard.filter(20, List.of(first), start.plusSeconds(10)).size());
+            assertEquals(2, guard.filter(10, List.of(banCandidate(start.plusSeconds(10), "2001:4860::8888"),
+                    banCandidate(start.plusSeconds(20), "2001:4860::8888")), start.plusSeconds(20)).size());
+            assertEquals(1, guard.filter(10, List.of(banCandidate(start.plusSeconds(30), "2001:4860::8888")),
+                    start.plusSeconds(30)).size());
+            var observed = guard.events(1, 20, 10L, "repeated", "observing", start, null).records().getFirst();
+            assertEquals(3, observed.peakWindows());
+            assertEquals(1, observed.replays());
+            assertEquals("2001:4860::/64", observed.peerNetwork());
+            assertEquals(0, observed.suppressed());
+
+            when(config.booleanValue("syncBanHistory", "repeatBanSuppression")).thenReturn(true);
+            assertTrue(guard.filter(10, List.of(banCandidate(start.plusSeconds(40), "2001:4860::8888")),
+                    start.plusSeconds(40)).isEmpty());
+            var blocked = guard.events(1, 20, 10L, null, "blocking", null, null).records().getFirst();
+            assertEquals(1, blocked.suppressed());
+            var afterQuiet = start.plusHours(2);
+            assertEquals(1, guard.filter(10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
+            assertEquals(1, guard.events(1, 20, 10L, null, "quiet", null, null).total());
+            assertTrue(mapper.dropExpiredFingerprints(start.minusDays(8)).isEmpty());
+            assertEquals(0, mapper.deleteExpiredTargets(start.minusDays(4), start.minusDays(30), 5000));
+        }
+
+        var batch = IntStream.range(0, 501).mapToObj(port -> {
+            var candidate = banCandidate(start, "1.1.1.1");
+            candidate.ban().setPeerPort(10_000 + port);
+            return candidate;
+        }).toList();
+        Callable<Integer> submit = () -> {
+            try (var session = factory.openSession()) {
+                var guard = new BanSubmissionGuard(session.getMapper(BanSubmissionGuardMapper.class), config);
+                int accepted = guard.filter(30, batch, start).size();
+                session.commit();
+                return accepted;
+            }
+        };
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = executor.submit(submit);
+            var second = executor.submit(submit);
+            assertEquals(batch.size(), first.get(30, TimeUnit.SECONDS) + second.get(30, TimeUnit.SECONDS));
+        }
+        try (var session = factory.openSession()) {
+            var mapper = session.getMapper(BanSubmissionGuardMapper.class);
+            var guard = new BanSubmissionGuard(mapper, config);
+            var events = guard.events(2, 20, 30L, "replay", "replayed", null, null);
+            assertEquals(batch.size(), events.total());
+            assertEquals(20, events.records().size());
+            assertEquals(1, events.records().getFirst().replays());
+            var mvc = MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard)).build();
+            mvc.perform(get("/api/admin/ban-submissions").param("appId", "30").param("kind", "replay")
+                            .param("page", "2").param("size", "20").param("since", start.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total").value(501))
+                    .andExpect(jsonPath("$.records[0].appId").value("30"))
+                    .andExpect(jsonPath("$.records[0].peerNetwork").value("1.1.1.0/24"));
+            assertEquals(1, mapper.deleteExpiredTargets(start.plusDays(1), start.minusDays(29), 5000));
+            assertEquals(batch.size(), mapper.deleteExpiredTargets(start.plusDays(31), start.plusDays(1), 5000));
+        }
+    }
+
+    private static Candidate banCandidate(OffsetDateTime time, String ip) {
+        var ban = new BtnBan();
+        ban.setTorrentIdentifier("torrent");
+        ban.setPeerPort(8080);
+        ban.setModule("test-module");
+        return new Candidate(ban, InetAddress.ofLiteral(ip), time);
     }
 
     @Test
@@ -376,7 +506,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("73", latest.info().current().getVersion().getVersion());
+        assertEquals("75", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

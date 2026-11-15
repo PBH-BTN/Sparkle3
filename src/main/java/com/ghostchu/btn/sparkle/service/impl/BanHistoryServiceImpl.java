@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.dto.BanHistoryQueryDto;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
+import com.ghostchu.btn.sparkle.service.BanSubmissionGuard;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.TorrentRegistration;
@@ -72,7 +73,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private PointAwardContext pointAwardContext;
     @Autowired
     private PointRulesService pointRulesService;
-
+    @Autowired
+    private BanSubmissionGuard banSubmissionGuard;
 
     @Transactional
     @Override
@@ -82,8 +84,23 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             long userId,
             @NotNull List<BtnBan> bans
     ) {
-        var nowTime = OffsetDateTime.now();
-        var list = bans.stream().map(btnBan -> {
+        var nowTime = OffsetDateTime.now(ZoneOffset.UTC);
+        var oldest = nowTime.minusDays(7);
+        var newest = nowTime.plusHours(1);
+        var candidates = bans.stream().map(ban -> {
+            if (ban.getBanAt() == null || ban.getModule() == null || ban.getTorrentIdentifier() == null) {
+                return null;
+            }
+            var banAt = ban.getBanAt().toInstant().atOffset(ZoneOffset.UTC);
+            if (banAt.isBefore(oldest) || banAt.isAfter(newest)
+                    || ban.getModule().endsWith("IdleConnectionDosProtection")
+                    || ban.getModule().endsWith("AntiVampire")) {
+                return null;
+            }
+            return new BanSubmissionGuard.Candidate(ban, InetAddress.ofLiteral(ban.getPeerIp()), banAt);
+        }).filter(Objects::nonNull).toList();
+        var list = banSubmissionGuard.filter(userAppId, candidates, nowTime).stream().map(candidate -> {
+            var btnBan = candidate.ban();
             Map<String, Object> structuredDataMap = Map.of();
             if (btnBan.getStructuredData() != null && !btnBan.getStructuredData().isBlank()) {
                 try {
@@ -95,19 +112,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     structuredDataMap = Map.of();
                 }
             }
-            var banAtTime = btnBan.getBanAt().toLocalDateTime().atOffset(ZoneOffset.UTC);
-            // 相差不能超过 7 天
-            if (banAtTime.isAfter(nowTime.plusHours(1)) || banAtTime.isBefore(nowTime.minusDays(7))) {
-                log.debug("Ignoring ban entry with out-of-range banAt time: {}", btnBan.getBanAt());
-                return null;
-            }
-            if (btnBan.getModule().endsWith("IdleConnectionDosProtection")) {
-                return null;
-            }
-            if (btnBan.getModule().endsWith("AntiVampire")) {
-                return null;
-            }
-            var inet = InetAddress.ofLiteral(btnBan.getPeerIp());
+            var inet = candidate.ip();
             TorrentRegistration registration = torrentService.getOrCreateTorrent(
                     btnBan.getTorrentIdentifier(),
                     btnBan.getTorrentSize(),
@@ -117,7 +122,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             );
             return new BanHistory()
                     .setInsertTime(nowTime)
-                    .setPopulateTime(banAtTime)
+                    .setPopulateTime(candidate.banAt())
                     .setUserappsId(userAppId)
                     .setTorrentId(registration.id())
                     .setPeerIp(inet)
@@ -134,7 +139,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setDescription(btnBan.getDescription())
                     .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get())
                     .setStructuredData(structuredDataMap);
-        }).filter(Objects::nonNull).toList();
+        }).toList();
         if (list.isEmpty()) return;
         this.baseMapper.insert(list, 1000);
         careerIngestionService.bans(userId,list);
