@@ -111,6 +111,23 @@ onMounted(() => Promise.all([load(1), loadRanking()]))
       </template>
     </PageHeader>
 
+    <section class="table-card surface-card">
+      <h2 class="ranking-title">{{ t('admin.banSubmissions.ranking') }}</h2>
+      <a-alert v-if="rankingError" type="error">{{ rankingError }}</a-alert>
+      <a-table :data="ranking" :loading="rankingLoading" :pagination="{ pageSize: 10 }" :scroll="{ x: 520 }" row-key="appId">
+        <template #columns>
+          <a-table-column :title="t('admin.banSubmissions.rankingApp')" data-index="appId" />
+          <a-table-column :title="t('admin.banSubmissions.replayBatches')">
+            <template #cell="{ record }">{{ formatNumber(record.replayBatches) }}</template>
+          </a-table-column>
+          <a-table-column :title="t('admin.banSubmissions.replayLogs')">
+            <template #cell="{ record }">{{ formatNumber(record.replays) }}</template>
+          </a-table-column>
+        </template>
+        <template #empty><a-empty :description="t('admin.banSubmissions.empty')" /></template>
+      </a-table>
+    </section>
+
     <a-form class="surface-card ban-filters" :model="filters" layout="inline" @submit-success="search">
       <a-form-item :label="t('admin.banSubmissions.app')">
         <a-input v-model="filters.appId" allow-clear inputmode="numeric" />
@@ -183,32 +200,6 @@ onMounted(() => Promise.all([load(1), loadRanking()]))
         @page-size-change="changePageSize"
       />
     </div>
-
-    <section class="table-card surface-card">
-      <h2 class="ranking-title">{{ t('admin.banSubmissions.ranking') }}</h2>
-      <a-alert v-if="rankingError" type="error">{{ rankingError }}</a-alert>
-      <a-table :data="ranking" :loading="rankingLoading" :pagination="{ pageSize: 10 }" :scroll="{ x: 950 }" row-key="appId">
-        <template #columns>
-          <a-table-column :title="t('admin.banSubmissions.app')" data-index="appId" />
-          <a-table-column :title="t('admin.banSubmissions.owner')" data-index="ownerId">
-            <template #cell="{ record }">{{ record.ownerId ?? '—' }}</template>
-          </a-table-column>
-          <a-table-column :title="t('admin.apps.userAgent')" data-index="lastUserAgent" :width="300">
-            <template #cell="{ record }">
-              <code v-if="record.lastUserAgent" class="ban-rule">{{ record.lastUserAgent }}</code>
-              <span v-else>—</span>
-            </template>
-          </a-table-column>
-          <a-table-column :title="t('admin.banSubmissions.detectionHits')">
-            <template #cell="{ record }">{{ formatNumber(record.detectionHits) }}</template>
-          </a-table-column>
-          <a-table-column :title="t('admin.banSubmissions.replays')">
-            <template #cell="{ record }">{{ formatNumber(record.replays) }}</template>
-          </a-table-column>
-        </template>
-        <template #empty><a-empty :description="t('admin.banSubmissions.empty')" /></template>
-      </a-table>
-    </section>
   </div>
 </template>
 

@@ -1123,9 +1123,10 @@ export default {
       clearConfirm: 'This deletes all duplicate ban events and resets detection for the affected targets. This action cannot be undone.',
       cleared: 'Cleared {count} duplicate ban records.',
       clearError: 'Could not clear duplicate ban records.',
-      ranking: 'Applications by hit count (top 100)',
-      owner: 'Owner ID',
-      detectionHits: 'Repeated-ban windows',
+      ranking: 'Applications by replay count (top 100)',
+      rankingApp: 'AppId',
+      replayBatches: 'Batches with replays',
+      replayLogs: 'Replayed log entries',
       states: {
         replayed: 'Replay detected',
         observing: 'Observing',

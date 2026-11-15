@@ -15,9 +15,7 @@ export interface AdminPage<T> {
 
 export interface BanSubmissionAppRank {
   appId: string
-  ownerId: string | null
-  lastUserAgent: string | null
-  detectionHits: number
+  replayBatches: number
   replays: number
 }
 
