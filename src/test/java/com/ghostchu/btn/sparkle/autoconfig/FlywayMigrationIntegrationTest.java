@@ -1,6 +1,8 @@
 package com.ghostchu.btn.sparkle.autoconfig;
 
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.mock.env.MockEnvironment;
@@ -9,6 +11,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,16 +29,37 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_ALLOW_DESTRUCTIVE", matches = "true")
 class FlywayMigrationIntegrationTest {
+    private final String sourceUrl = System.getenv("SPARKLE_FLYWAY_TEST_URL");
+    private final String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
+    private final String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
+    private String database;
+    private String url;
+
+    @BeforeEach
+    void createDatabase() throws Exception {
+        try (var connection = connect(sourceUrl, username, password);
+             var statement = connection.createStatement()) {
+            requireDisposableDatabase(connection);
+            String name = "sparkle_flyway_test_" + UUID.randomUUID().toString().replace("-", "");
+            statement.execute("CREATE DATABASE " + name);
+            database = name;
+            String[] parts = sourceUrl.split("\\?", 2);
+            url = parts[0].substring(0, parts[0].lastIndexOf('/') + 1) + database
+                    + (parts.length == 2 ? "?" + parts[1] : "");
+        }
+    }
+
+    @AfterEach
+    void dropDatabase() throws SQLException {
+        if (database == null) return;
+        try (var connection = connect(sourceUrl, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("DROP DATABASE " + database);
+        }
+    }
+
     @Test
     void createsTheCompleteSchemaOnAnEmptyDatabase() throws Exception {
-        String url = System.getenv("SPARKLE_FLYWAY_TEST_URL");
-        String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
-        String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
-
-        try (var connection = connect(url, username, password)) {
-            requireDisposableDatabase(connection);
-        }
-
         Flyway flyway = Flyway.configure()
                 .dataSource(url, username, password)
                 .locations("classpath:db/migration")
@@ -337,12 +361,6 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void upgradesAnAlreadyAppliedIncrementalV68WithoutRepair() throws Exception {
-        String url = System.getenv("SPARKLE_FLYWAY_TEST_URL");
-        String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
-        String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
-        try (var connection = connect(url, username, password)) {
-            requireDisposableDatabase(connection);
-        }
         Flyway.configure().dataSource(url, username, password).target("68")
                 .locations("classpath:db/migration").load().migrate();
         try (var connection = connect(url, username, password);
@@ -358,7 +376,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("69", latest.info().current().getVersion().getVersion());
+        assertEquals("71", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""
@@ -369,6 +387,8 @@ class FlywayMigrationIntegrationTest {
                                        'dashboard_swarm_remove_contributions'))
                       AND to_regprocedure('public.mark_dashboard_swarm_changes()') IS NULL
                       AND to_regprocedure('public.remove_dashboard_swarm_contributions()') IS NULL
+                      AND EXISTS (SELECT 1 FROM pg_index
+                        WHERE indexrelid = 'public.user_traffic_daily_day_idx'::regclass AND indisvalid)
                       AND NOT EXISTS (SELECT 1 FROM app_config_entries
                         WHERE config_key LIKE 'sparkle.homepage-statistics-refresh.modules.bittorrent-traffic%')
                       AND (SELECT COUNT(*) = 3 FROM timescaledb_information.jobs
@@ -384,21 +404,14 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void adoptsTheCurrentProductionSchemaWithoutReplayingHistoricalMigrations() throws Exception {
-        String url = System.getenv("SPARKLE_FLYWAY_TEST_URL");
-        String username = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_USER", "postgres");
-        String password = System.getenv().getOrDefault("SPARKLE_FLYWAY_TEST_PASSWORD", "");
-
-        try (var connection = connect(url, username, password)) {
-            requireDisposableDatabase(connection);
-        }
-
         Flyway flyway = Flyway.configure()
                 .dataSource(url, username, password)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
                 .load();
-        flyway.migrate();
+        Flyway.configure().dataSource(url, username, password).target("29")
+                .locations("classpath:db/migration").load().migrate();
 
         try (var connection = DriverManager.getConnection(url, username, password);
              var statement = connection.createStatement()) {

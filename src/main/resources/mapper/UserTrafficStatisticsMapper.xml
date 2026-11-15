@@ -9,4 +9,23 @@
         FROM user_traffic_daily WHERE user_id=#{uid}
         ORDER BY day DESC LIMIT #{size} OFFSET #{offset}
     </select>
+    <select id="network" resultType="map">
+        WITH totals AS (
+            SELECT day, SUM(upload) AS upload, SUM(download) AS download,
+                   SUM(upload_ack) AS upload_ack, SUM(download_ack) AS download_ack,
+                   SUM(seeding) AS seeding, SUM(downloading) AS downloading, SUM(loss) AS loss
+            FROM user_traffic_daily
+            WHERE day BETWEEN #{from} AND #{through}
+            GROUP BY day
+        )
+        SELECT days.day::date::text AS day,
+               COALESCE(upload, 0)::text AS upload, COALESCE(download, 0)::text AS download,
+               COALESCE(upload_ack, 0)::text AS "uploadAck", COALESCE(download_ack, 0)::text AS "downloadAck",
+               COALESCE(seeding, 0)::text AS seeding, COALESCE(downloading, 0)::text AS downloading,
+               COALESCE(loss, 0)::text AS loss
+        FROM generate_series((SELECT MIN(day) FROM totals)::timestamp,
+                             CAST(#{through} AS timestamp), INTERVAL '1 day') AS days(day)
+        LEFT JOIN totals ON totals.day = days.day::date
+        ORDER BY days.day
+    </select>
 </mapper>

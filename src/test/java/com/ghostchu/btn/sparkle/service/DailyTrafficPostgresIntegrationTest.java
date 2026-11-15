@@ -1,12 +1,14 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.mapper.CareerBatchMapper;
+import com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.sql.DriverManager;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,6 +63,9 @@ class DailyTrafficPostgresIntegrationTest {
             try (var input=getClass().getResourceAsStream("/mapper/CareerBatchMapper.xml")) {
                 new XMLMapperBuilder(input,config,"CareerBatchMapper.xml",config.getSqlFragments()).parse();
             }
+            try (var input = getClass().getResourceAsStream("/mapper/UserTrafficStatisticsMapper.xml")) {
+                new XMLMapperBuilder(input, config, "UserTrafficStatisticsMapper.xml", config.getSqlFragments()).parse();
+            }
             try (var session=new SqlSessionFactoryBuilder().build(config).openSession(connection)) {
                 var mapper=session.getMapper(CareerBatchMapper.class);
                 var row=new HashMap<String,Object>();
@@ -111,6 +116,23 @@ class DailyTrafficPostgresIntegrationTest {
                     assertEquals(120,result.getBigDecimal(1).intValueExact());
                     assertEquals(30,result.getBigDecimal(2).intValueExact());
                 }
+                try (var statement = connection.createStatement()) {
+                    statement.execute("""
+                            INSERT INTO user_traffic_daily (user_id, day, upload, downloading)
+                            VALUES (3, '2026-01-02', 9007199254740993, 0.25), (3, '2026-01-04', 5, 0)
+                            """);
+                }
+                var traffic = session.getMapper(UserTrafficStatisticsMapper.class);
+                var network = traffic.network(LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-04"));
+                assertEquals(3, network.size());
+                assertEquals("9007199254741073", network.getFirst().get("upload"));
+                assertEquals("30", network.getFirst().get("uploadAck"));
+                assertEquals("80", network.getFirst().get("downloadAck"));
+                assertEquals("120.250000", network.getFirst().get("downloading"));
+                assertEquals("20", network.getFirst().get("loss"));
+                assertEquals("2026-01-03", network.get(1).get("day"));
+                assertEquals("0", network.get(1).get("upload"));
+                assertEquals("5", network.getLast().get("upload"));
                 session.rollback();
             }
         }
