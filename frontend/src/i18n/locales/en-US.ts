@@ -2405,6 +2405,7 @@ export default {
       deleted: 'Rule deleted.',
     },
     btn: {
+      missingIpQueryControls: 'This Sparkle3 server did not return all IP query and comment controls. Check that it is running an updated version.',
       title: 'BTN management',
       description:
         'Manage BTN protocols, client abilities, heartbeat queues, PoW, and retention policies without editing application.yaml.',
@@ -2423,6 +2424,7 @@ export default {
       updatedAt: 'Configuration updated: {time}',
       durationHint: 'Currently about {duration}',
       sections: {
+        queryIpControls: 'IP query and comment controls',
         protocol: 'Protocol & handshake',
         reconfigure: 'Reconfigure',
         syncBanHistory: 'Ban history submission',
@@ -2449,6 +2451,7 @@ export default {
         userAvatar: 'Blurred avatar cache',
       },
       sectionDescriptions: {
+        queryIpControls: 'Set proof-of-work requirements for IP queries, comments, and batch counts. Configure the count API rate limit and Redis cache lifetime.',
         protocol: 'Defines the BTN protocol versions accepted by clients.',
         reconfigure:
           'Controls how often clients refresh remote configuration and their randomized first delay.',
@@ -2481,6 +2484,7 @@ export default {
         userAvatar: 'Controls the blurred avatar cache directory, lifetime, and cleanup schedule.',
       },
       fields: {
+        queryIpPowCaptcha: 'Require PoW for IP queries and comment operations',
         minProtocolVersion: 'Minimum protocol version',
         maxProtocolVersion: 'Maximum protocol version',
         interval: 'Submission / fetch interval',
@@ -2543,6 +2547,7 @@ export default {
         cacheDuration: 'Cache lifetime',
       },
       help: {
+        queryIpPowCaptcha: 'Applies to IP and CIDR queries, reading comments, and publishing, editing, and deleting comments.',
         repeatBanSuppression: 'Block new logs for targets that reach the repeated-ban threshold. With this off, BTN still records detected events and filters exact replays.',
         repeatBanWindows: 'Number of qualifying submission windows for the same target before BTN records a repeated-ban event.',
         minProtocolVersion: 'Minimum BTN protocol version accepted from clients.',

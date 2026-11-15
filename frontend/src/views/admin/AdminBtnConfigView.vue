@@ -52,9 +52,23 @@ const durationFields = new Set([
   'sparkle.user-avatar.cache-duration',
 ])
 
+const ipQueryControlOrder = [
+  'powCaptcha',
+  'commentCountPowCaptcha',
+  'commentCountRequestsPerMinute',
+  'commentCountCacheSeconds',
+]
+
 const sections = computed(() => {
+  const ipQueryControls = ipQueryControlOrder.flatMap((name) =>
+    fields.value.filter((field) => field.section === 'queryIp' && field.field === name),
+  )
   const grouped = new Map<string, BtnConfigField[]>()
+  if (ipQueryControls.length) {
+    grouped.set('queryIpControls', ipQueryControls)
+  }
   for (const field of fields.value) {
+    if (field.section === 'queryIp' && ipQueryControlOrder.includes(field.field)) continue
     const section = grouped.get(field.section)
     if (section) {
       section.push(field)
@@ -67,6 +81,12 @@ const sections = computed(() => {
     fields: sectionFields,
   }))
 })
+
+const missingIpQueryControls = computed(() =>
+  fields.value.length > 0 && ipQueryControlOrder.some((name) =>
+    !fields.value.some((field) => field.section === 'queryIp' && field.field === name),
+  ),
+)
 
 const hasEnvironmentOverrides = computed(() =>
   fields.value.some((field) => field.environmentOverride),
@@ -145,12 +165,18 @@ function sectionDescription(section: string) {
   return t(`admin.btn.sectionDescriptions.${section}`)
 }
 
+function fieldTranslationKey(field: BtnConfigField) {
+  return field.section === 'queryIp' && field.field === 'powCaptcha'
+    ? 'queryIpPowCaptcha'
+    : field.field
+}
+
 function fieldLabel(field: BtnConfigField) {
-  return t(`admin.btn.fields.${field.field}`)
+  return t(`admin.btn.fields.${fieldTranslationKey(field)}`)
 }
 
 function fieldHelp(field: BtnConfigField) {
-  const key = `admin.btn.help.${field.field}`
+  const key = `admin.btn.help.${fieldTranslationKey(field)}`
   const translated = t(key)
   return translated === key ? '' : translated
 }
@@ -196,6 +222,10 @@ onMounted(load)
 
     <a-alert v-if="loadError" type="error" show-icon>
       {{ loadError }}
+    </a-alert>
+
+    <a-alert v-if="missingIpQueryControls" type="warning" show-icon>
+      {{ t('admin.btn.missingIpQueryControls') }}
     </a-alert>
 
     <a-alert v-if="hasEnvironmentOverrides" type="warning" show-icon>

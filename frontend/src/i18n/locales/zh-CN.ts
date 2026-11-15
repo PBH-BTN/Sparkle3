@@ -2342,6 +2342,7 @@ export default {
       deleted: '规则已删除。',
     },
     btn: {
+      missingIpQueryControls: '当前 Sparkle3 后端未返回完整的 IP 查询与评论控制项。请确认服务已更新。',
       title: 'BTN 管理',
       description:
         '集中管理 BTN 协议、客户端下发模块、心跳队列、PoW 与数据清理策略，无需修改 application.yaml。',
@@ -2360,6 +2361,7 @@ export default {
       updatedAt: '配置更新时间：{time}',
       durationHint: '当前约为 {duration}',
       sections: {
+        queryIpControls: 'IP 查询与评论控制',
         protocol: '协议与握手',
         reconfigure: 'Reconfigure 重配置',
         syncBanHistory: '封禁记录同步',
@@ -2386,6 +2388,7 @@ export default {
         userAvatar: '模糊头像缓存',
       },
       sectionDescriptions: {
+        queryIpControls: '设置 IP 查询、评论和批量计数的工作量证明，并控制计数 API 的请求频率和 Redis 缓存有效期。',
         protocol: '控制 BTN 客户端可接受的协议版本范围。',
         reconfigure: '控制客户端重新拉取远程配置的频率和首轮随机延迟。',
         syncBanHistory: '控制客户端提交封禁记录的接口、频率与 PoW 要求。',
@@ -2412,6 +2415,7 @@ export default {
         userAvatar: '控制动态模糊头像缓存的目录、有效期和清理计划。',
       },
       fields: {
+        queryIpPowCaptcha: 'IP 查询与评论操作启用 PoW',
         minProtocolVersion: '最低协议版本',
         maxProtocolVersion: '最高协议版本',
         interval: '上报 / 拉取间隔',
@@ -2474,6 +2478,7 @@ export default {
         cacheDuration: '缓存有效期',
       },
       help: {
+        queryIpPowCaptcha: '适用于单 IP 和网段查询、读取评论以及发表、编辑和删除评论。',
         repeatBanSuppression: '目标达到重复封禁阈值后拦截新日志。关闭后仍会记录检测到的事件并过滤相同日志的重传。',
         repeatBanWindows: '同一目标达到此上报窗口数时，BTN 记录持续重复封禁事件。',
         minProtocolVersion: '客户端支持的 BTN 协议版本下限。',
