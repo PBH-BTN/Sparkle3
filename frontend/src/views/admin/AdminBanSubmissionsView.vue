@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Message, Modal } from '@arco-design/web-vue'
 import { adminApi } from '@/api/admin'
 import type { BanSubmissionEvent } from '@/api/adminTypes'
 import PageHeader from '@/components/PageHeader.vue'
@@ -11,6 +12,7 @@ const { t } = useI18n()
 const { formatDate, formatNumber } = useFormatters()
 const rows = ref<BanSubmissionEvent[]>([])
 const loading = ref(false)
+const clearing = ref(false)
 const error = ref('')
 const current = ref(1)
 const total = ref(0)
@@ -60,12 +62,39 @@ function changePageSize(size: number) {
   void load(1)
 }
 
+function confirmClear() {
+  Modal.confirm({
+    title: t('admin.banSubmissions.clear'),
+    content: t('admin.banSubmissions.clearConfirm'),
+    okButtonProps: { status: 'danger' },
+    async onOk() {
+      clearing.value = true
+      try {
+        const { deleted } = await adminApi.clearBanSubmissions()
+        Message.success(t('admin.banSubmissions.cleared', { count: formatNumber(deleted) }))
+        await load(1)
+      } catch (cause) {
+        Message.error(errorMessage(cause, t('admin.banSubmissions.clearError')))
+        throw cause
+      } finally {
+        clearing.value = false
+      }
+    },
+  })
+}
+
 onMounted(() => load(1))
 </script>
 
 <template>
   <div class="page-stack">
-    <PageHeader :title="t('admin.nav.banSubmissions')" :description="t('admin.banSubmissions.description')" />
+    <PageHeader :title="t('admin.nav.banSubmissions')" :description="t('admin.banSubmissions.description')">
+      <template #actions>
+        <a-button status="danger" :loading="clearing" @click="confirmClear">
+          {{ t('admin.banSubmissions.clear') }}
+        </a-button>
+      </template>
+    </PageHeader>
 
     <a-form class="surface-card ban-filters" :model="filters" layout="inline" @submit-success="search">
       <a-form-item :label="t('admin.banSubmissions.app')">

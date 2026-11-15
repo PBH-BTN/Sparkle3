@@ -1115,6 +1115,10 @@ export default {
       invalidApp: 'Enter a valid application ID',
       empty: 'No matching events',
       loadError: 'Could not load duplicate ban events',
+      clear: 'Clear records',
+      clearConfirm: 'This deletes all duplicate ban events and resets detection for the affected targets. This action cannot be undone.',
+      cleared: 'Cleared {count} duplicate ban records.',
+      clearError: 'Could not clear duplicate ban records.',
       states: {
         replayed: 'Replay detected',
         observing: 'Observing',

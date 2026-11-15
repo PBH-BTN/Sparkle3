@@ -1093,6 +1093,10 @@ export default {
       invalidApp: '请输入有效的应用 ID',
       empty: '没有符合条件的事件',
       loadError: '无法加载重复封禁事件',
+      clear: '清空记录',
+      clearConfirm: '将删除所有重复封禁事件，并重置相关目标的检测状态。此操作无法撤销。',
+      cleared: '已清空 {count} 条重复封禁记录。',
+      clearError: '无法清空重复封禁记录。',
       states: {
         replayed: '发现重传',
         observing: '观察中',
