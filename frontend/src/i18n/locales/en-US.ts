@@ -1019,6 +1019,7 @@ export default {
     nav: {
       dashboard: 'Dashboard',
       tasks: 'Task status & schedule',
+      banSubmissions: 'Duplicate bans',
       homepageStatistics: 'Homepage refresh',
       users: 'Users',
       userApps: 'Applications',
@@ -1097,6 +1098,30 @@ export default {
         swarms24h: 'Swarm records · 24h',
       },
     },
+    banSubmissions: {
+      description: 'Review replayed ban logs and targets repeatedly reported across submission windows.',
+      app: 'Application ID',
+      kind: 'Event type',
+      status: 'Status',
+      target: 'Peer network / port',
+      rule: 'Module / rule',
+      firstSeen: 'First seen',
+      lastSeen: 'Last seen',
+      windows: 'Peak windows',
+      replays: 'Replayed logs',
+      repeated: 'Repeated bans',
+      suppressed: 'New logs blocked',
+      search: 'Search',
+      invalidApp: 'Enter a valid application ID',
+      empty: 'No matching events',
+      loadError: 'Could not load duplicate ban events',
+      states: {
+        replayed: 'Replay detected',
+        observing: 'Observing',
+        blocking: 'Blocking',
+        quiet: 'Inactive',
+      },
+    },
     tasks: {
       title: 'Task status & schedule',
       description:
@@ -1173,6 +1198,10 @@ export default {
         AFTER_DELETE: 'Post-delete refresh',
       },
       items: {
+        'ban-submission-cleanup': {
+          name: 'Clean up ban submission records',
+          description: 'Remove expired ban fingerprints and detection summaries.',
+        },
         'ip-query-comment-reaudit': {
           name: 'IP comment re-review',
           description:
@@ -2436,6 +2465,8 @@ export default {
         maxProtocolVersion: 'Maximum protocol version',
         interval: 'Submission / fetch interval',
         randomInitialDelay: 'Randomized initial delay',
+        repeatBanSuppression: 'Block repeated bans',
+        repeatBanWindows: 'Repeated-ban window threshold',
         endpoint: 'Endpoint',
         powCaptcha: 'Require proof of work',
         dataRetentionTime: 'Swarm retention',
@@ -2486,6 +2517,8 @@ export default {
         cacheDuration: 'Cache lifetime',
       },
       help: {
+        repeatBanSuppression: 'Block new logs for targets that reach the repeated-ban threshold. With this off, BTN still records detected events and filters exact replays.',
+        repeatBanWindows: 'Number of qualifying submission windows for the same target before BTN records a repeated-ban event.',
         minProtocolVersion: 'Minimum BTN protocol version accepted from clients.',
         maxProtocolVersion: 'Must be greater than or equal to the minimum version.',
         interval:

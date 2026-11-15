@@ -32,6 +32,7 @@ import type {
   BackgroundTaskStatusResponse,
   BanHistoryDeletePreview,
   BanHistoryDeleteResult,
+  BanSubmissionEvent,
   BtnConfigView,
   CompressionPolicyInput,
   ConfigMigrationResult,
@@ -99,6 +100,15 @@ function queryString(values: object) {
 
 export const adminApi = {
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
+  banSubmissions: (query: {
+    page: number
+    size: number
+    appId?: string
+    kind?: string
+    status?: string
+    since?: string
+    until?: string
+  }) => request<AdminPage<BanSubmissionEvent>>(`/api/admin/ban-submissions${queryString(query)}`),
   taskStatus: () => request<BackgroundTaskStatusResponse>('/api/admin/tasks'),
   runTask: (id: string) =>
     request<TaskTriggerResponse>(`/api/admin/tasks/${encodeURIComponent(id)}/run`, {

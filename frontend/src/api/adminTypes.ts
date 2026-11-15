@@ -13,6 +13,21 @@ export interface AdminPage<T> {
   pages: number
 }
 
+export interface BanSubmissionEvent {
+  id: string
+  appId: string
+  peerNetwork: string
+  peerPort: number
+  moduleName: string
+  ruleName: string | null
+  firstSeen: string
+  lastSeen: string
+  peakWindows: number
+  replays: number
+  suppressed: number
+  status: 'replayed' | 'observing' | 'blocking' | 'quiet'
+}
+
 export interface SystemSample {
   timestamp: number
   cpuUsage: number

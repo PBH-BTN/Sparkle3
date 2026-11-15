@@ -997,6 +997,7 @@ export default {
     nav: {
       dashboard: '仪表盘',
       tasks: '任务状态与计划',
+      banSubmissions: '重复封禁',
       homepageStatistics: '首页数据刷新',
       users: '用户管理',
       userApps: '应用管理',
@@ -1075,6 +1076,30 @@ export default {
         swarms24h: '24 小时种群记录',
       },
     },
+    banSubmissions: {
+      description: '查看重传的封禁日志，以及在多个上报窗口中被反复封禁的目标。',
+      app: '应用 ID',
+      kind: '事件类型',
+      status: '状态',
+      target: '目标网段 / 端口',
+      rule: '模块 / 规则',
+      firstSeen: '首次出现',
+      lastSeen: '最近出现',
+      windows: '最高窗口数',
+      replays: '重传日志',
+      repeated: '持续重复封禁',
+      suppressed: '拦截的新日志',
+      search: '查询',
+      invalidApp: '请输入有效的应用 ID',
+      empty: '没有符合条件的事件',
+      loadError: '无法加载重复封禁事件',
+      states: {
+        replayed: '发现重传',
+        observing: '观察中',
+        blocking: '拦截中',
+        quiet: '已停止',
+      },
+    },
     tasks: {
       title: '任务状态与计划',
       description:
@@ -1151,6 +1176,10 @@ export default {
         AFTER_DELETE: '删除后刷新',
       },
       items: {
+        'ban-submission-cleanup': {
+          name: '清理封禁上报记录',
+          description: '清理已过期的封禁指纹和检测摘要。',
+        },
         'ip-query-comment-reaudit': {
           name: 'IP 评论复审',
           description:
@@ -2367,6 +2396,8 @@ export default {
         maxProtocolVersion: '最高协议版本',
         interval: '上报 / 拉取间隔',
         randomInitialDelay: '首次随机延迟',
+        repeatBanSuppression: '拦截持续重复封禁',
+        repeatBanWindows: '重复封禁窗口阈值',
         endpoint: '接口地址',
         powCaptcha: '要求 PoW 校验',
         dataRetentionTime: '种群数据保留时长',
@@ -2417,6 +2448,8 @@ export default {
         cacheDuration: '缓存有效期',
       },
       help: {
+        repeatBanSuppression: '目标达到重复封禁阈值后拦截新日志。关闭后仍会记录检测到的事件并过滤相同日志的重传。',
+        repeatBanWindows: '同一目标达到此上报窗口数时，BTN 记录持续重复封禁事件。',
         minProtocolVersion: '客户端支持的 BTN 协议版本下限。',
         maxProtocolVersion: '必须大于或等于最低协议版本。',
         interval: '单位：毫秒。修改后会更新下发给客户端的能力配置。',

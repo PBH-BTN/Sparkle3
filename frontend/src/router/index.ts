@@ -173,6 +173,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminTaskStatusView.vue'),
         },
         {
+          path: 'ban-submissions',
+          name: 'admin-ban-submissions',
+          component: () => import('@/views/admin/AdminBanSubmissionsView.vue'),
+        },
+        {
           path: 'homepage-statistics',
           name: 'admin-homepage-statistics',
           component: () => import('@/views/admin/AdminHomepageStatisticsView.vue'),

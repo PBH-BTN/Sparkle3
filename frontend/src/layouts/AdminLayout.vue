@@ -30,6 +30,7 @@ const session = useSessionStore()
 const allItems = computed(() => [
   { key: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: IconDashboard },
   { key: '/admin/tasks', label: t('admin.nav.tasks'), icon: IconSchedule },
+  { key: '/admin/ban-submissions', label: t('admin.nav.banSubmissions'), icon: IconThunderbolt },
   {
     key: '/admin/homepage-statistics',
     label: t('admin.nav.homepageStatistics'),
