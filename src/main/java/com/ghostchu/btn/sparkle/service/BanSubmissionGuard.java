@@ -168,6 +168,11 @@ public class BanSubmissionGuard {
                 current, limit, total, (total + limit - 1) / limit);
     }
 
+    @Transactional
+    public int clearEvents() {
+        return mapper.clearEvents();
+    }
+
     @Scheduled(cron = CLEANUP_CRON)
     @MonitoredScheduledTask(
             id = "ban-submission-cleanup",

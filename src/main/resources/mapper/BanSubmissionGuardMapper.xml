@@ -108,6 +108,18 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <delete id="clearEvents">
+        WITH events AS (
+            SELECT app_id, target FROM public.ban_submission_target
+            WHERE detected OR replays > 0
+            ORDER BY app_id, target
+            FOR UPDATE
+        )
+        DELETE FROM public.ban_submission_target AS state
+        USING events
+        WHERE state.app_id = events.app_id AND state.target = events.target
+    </delete>
+
     <select id="dropExpiredFingerprints" resultType="string" affectData="true" flushCache="true" useCache="false">
         SELECT drop_chunks('public.ban_submission_fingerprint', older_than => CAST(#{cutoff} AS timestamptz))::text
     </select>

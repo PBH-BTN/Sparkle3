@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.ghostchu.btn.sparkle.controller.admin.AdminBanSubmissionController;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
+import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
+import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard.Candidate;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
@@ -19,6 +21,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -41,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -168,7 +174,9 @@ class FlywayMigrationIntegrationTest {
             assertEquals(batch.size(), events.total());
             assertEquals(20, events.records().size());
             assertEquals(1, events.records().getFirst().replays());
-            var mvc = MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard)).build();
+            var mvc = MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard))
+                    .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                    .build();
             mvc.perform(get("/api/admin/ban-submissions").param("appId", "30").param("kind", "replay")
                             .param("page", "2").param("size", "20").param("since", start.toString()))
                     .andExpect(status().isOk())
@@ -177,6 +185,22 @@ class FlywayMigrationIntegrationTest {
                     .andExpect(jsonPath("$.records[0].peerNetwork").value("1.1.1.0/24"));
             assertEquals(1, mapper.deleteExpiredTargets(start.plusDays(1), start.minusDays(29), 5000));
             assertEquals(batch.size(), mapper.deleteExpiredTargets(start.plusDays(31), start.plusDays(1), 5000));
+            session.rollback();
+
+            var admin = new SparkleUserDetails(new User().setId(1L).setRole("admin"), null);
+            SecurityContextHolder.getContext().setAuthentication(
+                    UsernamePasswordAuthenticationToken.authenticated(admin, null, admin.getAuthorities()));
+            try {
+                mvc.perform(delete("/api/admin/ban-submissions").param("appId", "999"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.deleted").value(batch.size()));
+            } finally {
+                SecurityContextHolder.clearContext();
+            }
+            assertEquals(0, guard.events(1, 20, null, null, null, null, null).total());
+            assertEquals(0, guard.clearEvents());
+            assertTrue(guard.filter(30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
+            assertEquals(1, guard.events(1, 20, 30L, "replay", null, null, null).total());
         }
     }
 
