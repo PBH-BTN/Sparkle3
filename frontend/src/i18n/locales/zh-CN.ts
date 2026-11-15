@@ -42,6 +42,7 @@ export default {
     },
   },
   common: {
+    contentModerationRejected: '内容未通过审核，请修改后重试。',
     networkError: '请求未完成，请检查网络连接后重试。',
     invalidResponse: '服务器响应异常，请稍后重试。',
     query: '查询',
@@ -483,6 +484,7 @@ export default {
     deletedSuccess: '用户应用已删除。',
   },
   profile: {
+    nicknameRejectedByDictionary: '昵称未通过审核。请修改 GitHub 昵称后重新登录。',
     title: '个人资料',
     email: '电子邮件',
     registerAt: '注册时间',
@@ -1017,11 +1019,13 @@ export default {
       btn: 'BTN 管理',
       githubSync: 'GitHub 规则同步',
       flarumIntegration: 'Flarum 集成',
+      contentModeration: '记录内容审核',
       aiModeration: 'IP 查询与 AI 审核',
       ipQueryComments: '评论管理',
       databaseConfig: '配置数据库',
     },
     common: {
+    contentModerationRejected: '内容未通过审核，请修改后重试。',
       search: '搜索',
       keyword: '关键词',
       status: '状态',
@@ -1191,6 +1195,14 @@ export default {
           name: 'IP 评论复审',
           description:
             '定期重新审核待审核和审核失败的 IP 评论；已有进行中审核任务的评论会被跳过。',
+        },
+        'content-moderation-load': {
+          name: '加载内容审核词库',
+          description: '启动时从数据库加载词库和开关。',
+        },
+        'content-moderation-refresh': {
+          name: '同步内容审核词库',
+          description: '检查数据库中的词库版本并应用更新。',
         },
         'ai-moderation-worker': {
           name: 'AI 审核队列处理',
@@ -2599,6 +2611,18 @@ export default {
       endpointCopied: 'API 端点已复制。',
       copyFailed: '复制失败，请手动选择端点文本。',
       updatedAt: '最后更新：{time}',
+    },
+    contentModeration: {
+      enabled: '启用词库审核',
+      words: '敏感词库',
+      hint: '每行一个词。空白行和以 # 开头的行会被忽略。启用后审核 BTN 上报、GitHub 昵称和 IP 评论。',
+      versions: '已保存版本 {saved}，本实例生效版本 {active}',
+      hits: '本实例已跳过的记录：Swarm {swarm}，封禁 {ban}',
+      save: '保存设置',
+      saved: '设置已保存',
+      reload: '重新加载',
+      reloadConfirm: '重新加载会丢弃未保存的编辑。继续吗？',
+      loadFailed: '无法加载审核设置',
     },
     aiModeration: {
       title: 'IP 查询与 AI 内容审核',

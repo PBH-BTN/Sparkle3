@@ -65,6 +65,11 @@ const allItems = computed(() => [
     icon: IconLink,
   },
   {
+    key: '/admin/content-moderation',
+    label: t('admin.nav.contentModeration'),
+    icon: IconMessage,
+  },
+  {
     key: '/admin/ai-moderation',
     label: t('admin.nav.aiModeration'),
     icon: IconThunderbolt,

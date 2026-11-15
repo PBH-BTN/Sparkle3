@@ -277,6 +277,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminFlarumIntegrationView.vue'),
         },
         {
+          path: 'content-moderation',
+          name: 'admin-content-moderation',
+          component: () => import('@/views/admin/AdminContentModerationView.vue'),
+        },
+        {
           path: 'ai-moderation',
           name: 'admin-ai-moderation',
           component: () => import('@/views/admin/AdminAiModerationView.vue'),

@@ -5,6 +5,7 @@ import type {
   Announcement,
   AnnouncementInput,
   AiModerationAdmin,
+  ContentModerationSettings,
   AiModerationSettingsInput,
   AnalyseModule,
   AfdianSettings,
@@ -615,6 +616,13 @@ export const adminApi = {
       `/api/admin/memberships/licenses?${search.toString()}`,
     )
   },
+  contentModeration: () =>
+    request<ContentModerationSettings>('/api/admin/content-moderation'),
+  saveContentModeration: (payload: Pick<ContentModerationSettings, 'version' | 'enabled' | 'words'>) =>
+    request<ContentModerationSettings>('/api/admin/content-moderation', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   aiModeration: () =>
     request<AiModerationAdmin>('/api/admin/ai-moderation'),
   updateAiModeration: (body: AiModerationSettingsInput) =>

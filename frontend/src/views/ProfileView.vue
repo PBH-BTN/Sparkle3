@@ -144,7 +144,11 @@ onMounted(async () => {
             :title="t('profile.moderationReason')"
           >
             <div v-if="profile.user.nicknameModerationReason">
-              {{ t('profile.username') }}：{{ profile.user.nicknameModerationReason }}
+              {{ t('profile.username') }}：{{
+                profile.user.nicknameModerationReason === 'content_moderation_rejected'
+                  ? t('profile.nicknameRejectedByDictionary')
+                  : profile.user.nicknameModerationReason
+              }}
             </div>
             <div v-if="profile.user.avatarModerationReason">
               {{ t('profile.avatar') }}：{{ profile.user.avatarModerationReason }}

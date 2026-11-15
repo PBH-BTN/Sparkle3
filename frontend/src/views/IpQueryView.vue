@@ -878,7 +878,9 @@ onMounted(() => {
                         class="review-alert"
                         :title="
                           t('ipQueryPage.comments.reviewFailed', {
-                            reason: comment.moderationReason || 'N/A',
+                            reason: comment.moderationReason === 'content_moderation_rejected'
+                              ? t('common.contentModerationRejected')
+                              : comment.moderationReason || 'N/A',
                           })
                         "
                       />
@@ -995,7 +997,9 @@ onMounted(() => {
           <a-alert
             v-if="revision.moderationReason"
             type="warning"
-            :title="revision.moderationReason"
+            :title="revision.moderationReason === 'content_moderation_rejected'
+              ? t('common.contentModerationRejected')
+              : revision.moderationReason"
           />
         </div>
       </div>

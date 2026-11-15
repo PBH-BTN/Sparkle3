@@ -1111,6 +1111,15 @@ export interface AiModerationJob {
   completedAt: string | null
 }
 
+export interface ContentModerationSettings {
+  version: string
+  enabled: boolean
+  words: string
+  activeVersion: string
+  swarmHits: number
+  banHits: number
+}
+
 export interface AiModerationAdmin {
   settings: AiModerationSettings
   comments: IpQueryCommentSettings

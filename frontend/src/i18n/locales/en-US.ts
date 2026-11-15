@@ -43,6 +43,7 @@ export default {
     },
   },
   common: {
+    contentModerationRejected: 'This content did not pass moderation. Edit it and try again.',
     networkError: 'The request could not be completed. Check your connection and try again.',
     invalidResponse: 'The server returned an invalid response. Please try again later.',
     query: 'Search',
@@ -500,6 +501,7 @@ export default {
     deletedSuccess: 'User application deleted.',
   },
   profile: {
+    nicknameRejectedByDictionary: 'Your display name did not pass moderation. Update it on GitHub and sign in again.',
     title: 'Profile',
     email: 'Email',
     registerAt: 'Registered',
@@ -1039,11 +1041,13 @@ export default {
       btn: 'BTN management',
       githubSync: 'GitHub rule sync',
       flarumIntegration: 'Flarum integration',
+      contentModeration: 'Record content moderation',
       aiModeration: 'IP lookup & AI review',
       ipQueryComments: 'Comment moderation',
       databaseConfig: 'Config database',
     },
     common: {
+    contentModerationRejected: 'This content did not pass moderation. Edit it and try again.',
       search: 'Search',
       keyword: 'Keyword',
       status: 'Status',
@@ -1213,6 +1217,14 @@ export default {
           name: 'IP comment re-review',
           description:
             'Periodically re-reviews pending and failed IP comments. Comments that already have an active review job are skipped.',
+        },
+        'content-moderation-load': {
+          name: 'Load content moderation dictionary',
+          description: 'Loads the dictionary and its settings from the database at startup.',
+        },
+        'content-moderation-refresh': {
+          name: 'Sync content moderation dictionary',
+          description: 'Checks the stored dictionary version and applies updates.',
         },
         'ai-moderation-worker': {
           name: 'AI moderation worker',
@@ -2680,6 +2692,18 @@ export default {
       endpointCopied: 'API endpoint copied.',
       copyFailed: 'Copy failed. Select the endpoint text manually.',
       updatedAt: 'Last updated: {time}',
+    },
+    contentModeration: {
+      enabled: 'Enable dictionary checks',
+      words: 'Sensitive words',
+      hint: 'Enter one word per line. Blank lines and lines beginning with # are ignored. Checks apply to BTN reports, GitHub display names, and IP comments.',
+      versions: 'Saved version {saved}, active version on this instance {active}',
+      hits: 'Records skipped on this instance: Swarm {swarm}, bans {ban}',
+      save: 'Save settings',
+      saved: 'Settings saved',
+      reload: 'Reload',
+      reloadConfirm: 'Reloading discards unsaved edits. Continue?',
+      loadFailed: 'Could not load moderation settings',
     },
     aiModeration: {
       title: 'IP lookup & AI content moderation',

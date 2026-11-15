@@ -61,7 +61,10 @@ async function performRequest<T>(url: string, init: RequestInit = {}): Promise<T
         && typeof payload.message === 'string' && payload.message.trim()
         ? String(payload.message)
         : i18n.global.t('common.requestFailed')
-    throw new ApiError(message, response.status, payload)
+    const translated = message === 'content_moderation_rejected'
+      ? i18n.global.t('common.contentModerationRejected')
+      : message
+    throw new ApiError(translated, response.status, payload)
   }
 
   if (response.status === 204) {
