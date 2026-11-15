@@ -423,3 +423,5 @@ Windows 环境可使用：
 ## 已移除的首页流量任务
 
 V69 移除首页 BitTorrent 流量承载及其专用排行任务，不再注册 homepage-statistics-bittorrent-traffic 和 bittorrent-traffic-rankings。首页数据刷新只管理其余六个模块，旧流量模块的手动执行与配置请求作为未知模块拒绝。旧 YAML 中的流量模块配置不再迁入数据库。
+
+新版首页 BitTorrent 流量承载由登录后的页面请求触发，从每日流量表读取最近 30 天的全站按日汇总。
