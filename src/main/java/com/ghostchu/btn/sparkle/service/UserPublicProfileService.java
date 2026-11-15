@@ -27,14 +27,7 @@ public class UserPublicProfileService {
         UserPrivacySettings privacy = privacySettings(target);
         boolean self = sender.getId().equals(target.getId());
 
-        String nickname = null;
-        if (self || (target.isNicknamePubliclyVisible()
-                && privacy.allowsFullUsername())) {
-            nickname = target.getNickname();
-        } else if (target.isNicknamePubliclyVisible()
-                && privacy.allowsBlurredUsername()) {
-            nickname = blurNickname(target.getNickname());
-        }
+        String nickname = self ? target.getNickname() : publicNickname(target, privacy);
 
         String avatarUrl = null;
         if (self || (target.isAvatarPubliclyVisible()
@@ -94,6 +87,20 @@ public class UserPublicProfileService {
             return UserPrivacySettings.defaults(0);
         }
         return privacyService.get(user.getId());
+    }
+
+    public String publicNickname(User user) {
+        return publicNickname(user, privacySettings(user));
+    }
+
+    private String publicNickname(User user, UserPrivacySettings privacy) {
+        if (!user.isNicknamePubliclyVisible()) {
+            return null;
+        }
+        if (privacy.allowsFullUsername()) {
+            return user.getNickname();
+        }
+        return privacy.allowsBlurredUsername() ? blurNickname(user.getNickname()) : null;
     }
 
     public User requireUser(long userId) throws BusinessException {

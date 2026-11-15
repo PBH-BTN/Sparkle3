@@ -37,15 +37,7 @@ public class RulePreviewService {
     private final IRuleService ruleService;
 
     public @NotNull RulePreviewResponse preview() {
-        List<RulePreviewSection> sections = new ArrayList<>();
-        sections.add(new RulePreviewSection(
-                "ip_denylist",
-                providerEntries(denyListProviders)
-        ));
-        sections.add(new RulePreviewSection(
-                "ip_allowlist",
-                providerEntries(allowListProviders)
-        ));
+        List<RulePreviewSection> sections = new ArrayList<>(ipSections(false));
 
         List<Rule> peerRules = ruleService.list(new QueryWrapper<Rule>()
                 .in("type", PEER_RULE_TYPES)
@@ -69,6 +61,24 @@ public class RulePreviewService {
             ));
         }
         return new RulePreviewResponse(List.copyOf(sections), OffsetDateTime.now(ZoneOffset.UTC));
+    }
+
+    List<RulePreviewSection> ipSections(boolean separateManualRules) {
+        List<RulePreviewEntry> denyEntries = new ArrayList<>(providerEntries(
+                separateManualRules
+                        ? denyListProviders.stream()
+                                .filter(provider -> !"manual".equals(providerSource(provider)))
+                                .toList()
+                        : denyListProviders
+        ));
+        if (separateManualRules) {
+            ruleService.getRulesByType("ip_denylist").forEach(rule ->
+                    denyEntries.add(new RulePreviewEntry("manual", rule.getCategory(), rule.getContent())));
+        }
+        return List.of(
+                new RulePreviewSection("ip_denylist", List.copyOf(denyEntries)),
+                new RulePreviewSection("ip_allowlist", providerEntries(allowListProviders))
+        );
     }
 
     List<RulePreviewEntry> providerEntries(List<? extends Object> providers) {

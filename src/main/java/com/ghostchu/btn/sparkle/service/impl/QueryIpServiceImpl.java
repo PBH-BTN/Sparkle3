@@ -32,17 +32,14 @@ public class QueryIpServiceImpl {
     @Autowired
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
-    private IUserappsHeartbeatService userappsHeartbeatService;
-    @Autowired
-    private IUserappService userappService;
-    @Autowired
-    private IUserService userService;
+    private IpQueryLabelService labelService;
     @Autowired
     private BtnRuntimeConfigService btnConfigService;
 
     public @NotNull IpQueryResult queryIp(@NotNull String peerIp) {
+        IpScope scope;
         try {
-            peerIp = IpScope.parse(peerIp).canonicalCidr();
+            scope = IpScope.parse(peerIp);
         } catch (Exception exception) {
             throw new IllegalArgumentException(
                     exception.getMessage() == null
@@ -51,6 +48,7 @@ public class QueryIpServiceImpl {
                     exception
             );
         }
+        peerIp = scope.canonicalCidr();
         String queryIpIncludeModules = btnConfigService.text(
                 "queryIpStatistics",
                 "includeModules"
@@ -79,7 +77,6 @@ public class QueryIpServiceImpl {
         long concurrentDownloadWindow = btnConfigService.reportingWindowMillis("syncSwarm");
         IpQueryResult result = new IpQueryResult();
         result.setColor("#808080");
-        result.setLabels(new ArrayList<>());
         var bans = banHistoryService.fetchBanHistory(
                 OffsetDateTime.now().minus(bansCountingDuration, ChronoUnit.MILLIS),
                 peerIp,
@@ -135,17 +132,10 @@ public class QueryIpServiceImpl {
         distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
         result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
 
-        var heartbeats = userappsHeartbeatService.fetchIpHeartbeatRecords(peerIp, OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));
-        if (!heartbeats.isEmpty()) {
-            var firstResult = heartbeats.getFirst();
-            var btnUserApp = userappService.getById(firstResult.getUserappId());
-            if (btnUserApp != null) {
-                var btnUser = userService.getById(btnUserApp.getOwner());
-                if (btnUser != null) {
-                    result.getLabels().add("BTN用户");
-                }
-            }
-        }
+        var labels = labelService.labels(scope.network(),
+                OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));
+        result.setLabelDetails(labels);
+        result.setLabels(labels.stream().map(IpQueryLabelService.Label::text).distinct().toList());
         return result;
     }
 
@@ -157,6 +147,8 @@ public class QueryIpServiceImpl {
         private String color;
         @JsonProperty("labels")
         private List<String> labels = Collections.emptyList();
+        @JsonProperty("label_details")
+        private List<IpQueryLabelService.Label> labelDetails = Collections.emptyList();
         @JsonProperty("bans")
         private IpQueryResultBans bans;
         @JsonProperty("swarms")
