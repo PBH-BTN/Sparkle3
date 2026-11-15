@@ -3,7 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message, Modal } from '@arco-design/web-vue'
 import { adminApi } from '@/api/admin'
-import type { BanSubmissionEvent } from '@/api/adminTypes'
+import type { BanSubmissionAppRank, BanSubmissionEvent } from '@/api/adminTypes'
 import PageHeader from '@/components/PageHeader.vue'
 import TablePager from '@/components/TablePager.vue'
 import { errorMessage, useFormatters } from '@/utils/format'
@@ -14,6 +14,9 @@ const rows = ref<BanSubmissionEvent[]>([])
 const loading = ref(false)
 const clearing = ref(false)
 const error = ref('')
+const ranking = ref<BanSubmissionAppRank[]>([])
+const rankingLoading = ref(false)
+const rankingError = ref('')
 const current = ref(1)
 const total = ref(0)
 const pageSize = ref(20)
@@ -62,6 +65,18 @@ function changePageSize(size: number) {
   void load(1)
 }
 
+async function loadRanking() {
+  rankingLoading.value = true
+  rankingError.value = ''
+  try {
+    ranking.value = await adminApi.banSubmissionRanking()
+  } catch (cause) {
+    rankingError.value = errorMessage(cause, t('admin.banSubmissions.loadError'))
+  } finally {
+    rankingLoading.value = false
+  }
+}
+
 function confirmClear() {
   Modal.confirm({
     title: t('admin.banSubmissions.clear'),
@@ -72,7 +87,7 @@ function confirmClear() {
       try {
         const { deleted } = await adminApi.clearBanSubmissions()
         Message.success(t('admin.banSubmissions.cleared', { count: formatNumber(deleted) }))
-        await load(1)
+        await Promise.all([load(1), loadRanking()])
       } catch (cause) {
         Message.error(errorMessage(cause, t('admin.banSubmissions.clearError')))
         throw cause
@@ -83,7 +98,7 @@ function confirmClear() {
   })
 }
 
-onMounted(() => load(1))
+onMounted(() => Promise.all([load(1), loadRanking()]))
 </script>
 
 <template>
@@ -168,6 +183,26 @@ onMounted(() => load(1))
         @page-size-change="changePageSize"
       />
     </div>
+
+    <section class="table-card surface-card">
+      <h2 class="ranking-title">{{ t('admin.banSubmissions.ranking') }}</h2>
+      <a-alert v-if="rankingError" type="error">{{ rankingError }}</a-alert>
+      <a-table :data="ranking" :loading="rankingLoading" :pagination="{ pageSize: 10 }" :scroll="{ x: 650 }" row-key="appId">
+        <template #columns>
+          <a-table-column :title="t('admin.banSubmissions.app')" data-index="appId" />
+          <a-table-column :title="t('admin.banSubmissions.owner')" data-index="ownerId">
+            <template #cell="{ record }">{{ record.ownerId ?? '—' }}</template>
+          </a-table-column>
+          <a-table-column :title="t('admin.banSubmissions.detectionHits')">
+            <template #cell="{ record }">{{ formatNumber(record.detectionHits) }}</template>
+          </a-table-column>
+          <a-table-column :title="t('admin.banSubmissions.replays')">
+            <template #cell="{ record }">{{ formatNumber(record.replays) }}</template>
+          </a-table-column>
+        </template>
+        <template #empty><a-empty :description="t('admin.banSubmissions.empty')" /></template>
+      </a-table>
+    </section>
   </div>
 </template>
 
@@ -187,6 +222,11 @@ onMounted(() => load(1))
 
 .ban-pagination {
   padding: 12px;
+}
+
+.ranking-title {
+  margin: 16px;
+  font-size: 16px;
 }
 
 @media (max-width: 720px) {

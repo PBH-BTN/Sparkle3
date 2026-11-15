@@ -13,6 +13,13 @@ export interface AdminPage<T> {
   pages: number
 }
 
+export interface BanSubmissionAppRank {
+  appId: string
+  ownerId: string | null
+  detectionHits: number
+  replays: number
+}
+
 export interface BanSubmissionEvent {
   id: string
   appId: string

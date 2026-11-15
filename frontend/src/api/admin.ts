@@ -33,6 +33,7 @@ import type {
   BanHistoryDeletePreview,
   BanHistoryDeleteResult,
   BanSubmissionEvent,
+  BanSubmissionAppRank,
   BtnConfigView,
   CompressionPolicyInput,
   ConfigMigrationResult,
@@ -111,6 +112,7 @@ export const adminApi = {
   }) => request<AdminPage<BanSubmissionEvent>>(`/api/admin/ban-submissions${queryString(query)}`),
   clearBanSubmissions: () =>
     request<{ deleted: number }>('/api/admin/ban-submissions', { method: 'DELETE' }),
+  banSubmissionRanking: () => request<BanSubmissionAppRank[]>('/api/admin/ban-submissions/ranking'),
   taskStatus: () => request<BackgroundTaskStatusResponse>('/api/admin/tasks'),
   runTask: (id: string) =>
     request<TaskTriggerResponse>(`/api/admin/tasks/${encodeURIComponent(id)}/run`, {

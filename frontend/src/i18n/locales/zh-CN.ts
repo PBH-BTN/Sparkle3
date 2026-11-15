@@ -1097,6 +1097,9 @@ export default {
       clearConfirm: '将删除所有重复封禁事件，并重置相关目标的检测状态。此操作无法撤销。',
       cleared: '已清空 {count} 条重复封禁记录。',
       clearError: '无法清空重复封禁记录。',
+      ranking: '应用触发排行（前 100）',
+      owner: '所属用户 ID',
+      detectionHits: '重复封禁命中窗口',
       states: {
         replayed: '发现重传',
         observing: '观察中',
