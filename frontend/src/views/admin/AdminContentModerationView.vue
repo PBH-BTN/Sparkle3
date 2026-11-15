@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef, onMounted } from 'vue'
+import { reactive, ref, shallowRef, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { adminApi } from '@/api/admin'
@@ -8,15 +8,14 @@ import PageHeader from '@/components/PageHeader.vue'
 
 const { t } = useI18n()
 const settings = shallowRef<ContentModerationSettings>()
-const enabled = ref(false)
-const words = ref('')
+const form = reactive({ enabled: false, words: '' })
 const busy = ref(false)
 const failed = ref(false)
 
 function apply(value: ContentModerationSettings) {
   settings.value = value
-  enabled.value = value.enabled
-  words.value = value.words
+  form.enabled = value.enabled
+  form.words = value.words
 }
 
 async function load() {
@@ -37,8 +36,8 @@ async function save() {
   try {
     apply(await adminApi.saveContentModeration({
       version: settings.value.version,
-      enabled: enabled.value,
-      words: words.value,
+      enabled: form.enabled,
+      words: form.words,
     }))
     Message.success(t('admin.contentModeration.saved'))
   } catch {
@@ -61,12 +60,12 @@ onMounted(load)
         </template>
       </a-result>
       <a-spin v-else :loading="busy" style="width: 100%">
-        <a-form v-if="settings" layout="vertical" :disabled="busy" @submit-success="save">
+        <a-form v-if="settings" :model="form" layout="vertical" :disabled="busy" @submit-success="save">
           <a-form-item :label="t('admin.contentModeration.enabled')">
-            <a-switch v-model="enabled" />
+            <a-switch v-model="form.enabled" />
           </a-form-item>
           <a-form-item :label="t('admin.contentModeration.words')" :extra="t('admin.contentModeration.hint')">
-            <a-textarea v-model="words" :max-length="1000000" :rows="16" :spellcheck="false" />
+            <a-textarea v-model="form.words" :max-length="1000000" :rows="16" :spellcheck="false" />
           </a-form-item>
           <p>{{ t('admin.contentModeration.versions', { saved: settings.version, active: settings.activeVersion }) }}</p>
           <p>{{ t('admin.contentModeration.hits', { swarm: settings.swarmHits, ban: settings.banHits }) }}</p>
