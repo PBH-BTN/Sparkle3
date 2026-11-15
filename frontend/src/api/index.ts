@@ -11,6 +11,7 @@ import type {
   ClientDiscoveryRecord,
   ContactEmailRequest,
   ContactEmailResult,
+  DailyIpFlags,
   DailyTraffic,
   FilterOptions,
   GithubRegistrationResult,
@@ -71,6 +72,8 @@ export const uiApi = {
   session: () => request<SessionResponse>('/api/ui/session'),
   features: () => request<FeatureAvailability>('/api/ui/features'),
   home: () => request<HomeStats>('/api/ui/home'),
+  homeIpFlags: (from: string, to: string) =>
+    request<DailyIpFlags[]>(`/api/ui/home/ip-flags?${new URLSearchParams({ from, to })}`),
   homeNetworkStatistics: (days: number, source: StatisticsSource) =>
     request<HomeNetworkStatisticsResponse>(
       `/api/ui/statistics/home?days=${days}&source=${encodeURIComponent(source)}`,

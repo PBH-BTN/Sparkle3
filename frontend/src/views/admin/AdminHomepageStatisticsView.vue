@@ -256,7 +256,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
                 type="outline"
                 :loading="refreshingModule === config.module"
                 :disabled="
-                  moduleStatus(config.module)?.running
+                  moduleStatus(config.module)?.running ||
+                  (config.module === 'ip-flags' && moduleStatus(config.module)?.enabled === false)
                 "
                 @click="refresh(config.module)"
               >
