@@ -187,11 +187,17 @@ onMounted(() => Promise.all([load(1), loadRanking()]))
     <section class="table-card surface-card">
       <h2 class="ranking-title">{{ t('admin.banSubmissions.ranking') }}</h2>
       <a-alert v-if="rankingError" type="error">{{ rankingError }}</a-alert>
-      <a-table :data="ranking" :loading="rankingLoading" :pagination="{ pageSize: 10 }" :scroll="{ x: 650 }" row-key="appId">
+      <a-table :data="ranking" :loading="rankingLoading" :pagination="{ pageSize: 10 }" :scroll="{ x: 950 }" row-key="appId">
         <template #columns>
           <a-table-column :title="t('admin.banSubmissions.app')" data-index="appId" />
           <a-table-column :title="t('admin.banSubmissions.owner')" data-index="ownerId">
             <template #cell="{ record }">{{ record.ownerId ?? '—' }}</template>
+          </a-table-column>
+          <a-table-column :title="t('admin.apps.userAgent')" data-index="lastUserAgent" :width="300">
+            <template #cell="{ record }">
+              <code v-if="record.lastUserAgent" class="ban-rule">{{ record.lastUserAgent }}</code>
+              <span v-else>—</span>
+            </template>
           </a-table-column>
           <a-table-column :title="t('admin.banSubmissions.detectionHits')">
             <template #cell="{ record }">{{ formatNumber(record.detectionHits) }}</template>
