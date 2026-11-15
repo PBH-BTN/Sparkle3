@@ -78,6 +78,7 @@ declare module 'vue' {
     EChart: typeof import('./components/EChart.vue')['default']
     EmptyState: typeof import('./components/EmptyState.vue')['default']
     GlobalAnnouncements: typeof import('./components/GlobalAnnouncements.vue')['default']
+    HomeNetworkTraffic: typeof import('./components/HomeNetworkTraffic.vue')['default']
     LanguageSwitcher: typeof import('./components/LanguageSwitcher.vue')['default']
     LicenseRevocations: typeof import('./components/LicenseRevocations.vue')['default']
     LifetimeTrafficCard: typeof import('./components/LifetimeTrafficCard.vue')['default']
