@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import org.jetbrains.annotations.NotNull;
@@ -7,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -18,6 +21,9 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface IUserappService extends IService<Userapp> {
+    Page<Userapp> pageByBanCount(Page<Userapp> page, QueryWrapper<Userapp> filters,
+                                OffsetDateTime start, OffsetDateTime end);
+
     @Nullable
     Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent);
 

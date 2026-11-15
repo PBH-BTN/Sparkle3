@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
@@ -44,6 +45,13 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
             .maximumSize(10000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
             .build();
+
+    @Override
+    public Page<Userapp> pageByBanCount(Page<Userapp> page, QueryWrapper<Userapp> filters,
+                                       OffsetDateTime start, OffsetDateTime end) {
+        page.setCountId("countFilteredApplications");
+        return baseMapper.pageByBanCount(page, filters, start, end);
+    }
 
     @Nullable
     @Transactional

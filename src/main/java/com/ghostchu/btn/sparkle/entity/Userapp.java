@@ -73,4 +73,7 @@ public class Userapp implements Serializable {
 
     @TableField("btn_bypass")
     private Boolean btnBypass;
+
+    @TableField(exist = false)
+    private Long banCount;
 }

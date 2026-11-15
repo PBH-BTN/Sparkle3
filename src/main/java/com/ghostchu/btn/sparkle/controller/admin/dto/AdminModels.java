@@ -85,7 +85,8 @@ public final class AdminModels {
             String bannedReason,
             Boolean btnBypass,
             String installationId,
-            String lastUserAgent
+            String lastUserAgent,
+            String banCount
     ) {
     }
 

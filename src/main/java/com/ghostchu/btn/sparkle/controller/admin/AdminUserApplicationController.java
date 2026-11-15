@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +44,12 @@ public class AdminUserApplicationController {
             @RequestParam(defaultValue = "20") long size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long ownerId,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer banDays
     ) {
+        if (banDays != null && banDays != 1 && banDays != 3 && banDays != 7) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a 1, 3 or 7 day window");
+        }
         long safePage = Math.max(1, page);
         long safeSize = Math.min(100, Math.max(1, size));
         QueryWrapper<Userapp> wrapper = new QueryWrapper<>();
@@ -65,9 +70,14 @@ public class AdminUserApplicationController {
         } else if ("active".equalsIgnoreCase(status)) {
             wrapper.isNull("banned_at");
         }
-        wrapper.orderByDesc("created_at").orderByDesc("id");
-
-        Page<Userapp> result = userappService.page(new Page<>(safePage, safeSize), wrapper);
+        Page<Userapp> result = new Page<>(safePage, safeSize);
+        if (banDays == null) {
+            wrapper.orderByDesc("created_at").orderByDesc("id");
+            userappService.page(result, wrapper);
+        } else {
+            OffsetDateTime end = OffsetDateTime.now(ZoneOffset.UTC);
+            userappService.pageByBanCount(result, wrapper, end.minusDays(banDays), end);
+        }
         Map<Long, User> owners = loadOwners(result.getRecords());
         List<AdminApplicationView> records = result.getRecords().stream()
                 .map(application -> toView(application, owners.get(application.getOwner())))
@@ -233,7 +243,8 @@ public class AdminUserApplicationController {
                 application.getBannedReason(),
                 application.getBtnBypass(),
                 application.getInstallationId(),
-                application.getLastUserAgent()
+                application.getLastUserAgent(),
+                application.getBanCount() == null ? null : application.getBanCount().toString()
         );
     }
 
