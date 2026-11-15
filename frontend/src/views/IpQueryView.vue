@@ -18,6 +18,7 @@ import {
   IconUser,
 } from '@arco-design/web-vue/es/icon'
 import EmptyState from '@/components/EmptyState.vue'
+import IpQueryLabels from '@/components/IpQueryLabels.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TablePager from '@/components/TablePager.vue'
 import { uiApi } from '@/api'
@@ -427,6 +428,7 @@ onMounted(() => {
                 >
                   {{ flagLabel(flag) }}
                 </a-tag>
+                <IpQueryLabels :result="lookup.activity" />
               </div>
             </div>
           </div>

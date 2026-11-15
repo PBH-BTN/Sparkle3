@@ -912,6 +912,7 @@ export default {
     missingIp: 'The request is missing the IP parameter.',
     loadFailed: 'Unable to load the IP query result.',
     btnUser: 'BTN user',
+    btnBypass: 'BTN Bypass',
     flags: 'Flags',
     poweredBy: 'Powered by BTN 3.1',
   },

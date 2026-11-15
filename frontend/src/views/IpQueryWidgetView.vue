@@ -13,6 +13,7 @@ import {
   IconUpload,
 } from '@arco-design/web-vue/es/icon'
 import EmptyState from '@/components/EmptyState.vue'
+import IpQueryLabels from '@/components/IpQueryLabels.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import { uiApi } from '@/api'
 import type { IpQueryResult, IpQueryRecord, IpSwarmRecord } from '@/api/types'
@@ -60,10 +61,6 @@ const swarmColumns = computed<TableColumnData[]>(() => [
   { title: t('ipQuery.firstSeen'), slotName: 'firstSeen', width: 180 },
   { title: t('ipQuery.lastSeen'), slotName: 'lastSeen', width: 180 },
 ])
-
-function displayLabel(label: string) {
-  return label === 'BTN用户' ? t('ipQuery.btnUser') : label
-}
 
 function shortModuleName(name: string | null | undefined) {
   if (!name) return 'N/A'
@@ -119,9 +116,7 @@ onMounted(load)
               </div>
             </div>
             <div v-if="result.labels?.length" class="ip-labels">
-              <a-tag v-for="label in result.labels" :key="label" color="arcoblue">
-                {{ displayLabel(label) }}
-              </a-tag>
+              <IpQueryLabels :result="result" />
             </div>
           </a-card>
 

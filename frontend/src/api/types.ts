@@ -754,6 +754,11 @@ export interface IpSwarmRecord {
 export interface IpQueryResult {
   color: string
   labels: string[]
+  label_details?: {
+    type: 'ip_denylist' | 'ip_allowlist' | 'btn_user' | 'btn_bypass'
+    source: string | null
+    name: string | null
+  }[]
   bans: {
     duration: number
     total: number
