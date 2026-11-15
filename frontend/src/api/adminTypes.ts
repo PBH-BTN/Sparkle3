@@ -163,6 +163,7 @@ export interface AdminUser {
   lastLoginAt: string
   bannedAt: string | null
   bannedReason: string | null
+  unbanAt: string | null
   githubLogin: string | null
   scoreBytes: string
 }
@@ -196,6 +197,7 @@ export interface AdminApplication {
   lastSeenAt: string | null
   bannedAt: string | null
   bannedReason: string | null
+  unbanAt: string | null
   btnBypass: boolean | null
   installationId: string | null
   lastUserAgent: string | null
@@ -214,8 +216,6 @@ export interface AdminApplicationQuery {
 export interface AdminApplicationInput {
   ownerId: number
   comment: string
-  banned?: boolean
-  bannedReason?: string
   btnBypass?: boolean | null
 }
 

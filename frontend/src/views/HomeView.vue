@@ -20,7 +20,7 @@ import type {
   StackedAreaChart,
   StatisticsSource,
 } from '@/api/types'
-import { errorMessage } from '@/utils/format'
+import { errorMessage, useFormatters } from '@/utils/format'
 import { useSessionStore } from '@/stores/session'
 import {
   distributionPieOption,
@@ -30,6 +30,7 @@ import {
 const router = useRouter()
 const session = useSessionStore()
 const { t } = useI18n()
+const { formatDate } = useFormatters()
 const stats = ref<HomeStats | null>(null)
 const loading = ref(true)
 const networkStats = ref<HomeNetworkStatisticsResponse | null>(null)
@@ -182,6 +183,9 @@ onMounted(() => {
       :title="t('home.accountPaused')"
     >
       {{ t('home.accountPausedText', { reason: session.user.bannedReason || 'N/A' }) }}
+      <div v-if="session.user.unbanAt">
+        {{ t('common.suspensionEndsAt', { time: formatDate(session.user.unbanAt) }) }}
+      </div>
     </a-alert>
 
     <GlobalAnnouncements placement="HOME_HERO" variant="hero" />

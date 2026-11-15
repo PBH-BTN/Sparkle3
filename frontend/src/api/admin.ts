@@ -145,10 +145,10 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  setUserBanned: (id: string, banned: boolean, reason?: string) =>
+  setUserBanned: (id: string, banned: boolean, reason?: string, unbanAt?: string | null) =>
     request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/ban`, {
       method: 'POST',
-      body: JSON.stringify({ banned, reason }),
+      body: JSON.stringify({ banned, reason, unbanAt }),
     }),
   adjustUserPoints: (id: string, amount: string, reason: string) =>
     request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/points`, {
@@ -172,10 +172,10 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  banApplication: (id: number, reason: string) =>
+  setApplicationBanned: (id: number, banned: boolean, reason?: string, unbanAt?: string | null) =>
     request<AdminApplication>(`/api/admin/userapps/${id}/ban`, {
       method: 'POST',
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ banned, reason, unbanAt }),
     }),
   resetApplicationSecret: (id: number) =>
     request<AdminApplicationCredentials>(`/api/admin/userapps/${id}/reset-secret`, {

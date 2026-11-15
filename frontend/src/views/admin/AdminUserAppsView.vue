@@ -16,6 +16,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import TablePager from '@/components/TablePager.vue'
+import SuspensionModal from '@/components/admin/SuspensionModal.vue'
 import { adminApi } from '@/api/admin'
 import type {
   AdminApplication,
@@ -51,14 +52,10 @@ const editingApplication = ref<AdminApplication | null>(null)
 const editor = reactive<{
   ownerId: number | undefined
   comment: string
-  banned: boolean
-  bannedReason: string
   btnBypass: boolean
 }>({
   ownerId: undefined,
   comment: '',
-  banned: false,
-  bannedReason: '',
   btnBypass: false,
 })
 
@@ -67,7 +64,6 @@ const credentials = ref<AdminApplicationCredentials | null>(null)
 const banVisible = ref(false)
 const banSaving = ref(false)
 const banApplication = ref<AdminApplication | null>(null)
-const banReason = ref('')
 
 const columns = computed<TableColumnData[]>(() => [
   { title: t('admin.apps.id'), slotName: 'id', width: 90, align: 'center' },
@@ -130,8 +126,6 @@ function openCreate() {
   Object.assign(editor, {
     ownerId: undefined,
     comment: '',
-    banned: false,
-    bannedReason: '',
     btnBypass: false,
   })
   editorVisible.value = true
@@ -143,8 +137,6 @@ function openEdit(application: AdminApplication) {
   Object.assign(editor, {
     ownerId: application.ownerId,
     comment: application.comment,
-    banned: Boolean(application.bannedAt),
-    bannedReason: application.bannedReason ?? '',
     btnBypass: Boolean(application.btnBypass),
   })
   editorVisible.value = true
@@ -163,8 +155,6 @@ async function saveApplication() {
   const body: AdminApplicationInput = {
     ownerId: editor.ownerId,
     comment: editor.comment.trim(),
-    banned: editor.banned,
-    bannedReason: editor.bannedReason.trim(),
     btnBypass: editor.btnBypass,
   }
   try {
@@ -197,17 +187,12 @@ async function resetSecret(application: AdminApplication) {
   }
 }
 
-async function suspendApplication() {
+async function suspendApplication(reason: string, unbanAt: string | null) {
   const application = banApplication.value
   if (!application) return
-  const reason = banReason.value.trim()
-  if (!reason) {
-    Message.warning(t('admin.apps.banReasonRequired'))
-    return
-  }
   banSaving.value = true
   try {
-    await adminApi.banApplication(application.id, reason)
+    await adminApi.setApplicationBanned(application.id, true, reason, unbanAt)
     Message.success(t('admin.common.updated'))
     banVisible.value = false
     await load()
@@ -220,13 +205,7 @@ async function suspendApplication() {
 
 async function restoreApplication(application: AdminApplication) {
   try {
-    await adminApi.updateApplication(application.id, {
-      ownerId: application.ownerId,
-      comment: application.comment,
-      banned: false,
-      bannedReason: '',
-      btnBypass: application.btnBypass,
-    })
+    await adminApi.setApplicationBanned(application.id, false)
     Message.success(t('admin.common.updated'))
     await load()
   } catch (error) {
@@ -259,11 +238,14 @@ function confirmResetSecret(application: AdminApplication) {
   })
 }
 
+function openBan(application: AdminApplication) {
+  banApplication.value = application
+  banVisible.value = true
+}
+
 function confirmToggleBanned(application: AdminApplication) {
   if (!application.bannedAt) {
-    banApplication.value = application
-    banReason.value = ''
-    banVisible.value = true
+    openBan(application)
     return
   }
   Modal.confirm({
@@ -385,7 +367,7 @@ onMounted(load)
         </template>
         <template #flags="{ record }">
           <div class="flag-cell">
-            <a-tooltip v-if="record.bannedAt" :content="record.bannedReason || ''">
+            <a-tooltip v-if="record.bannedAt" :content="[record.bannedReason, record.unbanAt && t('common.suspensionEndsAt', { time: formatDate(record.unbanAt) })].filter(Boolean).join(' · ')">
               <a-tag color="red">{{ t('admin.common.banned') }}</a-tag>
             </a-tooltip>
             <a-tag v-else color="green">{{ t('admin.common.active') }}</a-tag>
@@ -418,6 +400,10 @@ onMounted(load)
                 <a-doption @click="confirmResetSecret(record)">
                   <template #icon><IconSafe /></template>
                   {{ t('admin.apps.resetSecret') }}
+                </a-doption>
+                <a-doption v-if="record.bannedAt" @click="openBan(record)">
+                  <template #icon><IconLock /></template>
+                  {{ t('admin.suspension.edit') }}
                 </a-doption>
                 <a-doption @click="confirmToggleBanned(record)">
                   <template #icon>
@@ -468,19 +454,6 @@ onMounted(load)
               <a-switch v-model="editor.btnBypass" />
             </a-form-item>
           </a-col>
-          <a-col v-if="editingId != null" :xs="24" :md="12">
-            <a-form-item :label="t('admin.common.status')">
-              <a-switch v-model="editor.banned">
-                <template #checked>{{ t('admin.common.banned') }}</template>
-                <template #unchecked>{{ t('admin.common.active') }}</template>
-              </a-switch>
-            </a-form-item>
-          </a-col>
-          <a-col v-if="editingId != null && editor.banned" :xs="24">
-            <a-form-item :label="t('admin.apps.banReason')">
-              <a-textarea v-model="editor.bannedReason" :auto-size="{ minRows: 2, maxRows: 5 }" />
-            </a-form-item>
-          </a-col>
         </a-row>
         <a-descriptions
           v-if="editingApplication"
@@ -505,30 +478,16 @@ onMounted(load)
       </a-form>
     </a-modal>
 
-    <a-modal
+    <SuspensionModal
       v-model:visible="banVisible"
-      :title="t('admin.apps.suspend')"
-      :footer="false"
-      width="520px"
-    >
-      <a-form :model="{ banReason }" layout="vertical">
-        <a-form-item :label="t('admin.apps.banReason')" required>
-          <a-textarea
-            v-model="banReason"
-            :placeholder="t('admin.apps.banReasonPlaceholder')"
-            :max-length="500"
-            :auto-size="{ minRows: 3, maxRows: 6 }"
-            show-word-limit
-          />
-        </a-form-item>
-        <div class="modal-actions">
-          <a-button @click="banVisible = false">{{ t('admin.common.cancel') }}</a-button>
-          <a-button status="danger" type="primary" :loading="banSaving" @click="suspendApplication">
-            {{ t('admin.apps.suspend') }}
-          </a-button>
-        </div>
-      </a-form>
-    </a-modal>
+      :title="t(banApplication?.bannedAt ? 'admin.suspension.edit' : 'admin.apps.suspend')"
+      :subject="banApplication?.comment ?? ''"
+      :submit-label="t(banApplication?.bannedAt ? 'admin.common.save' : 'admin.apps.suspend')"
+      :saving="banSaving"
+      :initial-reason="banApplication?.bannedReason"
+      :initial-unban-at="banApplication?.unbanAt"
+      @submit="suspendApplication"
+    />
 
     <a-modal
       v-model:visible="credentialsVisible"

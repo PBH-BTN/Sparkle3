@@ -15,6 +15,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
 import TablePager from '@/components/TablePager.vue'
+import SuspensionModal from '@/components/admin/SuspensionModal.vue'
 import { adminApi } from '@/api/admin'
 import type { AdminUser, AdminUserInput } from '@/api/adminTypes'
 import { useSessionStore } from '@/stores/session'
@@ -50,7 +51,6 @@ const editorForm = reactive<AdminUserInput>({
 const banVisible = ref(false)
 const banSaving = ref(false)
 const banUser = ref<AdminUser | null>(null)
-const banReason = ref('')
 
 const pointsVisible = ref(false)
 const pointsSaving = ref(false)
@@ -77,7 +77,7 @@ const columns = computed<TableColumnData[]>(() => [
   { title: t('admin.users.points'), slotName: 'points', width: 140 },
   { title: t('admin.users.registerAt'), slotName: 'registerAt', width: 150 },
   { title: t('admin.users.lastLoginAt'), slotName: 'lastLoginAt', width: 150 },
-  { title: t('admin.common.actions'), slotName: 'actions', width: 280 },
+  { title: t('admin.common.actions'), slotName: 'actions', width: 390 },
 ])
 
 async function load() {
@@ -170,15 +170,14 @@ async function saveUser() {
 
 function openBan(user: AdminUser) {
   banUser.value = user
-  banReason.value = user.bannedReason ?? ''
   banVisible.value = true
 }
 
-async function confirmBan() {
+async function confirmBan(reason: string, unbanAt: string | null) {
   if (!banUser.value) return
   banSaving.value = true
   try {
-    await adminApi.setUserBanned(banUser.value.id, true, banReason.value.trim())
+    await adminApi.setUserBanned(banUser.value.id, true, reason, unbanAt)
     Message.success(t('admin.common.updated'))
     banVisible.value = false
     await load()
@@ -324,7 +323,7 @@ onMounted(load)
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1320 }"
+        :scroll="{ x: 1430 }"
         row-key="id"
         stripe
       >
@@ -355,7 +354,7 @@ onMounted(load)
               {{ roleLabel(record.role) }}
             </a-tag>
             <span>{{ privacySummary(record) }}</span>
-            <a-tooltip v-if="record.bannedAt" :content="record.bannedReason || ''">
+            <a-tooltip v-if="record.bannedAt" :content="[record.bannedReason, record.unbanAt && t('common.suspensionEndsAt', { time: formatDate(record.unbanAt) })].filter(Boolean).join(' · ')">
               <a-tag color="red" size="small">{{ t('admin.common.banned') }}</a-tag>
             </a-tooltip>
             <a-tag v-else color="green" size="small">{{ t('admin.common.active') }}</a-tag>
@@ -396,14 +395,13 @@ onMounted(load)
               {{ t('admin.users.restore') }}
             </a-button>
             <a-button
-              v-else
               type="text"
               size="small"
               :disabled="record.id === session.user?.id"
               @click="openBan(record)"
             >
               <template #icon><IconLock /></template>
-              {{ t('admin.users.suspend') }}
+              {{ t(record.bannedAt ? 'admin.suspension.edit' : 'admin.users.suspend') }}
             </a-button>
             <a-popconfirm :content="t('admin.users.deleteConfirm')" @ok="deleteUser(record)">
               <a-button
@@ -492,28 +490,16 @@ onMounted(load)
       </a-form>
     </a-modal>
 
-    <a-modal
+    <SuspensionModal
       v-model:visible="banVisible"
-      :title="t('admin.users.suspendTitle')"
-      :footer="false"
-      width="520px"
-    >
-      <a-form :model="{ banReason }" layout="vertical">
-        <a-form-item :label="t('admin.users.suspendReason')" required>
-          <a-textarea
-            v-model="banReason"
-            :placeholder="t('admin.users.suspendReasonPlaceholder')"
-            :auto-size="{ minRows: 3, maxRows: 6 }"
-          />
-        </a-form-item>
-        <div class="modal-actions">
-          <a-button @click="banVisible = false">{{ t('admin.common.cancel') }}</a-button>
-          <a-button status="danger" type="primary" :loading="banSaving" @click="confirmBan">
-            {{ t('admin.users.suspend') }}
-          </a-button>
-        </div>
-      </a-form>
-    </a-modal>
+      :title="t(banUser?.bannedAt ? 'admin.suspension.edit' : 'admin.users.suspendTitle')"
+      :subject="banUser?.nickname ?? ''"
+      :submit-label="t(banUser?.bannedAt ? 'admin.common.save' : 'admin.users.suspend')"
+      :saving="banSaving"
+      :initial-reason="banUser?.bannedReason"
+      :initial-unban-at="banUser?.unbanAt"
+      @submit="confirmBan"
+    />
 
     <a-modal
       v-model:visible="pointsVisible"

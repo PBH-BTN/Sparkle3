@@ -176,6 +176,9 @@ onMounted(async () => {
                   })
                 }}
                 {{ t('profile.bannedHint') }}
+                <div v-if="profile.user.unbanAt">
+                  {{ t('common.suspensionEndsAt', { time: formatDate(profile.user.unbanAt) }) }}
+                </div>
               </div>
             </a-descriptions-item>
             <a-descriptions-item :label="t('profile.privacyProtection')">

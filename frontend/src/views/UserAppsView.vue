@@ -19,6 +19,13 @@ import { geoIp } from '@/utils/peerRecords'
 const router = useRouter()
 const { t } = useI18n()
 const { formatDate } = useFormatters()
+
+function suspensionDetails(application: { bannedReason: string | null; unbanAt: string | null }) {
+  const reason = t('userApps.pausedReason', { reason: application.bannedReason || 'N/A' })
+  return application.unbanAt
+    ? `${reason} · ${t('common.suspensionEndsAt', { time: formatDate(application.unbanAt) })}`
+    : reason
+}
 const applications = ref<UserApplication[]>([])
 const loading = ref(true)
 const actionLoading = ref<string | null>(null)
@@ -173,7 +180,7 @@ onMounted(loadApplications)
           <template #status="{ record }">
             <a-tooltip
               v-if="record.bannedAt"
-              :content="t('userApps.pausedReason', { reason: record.bannedReason || 'N/A' })"
+              :content="suspensionDetails(record)"
             >
               <a-tag color="red">{{ t('common.paused') }}</a-tag>
             </a-tooltip>
@@ -238,9 +245,7 @@ onMounted(loadApplications)
                 </div>
                 <a-tooltip
                   v-if="application.bannedAt"
-                  :content="t('userApps.pausedReason', {
-                    reason: application.bannedReason || 'N/A',
-                  })"
+                  :content="suspensionDetails(application)"
                 >
                   <a-tag color="red">{{ t('common.paused') }}</a-tag>
                 </a-tooltip>
@@ -279,11 +284,7 @@ onMounted(loadApplications)
                 type="error"
                 class="mobile-ban-reason"
               >
-                {{
-                  t('userApps.pausedReason', {
-                    reason: application.bannedReason || 'N/A',
-                  })
-                }}
+                {{ suspensionDetails(application) }}
               </a-alert>
 
               <footer class="mobile-app-actions">

@@ -33,6 +33,7 @@ export interface SessionUser {
   registerAt: string | null
   bannedAt: string | null
   bannedReason: string | null
+  unbanAt: string | null
   role: string
   admin: boolean
   moderator: boolean
@@ -548,6 +549,7 @@ export interface UserApplication {
   lastSeenAt: string | null
   bannedAt: string | null
   bannedReason: string | null
+  unbanAt: string | null
   btnBypass: boolean | null
   exemptIps: string[]
 }

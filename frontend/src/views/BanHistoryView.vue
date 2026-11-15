@@ -12,6 +12,7 @@ import {
   IconSearch,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import SuspensionModal from '@/components/admin/SuspensionModal.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import EChart from '@/components/EChart.vue'
 import TablePager from '@/components/TablePager.vue'
@@ -42,7 +43,6 @@ const structuredVisible = ref(false)
 const quickBanVisible = ref(false)
 const quickBanSaving = ref(false)
 const quickBanUserappId = ref<number | null>(null)
-const quickBanReason = ref('')
 const peerInsights = ref<BanPeerInsightsResponse | null>(null)
 const peerInsightsLoading = ref(false)
 const peerInsightDays = ref(7)
@@ -232,20 +232,14 @@ function showStructuredData(record: BanHistoryRecord) {
 function openQuickBan(record: BanHistoryRecord) {
   if (!record.userappId) return
   quickBanUserappId.value = record.userappId
-  quickBanReason.value = ''
   quickBanVisible.value = true
 }
 
-async function submitQuickBan() {
+async function submitQuickBan(reason: string, unbanAt: string | null) {
   if (!quickBanUserappId.value) return
-  const reason = quickBanReason.value.trim()
-  if (!reason) {
-    Message.warning(t('banHistory.disableReasonRequired'))
-    return
-  }
   quickBanSaving.value = true
   try {
-    await adminApi.banApplication(quickBanUserappId.value, reason)
+    await adminApi.setApplicationBanned(quickBanUserappId.value, true, reason, unbanAt)
     Message.success(t('banHistory.disabledSuccess'))
     quickBanVisible.value = false
   } catch (error) {
@@ -507,33 +501,14 @@ onMounted(async () => {
       />
     </a-card>
 
-    <a-modal
+    <SuspensionModal
       v-model:visible="quickBanVisible"
       :title="t('banHistory.quickDisableTitle', { id: quickBanUserappId ?? 'N/A' })"
-      :footer="false"
-      width="560px"
-    >
-      <a-alert type="warning" show-icon>
-        {{ t('banHistory.quickDisableHint') }}
-      </a-alert>
-      <a-form :model="{ reason: quickBanReason }" layout="vertical" class="quick-ban-form">
-        <a-form-item :label="t('banHistory.disableReason')" required>
-          <a-textarea
-            v-model="quickBanReason"
-            :max-length="500"
-            show-word-limit
-            :auto-size="{ minRows: 4, maxRows: 8 }"
-            :placeholder="t('banHistory.disableReasonPlaceholder')"
-          />
-        </a-form-item>
-      </a-form>
-      <div class="modal-actions">
-        <a-button @click="quickBanVisible = false">{{ t('common.cancel') }}</a-button>
-        <a-button status="danger" :loading="quickBanSaving" @click="submitQuickBan">
-          {{ t('banHistory.quickDisable') }}
-        </a-button>
-      </div>
-    </a-modal>
+      :subject="t('banHistory.quickDisableHint')"
+      :submit-label="t('admin.apps.suspend')"
+      :saving="quickBanSaving"
+      @submit="submitQuickBan"
+    />
 
     <a-modal
       v-model:visible="structuredVisible"
@@ -591,16 +566,6 @@ onMounted(async () => {
   min-width: 62px;
   color: var(--color-text-2);
   font-size: 12px;
-}
-
-.quick-ban-form {
-  margin-top: 18px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .structured-data {
