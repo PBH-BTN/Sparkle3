@@ -47,6 +47,13 @@ const contactEmailVariables = [
   '{{recipientName}}',
   '{{recipientId}}',
 ]
+const trafficAudiences = [
+  { key: 'homepageReportedStaffOnly', label: 'admin.settings.homepageReportedAudience' },
+  { key: 'homepageConfirmedStaffOnly', label: 'admin.settings.homepageConfirmedAudience' },
+  { key: 'homepageActivityStaffOnly', label: 'admin.settings.homepageActivityAudience' },
+  { key: 'homepageAverageLossStaffOnly', label: 'admin.settings.homepageAverageLossAudience' },
+  { key: 'homepageTotalLossStaffOnly', label: 'admin.settings.homepageTotalLossAudience' },
+] as const
 const form = reactive<RuntimeConfig>({
   protocolMinVersion: 20,
   protocolMaxVersion: 20,
@@ -54,7 +61,10 @@ const form = reactive<RuntimeConfig>({
   clientDiscoveryEnabled: false,
   swarmStatisticsEnabled: true,
   homepageNetworkTrafficEnabled: true,
-  homepageNetworkTrafficStaffOnly: false,
+  homepageReportedStaffOnly: false,
+  homepageConfirmedStaffOnly: false,
+  homepageActivityStaffOnly: false,
+  homepageAverageLossStaffOnly: false,
   homepageTotalLossStaffOnly: true,
   swarmStatisticsRefreshMinutes: 60,
   swarmStatisticsWindowDays: 7,
@@ -621,14 +631,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
             <a-form-item :label="t('admin.settings.homepageNetworkTrafficEnabled')">
               <a-switch v-model="form.homepageNetworkTrafficEnabled" />
             </a-form-item>
-            <a-form-item :label="t('admin.settings.homepageNetworkTrafficAudience')">
-              <a-select v-model="form.homepageNetworkTrafficStaffOnly">
-                <a-option :value="false">{{ t('admin.settings.trafficAudienceSignedIn') }}</a-option>
-                <a-option :value="true">{{ t('admin.settings.trafficAudienceStaff') }}</a-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item :label="t('admin.settings.homepageTotalLossAudience')">
-              <a-select v-model="form.homepageTotalLossStaffOnly">
+            <a-form-item v-for="field in trafficAudiences" :key="field.key" :label="t(field.label)">
+              <a-select v-model="form[field.key]">
                 <a-option :value="false">{{ t('admin.settings.trafficAudienceSignedIn') }}</a-option>
                 <a-option :value="true">{{ t('admin.settings.trafficAudienceStaff') }}</a-option>
               </a-select>

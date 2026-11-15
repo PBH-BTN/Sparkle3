@@ -10,9 +10,16 @@ import { stackedAreaChartOption } from '@/utils/charts'
 import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
 
-const props = defineProps<{ showTraffic: boolean; showTotalLoss: boolean }>()
+const props = defineProps<{
+  showReported: boolean
+  showConfirmed: boolean
+  showActivity: boolean
+  showAverageLoss: boolean
+  showTotalLoss: boolean
+}>()
 const { t } = useI18n()
-const sectionTitle = computed(() => t(props.showTraffic ? 'home.networkTrafficTitle' : 'home.networkTrafficTotalLoss'))
+const showTraffic = computed(() => props.showReported || props.showConfirmed || props.showActivity || props.showAverageLoss)
+const sectionTitle = computed(() => t(showTraffic.value ? 'home.networkTrafficTitle' : 'home.networkTrafficTotalLoss'))
 const { formatBytes, formatHours } = useFormatters()
 const days = ref(30)
 const records = ref<DailyTraffic[]>([])
@@ -36,22 +43,20 @@ const cumulativeRows = computed(() => {
   const keys = Object.keys(totals) as (keyof typeof totals)[]
   let seeding = 0
   let downloading = 0
-  let lossRatios = 0
-  let averageLoss = 0n
-  return records.value.slice(-days.value).map(({ day, metrics }, index) => {
+  const start = new Date()
+  start.setUTCDate(start.getUTCDate() - days.value + 1)
+  const firstDay = start.toISOString().slice(0, 10)
+  return records.value.filter(row => row.day >= firstDay).map(({ day, metrics }) => {
     for (const key of keys) totals[key] += BigInt(metrics[key] ?? '0')
     seeding += Number(metrics.seeding ?? '0')
     downloading += Number(metrics.downloading ?? '0')
-    averageLoss += BigInt(metrics.averageLoss ?? '0')
-    lossRatios += Number(metrics.lossRatio ?? '0')
-    const elapsedDays = index + 1
     return {
       day,
       ...totals,
       seeding,
       downloading,
-      loss: (averageLoss + BigInt(Math.floor(elapsedDays / 2))) / BigInt(elapsedDays),
-      lossRatio: lossRatios / elapsedDays,
+      loss: Number(metrics.averageLoss ?? '0'),
+      lossRatio: Number(metrics.lossRatio ?? '0'),
     }
   })
 })
@@ -105,16 +110,13 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
 }
 
 const charts = computed(() => {
-  const visible = props.showTraffic ? [
-    { title: 'traffic.chartReported', option: chartOption(['upload', 'download'], 'bytes') },
-    { title: 'traffic.chartConfirmed', option: chartOption(['uploadAck', 'downloadAck'], 'bytes') },
-    { title: 'traffic.chartActivity', option: chartOption(['seeding', 'downloading'], 'hours') },
-    { title: 'home.networkTrafficLossChart', option: chartOption(['loss', 'lossRatio'], 'loss') },
-  ] : []
-  if (props.showTotalLoss) {
-    visible.push({ title: 'home.networkTrafficTotalLoss', option: chartOption(['totalLoss'], 'bytes') })
-  }
-  return visible
+  return [
+    { visible: props.showReported, title: 'traffic.chartReported', keys: ['upload', 'download'], unit: 'bytes' },
+    { visible: props.showConfirmed, title: 'traffic.chartConfirmed', keys: ['uploadAck', 'downloadAck'], unit: 'bytes' },
+    { visible: props.showActivity, title: 'traffic.chartActivity', keys: ['seeding', 'downloading'], unit: 'hours' },
+    { visible: props.showAverageLoss, title: 'home.networkTrafficLossChart', keys: ['loss', 'lossRatio'], unit: 'loss' },
+    { visible: props.showTotalLoss, title: 'home.networkTrafficTotalLoss', keys: ['totalLoss'], unit: 'bytes' },
+  ] satisfies { visible: boolean; title: string; keys: Metric[]; unit: Parameters<typeof chartOption>[1] }[]
 })
 
 async function load() {
@@ -145,7 +147,7 @@ onMounted(load)
         <a-radio :value="7">{{ t('home.last7Days') }}</a-radio>
       </a-radio-group>
     </div>
-    <a-card v-if="loading || failed || !records.length" class="surface-card network-traffic-state">
+    <a-card v-if="loading || failed || !cumulativeRows.length" class="surface-card network-traffic-state">
       <a-spin v-if="loading" />
       <template v-else-if="failed">
         <p>{{ t('traffic.failed') }}</p>
@@ -154,8 +156,8 @@ onMounted(load)
       <a-empty v-else :description="t('home.statistics.noData')" />
     </a-card>
     <div v-else class="network-traffic-charts">
-      <a-card v-for="chart in charts" :key="chart.title" class="surface-card" :title="showTraffic ? t(chart.title) : undefined">
-        <EChart :option="chart.option" height="260px" />
+      <a-card v-for="chart in charts.filter(chart => chart.visible)" :key="chart.title" class="surface-card" :title="showTraffic ? t(chart.title) : undefined">
+        <EChart :option="chartOption(chart.keys, chart.unit)" height="260px" />
       </a-card>
     </div>
   </section>

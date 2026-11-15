@@ -263,7 +263,10 @@ onMounted(() => {
 
     <HomeNetworkTraffic
       v-if="moduleEnabled('network-traffic') || moduleEnabled('network-total-loss')"
-      :show-traffic="moduleEnabled('network-traffic')"
+      :show-reported="moduleEnabled('network-reported')"
+      :show-confirmed="moduleEnabled('network-confirmed')"
+      :show-activity="moduleEnabled('network-activity')"
+      :show-average-loss="moduleEnabled('network-average-loss')"
       :show-total-loss="moduleEnabled('network-total-loss')"
     />
 
