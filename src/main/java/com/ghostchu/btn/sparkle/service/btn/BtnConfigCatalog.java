@@ -323,6 +323,12 @@ public final class BtnConfigCatalog {
                     "{rooturl}/ping/queryIp/widget"
             ),
             Definition.bool("queryIp", "powCaptcha", false),
+            Definition.text("queryIp", "lookupEndpoint", "{rooturl}/ping/queryIp/lookup"),
+            Definition.text("queryIp", "commentsEndpoint", "{rooturl}/ping/queryIp/comments"),
+            Definition.text("queryIp", "commentCountsEndpoint", "{rooturl}/ping/queryIp/commentCounts"),
+            Definition.bool("queryIp", "commentCountPowCaptcha", false),
+            Definition.integer("queryIp", "commentCountRequestsPerMinute", 12, 1, 600),
+            Definition.integer("queryIp", "commentCountCacheSeconds", 300, 1, 86400),
 
             Definition.url("rootUrls", "rootUrl", "https://sparkle.pbh-btn.com"),
             Definition.url("rootUrls", "chnRootUrl", "https://sparkle.ghostchu.com"),

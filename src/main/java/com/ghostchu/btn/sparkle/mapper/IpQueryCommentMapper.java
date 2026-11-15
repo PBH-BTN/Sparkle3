@@ -9,6 +9,26 @@ import java.util.List;
 
 public interface IpQueryCommentMapper extends BaseMapper<IpQueryComment> {
     @Select("""
+            <script>
+            SELECT input.address, (
+                SELECT COUNT(*) FROM ip_query_comments c
+                WHERE c.deleted_at IS NULL
+                  AND c.moderation_status = 'APPROVED'
+                  AND c.network &gt;&gt;= input.address::inet
+            ) AS count
+            FROM (VALUES
+              <foreach collection="addresses" item="address" separator=",">
+                (#{address}::text)
+              </foreach>
+            ) AS input(address)
+            </script>
+            """)
+    List<AddressCommentCount> countApprovedByAddress(@Param("addresses") List<String> addresses);
+
+    record AddressCommentCount(String address, long count) {
+    }
+
+    @Select("""
             SELECT *
             FROM ip_query_comments
             WHERE deleted_at IS NULL

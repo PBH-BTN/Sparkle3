@@ -65,6 +65,26 @@ public class PingQueryIpController extends BasePingController {
             return booleanValue("queryIp", "powCaptcha");
         }
 
+        @JsonProperty("lookup_endpoint")
+        public String getLookupEndpoint() {
+            return text("queryIp", "lookupEndpoint");
+        }
+
+        @JsonProperty("comments_endpoint")
+        public String getCommentsEndpoint() {
+            return text("queryIp", "commentsEndpoint");
+        }
+
+        @JsonProperty("comment_counts_endpoint")
+        public String getCommentCountsEndpoint() {
+            return text("queryIp", "commentCountsEndpoint");
+        }
+
+        @JsonProperty("comment_counts_pow_captcha")
+        public boolean isCommentCountsPowCaptcha() {
+            return booleanValue("queryIp", "commentCountPowCaptcha");
+        }
+
         @JsonProperty("iframe_endpoint")
         public String getIframeEndpoint() {
             return text("queryIp", "iframeEndpoint");

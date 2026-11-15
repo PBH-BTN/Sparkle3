@@ -187,6 +187,12 @@ sparkle:
       pow-captcha: true
       endpoint: "{rooturl}/ping/queryIp"
       iframe-endpoint: "{rooturl}/ping/queryIp/widget"
+      lookup-endpoint: "{rooturl}/ping/queryIp/lookup"
+      comments-endpoint: "{rooturl}/ping/queryIp/comments"
+      comment-counts-endpoint: "{rooturl}/ping/queryIp/commentCounts"
+      comment-count-pow-captcha: false
+      comment-count-requests-per-minute: 12
+      comment-count-cache-seconds: 300
   analyse:
     untrusted-vote:
       enabled: true

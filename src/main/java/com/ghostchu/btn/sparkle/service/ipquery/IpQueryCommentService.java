@@ -55,6 +55,16 @@ public class IpQueryCommentService {
             int requestedPage,
             int requestedSize
     ) throws BusinessException {
+        return list(viewerUserId, requestedScope, requestedPage, requestedSize, true);
+    }
+
+    public CommentPage list(
+            long viewerUserId,
+            String requestedScope,
+            int requestedPage,
+            int requestedSize,
+            boolean includeModeratorMetadata
+    ) throws BusinessException {
         CommentAccess access = lookupService.access();
         String scope = commentScope(requestedScope);
         int page = Math.max(1, requestedPage);
@@ -82,7 +92,7 @@ public class IpQueryCommentService {
         List<CommentView> records = mapComments(
                 comments,
                 viewerUserId,
-                canViewCommentMetadata(viewerUserId)
+                includeModeratorMetadata && canViewCommentMetadata(viewerUserId)
         );
         long pages = total == 0 ? 0 : (total + size - 1) / size;
         return new CommentPage(
