@@ -25,6 +25,21 @@
 使用现有数据库配置，无需新增迁移；后台保存后热更新，其他实例在约一秒内刷新。
 命令行和环境变量覆盖继续优先于后台保存的值。
 
+## BTN IP 查询与评论
+
+客户端配置的 `ip_query` 能力声明详细查询、评论和批量计数地址。客户端使用现有 BTN 应用凭据，
+在能力要求时为每次请求提交独立的 PoW 挑战解答。
+
+- `GET /ping/queryIp/lookup?query=...` 支持单 IP 和 CIDR，返回查询详情及当前 BTN 账户的 `canComment`。
+- `GET /ping/queryIp/comments?scope=...` 分页获取评论。`POST /ping/queryIp/comments` 发表评论或回复，
+  `PUT/DELETE /ping/queryIp/comments/{id}` 编辑或删除本人评论。
+- `POST /ping/queryIp/commentCounts` 接收包含 1 至 50 个单 IP 的 JSON 数组，返回以输入地址为键的计数。
+  计数包括覆盖该 IP 的网段中已审核通过且未删除的评论。评论区关闭展示时返回零。
+
+后台“BTN 管理 → IP 查询”可设置 IP 查询及评论操作的 PoW 开关，以及独立的计数 PoW、频率上限和
+Redis TTL。计数默认每个 BTN 应用每 60 秒可请求 12 次，Redis 默认缓存 300 秒，包括零结果。
+TTL 更新后，新请求使用新 TTL 的缓存，旧条目按原有效期自动过期。
+
 ## 数据库与自动迁移
 
 数据库使用 Flyway 管理，应用启动时会自动检查并执行 `classpath:db/migration` 中尚未应用的
