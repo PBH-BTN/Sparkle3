@@ -73,11 +73,11 @@ type BanQueryFilters = Omit<BanHistoryQuery, 'page' | 'size' | 'sortBy' | 'sortO
 
 function buildQuery(): BanQueryFilters {
   return {
-    insertTimeStart:
+    populateTimeStart:
       form.timeRange && form.timeRange[0]
         ? dayjs(form.timeRange[0]).toISOString()
         : undefined,
-    insertTimeEnd:
+    populateTimeEnd:
       form.timeRange && form.timeRange[1]
         ? dayjs(form.timeRange[1]).toISOString()
         : undefined,
@@ -114,7 +114,7 @@ const columns = computed<TableColumnData[]>(() => {
     {
     title: t('banHistory.populateTime'),
     dataIndex: 'populate_time',
-    slotName: 'insertTime',
+    slotName: 'populateTime',
     width: 180,
     sortable: { sortDirections: ['ascend', 'descend'] },
     },
@@ -415,7 +415,7 @@ onMounted(async () => {
             :description="t('banHistory.emptyText')"
           />
         </template>
-        <template #insertTime="{ record }">{{ formatDate(record.insertTime) }}</template>
+        <template #populateTime="{ record }">{{ formatDate(record.populateTime) }}</template>
         <template #userAppId="{ record }">
           <div class="userapp-actions">
             <code>{{ record.userappId ?? 'N/A' }}</code>

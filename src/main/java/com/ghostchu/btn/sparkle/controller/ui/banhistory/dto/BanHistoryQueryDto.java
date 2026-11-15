@@ -2,6 +2,7 @@ package com.ghostchu.btn.sparkle.controller.ui.banhistory.dto;
 
 import java.time.OffsetDateTime;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,8 +15,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BanHistoryQueryDto {
-    private OffsetDateTime insertTimeStart;
-    private OffsetDateTime insertTimeEnd;
+    @JsonAlias("populateTimeStart")
+    private OffsetDateTime populateTimeStart;
+    @JsonAlias("populateTimeEnd")
+    private OffsetDateTime populateTimeEnd;
     private Long torrentId;
     private String peerIp;
     private Integer peerPort;
@@ -30,6 +33,6 @@ public class BanHistoryQueryDto {
     private Integer size = 100;
     
     // Sorting
-    private String sortBy = "insert_time";
+    private String sortBy = "populate_time";
     private String sortOrder = "desc";
 }

@@ -57,7 +57,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private static final String DISTINCT_MODULE_NAMES_CACHE_KEY = "sparkle:banhistory:module_names:distinct_cache";
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "populate_time", "torrent_id", "peer_ip", "peer_port", "peer_id",
-            "peer_client_name", "peer_progress", "module_name", "rule", "insert_time"
+            "peer_client_name", "peer_progress", "module_name", "rule"
     );
     @Autowired
     private ITorrentService torrentService;
@@ -221,20 +221,21 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         // Check if there are any search conditions
         boolean hasSearchConditions = hasSearchConditions(queryDto);
 
-        OffsetDateTime insertTimeStart = Objects.requireNonNullElse(queryDto.getInsertTimeStart(), OffsetDateTime.now().minusDays(7));
-        OffsetDateTime insertTimeNow = Objects.requireNonNullElse(queryDto.getInsertTimeEnd(), OffsetDateTime.now());
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime populateTimeStart = Objects.requireNonNullElse(queryDto.getPopulateTimeStart(), now.minusDays(7));
+        OffsetDateTime populateTimeEnd = Objects.requireNonNullElse(queryDto.getPopulateTimeEnd(), now);
 
-        if (insertTimeStart.isAfter(insertTimeNow)) {
+        if (populateTimeStart.isAfter(populateTimeEnd)) {
             throw new IllegalArgumentException("Illegal query duration");
         }
 
-        if (insertTimeStart.until(insertTimeNow, ChronoUnit.DAYS) > 14) {
+        if (populateTimeStart.until(populateTimeEnd, ChronoUnit.DAYS) > 14) {
             throw new IllegalArgumentException("The query date start to end duration cannot over 14 days.");
         }
 
         // Time range filter
-        queryWrapper.ge("populate_time", insertTimeStart)
-                .le("populate_time", insertTimeNow)
+        queryWrapper.ge("populate_time", populateTimeStart)
+                .le("populate_time", populateTimeEnd)
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .likeRight(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())
@@ -285,8 +286,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
      * Check if the query DTO has any search conditions (excluding pagination and sorting)
      */
     private boolean hasSearchConditions(@NotNull BanHistoryQueryDto queryDto) {
-        return queryDto.getInsertTimeStart() != null
-                || queryDto.getInsertTimeEnd() != null
+        return queryDto.getPopulateTimeStart() != null
+                || queryDto.getPopulateTimeEnd() != null
                 || queryDto.getTorrentId() != null
                 || (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank())
                 || queryDto.getPeerPort() != null

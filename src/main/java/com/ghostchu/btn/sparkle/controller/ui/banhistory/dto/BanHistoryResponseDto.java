@@ -18,7 +18,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class BanHistoryResponseDto {
     private Long id;
-    private OffsetDateTime insertTime;
+    private OffsetDateTime populateTime;
     private Long userappId;
     private Long torrentId;
     private String peerIp;
@@ -38,7 +38,7 @@ public class BanHistoryResponseDto {
     
     public BanHistoryResponseDto(BanHistory entity) {
         this.id = entity.getId();
-        this.insertTime = entity.getInsertTime();
+        this.populateTime = entity.getPopulateTime();
         this.torrentId = entity.getTorrentId();
         this.userappId = entity.getUserappsId();
         this.peerIp = entity.getPeerIp() != null ? entity.getPeerIp().getHostAddress() : null;

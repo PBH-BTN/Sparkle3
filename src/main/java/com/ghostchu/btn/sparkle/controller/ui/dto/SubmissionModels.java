@@ -21,7 +21,6 @@ public final class SubmissionModels {
         private String torrentId;
         private String uploaded;
         private String downloaded;
-        private OffsetDateTime insertTime;
         private OffsetDateTime populateTime;
         private String peerIp;
         private Integer peerPort;

@@ -40,7 +40,7 @@ class SubmissionMapperTest {
             assertTrue(sql.contains("r.peer_progress"));
             assertTrue(sql.contains("r.structured_data"));
             if (i == 0) {
-                assertFalse(sql.contains("WHERE insert_time"));
+                assertFalse(sql.contains("insert_time"));
                 assertTrue(sql.contains("populate_time AS submitted_at"));
                 assertTrue(sql.contains("peer_flags AS flags"));
             }

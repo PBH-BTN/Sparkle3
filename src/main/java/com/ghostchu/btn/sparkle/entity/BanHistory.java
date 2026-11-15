@@ -38,7 +38,7 @@ public class BanHistory implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @TableField(value = "insert_time")
+    @TableField(value = "insert_time", select = false)
     private OffsetDateTime insertTime;
 
     @TableField(value = "populate_time")

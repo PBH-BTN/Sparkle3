@@ -19,7 +19,7 @@
     <select id="query" resultMap="submissionRecord">
         SELECT r.id, a.comment AS application, r.submitted_at, r.peer_id, r.client_name,
                r.module_name, r.client_type, r.client_version, r.torrent_id, r.uploaded, r.downloaded,
-               r.insert_time, r.populate_time, r.peer_ip, r.peer_port, r.peer_progress,
+               r.populate_time, r.peer_ip, r.peer_port, r.peer_progress,
                r.reporter_progress, r.flags, r.peer_geoip, r.rule, r.description, r.structured_data,
                r.first_time_seen, r.last_time_seen, r.user_progress
         FROM (
@@ -29,7 +29,7 @@
                        peer_client_name AS client_name, module_name, NULL::text AS client_type,
                        NULL::text AS client_version, torrent_id::text,
                        to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded,
-                       insert_time, populate_time, host(peer_ip) AS peer_ip, peer_port, peer_progress,
+                       populate_time, host(peer_ip) AS peer_ip, peer_port, peer_progress,
                        reporter_progress, peer_flags AS flags, peer_geoip, rule, description, structured_data,
                        NULL::timestamptz AS first_time_seen, NULL::timestamptz AS last_time_seen,
                        NULL::double precision AS user_progress
@@ -41,7 +41,7 @@
                        peer_client_name AS client_name, NULL::text AS module_name, client_type,
                        client_semver AS client_version, NULL::text AS torrent_id,
                        NULL::text AS uploaded, NULL::text AS downloaded,
-                       NULL::timestamptz AS insert_time, NULL::timestamptz AS populate_time,
+                       NULL::timestamptz AS populate_time,
                        NULL::text AS peer_ip, NULL::integer AS peer_port, NULL::double precision AS peer_progress,
                        NULL::double precision AS reporter_progress, NULL::text AS flags, NULL::jsonb AS peer_geoip,
                        NULL::text AS rule, NULL::text AS description, NULL::jsonb AS structured_data,
@@ -55,7 +55,7 @@
                        peer_client_name AS client_name, NULL::text AS module_name, NULL::text AS client_type,
                        NULL::text AS client_version, torrent_id::text,
                        to_peer_traffic::text AS uploaded, from_peer_traffic::text AS downloaded,
-                       NULL::timestamptz AS insert_time, NULL::timestamptz AS populate_time,
+                       NULL::timestamptz AS populate_time,
                        host(peer_ip) AS peer_ip, peer_port, peer_progress, NULL::double precision AS reporter_progress,
                        flags, peer_geoip, NULL::text AS rule, NULL::text AS description, NULL::jsonb AS structured_data,
                        first_time_seen, last_time_seen, user_progress

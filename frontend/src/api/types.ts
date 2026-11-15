@@ -563,7 +563,7 @@ export interface PageResponse<T> {
 
 export interface BanHistoryRecord {
   id: number
-  insertTime: string
+  populateTime: string
   userappId: number | null
   torrentId: number | null
   peerIp: string | null
@@ -596,8 +596,8 @@ export interface BanHistoryRecord {
 }
 
 export interface BanHistoryQuery {
-  insertTimeStart?: string
-  insertTimeEnd?: string
+  populateTimeStart?: string
+  populateTimeEnd?: string
   torrentId?: number
   peerIp?: string
   peerPort?: number
