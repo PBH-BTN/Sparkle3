@@ -31,6 +31,9 @@
 在能力要求时为每次请求提交独立的 PoW 挑战解答。
 
 - `GET /ping/queryIp/lookup?query=...` 支持单 IP 和 CIDR，返回查询详情及当前 BTN 账户的 `canComment`。
+  查询统计保留 `labels` 字符串数组，并通过 `label_details` 提供可本地化的标签。规则标签包含与查询范围
+  相交的 IP 黑名单和允许列表规则，命中 BTN Bypass 时另有同名标签。单 IP 的 BTN 用户昵称遵循公开
+  资料的可见性和审核结果，CIDR 仅显示通用 BTN 用户标签。
 - `GET /ping/queryIp/comments?scope=...` 分页获取评论。`POST /ping/queryIp/comments` 发表评论或回复，
   `PUT/DELETE /ping/queryIp/comments/{id}` 编辑或删除本人评论。
 - `POST /ping/queryIp/commentCounts` 接收包含 1 至 50 个单 IP 的 JSON 数组，返回以输入地址为键的计数。
