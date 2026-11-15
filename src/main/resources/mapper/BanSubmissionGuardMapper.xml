@@ -114,21 +114,29 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <insert id="recordReplayBatch">
+        INSERT INTO public.ban_submission_replay_daily AS daily (day, app_id, replay_batches, replays)
+        VALUES (#{day}, #{appId}, 1, #{replays})
+        ON CONFLICT (day, app_id) DO UPDATE SET
+            replay_batches = daily.replay_batches + 1,
+            replays = daily.replays + EXCLUDED.replays
+    </insert>
+
+    <delete id="clearReplayDays">
+        DELETE FROM public.ban_submission_replay_daily WHERE replay_batches > 0
+    </delete>
+
+    <delete id="deleteReplayDaysBefore">
+        DELETE FROM public.ban_submission_replay_daily WHERE day &lt; #{day}
+    </delete>
+
     <select id="rankApplications" resultType="com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels$AppRank">
-        WITH ranked AS (
-            SELECT app_id, SUM(GREATEST(detection_hits, CASE WHEN detected THEN 1 ELSE 0 END)) AS detections,
-                SUM(replays) AS replays
-            FROM public.ban_submission_target
-            WHERE detected OR replays > 0
-            GROUP BY app_id
-            ORDER BY detections DESC, replays DESC, app_id
-            LIMIT 100
-        )
-        SELECT ranked.app_id::text AS app_id, app.owner::text AS owner_id, app.last_user_agent,
-            ranked.detections::bigint AS detection_hits, ranked.replays::bigint AS replays
-        FROM ranked
-        LEFT JOIN public.userapp AS app ON app.id = ranked.app_id
-        ORDER BY ranked.detections DESC, ranked.replays DESC, ranked.app_id
+        SELECT app_id::text AS app_id, SUM(replay_batches)::bigint AS replay_batches, SUM(replays)::bigint AS replays
+        FROM public.ban_submission_replay_daily
+        WHERE day >= #{since}
+        GROUP BY ban_submission_replay_daily.app_id
+        ORDER BY replay_batches DESC, replays DESC, ban_submission_replay_daily.app_id
+        LIMIT 100
     </select>
 
     <delete id="clearEvents">

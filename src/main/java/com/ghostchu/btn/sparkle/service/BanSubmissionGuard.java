@@ -152,6 +152,10 @@ public class BanSubmissionGuard {
         for (var batch : Lists.partition(counts, BATCH_SIZE)) {
             mapper.recordSuppressed(appId, batch);
         }
+        long replays = targets.stream().mapToLong(Target::replays).sum();
+        if (replays > 0) {
+            mapper.recordReplayBatch(appId, now.withOffsetSameInstant(ZoneOffset.UTC).toLocalDate(), replays);
+        }
         return accepted;
     }
 
@@ -171,11 +175,13 @@ public class BanSubmissionGuard {
 
     @Transactional
     public int clearEvents() {
-        return mapper.clearEvents();
+        int deleted = mapper.clearEvents();
+        mapper.clearReplayDays();
+        return deleted;
     }
 
     public List<AppRank> rankApplications() {
-        return mapper.rankApplications();
+        return mapper.rankApplications(OffsetDateTime.now(ZoneOffset.UTC).toLocalDate().minusDays(29));
     }
 
     @Scheduled(cron = CLEANUP_CRON)
@@ -192,7 +198,7 @@ public class BanSubmissionGuard {
         var eventCutoff = now.minusDays(30);
         // The accepted ban timestamp can be at most seven days old.
         var chunks = mapper.dropExpiredFingerprints(now.minusDays(8));
-        int removed = 0;
+        int removed = mapper.deleteReplayDaysBefore(now.toLocalDate().minusDays(29));
         for (int batch = 0; batch < 20; batch++) {
             int count = mapper.deleteExpiredTargets(stateCutoff, eventCutoff, CLEANUP_BATCH_SIZE);
             removed += count;

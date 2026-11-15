@@ -154,15 +154,13 @@ class FlywayMigrationIntegrationTest {
     void banSubmissionGuardDeduplicatesAndDetectsAcrossWindows() throws Exception {
         try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
             statement.execute("CREATE EXTENSION IF NOT EXISTS timescaledb");
-            statement.execute("CREATE TABLE public.userapp (id bigint PRIMARY KEY, owner bigint, last_user_agent text)");
-            statement.execute("INSERT INTO public.userapp VALUES (10, 100, 'TestClient/1.0')");
             statement.execute(new org.springframework.core.io.ClassPathResource("db/migration/V23__app_config_entries.sql")
                     .getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
         }
         var flyway = Flyway.configure().dataSource(url, username, password)
-                .baselineVersion("73").target("76").load();
+                .baselineVersion("73").target("79").load();
         flyway.baseline();
-        assertEquals(3, flyway.migrate().migrationsExecuted);
+        assertEquals(6, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
         var configuration = new Configuration(new Environment("ban-guard-test", new JdbcTransactionFactory(),
@@ -205,15 +203,21 @@ class FlywayMigrationIntegrationTest {
             var blocked = guard.events(1, 20, 10L, null, "blocking", null, null).records().getFirst();
             assertEquals(1, blocked.suppressed());
             var rank = guard.rankApplications().getFirst();
-            assertEquals("100", rank.ownerId());
-            assertEquals("TestClient/1.0", rank.lastUserAgent());
-            assertEquals(2, rank.detectionHits());
+            assertEquals("10", rank.appId());
+            assertEquals(1, rank.replayBatches());
             assertEquals(1, rank.replays());
             assertTrue(guard.filter(20, List.of(first, first, first), start.plusSeconds(40)).isEmpty());
             var ranks = guard.rankApplications();
-            assertEquals(List.of("10", "20"), ranks.stream().map(row -> row.appId()).toList());
-            assertEquals(3, ranks.get(1).replays());
-            assertNull(ranks.get(1).lastUserAgent());
+            assertEquals(List.of("20", "10"), ranks.stream().map(row -> row.appId()).toList());
+            assertEquals(1, ranks.getFirst().replayBatches());
+            assertEquals(3, ranks.getFirst().replays());
+            assertTrue(guard.filter(10, List.of(first), start.plusSeconds(41)).isEmpty());
+            MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard)).build()
+                    .perform(get("/api/admin/ban-submissions/ranking"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].appId").value("10"))
+                    .andExpect(jsonPath("$[0].replayBatches").value(2))
+                    .andExpect(jsonPath("$[0].replays").value(2));
             var afterQuiet = start.plusHours(2);
             assertEquals(1, guard.filter(10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
             assertEquals(1, guard.events(1, 20, 10L, null, "quiet", null, null).total());
@@ -603,7 +607,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("78", latest.info().current().getVersion().getVersion());
+        assertEquals("79", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

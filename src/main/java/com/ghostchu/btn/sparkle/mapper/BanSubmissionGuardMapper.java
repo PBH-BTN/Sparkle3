@@ -4,6 +4,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.Event;
 import com.ghostchu.btn.sparkle.controller.admin.dto.BanSubmissionModels.AppRank;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -31,7 +32,13 @@ public interface BanSubmissionGuardMapper {
 
     int clearEvents();
 
-    List<AppRank> rankApplications();
+    void recordReplayBatch(@Param("appId") long appId, @Param("day") LocalDate day, @Param("replays") long replays);
+
+    void clearReplayDays();
+
+    int deleteReplayDaysBefore(@Param("day") LocalDate day);
+
+    List<AppRank> rankApplications(@Param("since") LocalDate since);
 
     List<Event> listEvents(@Param("query") EventQuery query, @Param("offset") long offset, @Param("size") long size);
 
