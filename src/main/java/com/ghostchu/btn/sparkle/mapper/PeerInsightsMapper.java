@@ -29,20 +29,20 @@ public interface PeerInsightsMapper {
     @Select("""
             WITH peers AS (
                 SELECT peer_ip, family(peer_ip) AS ip_version,
-                       BOOL_OR(insert_time >= NOW() - INTERVAL '24 hours') AS within_24h,
-                       BOOL_OR(insert_time >= NOW() - INTERVAL '3 days') AS within_3d
+                       BOOL_OR(populate_time >= NOW() - INTERVAL '24 hours') AS within_24h,
+                       BOOL_OR(populate_time >= NOW() - INTERVAL '3 days') AS within_3d
                 FROM public.ban_history
-                WHERE insert_time >= NOW() - INTERVAL '7 days'
+                WHERE populate_time >= NOW() - INTERVAL '7 days'
+                  AND populate_time <= NOW()
                 GROUP BY peer_ip
             )
             SELECT ranges.range_hours,
                    COUNT(*) FILTER (WHERE peers.ip_version = 4) AS ipv4_peers,
                    COUNT(*) FILTER (WHERE peers.ip_version = 6) AS ipv6_peers
-            FROM peers
-            CROSS JOIN (VALUES (24), (72), (168)) AS ranges(range_hours)
-            WHERE (ranges.range_hours = 24 AND peers.within_24h)
-               OR (ranges.range_hours = 72 AND peers.within_3d)
-               OR ranges.range_hours = 168
+            FROM (VALUES (24), (72), (168)) AS ranges(range_hours)
+            LEFT JOIN peers ON (ranges.range_hours = 24 AND peers.within_24h)
+                            OR (ranges.range_hours = 72 AND peers.within_3d)
+                            OR ranges.range_hours = 168
             GROUP BY ranges.range_hours
             ORDER BY ranges.range_hours
             """)
