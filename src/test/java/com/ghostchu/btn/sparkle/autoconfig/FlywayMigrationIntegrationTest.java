@@ -376,7 +376,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("71", latest.info().current().getVersion().getVersion());
+        assertEquals("72", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""
@@ -389,6 +389,9 @@ class FlywayMigrationIntegrationTest {
                       AND to_regprocedure('public.remove_dashboard_swarm_contributions()') IS NULL
                       AND EXISTS (SELECT 1 FROM pg_index
                         WHERE indexrelid = 'public.user_traffic_daily_day_idx'::regclass AND indisvalid)
+                      AND EXISTS (SELECT 1 FROM app_config_entries
+                        WHERE config_key = 'sparkle.homepage.network-traffic-enabled'
+                          AND config_value = 'true' AND hot_reload)
                       AND NOT EXISTS (SELECT 1 FROM app_config_entries
                         WHERE config_key LIKE 'sparkle.homepage-statistics-refresh.modules.bittorrent-traffic%')
                       AND (SELECT COUNT(*) = 3 FROM timescaledb_information.jobs

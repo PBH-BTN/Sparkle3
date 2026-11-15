@@ -110,6 +110,7 @@ public final class AdminModels {
             boolean swarmStatisticsEnabled,
             int swarmStatisticsRefreshMinutes,
             int swarmStatisticsWindowDays,
+            Boolean homepageNetworkTrafficEnabled,
             String userContactEmailSubjectTemplate,
             String userContactEmailBodyTemplate
     ) {

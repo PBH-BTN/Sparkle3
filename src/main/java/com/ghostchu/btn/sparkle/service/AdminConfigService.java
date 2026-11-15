@@ -25,6 +25,7 @@ public class AdminConfigService {
             "sparkle.swarm-statistics-track.refresh-interval-minutes";
     private static final String SWARM_STATISTICS_WINDOW_DAYS =
             "sparkle.swarm-statistics-track.window-days";
+    private static final String HOMEPAGE_NETWORK_TRAFFIC_ENABLED = "sparkle.homepage.network-traffic-enabled";
     private static final String USER_CONTACT_EMAIL_SUBJECT_TEMPLATE =
             "sparkle.user-contact-email.subject-template";
     private static final String USER_CONTACT_EMAIL_BODY_TEMPLATE =
@@ -46,6 +47,8 @@ public class AdminConfigService {
                               int swarmStatisticsRefreshMinutes,
                               @Value("${sparkle.swarm-statistics-track.window-days:7}")
                               int swarmStatisticsWindowDays,
+                              @Value("${sparkle.homepage.network-traffic-enabled:true}")
+                              boolean homepageNetworkTrafficEnabled,
                               @Value("${sparkle.user-contact-email.subject-template}")
                               String userContactEmailSubjectTemplate,
                               @Value("${sparkle.user-contact-email.content-template}")
@@ -59,6 +62,7 @@ public class AdminConfigService {
                 swarmStatisticsEnabled,
                 swarmStatisticsRefreshMinutes,
                 swarmStatisticsWindowDays,
+                homepageNetworkTrafficEnabled,
                 userContactEmailSubjectTemplate,
                 userContactEmailBodyTemplate
         );
@@ -79,6 +83,12 @@ public class AdminConfigService {
         }
     }
 
+    public boolean homepageNetworkTrafficEnabled() {
+        boolean configured = get().homepageNetworkTrafficEnabled();
+        return databaseConfigService.hasExternalOverride(HOMEPAGE_NETWORK_TRAFFIC_ENABLED, String.valueOf(configured))
+                ? defaults.homepageNetworkTrafficEnabled() : configured;
+    }
+
     @Transactional
     public @NotNull RuntimeConfigView update(@NotNull RuntimeConfigView config, Long operatorId)
             throws BusinessException {
@@ -93,6 +103,9 @@ public class AdminConfigService {
         values.put(SWARM_STATISTICS_REFRESH_MINUTES,
                 String.valueOf(normalized.swarmStatisticsRefreshMinutes()));
         values.put(SWARM_STATISTICS_WINDOW_DAYS, String.valueOf(normalized.swarmStatisticsWindowDays()));
+        if (config.homepageNetworkTrafficEnabled() != null) {
+            values.put(HOMEPAGE_NETWORK_TRAFFIC_ENABLED, String.valueOf(normalized.homepageNetworkTrafficEnabled()));
+        }
         values.put(USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                 normalized.userContactEmailSubjectTemplate());
         values.put(USER_CONTACT_EMAIL_BODY_TEMPLATE, normalized.userContactEmailBodyTemplate());
@@ -114,6 +127,7 @@ public class AdminConfigService {
                     SWARM_STATISTICS_ENABLED,
                     SWARM_STATISTICS_REFRESH_MINUTES,
                     SWARM_STATISTICS_WINDOW_DAYS,
+                    HOMEPAGE_NETWORK_TRAFFIC_ENABLED,
                     USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                     USER_CONTACT_EMAIL_BODY_TEMPLATE
             ));
@@ -130,6 +144,7 @@ public class AdminConfigService {
                             defaults.swarmStatisticsRefreshMinutes()),
                     parseInt(entries.get(SWARM_STATISTICS_WINDOW_DAYS),
                             defaults.swarmStatisticsWindowDays()),
+                    parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_ENABLED), defaults.homepageNetworkTrafficEnabled()),
                     entries.getOrDefault(
                             USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                             defaults.userContactEmailSubjectTemplate()
@@ -185,6 +200,8 @@ public class AdminConfigService {
                 config.swarmStatisticsEnabled(),
                 config.swarmStatisticsRefreshMinutes(),
                 config.swarmStatisticsWindowDays(),
+                config.homepageNetworkTrafficEnabled() == null
+                        ? get().homepageNetworkTrafficEnabled() : config.homepageNetworkTrafficEnabled(),
                 config.userContactEmailSubjectTemplate().trim(),
                 config.userContactEmailBodyTemplate().trim()
         );

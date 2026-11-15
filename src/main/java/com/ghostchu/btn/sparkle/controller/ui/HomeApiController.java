@@ -96,6 +96,8 @@ public class HomeApiController {
 
     @GetMapping("/home")
     public HomeStats home() {
+        var enabledModules = new LinkedHashMap<>(homepageStatisticsRefreshService.enabledModules());
+        enabledModules.put("network-traffic", adminConfigService.homepageNetworkTrafficEnabled());
         return new HomeStats(
                 readStats(
                         RedisKeyConstant.STATS_BANHISTORY_ALLTIME,
@@ -118,7 +120,7 @@ public class HomeApiController {
                         RedisKeyConstant.STATS_SWARMTRACKER_7DAYS,
                         RedisKeyConstant.STATS_SWARMTRACKER_24HOURS
                 ),
-                homepageStatisticsRefreshService.enabledModules()
+                enabledModules
         );
     }
 

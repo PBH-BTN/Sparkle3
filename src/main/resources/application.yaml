@@ -375,6 +375,8 @@ sparkle:
     prefix-length:
       ipv4: 30
       ipv6: 48
+  homepage:
+    network-traffic-enabled: true
   swarm-statistics-track:
     enabled: true
     refresh-interval-minutes: 60

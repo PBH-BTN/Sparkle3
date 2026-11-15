@@ -55,6 +55,9 @@ class BusinessConfigMigrationTest {
         ).getContentAsString(StandardCharsets.UTF_8)
                 + new ClassPathResource(
                 "db/migration/V52__flarum_integration_config.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V72__homepage_network_traffic_config.sql"
         ).getContentAsString(StandardCharsets.UTF_8);
         Matcher matcher = SQL_DEFAULT_KEY.matcher(sql);
         Set<String> sqlKeys = new HashSet<>();

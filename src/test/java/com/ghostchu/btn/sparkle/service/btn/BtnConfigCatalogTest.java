@@ -101,6 +101,7 @@ class BtnConfigCatalogTest {
                 "sparkle.analyse.",
                 "sparkle.client-discovery.",
                 "sparkle.homepage-statistics-refresh.",
+                "sparkle.homepage.network-traffic-enabled",
                 "sparkle.swarm-statistics-track.",
                 "sparkle.footer.",
                 "sparkle.user-contact-email.",

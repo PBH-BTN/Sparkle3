@@ -35,6 +35,7 @@ import java.util.Set;
 @Slf4j
 public class DatabaseConfigService {
     public static final Set<String> HOT_RELOAD_KEYS = Set.of(
+            "sparkle.homepage.network-traffic-enabled",
             "sparkle.ping.config.min-protocol-version",
             "sparkle.ping.config.max-protocol-version",
             "sparkle.ping.query-ip.pow-captcha",
