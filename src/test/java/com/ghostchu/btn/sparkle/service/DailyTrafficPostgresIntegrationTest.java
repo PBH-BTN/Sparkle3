@@ -139,7 +139,8 @@ class DailyTrafficPostgresIntegrationTest {
                 try (var statement = connection.createStatement()) {
                     statement.execute("""
                             INSERT INTO user_traffic_daily (user_id, day, upload, loss)
-                            SELECT id, '2026-01-05', 10000,
+                            SELECT id, '2026-01-05',
+                                   CASE id WHEN 99 THEN 10 WHEN 100 THEN 9010000 ELSE 10000 END,
                                    CASE id WHEN 1 THEN 0 WHEN 100 THEN 9010 ELSE 10 END
                             FROM generate_series(1, 100) AS users(id)
                             """);
@@ -147,9 +148,15 @@ class DailyTrafficPostgresIntegrationTest {
                 var day = LocalDate.parse("2026-01-05");
                 var averages = traffic.network(day, day,
                         new NetworkTrafficAccess(false, false, false, true, false)).getFirst();
-                assertEquals("99.9", new java.math.BigDecimal(averages.get("averageLoss")).stripTrailingZeros().toPlainString());
-                assertEquals("0.999", new java.math.BigDecimal(averages.get("lossRatio")).stripTrailingZeros().toPlainString());
+                assertEquals("10", new java.math.BigDecimal(averages.get("averageLoss")).stripTrailingZeros().toPlainString());
+                assertEquals("0.1", new java.math.BigDecimal(averages.get("lossRatio")).stripTrailingZeros().toPlainString());
                 assertEquals(Set.of("day", "averageLoss", "lossRatio"), averages.keySet());
+                var combined = traffic.network(day.minusDays(1), day,
+                        new NetworkTrafficAccess(true, true, true, true, true));
+                assertEquals("5", combined.getFirst().get("upload"));
+                assertEquals(averages.get("averageLoss"), combined.getLast().get("averageLoss"));
+                assertEquals(averages.get("lossRatio"), combined.getLast().get("lossRatio"));
+                assertEquals("9990", combined.getLast().get("totalLoss"));
                 assertEquals(Map.of("day", "2026-01-05", "totalLoss", "9990"),
                         traffic.network(day, day, new NetworkTrafficAccess(false, false, false, false, true)).getFirst());
                 session.rollback();

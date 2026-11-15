@@ -21,12 +21,27 @@
             , SUM(seeding)::text AS seeding, SUM(downloading)::text AS downloading
         </if>
         <if test="access.averageLoss">
-            , AVG(loss)::text AS "averageLoss",
-              AVG(loss_ratio)::text AS "lossRatio"
+            , (AVG(loss) FILTER (WHERE loss_rank BETWEEN trim_count + 1 AND sample_count - trim_count))::text AS "averageLoss",
+              (AVG(loss_ratio) FILTER (WHERE ratio_rank BETWEEN trim_count + 1 AND sample_count - trim_count))::text AS "lossRatio"
         </if>
         <if test="access.totalLoss">, SUM(loss)::text AS "totalLoss"</if>
-        FROM user_traffic_daily
-        WHERE day BETWEEN #{from} AND #{through}
+        <choose>
+            <when test="access.averageLoss">
+                FROM (
+                    SELECT user_traffic_daily.*,
+                           ROW_NUMBER() OVER (PARTITION BY day ORDER BY loss) AS loss_rank,
+                           ROW_NUMBER() OVER (PARTITION BY day ORDER BY loss_ratio) AS ratio_rank,
+                           COUNT(*) OVER (PARTITION BY day) AS sample_count,
+                           COUNT(*) OVER (PARTITION BY day) / 100 AS trim_count
+                    FROM user_traffic_daily
+                    WHERE day BETWEEN #{from} AND #{through}
+                ) AS ranked
+            </when>
+            <otherwise>
+                FROM user_traffic_daily
+                WHERE day BETWEEN #{from} AND #{through}
+            </otherwise>
+        </choose>
         GROUP BY day
         ORDER BY day
     </select>
