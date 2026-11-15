@@ -417,9 +417,6 @@ export default {
     last7Days: '7 days',
     last24Hours: '24 hours',
     trafficWindow: 'Last {days} days',
-    trafficUpdatedAt: 'Updated {time}',
-    trafficNeverUpdated: 'Statistics have not been refreshed yet',
-    trafficStale: 'This data has exceeded its expected refresh cycle and may be stale.',
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',

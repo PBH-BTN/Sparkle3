@@ -16,7 +16,7 @@ import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
 
 const { t, locale } = useI18n()
-const { formatBytes } = useFormatters()
+const { formatBytes, formatHours } = useFormatters()
 const statisticsStartedOn = '2026/11/15'
 const page = ref(1)
 const size = ref(20)
@@ -42,7 +42,7 @@ const columns = computed<TableColumnData[]>(() => [
 function formatMetric(row: DailyTraffic, key: string) {
   const value = row.metrics[key] || '0'
   if (key === 'seeding' || key === 'downloading') {
-    return t('traffic.hours', { value: new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(Number(value) / 3600) })
+    return formatHours(value)
   }
   return key === 'lossRatio' ? value + '%' : formatBytes(value)
 }

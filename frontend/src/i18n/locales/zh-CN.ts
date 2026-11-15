@@ -403,9 +403,6 @@ export default {
     last7Days: '7 天',
     last24Hours: '24 小时',
     trafficWindow: '最近 {days} 天流量',
-    trafficUpdatedAt: '更新于 {time}',
-    trafficNeverUpdated: '尚未完成统计更新',
-    trafficStale: '数据已超过预期刷新周期，可能显示旧值。',
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',

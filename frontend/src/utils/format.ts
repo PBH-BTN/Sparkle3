@@ -107,6 +107,11 @@ export function useFormatters() {
           maximumFractionDigits: 2,
         }).format(value)
 
+  const formatHours = (seconds: string | number) =>
+    t('traffic.hours', {
+      value: new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(Number(seconds) / 3600),
+    })
+
   const formatDuration = (durationMs: number | null | undefined) => {
     if (durationMs == null) return 'N/A'
     let seconds = Math.max(0, Math.floor(durationMs / 1000))
@@ -140,6 +145,7 @@ export function useFormatters() {
     formatBytes,
     formatPointBytes,
     formatProgress,
+    formatHours,
     formatDuration,
     formatRatio,
   }

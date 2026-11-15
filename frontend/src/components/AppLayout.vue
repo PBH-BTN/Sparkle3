@@ -15,7 +15,6 @@ import {
   IconDashboard,
   IconDown,
   IconEmail,
-  IconExclamationCircle,
   IconFile,
   IconFire,
   IconHome,
@@ -32,13 +31,14 @@ import LanguageSwitcher from './LanguageSwitcher.vue'
 import AppFooter from './AppFooter.vue'
 import { useSessionStore } from '@/stores/session'
 import { uiApi } from '@/api'
+import type { DailyTraffic } from '@/api/types'
 import { useFormatters } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const { t, locale } = useI18n()
-const { formatBytes, formatDate } = useFormatters()
+const { formatBytes, formatHours } = useFormatters()
 const mobileMenuOpen = ref(false)
 const unreadMessages = ref(0)
 let unreadTimer: number | undefined
@@ -89,13 +89,59 @@ const selectedKey = computed(() => {
   )
 })
 
-const trafficIsStale = computed(() => {
-  const updatedAt = session.traffic?.lastUpdateAt
-  if (!updatedAt) return true
-  const timestamp = new Date(updatedAt).getTime()
-  const staleAfterMinutes = Math.max(120, (session.traffic?.refreshIntervalMinutes ?? 60) * 2)
-  return Number.isNaN(timestamp) || Date.now() - timestamp > staleAfterMinutes * 60 * 1000
+const trafficWindowDays = 7
+const trafficRecords = ref<DailyTraffic[] | null>(null)
+const trafficMetrics = [
+  { key: 'upload', label: 'ranking.sentSelf' },
+  { key: 'download', label: 'ranking.receivedSelf' },
+  { key: 'uploadAck', label: 'ranking.sentAck' },
+  { key: 'downloadAck', label: 'ranking.receivedAck' },
+  { key: 'seeding', label: 'career.seeding', duration: true },
+  { key: 'downloading', label: 'career.downloading', duration: true },
+]
+const trafficTotals = computed(() => {
+  const records = trafficRecords.value
+  if (!records) return null
+  return trafficMetrics.map(({ key, label, duration }) => ({
+    key,
+    label,
+    value: duration
+      ? formatHours(records.reduce((sum, row) => sum + Number(row.metrics[key] ?? '0'), 0))
+      : formatBytes(records.reduce((sum, row) => sum + BigInt(row.metrics[key] ?? '0'), 0n)),
+  }))
 })
+
+watch(() => session.user?.id, (userId, _, onCleanup) => {
+  trafficRecords.value = null
+  if (!userId) return
+  let active = true
+  let loading = false
+  async function refreshTraffic() {
+    if (loading) return
+    loading = true
+    try {
+      const { records } = await uiApi.dailyTraffic(1, trafficWindowDays)
+      if (!active || session.user?.id !== userId) return
+      const date = new Date()
+      const today = date.toISOString().slice(0, 10)
+      date.setUTCDate(date.getUTCDate() - (trafficWindowDays - 1))
+      const firstDay = date.toISOString().slice(0, 10)
+      trafficRecords.value = records.filter(({ day }) => day >= firstDay && day <= today)
+    } catch {
+      // Keep the last successful totals while the next refresh retries.
+    } finally {
+      loading = false
+    }
+  }
+  void refreshTraffic()
+  const timer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') void refreshTraffic()
+  }, 60_000)
+  onCleanup(() => {
+    active = false
+    window.clearInterval(timer)
+  })
+}, { immediate: true })
 
 function navigate(id: string) {
   mobileMenuOpen.value = false
@@ -227,36 +273,14 @@ onBeforeUnmount(() => {
       </div>
     </a-layout-header>
 
-    <div v-if="session.traffic" class="traffic-strip">
+    <div v-if="trafficTotals" class="traffic-strip">
       <div class="traffic-strip-inner">
         <span class="traffic-strip-title">
-          {{ t('home.trafficWindow', { days: session.traffic.windowDays }) }}
+          {{ t('home.trafficWindow', { days: trafficWindowDays }) }}
         </span>
-        <span class="traffic-item">
-          <span class="traffic-label">{{ t('ranking.sentSelf') }}</span>
-          <strong>{{ formatBytes(session.traffic.sentTrafficSelfReport) }}</strong>
-        </span>
-        <span class="traffic-item">
-          <span class="traffic-label">{{ t('ranking.receivedSelf') }}</span>
-          <strong>{{ formatBytes(session.traffic.receivedTrafficSelfReport) }}</strong>
-        </span>
-        <span class="traffic-item">
-          <span class="traffic-label">{{ t('ranking.sentAck') }}</span>
-          <strong>{{ formatBytes(session.traffic.sentTrafficOtherAck) }}</strong>
-        </span>
-        <span class="traffic-item">
-          <span class="traffic-label">{{ t('ranking.receivedAck') }}</span>
-          <strong>{{ formatBytes(session.traffic.receivedTrafficOtherAck) }}</strong>
-        </span>
-        <span class="traffic-updated" :class="{ 'traffic-updated--stale': trafficIsStale }">
-          <a-tooltip v-if="trafficIsStale" :content="t('home.trafficStale')">
-            <IconExclamationCircle />
-          </a-tooltip>
-          {{
-            session.traffic.lastUpdateAt
-              ? t('home.trafficUpdatedAt', { time: formatDate(session.traffic.lastUpdateAt) })
-              : t('home.trafficNeverUpdated')
-          }}
+        <span v-for="metric in trafficTotals" :key="metric.key" class="traffic-item">
+          <span class="traffic-label">{{ t(metric.label) }}</span>
+          <strong>{{ metric.value }}</strong>
         </span>
       </div>
     </div>
@@ -488,18 +512,6 @@ onBeforeUnmount(() => {
 
 .traffic-label {
   color: var(--color-text-3);
-}
-
-.traffic-updated {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  color: var(--color-text-3);
-}
-
-.traffic-updated--stale {
-  color: rgb(var(--orange-6));
 }
 
 .app-content {
