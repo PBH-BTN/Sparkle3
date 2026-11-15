@@ -26,7 +26,7 @@ public class AfdianEmailBindingService {
         var matches = mapper.findUsers(email);
         if (matches.size() != 1) return false;
         var user = userMapper.selectForUpdate(matches.getFirst().getId());
-        if (user == null || user.getBannedAt() != null || user.getEmail() == null
+        if (user == null || user.isSuspended() || user.getEmail() == null
                 || !user.getEmail().equalsIgnoreCase(email) || mapper.hasUserBinding(user.getId())
                 || mapper.hasExternalBinding(externalId)) return false;
         if (mapper.insertLegacy(user.getId(), externalId, orderId) != 1

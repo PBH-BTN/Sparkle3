@@ -151,7 +151,7 @@ public class RankingApiController {
                         false,
                         null,
                         false,
-                        user.getBannedAt() != null,
+                        user.isSuspended(),
                         Long.toString(score)
                 );
             }
@@ -179,7 +179,7 @@ public class RankingApiController {
                 anonymous,
                 avatarAvailable ? user.getAvatarUrl() : null,
                 avatarAvailable,
-                user.getBannedAt() != null,
+                user.isSuspended(),
                 value(ranking.getSentTrafficSelfReport()),
                 value(ranking.getReceivedTrafficSelfReport()),
                 value(ranking.getSentTrafficOtherAck()),
@@ -226,7 +226,7 @@ public class RankingApiController {
                 anonymous,
                 avatarAvailable ? user.getAvatarUrl() : null,
                 avatarAvailable,
-                user.getBannedAt() != null,
+                user.isSuspended(),
                 Long.toString(value(user.getScoreBytes()))
         );
     }

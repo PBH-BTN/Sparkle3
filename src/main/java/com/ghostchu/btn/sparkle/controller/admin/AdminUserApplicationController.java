@@ -1,15 +1,17 @@
 package com.ghostchu.btn.sparkle.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.AdminApplicationView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.ApplicationCredentials;
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.PageResult;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,7 @@ import java.util.Map;
 public class AdminUserApplicationController {
     private final IUserappService userappService;
     private final IUserService userService;
+    private final AdminSuspensionService suspensionService;
 
     @GetMapping
     public PageResult<AdminApplicationView> list(
@@ -66,9 +69,9 @@ public class AdminUserApplicationController {
             wrapper.eq("owner", ownerId);
         }
         if ("banned".equalsIgnoreCase(status)) {
-            wrapper.isNotNull("banned_at");
+            wrapper.apply(SuspensionStatus.SUSPENDED_SQL);
         } else if ("active".equalsIgnoreCase(status)) {
-            wrapper.isNull("banned_at");
+            wrapper.apply(SuspensionStatus.NOT_SUSPENDED_SQL);
         }
         Page<Userapp> result = new Page<>(safePage, safeSize);
         if (banDays == null) {
@@ -113,7 +116,7 @@ public class AdminUserApplicationController {
 
     @PutMapping("/{id}")
     public AdminApplicationView update(@PathVariable long id,
-                                       @RequestBody UpdateApplicationRequest request) {
+                                       @RequestBody UpdateApplicationRequest request) throws BusinessException {
         Userapp application = requireApplication(id);
         if (request.comment() == null || request.comment().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Application name is required");
@@ -125,28 +128,7 @@ public class AdminUserApplicationController {
         application.setComment(request.comment().trim());
         application.setOwner(owner.getId());
         application.setBtnBypass(request.btnBypass());
-        if (Boolean.TRUE.equals(request.banned())) {
-            if (application.getBannedAt() == null) {
-                application.setBannedAt(OffsetDateTime.now());
-            }
-            application.setBannedReason(
-                    request.bannedReason() == null || request.bannedReason().isBlank()
-                            ? "Suspended by administrator"
-                            : request.bannedReason().trim()
-            );
-        } else {
-            application.setBannedAt(null);
-            application.setBannedReason(null);
-        }
-        userappService.update(
-                Wrappers.<Userapp>lambdaUpdate()
-                        .eq(Userapp::getId, id)
-                        .set(Userapp::getComment, application.getComment())
-                        .set(Userapp::getOwner, application.getOwner())
-                        .set(Userapp::getBtnBypass, application.getBtnBypass())
-                        .set(Userapp::getBannedAt, application.getBannedAt())
-                        .set(Userapp::getBannedReason, application.getBannedReason())
-        );
+        suspensionService.updateApplication(application, request.banned(), request.bannedReason(), request.unbanAt());
         return toView(application, owner);
     }
 
@@ -165,20 +147,10 @@ public class AdminUserApplicationController {
     public AdminApplicationView ban(
             @PathVariable long id,
             @RequestBody BanApplicationRequest request
-    ) {
+    ) throws BusinessException {
         Userapp application = requireApplication(id);
-        if (request == null || request.reason() == null || request.reason().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "A suspension reason is required");
-        }
-        String reason = request.reason().trim();
-        if (reason.length() > 500) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "The suspension reason must not exceed 500 characters");
-        }
-        application.setBannedAt(OffsetDateTime.now());
-        application.setBannedReason(reason);
-        userappService.updateById(application);
+        suspensionService.setApplicationSuspended(application, !Boolean.FALSE.equals(request.banned()),
+                request.reason(), request.unbanAt());
         return toView(application, userService.getById(application.getOwner()));
     }
 
@@ -230,6 +202,7 @@ public class AdminUserApplicationController {
     }
 
     private AdminApplicationView toView(Userapp application, User owner) {
+        boolean suspended = application.isSuspended();
         return new AdminApplicationView(
                 application.getId(),
                 application.getAppId(),
@@ -239,8 +212,9 @@ public class AdminUserApplicationController {
                 owner == null ? null : owner.getEmail(),
                 application.getCreatedAt(),
                 application.getLastSeenAt(),
-                application.getBannedAt(),
-                application.getBannedReason(),
+                suspended ? application.getBannedAt() : null,
+                suspended ? application.getBannedReason() : null,
+                suspended ? application.getUnbanAt() : null,
                 application.getBtnBypass(),
                 application.getInstallationId(),
                 application.getLastUserAgent(),
@@ -260,12 +234,15 @@ public class AdminUserApplicationController {
             String comment,
             Boolean banned,
             String bannedReason,
+            OffsetDateTime unbanAt,
             Boolean btnBypass
     ) {
     }
 
     public record BanApplicationRequest(
-            String reason
+            String reason,
+            OffsetDateTime unbanAt,
+            Boolean banned
     ) {
     }
 }

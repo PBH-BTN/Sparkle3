@@ -88,7 +88,7 @@ public class FlarumIntegrationService {
                         Long.toString(user.getId()),
                         nickname(user, privacy),
                         user.getRegisterAt(),
-                        user.getBannedAt() != null
+                        user.isSuspended()
                 ),
                 traffic7d,
                 points,

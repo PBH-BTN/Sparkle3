@@ -283,7 +283,7 @@ public class CommunityGroupService {
     public GithubJoinResult join(long userId, long groupId) throws BusinessException {
         GroupRow group = requireGithubGroup(groupId);
         User user = userService.getById(userId);
-        if (user == null || user.getBannedAt() != null) {
+        if (user == null || user.isSuspended()) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "Account is unavailable");
         }
         UserRel relation = githubRelation(userId);

@@ -115,7 +115,7 @@ public class PingIpQueryDetailsController extends BasePingController {
             return false;
         }
         var user = users.getById(owner);
-        return user != null && user.getBannedAt() == null;
+        return user != null && !user.isSuspended();
     }
 
     private long requireEligible(Userapp app) throws BusinessException {

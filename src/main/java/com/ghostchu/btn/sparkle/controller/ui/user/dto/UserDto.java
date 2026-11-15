@@ -24,6 +24,7 @@ public class UserDto implements Serializable {
     private OffsetDateTime registerAt;
     private OffsetDateTime bannedAt;
     private String bannedReason;
+    private OffsetDateTime unbanAt;
 
     public UserDto(User user) {
         this.id = user.getId();
@@ -31,7 +32,10 @@ public class UserDto implements Serializable {
         this.nickname = user.getNickname();
         this.email = user.getEmail();
         this.registerAt = user.getRegisterAt();
-        this.bannedAt = user.getBannedAt();
-        this.bannedReason = user.getBannedReason();
+        if (user.isSuspended()) {
+            this.bannedAt = user.getBannedAt();
+            this.bannedReason = user.getBannedReason();
+            this.unbanAt = user.getUnbanAt();
+        }
     }
 }

@@ -70,7 +70,7 @@ public class BasePingController {
         if (userApp == null) {
             throw new UserApplicationNotFoundException();
         }
-        if (userApp.getBannedAt() != null) {
+        if (userApp.isSuspended()) {
             throw new UserApplicationBannedException(userApp.getBannedReason());
         }
         if (recordPoints) {
@@ -84,7 +84,7 @@ public class BasePingController {
         var cred = cred(request);
         cred.verifyOrThrow();
         Userapp userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
-        if (userApp != null && userApp.getBannedAt() == null) {
+        if (userApp != null && !userApp.isSuspended()) {
             pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
         }
         return userApp;
@@ -94,7 +94,7 @@ public class BasePingController {
     protected Userapp authenticateForRulesPoints() {
         try {
             Userapp userapp = verifyUserApplicationFailSafe();
-            return userapp == null || userapp.getBannedAt() != null ? null : userapp;
+            return userapp == null || userapp.isSuspended() ? null : userapp;
         } catch (AccessDeniedException exception) {
             return null;
         }

@@ -48,7 +48,7 @@ public class UserPublicProfileService {
                 scoreBytes == null ? null : UnitConverter.autoUnit(scoreBytes),
                 scoreBytes == null ? null : Long.toString(scoreBytes),
                 nickname == null,
-                target.getBannedAt() != null,
+                target.isSuspended(),
                 self,
                 canSendMessage(sender, target),
                 canContactEmail(sender, target),
@@ -61,8 +61,8 @@ public class UserPublicProfileService {
         if (sender == null || target == null || sender.getId().equals(target.getId())) {
             return false;
         }
-        return sender.getBannedAt() == null
-                && target.getBannedAt() == null
+        return !sender.isSuspended()
+                && !target.isSuspended()
                 && privacySettings(target).receiveUserMessages();
     }
 
@@ -70,7 +70,7 @@ public class UserPublicProfileService {
         if (sender == null || target == null || sender.getId().equals(target.getId())) {
             return false;
         }
-        if (sender.getBannedAt() != null || target.getBannedAt() != null) {
+        if (sender.isSuspended() || target.isSuspended()) {
             return false;
         }
         if (!privacySettings(target).receiveUserMessages()) {

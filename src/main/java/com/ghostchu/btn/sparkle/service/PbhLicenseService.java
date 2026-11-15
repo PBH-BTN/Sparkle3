@@ -107,7 +107,7 @@ public class PbhLicenseService {
         }
 
         User user = userService.getById(btnUserId);
-        if (user == null || user.getBannedAt() != null) {
+        if (user == null || user.isSuspended()) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "Account is unavailable");
         }
         MemberTransaction product = transactionMapper.lockNextAvailableProduct(btnUserId);

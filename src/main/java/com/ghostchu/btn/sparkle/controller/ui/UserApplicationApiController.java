@@ -50,7 +50,7 @@ public class UserApplicationApiController {
                 .toList();
         var exemptAppIds = applications.stream()
                 .filter(application -> Boolean.TRUE.equals(application.getBtnBypass()))
-                .filter(application -> application.getBannedAt() == null)
+                .filter(application -> !application.isSuspended())
                 .map(application -> application.getId())
                 .toList();
         Map<Long, LinkedHashSet<String>> ipsByApp = new HashMap<>();

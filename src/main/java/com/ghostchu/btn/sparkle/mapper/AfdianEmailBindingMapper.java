@@ -21,7 +21,7 @@ public interface AfdianEmailBindingMapper {
             """)
     boolean hasUserBinding(@Param("userId") long userId);
 
-    @Select("SELECT id, email, banned_at FROM \"user\" WHERE lower(email) = #{email} LIMIT 2")
+    @Select("SELECT id, email, banned_at, unban_at FROM \"user\" WHERE lower(email) = #{email} LIMIT 2")
     List<User> findUsers(@Param("email") String email);
 
     @Insert("""

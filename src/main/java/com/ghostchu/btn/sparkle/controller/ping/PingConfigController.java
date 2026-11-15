@@ -44,7 +44,7 @@ public class PingConfigController extends BasePingController {
         if (userapp == null) {
             config = userappConfigService.configAnonymousUserapp();
         } else {
-            if (userapp.getBannedAt() != null) {
+            if (userapp.isSuspended()) {
                 throw new UserApplicationBannedException(userapp.getBannedReason());
             }
             config = userappConfigService.configLoggedInUserapp(userapp);

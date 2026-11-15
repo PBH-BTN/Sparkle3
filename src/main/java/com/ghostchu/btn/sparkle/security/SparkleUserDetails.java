@@ -60,7 +60,7 @@ public class SparkleUserDetails implements UserDetails, OAuth2User {
     @Override
     public boolean isAccountNonLocked() {
         // 检查用户是否被封禁
-        return user.getBannedAt() == null;
+        return !user.isSuspended();
     }
 
     @Override
@@ -71,7 +71,7 @@ public class SparkleUserDetails implements UserDetails, OAuth2User {
     @Override
     public boolean isEnabled() {
         // 检查用户是否被封禁
-        return user.getBannedAt() == null;
+        return !user.isSuspended();
     }
 
     @Override

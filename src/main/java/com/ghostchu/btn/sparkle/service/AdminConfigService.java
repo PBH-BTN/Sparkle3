@@ -101,7 +101,7 @@ public class AdminConfigService {
     }
 
     public NetworkTrafficAccess homepageTrafficAccess(User user) {
-        if (user == null || user.getBannedAt() != null) {
+        if (user == null || user.isSuspended()) {
             return new NetworkTrafficAccess(false, false, false, false, false);
         }
         var config = get();

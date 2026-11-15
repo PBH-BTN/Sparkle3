@@ -15,6 +15,7 @@ import com.ghostchu.btn.sparkle.entity.UserMessage;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
 import com.ghostchu.btn.sparkle.security.AdminPolicy;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -548,7 +549,7 @@ public class UserMessageService {
     private List<Long> activeRecipientIds() {
         return userService.list(
                 new QueryWrapper<User>()
-                        .isNull("banned_at")
+                        .apply(SuspensionStatus.NOT_SUSPENDED_SQL)
                         .notLike("email", "@sparkle.system")
                         .orderByAsc("id")
         ).stream().map(User::getId).toList();

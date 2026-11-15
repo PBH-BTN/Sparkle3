@@ -1,16 +1,31 @@
 package com.ghostchu.btn.sparkle.autoconfig;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.ghostchu.btn.sparkle.controller.admin.AdminBanSubmissionController;
 import com.ghostchu.btn.sparkle.controller.admin.AdminContentModerationController;
+import com.ghostchu.btn.sparkle.controller.admin.AdminUserApplicationController;
+import com.ghostchu.btn.sparkle.controller.admin.AdminUserController;
+import com.ghostchu.btn.sparkle.controller.handler.GlobalExceptionHandler;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.HomepageIpFlagController;
+import com.ghostchu.btn.sparkle.converter.InetAddressTypeHandler;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
 import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
+import com.ghostchu.btn.sparkle.mapper.UserMapper;
+import com.ghostchu.btn.sparkle.mapper.UserappMapper;
+import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
+import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.IUserappService;
+import com.ghostchu.btn.sparkle.service.UserPrivacyService;
+import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import com.ghostchu.btn.sparkle.service.HomepageIpFlagService;
 import com.ghostchu.btn.sparkle.service.HomepageStatisticsRefreshService;
 import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
@@ -60,6 +75,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -102,6 +118,91 @@ class FlywayMigrationIntegrationTest {
         try (var connection = connect(sourceUrl, username, password);
              var statement = connection.createStatement()) {
             statement.execute("DROP DATABASE " + database);
+        }
+    }
+
+    @Test
+    void timedSuspensionsPersistAndExpireInAdminRequests() throws Exception {
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("""
+                    CREATE TABLE "user" (id bigint PRIMARY KEY, banned_at timestamptz, banned_reason text);
+                    CREATE TABLE userapp (id bigint PRIMARY KEY, banned_at timestamptz, banned_reason text);
+                    INSERT INTO "user" VALUES (1, now(), 'Existing reason');
+                    INSERT INTO userapp VALUES (2, NULL, NULL);
+                    """);
+        }
+        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").load();
+        flyway.baseline();
+        assertEquals(1, flyway.migrate().migrationsExecuted);
+        flyway.validate();
+
+        var configuration = new MybatisConfiguration(new Environment("suspension-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.getTypeHandlerRegistry().register(InetAddressTypeHandler.class);
+        configuration.addMapper(UserMapper.class);
+        configuration.addMapper(UserappMapper.class);
+        try (var session = new SqlSessionFactoryBuilder().build(configuration).openSession(true);
+             var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            var userMapper = session.getMapper(UserMapper.class);
+            var appMapper = session.getMapper(UserappMapper.class);
+            var service = new AdminSuspensionService(userMapper, appMapper);
+            var users = mock(IUserService.class);
+            var apps = mock(IUserappService.class);
+            var privacy = mock(UserPrivacyService.class);
+            var user = new User().setId(1L).setRole("user");
+            var app = new Userapp().setId(2L).setOwner(1L);
+            when(users.getById(1L)).thenReturn(user);
+            when(apps.getById(2L)).thenReturn(app);
+            when(privacy.get(1L)).thenReturn(UserPrivacySettings.defaults(1L));
+            var mvc = MockMvcBuilders.standaloneSetup(
+                            new AdminUserController(users, service, apps, null, null, privacy),
+                            new AdminUserApplicationController(apps, users, service))
+                    .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                    .setControllerAdvice(new GlobalExceptionHandler())
+                    .build();
+            assertEquals(1, userMapper.selectCount(new QueryWrapper<User>().apply(SuspensionStatus.SUSPENDED_SQL)));
+            var until = OffsetDateTime.now(ZoneOffset.ofHours(8)).plusDays(1).withNano(0);
+            var body = """
+                    {"banned":true,"reason":"  Duplicate reports  ","unbanAt":"%s"}
+                    """.formatted(until);
+            mvc.perform(post("/api/admin/users/1/ban").contentType("application/json")
+                            .content("""
+                                    {"banned":true,"reason":"   "}
+                                    """))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(post("/api/admin/users/1/ban").contentType("application/json").content(body))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.bannedReason").value("Duplicate reports"));
+            mvc.perform(post("/api/admin/userapps/2/ban").contentType("application/json").content(body))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.bannedReason").value("Duplicate reports"));
+            try (var rows = statement.executeQuery("""
+                    SELECT banned_reason, unban_at FROM "user"
+                    UNION ALL SELECT banned_reason, unban_at FROM userapp
+                    """)) {
+                for (int i = 0; i < 2; i++) {
+                    assertTrue(rows.next());
+                    assertEquals("Duplicate reports", rows.getString(1));
+                    assertTrue(until.isEqual(rows.getObject(2, OffsetDateTime.class)));
+                }
+                assertFalse(rows.next());
+            }
+            assertTrue(user.isSuspended());
+            assertTrue(app.isSuspended());
+            assertEquals(1, appMapper.selectCount(new QueryWrapper<Userapp>().apply(SuspensionStatus.SUSPENDED_SQL)));
+            statement.execute("UPDATE userapp SET unban_at = CURRENT_TIMESTAMP - interval '1 second'");
+            assertEquals(1, appMapper.selectCount(new QueryWrapper<Userapp>().apply(SuspensionStatus.NOT_SUSPENDED_SQL)));
+            mvc.perform(post("/api/admin/users/1/ban").contentType("application/json")
+                            .content("""
+                                    {"banned":false}
+                                    """))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.bannedAt").doesNotExist());
+            try (var rows = statement.executeQuery("""
+                    SELECT banned_at, banned_reason, unban_at FROM "user" WHERE id = 1
+                    """)) {
+                assertTrue(rows.next());
+                for (int column = 1; column <= 3; column++) assertNull(rows.getObject(column));
+            }
         }
     }
 
@@ -702,7 +803,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("80", latest.info().current().getVersion().getVersion());
+        assertEquals("81", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

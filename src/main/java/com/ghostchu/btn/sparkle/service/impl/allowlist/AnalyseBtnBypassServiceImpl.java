@@ -12,6 +12,7 @@ import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.IPAllowListRuleProvider;
 import com.ghostchu.btn.sparkle.service.impl.AbstractAnalyseRuleServiceImpl;
 import com.ghostchu.btn.sparkle.util.IPAddressUtil;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -53,7 +54,7 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
         StringBuilder stringBuilder = new StringBuilder();
         List<Userapp> bypassedUserAppsId = userappService.list(new LambdaQueryWrapper<Userapp>()
                         .eq(Userapp::getBtnBypass, true)
-                        .isNull(Userapp::getBannedAt))
+                        .apply(SuspensionStatus.NOT_SUSPENDED_SQL))
                 .stream().toList();
         long totalIpsAdded = 0;
         for (Userapp uapp : bypassedUserAppsId) {

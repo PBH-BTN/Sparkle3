@@ -1,9 +1,11 @@
 package com.ghostchu.btn.sparkle.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -47,11 +49,14 @@ public class Userapp implements Serializable {
     @TableField("owner")
     private Long owner;
 
-    @TableField(value = "banned_at")
+    @TableField(value = "banned_at", updateStrategy = FieldStrategy.NEVER)
     private OffsetDateTime bannedAt;
 
-    @TableField("banned_reason")
+    @TableField(value = "banned_reason", updateStrategy = FieldStrategy.NEVER)
     private String bannedReason;
+
+    @TableField(value = "unban_at", updateStrategy = FieldStrategy.NEVER)
+    private OffsetDateTime unbanAt;
 
     @TableField("comment")
     private String comment;
@@ -76,4 +81,8 @@ public class Userapp implements Serializable {
 
     @TableField(exist = false)
     private Long banCount;
+
+    public boolean isSuspended() {
+        return SuspensionStatus.isActive(bannedAt, unbanAt, OffsetDateTime.now());
+    }
 }

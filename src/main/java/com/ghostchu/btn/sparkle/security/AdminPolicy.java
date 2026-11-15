@@ -19,7 +19,7 @@ public final class AdminPolicy {
 
     public static boolean isAdmin(User user) {
         return user != null
-                && user.getBannedAt() == null
+                && !user.isSuspended()
                 && isAdminRole(user.getRole());
     }
 
@@ -27,7 +27,7 @@ public final class AdminPolicy {
         if (userDetails == null || userDetails.getUser() == null) {
             return false;
         }
-        if (userDetails.getUser().getBannedAt() != null) {
+        if (userDetails.getUser().isSuspended()) {
             return false;
         }
         return isAdmin(userDetails.getUser())
@@ -36,7 +36,7 @@ public final class AdminPolicy {
 
     public static boolean isModerator(User user) {
         return user != null
-                && user.getBannedAt() == null
+                && !user.isSuspended()
                 && MODERATOR_AUTHORITY.equalsIgnoreCase(
                         user.getRole() == null ? "" : user.getRole().trim()
                 );

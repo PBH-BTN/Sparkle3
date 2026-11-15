@@ -105,7 +105,11 @@ public class AccountDeletionFinalizer {
             if (application.getBannedAt() == null) application.setBannedAt(now);
             application.setBannedReason(UserAccountDeletionService.DELETED_APP_REASON)
                     .setComment(UserAccountDeletionService.DELETED_APP_REASON);
-            userappMapper.updateById(application);
+            userappMapper.update(application, new LambdaUpdateWrapper<Userapp>()
+                    .eq(Userapp::getId, application.getId())
+                    .set(Userapp::getBannedAt, application.getBannedAt())
+                    .set(Userapp::getBannedReason, application.getBannedReason())
+                    .set(Userapp::getUnbanAt, null));
         });
         userRelMapper.selectList(
                 new QueryWrapper<UserRel>()
@@ -171,7 +175,11 @@ public class AccountDeletionFinalizer {
                 .setBannedAt(userEntity.getBannedAt() == null
                         ? now : userEntity.getBannedAt())
                 .setBannedReason(UserAccountDeletionService.DELETED_APP_REASON);
-        userMapper.updateById(userEntity);
+        userMapper.update(userEntity, new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId)
+                .set(User::getBannedAt, userEntity.getBannedAt())
+                .set(User::getBannedReason, userEntity.getBannedReason())
+                .set(User::getUnbanAt, null));
         careerMapper.deleteEvents(userId);
         careerMapper.deleteDaily(userId);
         careerMapper.deleteTrafficDaily(userId);

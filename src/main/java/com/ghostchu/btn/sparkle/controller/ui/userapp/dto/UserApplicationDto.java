@@ -22,6 +22,7 @@ public class UserApplicationDto implements Serializable {
     private OffsetDateTime lastSeenAt;
     private OffsetDateTime bannedAt;
     private String bannedReason;
+    private OffsetDateTime unbanAt;
     private Boolean btnBypass;
     private List<String> exemptIps;
 
@@ -31,8 +32,11 @@ public class UserApplicationDto implements Serializable {
         this.comment = userapp.getComment();
         this.createdAt = userapp.getCreatedAt();
         this.lastSeenAt = userapp.getLastSeenAt();
-        this.bannedAt = userapp.getBannedAt();
-        this.bannedReason = userapp.getBannedReason();
+        if (userapp.isSuspended()) {
+            this.bannedAt = userapp.getBannedAt();
+            this.bannedReason = userapp.getBannedReason();
+            this.unbanAt = userapp.getUnbanAt();
+        }
         this.btnBypass = userapp.getBtnBypass();
         this.exemptIps = exemptIps == null ? List.of() : List.copyOf(exemptIps);
     }

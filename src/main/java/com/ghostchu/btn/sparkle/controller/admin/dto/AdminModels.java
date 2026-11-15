@@ -67,6 +67,7 @@ public final class AdminModels {
             OffsetDateTime lastLoginAt,
             OffsetDateTime bannedAt,
             String bannedReason,
+            OffsetDateTime unbanAt,
             String githubLogin,
             String scoreBytes
     ) {
@@ -83,6 +84,7 @@ public final class AdminModels {
             OffsetDateTime lastSeenAt,
             OffsetDateTime bannedAt,
             String bannedReason,
+            OffsetDateTime unbanAt,
             Boolean btnBypass,
             String installationId,
             String lastUserAgent,

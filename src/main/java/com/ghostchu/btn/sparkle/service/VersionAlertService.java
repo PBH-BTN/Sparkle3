@@ -218,7 +218,7 @@ public class VersionAlertService {
                     "EVENT"
             );
             User user = userService.getById(ownerId);
-            if (user == null || user.getBannedAt() != null) {
+            if (user == null || user.isSuspended()) {
                 execution.skipped("User is unavailable");
                 return;
             }

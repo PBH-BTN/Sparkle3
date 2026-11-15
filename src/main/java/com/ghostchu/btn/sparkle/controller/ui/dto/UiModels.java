@@ -40,6 +40,7 @@ public final class UiModels {
             OffsetDateTime registerAt,
             OffsetDateTime bannedAt,
             String bannedReason,
+            OffsetDateTime unbanAt,
             String role,
             boolean admin,
             boolean moderator,
@@ -50,14 +51,16 @@ public final class UiModels {
             String avatarModerationReason
     ) {
         public static UserView from(User user, UserPrivacySettings privacy) {
+            boolean suspended = user.isSuspended();
             return new UserView(
                     String.valueOf(user.getId()),
                     user.getNickname(),
                     user.getEmail(),
                     user.getAvatarUrl(),
                     user.getRegisterAt(),
-                    user.getBannedAt(),
-                    user.getBannedReason(),
+                    suspended ? user.getBannedAt() : null,
+                    suspended ? user.getBannedReason() : null,
+                    suspended ? user.getUnbanAt() : null,
                     user.getRole(),
                     AdminPolicy.isAdmin(user),
                     AdminPolicy.hasModeratorAccess(user),

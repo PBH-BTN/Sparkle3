@@ -30,7 +30,7 @@ class UserappBanRankingIntegrationTest {
                 statement.execute("""
                         CREATE TEMP TABLE userapp (
                             id bigint, app_id text, comment text, owner bigint, created_at timestamptz,
-                            last_seen_at timestamptz, banned_at timestamptz, banned_reason text,
+                            last_seen_at timestamptz, banned_at timestamptz, banned_reason text, unban_at timestamptz,
                             btn_bypass boolean, installation_id text, last_user_agent text
                         );
                         CREATE TEMP TABLE ban_history (userapps_id bigint, populate_time timestamptz);

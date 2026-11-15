@@ -1,7 +1,6 @@
 package com.ghostchu.btn.sparkle.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ghostchu.btn.sparkle.constants.AvatarVisibility;
 import com.ghostchu.btn.sparkle.constants.PointsVisibility;
@@ -13,12 +12,14 @@ import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
+import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
 import com.ghostchu.btn.sparkle.service.UserPrivacySettings;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
+import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,6 +49,7 @@ public class AdminUserController {
     private static final OffsetDateTime NEVER = OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
 
     private final IUserService userService;
+    private final AdminSuspensionService suspensionService;
     private final IUserappService userappService;
     private final UserRelMapper userRelMapper;
     private final PointsService pointsService;
@@ -80,9 +82,9 @@ public class AdminUserController {
             wrapper.eq("role", role.trim());
         }
         if ("banned".equalsIgnoreCase(status)) {
-            wrapper.isNotNull("banned_at");
+            wrapper.apply(SuspensionStatus.SUSPENDED_SQL);
         } else if ("active".equalsIgnoreCase(status)) {
-            wrapper.isNull("banned_at");
+            wrapper.apply(SuspensionStatus.NOT_SUSPENDED_SQL);
         }
         wrapper.orderByDesc("register_at").orderByDesc("id");
 
@@ -181,25 +183,12 @@ public class AdminUserController {
     @PostMapping("/{id}/ban")
     public AdminUserView setBanned(@PathVariable long id,
                                    @RequestBody BanUserRequest request,
-                                   @AuthenticationPrincipal SparkleUserDetails principal) {
+                                   @AuthenticationPrincipal SparkleUserDetails principal) throws BusinessException {
         User user = requireUser(id);
         if (request.banned() && principal != null && principal.getUserId() == id) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot suspend your own account");
         }
-        if (request.banned()) {
-            user.setBannedAt(OffsetDateTime.now());
-            user.setBannedReason(blankToDefault(request.reason(), "Suspended by administrator"));
-            userService.updateById(user);
-        } else {
-            user.setBannedAt(null);
-            user.setBannedReason(null);
-            userService.update(
-                    Wrappers.<User>lambdaUpdate()
-                            .eq(User::getId, id)
-                            .set(User::getBannedAt, null)
-                            .set(User::getBannedReason, null)
-            );
-        }
+        suspensionService.setUserSuspended(user, request.banned(), request.reason(), request.unbanAt());
         UserRel relation = userService.getUserRelByBindUserId(id);
         return toView(
                 user,
@@ -289,6 +278,7 @@ public class AdminUserController {
             String githubLogin,
             UserPrivacySettings privacy
     ) {
+        boolean suspended = user.isSuspended();
         return new AdminUserView(
                 String.valueOf(user.getId()),
                 user.getEmail(),
@@ -300,8 +290,9 @@ public class AdminUserController {
                 privacy.pointsVisibility().name(),
                 user.getRegisterAt(),
                 user.getLastLoginAt(),
-                user.getBannedAt(),
-                user.getBannedReason(),
+                suspended ? user.getBannedAt() : null,
+                suspended ? user.getBannedReason() : null,
+                suspended ? user.getUnbanAt() : null,
                 githubLogin,
                 Long.toString(user.getScoreBytes() == null ? 0 : user.getScoreBytes())
         );
@@ -366,7 +357,7 @@ public class AdminUserController {
     ) {
     }
 
-    public record BanUserRequest(boolean banned, String reason) {
+    public record BanUserRequest(boolean banned, String reason, OffsetDateTime unbanAt) {
     }
 
     public record AdjustPointsRequest(String amount, String reason) {

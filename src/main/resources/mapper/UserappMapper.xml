@@ -7,7 +7,7 @@
     </select>
     <select id="pageByBanCount" resultType="com.ghostchu.btn.sparkle.entity.Userapp">
         SELECT app.id, app.app_id, app.comment, app.owner, app.created_at, app.last_seen_at,
-               app.banned_at, app.banned_reason, app.btn_bypass, app.installation_id, app.last_user_agent,
+               app.banned_at, app.banned_reason, app.unban_at, app.btn_bypass, app.installation_id, app.last_user_agent,
                COALESCE(bans.submission_count, 0) AS ban_count
         FROM userapp app
         LEFT JOIN (

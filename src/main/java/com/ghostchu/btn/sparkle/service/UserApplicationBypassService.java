@@ -16,7 +16,7 @@ public class UserApplicationBypassService {
     private final IPDBManager ipdb;
 
     public List<BypassIp> list(Userapp application) {
-        if (!Boolean.TRUE.equals(application.getBtnBypass()) || application.getBannedAt() != null) return List.of();
+        if (!Boolean.TRUE.equals(application.getBtnBypass()) || application.isSuspended()) return List.of();
         var end = OffsetDateTime.now();
         var result = new LinkedHashMap<String, BypassIp>();
         for (var heartbeat : heartbeats.fetchHeartBeatsByUserAppIdInTimeRange(application.getId(),end.minusHours(1),end)) {
