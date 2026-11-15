@@ -445,7 +445,7 @@ V70 只建新表，不回填历史，也不扫描或锁定现有业务大表，�
 首页 BitTorrent 流量承载通过 `GET /api/ui/user/traffic/network` 汇总最近 30 个 UTC 自然日内「我的流量统计」使用的同一批每日记录。没有记录的日期不生成数据点。接口按请求者当前角色只返回有权查看的指标，五张图均不可见时返回 403。
 后台“运行设置”可切换首页 BitTorrent 流量承载，保存后重新加载首页即可看到变化。V72 为 `sparkle.homepage.network-traffic-enabled` 写入启用默认值，保留已有设置，通常无需维护窗口。
 后台“运行设置”可分别配置汇报流量、确认流量、活动时长、日均拦截损失、总计拦截损失的可见范围，选择所有登录用户或仅管理员和协管。前四张图分别使用 `sparkle.homepage.reported-staff-only`、`sparkle.homepage.confirmed-staff-only`、`sparkle.homepage.activity-staff-only` 和 `sparkle.homepage.average-loss-staff-only`，未单独配置时继承原有的 `sparkle.homepage.network-traffic-staff-only`。总计拦截损失沿用 `sparkle.homepage.total-loss-staff-only`。
-首页支持 30、14 和 7 天范围。汇报流量、确认流量、活动时长和总计拦截损失按 UTC 日求和，再在所选范围内逐日累计。日均拦截损失直接对每天各条个人日记录保存的损失流量和损失比例分别求平均。
+首页支持 30、14 和 7 天范围。汇报流量、确认流量、活动时长和总计拦截损失按 UTC 日求和，再在所选范围内逐日累计。日均拦截损失按 UTC 日分别对个人损失流量和损失比例排序，每项剔除最高和最低各 1% 的样本后计算平均值。每端剔除条数向下取整，当天不足 100 条时使用全部样本。
 V71 创建日期索引以支持该查询。索引构建期间每日流量表可读取，写入会等待。如果表中已有大量记录，请在维护窗口升级。
 依赖 PostgreSQL 18 的写入前后值返回语法。升级前应完成备份及专用 TimescaleDB 测试库验证。
 删除账户时同步清除此表的数据；原始明细清理不影响已累计的每日结果。
