@@ -6,6 +6,7 @@ import type { XAXisComponentOption, YAXisComponentOption } from 'echarts'
 import { uiApi } from '@/api'
 import type { DailyTraffic } from '@/api/types'
 import EChart from '@/components/EChart.vue'
+import HomeStatisticsFilters from '@/components/HomeStatisticsFilters.vue'
 import { stackedAreaChartOption } from '@/utils/charts'
 import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
@@ -136,17 +137,12 @@ onMounted(load)
 
 <template>
   <section class="network-traffic" :aria-label="sectionTitle">
-    <div class="network-traffic-heading">
-      <div>
-        <h2>{{ sectionTitle }}</h2>
-        <p v-if="showTraffic">{{ t('home.networkTrafficDescription') }}</p>
-      </div>
-      <a-radio-group v-model="days" type="button" :aria-label="t('home.statistics.range')">
-        <a-radio :value="30">{{ t('home.last30Days') }}</a-radio>
-        <a-radio :value="14">{{ t('home.last14Days') }}</a-radio>
-        <a-radio :value="7">{{ t('home.last7Days') }}</a-radio>
-      </a-radio-group>
-    </div>
+    <HomeStatisticsFilters
+      v-model="days"
+      :title="sectionTitle"
+      :description="showTraffic ? t('home.networkTrafficDescription') : undefined"
+      :ranges="[30, 14, 7]"
+    />
     <a-card v-if="loading || failed || !cumulativeRows.length" class="surface-card network-traffic-state">
       <a-spin v-if="loading" />
       <template v-else-if="failed">
@@ -166,26 +162,7 @@ onMounted(load)
 <style scoped>
 .network-traffic {
   display: grid;
-  gap: 16px;
-}
-
-.network-traffic-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.network-traffic-heading h2 {
-  margin: 0 0 6px;
-  color: var(--color-text-1);
-  font-size: 22px;
-}
-
-.network-traffic-heading p {
-  margin: 0;
-  color: var(--color-text-3);
+  gap: 14px;
 }
 
 .network-traffic-charts {

@@ -9,6 +9,7 @@ import { IconApps, IconBug, IconRight } from '@arco-design/web-vue/es/icon'
 import EChart from '@/components/EChart.vue'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
 import HomeIpFlags from '@/components/HomeIpFlags.vue'
+import HomeStatisticsFilters from '@/components/HomeStatisticsFilters.vue'
 import HomeNetworkTraffic from '@/components/HomeNetworkTraffic.vue'
 import { uiApi } from '@/api'
 import type {
@@ -109,7 +110,7 @@ function pieOption(chart: DistributionChart | undefined): EChartsCoreOption {
 
 function formatBucket(value: string) {
   const date = dayjs(value)
-  return selectedDays.value === 1 ? date.format('HH:mm') : date.format('MM-DD')
+  return networkStats.value?.days === 1 ? date.format('HH:mm') : date.format('MM-DD')
 }
 
 function stackedAreaOption(chart: StackedAreaChart | undefined): EChartsCoreOption {
@@ -138,6 +139,7 @@ async function loadHomeStats() {
 async function loadNetworkStats() {
   if (!moduleEnabled('network-charts')) return
   const requestId = ++statisticsRequestId
+  networkStats.value = null
   networkLoading.value = true
   try {
     const result = await uiApi.homeNetworkStatistics(selectedDays.value, networkSource.value)
@@ -278,40 +280,23 @@ onMounted(() => {
     <HomeIpFlags v-if="moduleEnabled('ip-flags')" />
 
     <section v-if="moduleEnabled('network-charts')" class="stats-section">
-      <div class="section-heading">
-        <div>
-          <h2>{{ t('home.statistics.networkTitle') }}</h2>
-          <p>{{ t('home.statistics.networkDescription') }}</p>
+      <HomeStatisticsFilters
+        v-model="selectedDays"
+        :title="t('home.statistics.networkTitle')"
+        :description="t('home.statistics.networkDescription')"
+        :ranges="[30, 14, 7, 1]"
+      >
+        <div class="statistics-filter-field">
+          <span>{{ t('home.statistics.source') }}</span>
+          <a-select v-model="networkSource" :aria-label="t('home.statistics.source')">
+            <a-option value="ban">{{ t('home.statistics.sources.ban') }}</a-option>
+            <a-option value="all">{{ t('home.statistics.sources.all') }}</a-option>
+          </a-select>
         </div>
-      </div>
-
-      <a-card class="surface-card chart-controls">
-        <div class="chart-control-row">
-          <div class="chart-control">
-            <span>{{ t('home.statistics.range') }}</span>
-            <a-radio-group v-model="selectedDays" type="button">
-              <a-radio :value="30">{{ t('home.last30Days') }}</a-radio>
-              <a-radio :value="14">{{ t('home.last14Days') }}</a-radio>
-              <a-radio :value="7">{{ t('home.last7Days') }}</a-radio>
-              <a-radio :value="1">{{ t('home.last24Hours') }}</a-radio>
-            </a-radio-group>
-          </div>
-          <div class="chart-control">
-            <span>{{ t('home.statistics.source') }}</span>
-            <a-select v-model="networkSource" class="source-select">
-              <a-option value="ban">{{ t('home.statistics.sources.ban') }}</a-option>
-              <a-option value="all">{{ t('home.statistics.sources.all') }}</a-option>
-            </a-select>
-          </div>
-          <span v-if="networkStats" class="chart-updated">
-            {{
-              t('home.statistics.updatedAt', {
-                time: dayjs(networkStats.generatedAt).format('HH:mm:ss'),
-              })
-            }}
-          </span>
-        </div>
-      </a-card>
+        <template v-if="networkStats" #status>
+          {{ t('home.statistics.updatedAt', { time: dayjs(networkStats.generatedAt).format('HH:mm:ss') }) }}
+        </template>
+      </HomeStatisticsFilters>
 
       <a-spin :loading="networkLoading" class="network-spin">
         <a-row :gutter="[16, 16]">
@@ -658,39 +643,6 @@ body[arco-theme='dark'] .hero-dot {
   font-size: 24px;
 }
 
-.chart-controls :deep(.arco-card-body) {
-  padding: 14px 18px;
-}
-
-.chart-control-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px 24px;
-}
-
-.chart-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chart-control > span {
-  color: var(--color-text-3);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.source-select {
-  width: 170px;
-}
-
-.chart-updated {
-  margin-left: auto;
-  color: var(--color-text-3);
-  font-size: 12px;
-}
-
 .chart-card :deep(.arco-card-body) {
   min-height: 270px;
 }
@@ -716,32 +668,5 @@ body[arco-theme='dark'] .hero-dot {
   .hero-graphic {
     opacity: 0.45;
   }
-
-  .chart-control,
-  .chart-control-row {
-    align-items: stretch;
-  }
-
-  .chart-control {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .chart-control :deep(.arco-radio-group),
-  .source-select {
-    width: 100%;
-  }
-
-  .chart-control :deep(.arco-radio-button) {
-    flex: 1;
-    text-align: center;
-  }
-
-  .chart-updated {
-    width: 100%;
-    margin-left: 0;
-  }
-
-
 }
 </style>

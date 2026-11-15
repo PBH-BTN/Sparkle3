@@ -391,9 +391,6 @@ export default {
     ipFlags: {
       title: 'IP 标志统计',
       description: '按 UTC 日期统计种群跟踪中各标志的唯一 IP 数。',
-      from: '开始日期',
-      to: '结束日期',
-      invalidRange: '请选择最多 90 天的日期范围。',
       failed: '无法加载 IP 标志统计。',
       empty: '所选日期暂无 IP 标志统计。',
       metrics: {
@@ -445,6 +442,8 @@ export default {
       networkTitle: '网络统计数据',
       networkDescription: '查看 Peer ID、客户端、GeoIP 城市和地址栈的近期分布。',
       range: '统计区间',
+      last3Days: '最近 3 天',
+      todayUtc: '今天（UTC）',
       source: '数据源',
       sources: {
         ban: '仅封禁数据',

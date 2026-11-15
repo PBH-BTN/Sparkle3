@@ -7,6 +7,7 @@ import type { TooltipComponentOption } from 'echarts/components'
 import { uiApi } from '@/api'
 import type { DailyIpFlags } from '@/api/types'
 import EChart from '@/components/EChart.vue'
+import HomeStatisticsFilters from '@/components/HomeStatisticsFilters.vue'
 import { stackedAreaChartOption } from '@/utils/charts'
 
 const metrics = [
@@ -16,15 +17,18 @@ const metrics = [
 ] as const
 
 const { t, n } = useI18n()
-const utcToday = () => new Date().toISOString().slice(0, 10)
-const range = ref([dayjs(utcToday()).subtract(6, 'day').format('YYYY-MM-DD'), utcToday()])
+const days = ref(7)
+const range = ref<[string, string]>(dateRange(days.value))
 const records = ref<DailyIpFlags[]>([])
 const loading = ref(false)
 const failed = ref(false)
-const invalidRange = computed(() => {
-  const [from, to] = range.value
-  return !from || !to || to > utcToday() || to < from || dayjs(to).diff(dayjs(from), 'day') >= 90
-})
+
+function dateRange(days: number): [string, string] {
+  const end = new Date()
+  const to = end.toISOString().slice(0, 10)
+  end.setUTCDate(end.getUTCDate() - days + 1)
+  return [end.toISOString().slice(0, 10), to]
+}
 
 const option = computed(() => {
   const [from, to] = range.value
@@ -55,24 +59,16 @@ const option = computed(() => {
 
 let requestId = 0
 
-function setDate(index: number, value: unknown) {
-  if (typeof value !== 'string') return
-  range.value = range.value.map((date, key) => key === index ? value : date)
-}
-
-function disableFutureDate(date?: Date) {
-  return !!date && dayjs(date).format('YYYY-MM-DD') > utcToday()
-}
-
 async function load() {
   const id = ++requestId
+  range.value = dateRange(days.value)
+  const [from, to] = range.value
   records.value = []
   failed.value = false
-  loading.value = !invalidRange.value
-  if (!loading.value) return
+  loading.value = true
 
   try {
-    const result = await uiApi.homeIpFlags(range.value[0]!, range.value[1]!)
+    const result = await uiApi.homeIpFlags(from, to)
     if (id === requestId) records.value = result
   } catch {
     if (id === requestId) failed.value = true
@@ -81,95 +77,36 @@ async function load() {
   }
 }
 
-watch(range, load, { immediate: true })
+watch(days, load, { immediate: true })
 </script>
 
 <template>
-  <a-card class="surface-card">
-    <div class="ip-flags-header">
-      <div>
-        <h2>{{ t('home.ipFlags.title') }}</h2>
-        <p>{{ t('home.ipFlags.description') }}</p>
+  <section class="ip-flags">
+    <HomeStatisticsFilters
+      v-model="days"
+      :title="t('home.ipFlags.title')"
+      :description="t('home.ipFlags.description')"
+      :ranges="[30, 14, 7, 3, 1]"
+      calendar-days
+    />
+    <a-card class="surface-card">
+      <a-result v-if="failed" status="error" :title="t('home.ipFlags.failed')">
+        <template #extra><a-button @click="load">{{ t('common.retry') }}</a-button></template>
+      </a-result>
+      <div v-else-if="loading" class="ip-flags-status" role="status">
+        <a-spin :tip="t('common.loading')" />
       </div>
-      <div class="ip-flags-range">
-        <a-range-picker
-          v-model="range"
-          value-format="YYYY-MM-DD"
-          :allow-clear="false"
-          :disabled-date="disableFutureDate"
-          :aria-label="t('home.statistics.range')"
-        />
-      </div>
-      <div class="ip-flags-mobile-range">
-        <a-date-picker
-          :model-value="range[0]"
-          value-format="YYYY-MM-DD"
-          :allow-clear="false"
-          :disabled-date="disableFutureDate"
-          :aria-label="t('home.ipFlags.from')"
-          @change="(value: unknown) => setDate(0, value)"
-        />
-        <a-date-picker
-          :model-value="range[1]"
-          value-format="YYYY-MM-DD"
-          :allow-clear="false"
-          :disabled-date="disableFutureDate"
-          :aria-label="t('home.ipFlags.to')"
-          @change="(value: unknown) => setDate(1, value)"
-        />
-      </div>
-    </div>
-    <a-alert v-if="invalidRange" type="warning">{{ t('home.ipFlags.invalidRange') }}</a-alert>
-    <a-result v-else-if="failed" status="error" :title="t('home.ipFlags.failed')">
-      <template #extra><a-button @click="load">{{ t('common.retry') }}</a-button></template>
-    </a-result>
-    <div v-else-if="loading" class="ip-flags-status" role="status">
-      <a-spin :tip="t('common.loading')" />
-    </div>
-    <a-empty v-else-if="records.length === 0" :description="t('home.ipFlags.empty')" />
-    <EChart v-else :option="option" height="390px" />
-  </a-card>
+      <a-empty v-else-if="records.length === 0" :description="t('home.ipFlags.empty')" />
+      <EChart v-else :option="option" height="390px" />
+    </a-card>
+  </section>
 </template>
 
 <style scoped>
-.ip-flags-header {
+.ip-flags {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 24px;
-  margin-bottom: 16px;
-}
-
-.ip-flags-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.ip-flags-header p {
-  margin: 4px 0 0;
-  color: var(--color-text-2);
-}
-
-.ip-flags-range {
-  max-width: 100%;
-}
-
-.ip-flags-mobile-range {
-  display: none;
-}
-
-@media (max-width: 720px) {
-  .ip-flags-range {
-    display: none;
-  }
-
-  .ip-flags-mobile-range {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
+  flex-direction: column;
+  gap: 14px;
 }
 
 .ip-flags-status {

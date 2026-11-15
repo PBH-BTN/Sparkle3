@@ -404,9 +404,6 @@ export default {
     ipFlags: {
       title: 'IP flag statistics',
       description: 'Daily unique IPs per flag in swarm tracking, grouped by UTC date.',
-      from: 'Start date',
-      to: 'End date',
-      invalidRange: 'Select a date range of up to 90 days.',
       failed: 'Could not load IP flag statistics.',
       empty: 'No IP flag statistics for the selected dates.',
       metrics: {
@@ -460,6 +457,8 @@ export default {
       networkDescription:
         'Inspect recent Peer ID, client, GeoIP city, and address-stack distributions.',
       range: 'Range',
+      last3Days: 'Last 3 days',
+      todayUtc: 'Today (UTC)',
       source: 'Data source',
       sources: {
         ban: 'Ban data only',
