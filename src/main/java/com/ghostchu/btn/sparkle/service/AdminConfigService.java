@@ -31,6 +31,10 @@ public class AdminConfigService {
     private static final String HOMEPAGE_NETWORK_TRAFFIC_ENABLED = "sparkle.homepage.network-traffic-enabled";
     private static final String HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY = "sparkle.homepage.network-traffic-staff-only";
     private static final String HOMEPAGE_TOTAL_LOSS_STAFF_ONLY = "sparkle.homepage.total-loss-staff-only";
+    private static final String HOMEPAGE_REPORTED_STAFF_ONLY = "sparkle.homepage.reported-staff-only";
+    private static final String HOMEPAGE_CONFIRMED_STAFF_ONLY = "sparkle.homepage.confirmed-staff-only";
+    private static final String HOMEPAGE_ACTIVITY_STAFF_ONLY = "sparkle.homepage.activity-staff-only";
+    private static final String HOMEPAGE_AVERAGE_LOSS_STAFF_ONLY = "sparkle.homepage.average-loss-staff-only";
     private static final String USER_CONTACT_EMAIL_SUBJECT_TEMPLATE =
             "sparkle.user-contact-email.subject-template";
     private static final String USER_CONTACT_EMAIL_BODY_TEMPLATE =
@@ -72,6 +76,10 @@ public class AdminConfigService {
                 homepageNetworkTrafficEnabled,
                 homepageNetworkTrafficStaffOnly,
                 homepageTotalLossStaffOnly,
+                homepageNetworkTrafficStaffOnly,
+                homepageNetworkTrafficStaffOnly,
+                homepageNetworkTrafficStaffOnly,
+                homepageNetworkTrafficStaffOnly,
                 userContactEmailSubjectTemplate,
                 userContactEmailBodyTemplate
         );
@@ -93,14 +101,18 @@ public class AdminConfigService {
     }
 
     public NetworkTrafficAccess homepageTrafficAccess(User user) {
-        if (user == null || user.getBannedAt() != null) return new NetworkTrafficAccess(false, false);
+        if (user == null || user.getBannedAt() != null) {
+            return new NetworkTrafficAccess(false, false, false, false, false);
+        }
         var config = get();
         boolean staff = AdminPolicy.hasModeratorAccess(user);
         boolean trafficEnabled = effectiveBoolean(HOMEPAGE_NETWORK_TRAFFIC_ENABLED,
                 config.homepageNetworkTrafficEnabled(), defaults.homepageNetworkTrafficEnabled());
         return new NetworkTrafficAccess(
-                trafficEnabled && (staff || !effectiveBoolean(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY,
-                        config.homepageNetworkTrafficStaffOnly(), defaults.homepageNetworkTrafficStaffOnly())),
+                trafficEnabled && (staff || !effectiveAudience(HOMEPAGE_REPORTED_STAFF_ONLY, config.homepageReportedStaffOnly())),
+                trafficEnabled && (staff || !effectiveAudience(HOMEPAGE_CONFIRMED_STAFF_ONLY, config.homepageConfirmedStaffOnly())),
+                trafficEnabled && (staff || !effectiveAudience(HOMEPAGE_ACTIVITY_STAFF_ONLY, config.homepageActivityStaffOnly())),
+                trafficEnabled && (staff || !effectiveAudience(HOMEPAGE_AVERAGE_LOSS_STAFF_ONLY, config.homepageAverageLossStaffOnly())),
                 staff || !effectiveBoolean(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY,
                         config.homepageTotalLossStaffOnly(), defaults.homepageTotalLossStaffOnly())
         );
@@ -108,6 +120,10 @@ public class AdminConfigService {
 
     private boolean effectiveBoolean(String key, boolean configured, boolean fallback) {
         return databaseConfigService.hasExternalOverride(key, String.valueOf(configured)) ? fallback : configured;
+    }
+
+    private boolean effectiveAudience(String key, boolean configured) {
+        return parseBoolean(databaseConfigService.getExternalOverride(key, String.valueOf(configured)), configured);
     }
 
     @Transactional
@@ -133,6 +149,10 @@ public class AdminConfigService {
         if (config.homepageTotalLossStaffOnly() != null) {
             values.put(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY, String.valueOf(normalized.homepageTotalLossStaffOnly()));
         }
+        addNewAudienceSetting(values, HOMEPAGE_REPORTED_STAFF_ONLY, config.homepageReportedStaffOnly());
+        addNewAudienceSetting(values, HOMEPAGE_CONFIRMED_STAFF_ONLY, config.homepageConfirmedStaffOnly());
+        addNewAudienceSetting(values, HOMEPAGE_ACTIVITY_STAFF_ONLY, config.homepageActivityStaffOnly());
+        addNewAudienceSetting(values, HOMEPAGE_AVERAGE_LOSS_STAFF_ONLY, config.homepageAverageLossStaffOnly());
         values.put(USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                 normalized.userContactEmailSubjectTemplate());
         values.put(USER_CONTACT_EMAIL_BODY_TEMPLATE, normalized.userContactEmailBodyTemplate());
@@ -142,6 +162,13 @@ public class AdminConfigService {
         cached = normalized;
         cacheExpiresAt = System.currentTimeMillis() + CACHE_TTL.toMillis();
         return cached;
+    }
+
+    private void addNewAudienceSetting(Map<String, String> values, String key, Boolean staffOnly) {
+        if (staffOnly == null) return;
+        String value = staffOnly.toString();
+        databaseConfigService.insertIfMissing(key, value, "database");
+        values.put(key, value);
     }
 
     private RuntimeConfigView load() {
@@ -157,12 +184,17 @@ public class AdminConfigService {
                     HOMEPAGE_NETWORK_TRAFFIC_ENABLED,
                     HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY,
                     HOMEPAGE_TOTAL_LOSS_STAFF_ONLY,
+                    HOMEPAGE_REPORTED_STAFF_ONLY,
+                    HOMEPAGE_CONFIRMED_STAFF_ONLY,
+                    HOMEPAGE_ACTIVITY_STAFF_ONLY,
+                    HOMEPAGE_AVERAGE_LOSS_STAFF_ONLY,
                     USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                     USER_CONTACT_EMAIL_BODY_TEMPLATE
             ));
-            if (entries == null || entries.isEmpty()) {
-                return defaults;
-            }
+            boolean legacyStaffOnly = parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY),
+                    defaults.homepageNetworkTrafficStaffOnly());
+            boolean legacyAudience = effectiveBoolean(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY, legacyStaffOnly,
+                    defaults.homepageNetworkTrafficStaffOnly());
             return new RuntimeConfigView(
                     parseInt(entries.get(MIN_PROTOCOL), defaults.protocolMinVersion()),
                     parseInt(entries.get(MAX_PROTOCOL), defaults.protocolMaxVersion()),
@@ -174,8 +206,12 @@ public class AdminConfigService {
                     parseInt(entries.get(SWARM_STATISTICS_WINDOW_DAYS),
                             defaults.swarmStatisticsWindowDays()),
                     parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_ENABLED), defaults.homepageNetworkTrafficEnabled()),
-                    parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY), defaults.homepageNetworkTrafficStaffOnly()),
+                    legacyStaffOnly,
                     parseBoolean(entries.get(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY), defaults.homepageTotalLossStaffOnly()),
+                    parseBoolean(entries.get(HOMEPAGE_REPORTED_STAFF_ONLY), legacyAudience),
+                    parseBoolean(entries.get(HOMEPAGE_CONFIRMED_STAFF_ONLY), legacyAudience),
+                    parseBoolean(entries.get(HOMEPAGE_ACTIVITY_STAFF_ONLY), legacyAudience),
+                    parseBoolean(entries.get(HOMEPAGE_AVERAGE_LOSS_STAFF_ONLY), legacyAudience),
                     entries.getOrDefault(
                             USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                             defaults.userContactEmailSubjectTemplate()
@@ -238,6 +274,10 @@ public class AdminConfigService {
                         ? current.homepageNetworkTrafficStaffOnly() : config.homepageNetworkTrafficStaffOnly(),
                 config.homepageTotalLossStaffOnly() == null
                         ? current.homepageTotalLossStaffOnly() : config.homepageTotalLossStaffOnly(),
+                config.homepageReportedStaffOnly() == null ? current.homepageReportedStaffOnly() : config.homepageReportedStaffOnly(),
+                config.homepageConfirmedStaffOnly() == null ? current.homepageConfirmedStaffOnly() : config.homepageConfirmedStaffOnly(),
+                config.homepageActivityStaffOnly() == null ? current.homepageActivityStaffOnly() : config.homepageActivityStaffOnly(),
+                config.homepageAverageLossStaffOnly() == null ? current.homepageAverageLossStaffOnly() : config.homepageAverageLossStaffOnly(),
                 config.userContactEmailSubjectTemplate().trim(),
                 config.userContactEmailBodyTemplate().trim()
         );

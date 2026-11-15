@@ -114,6 +114,10 @@ public final class AdminModels {
             Boolean homepageNetworkTrafficEnabled,
             Boolean homepageNetworkTrafficStaffOnly,
             Boolean homepageTotalLossStaffOnly,
+            Boolean homepageReportedStaffOnly,
+            Boolean homepageConfirmedStaffOnly,
+            Boolean homepageActivityStaffOnly,
+            Boolean homepageAverageLossStaffOnly,
             String userContactEmailSubjectTemplate,
             String userContactEmailBodyTemplate
     ) {

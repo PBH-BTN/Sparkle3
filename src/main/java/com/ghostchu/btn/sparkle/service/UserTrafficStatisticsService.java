@@ -31,7 +31,7 @@ public class UserTrafficStatisticsService {
 
     public List<DailyTraffic> network(NetworkTrafficAccess access) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        return mapper.network(today.minusDays(NETWORK_WINDOW_DAYS - 1), today, access.traffic(), access.totalLoss())
+        return mapper.network(today.minusDays(NETWORK_WINDOW_DAYS - 1), today, access)
                 .stream().map(UserTrafficStatisticsService::toDailyTraffic).toList();
     }
 

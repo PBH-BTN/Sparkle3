@@ -26,9 +26,9 @@ class AdminConfigServiceTest {
     @Test
     void homepageNetworkTrafficDefaultsToEnabledAndCanBeDisabled() throws BusinessException {
         assertTrue(config.homepageTrafficAccess(signedInUser).traffic());
-        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, false, null, null, "{{title}}", "{{content}}"), 1L);
+        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, false, null, null, null, null, null, null, "{{title}}", "{{content}}"), 1L);
         assertFalse(config.homepageTrafficAccess(signedInUser).traffic());
-        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, null, null, null, "{{title}}", "{{content}}"), 1L);
+        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, null, null, null, null, null, null, null, "{{title}}", "{{content}}"), 1L);
         assertFalse(config.homepageTrafficAccess(signedInUser).traffic());
         verify(databaseConfig, times(1)).update(NETWORK_TRAFFIC_KEY, "false", 1L);
     }
@@ -41,11 +41,29 @@ class AdminConfigServiceTest {
         assertFalse(config.homepageTrafficAccess(user).totalLoss());
         assertTrue(config.homepageTrafficAccess(moderator).totalLoss());
         assertTrue(config.homepageTrafficAccess(new User().setRole("admin")).totalLoss());
-        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, true, true, false, "{{title}}", "{{content}}"), 1L);
-        assertFalse(config.homepageTrafficAccess(user).traffic());
+        config.update(new RuntimeConfigView(1, 10, false, true, true, 60, 7, true, true, false, true, false, true, false, "{{title}}", "{{content}}"), 1L);
+        var access = config.homepageTrafficAccess(user);
+        assertFalse(access.reported());
+        assertTrue(access.confirmed());
+        assertFalse(access.activity());
+        assertTrue(access.averageLoss());
         assertTrue(config.homepageTrafficAccess(user).totalLoss());
         assertTrue(config.homepageTrafficAccess(moderator).traffic());
         assertFalse(config.homepageTrafficAccess(null).totalLoss());
+        verify(databaseConfig).insertIfMissing("sparkle.homepage.reported-staff-only", "true", "database");
+        verify(databaseConfig).update("sparkle.homepage.confirmed-staff-only", "false", 1L);
+    }
+
+    @Test
+    void chartsInheritLegacyAudienceUntilConfiguredIndividually() {
+        when(databaseConfig.getRawValues(anyList())).thenReturn(Map.of(
+                "sparkle.homepage.network-traffic-staff-only", "true",
+                "sparkle.homepage.confirmed-staff-only", "false"));
+        var access = config.homepageTrafficAccess(signedInUser);
+        assertFalse(access.reported());
+        assertTrue(access.confirmed());
+        assertFalse(access.activity());
+        assertFalse(access.averageLoss());
     }
 
     @Test

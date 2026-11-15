@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.NetworkTrafficAccess;
 import com.ghostchu.btn.sparkle.mapper.CareerBatchMapper;
 import com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
@@ -123,16 +124,17 @@ class DailyTrafficPostgresIntegrationTest {
                             """);
                 }
                 var traffic = session.getMapper(UserTrafficStatisticsMapper.class);
-                var network = traffic.network(LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-04"), true, true);
-                assertEquals(3, network.size());
+                var network = traffic.network(LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-04"),
+                        new NetworkTrafficAccess(true, true, true, true, true));
+                assertEquals(List.of("2026-01-02", "2026-01-04"),
+                        network.stream().map(entry -> entry.get("day")).toList());
                 assertEquals("9007199254741073", network.getFirst().get("upload"));
                 assertEquals("30", network.getFirst().get("uploadAck"));
                 assertEquals("80", network.getFirst().get("downloadAck"));
                 assertEquals("120.250000", network.getFirst().get("downloading"));
                 assertEquals("20", network.getFirst().get("totalLoss"));
-                assertEquals("7", network.getFirst().get("averageLoss"));
-                assertEquals("2026-01-03", network.get(1).get("day"));
-                assertEquals("0", network.get(1).get("upload"));
+                assertEquals("6.66666667", new java.math.BigDecimal(network.getFirst().get("averageLoss"))
+                        .setScale(8, java.math.RoundingMode.HALF_UP).toPlainString());
                 assertEquals("5", network.getLast().get("upload"));
                 try (var statement = connection.createStatement()) {
                     statement.execute("""
@@ -143,12 +145,13 @@ class DailyTrafficPostgresIntegrationTest {
                             """);
                 }
                 var day = LocalDate.parse("2026-01-05");
-                var averages = traffic.network(day, day, true, false).getFirst();
-                assertEquals("10", averages.get("averageLoss"));
-                assertEquals("0.10000000", averages.get("lossRatio"));
-                assertFalse(averages.containsKey("totalLoss"));
+                var averages = traffic.network(day, day,
+                        new NetworkTrafficAccess(false, false, false, true, false)).getFirst();
+                assertEquals("99.9", new java.math.BigDecimal(averages.get("averageLoss")).stripTrailingZeros().toPlainString());
+                assertEquals("0.999", new java.math.BigDecimal(averages.get("lossRatio")).stripTrailingZeros().toPlainString());
+                assertEquals(Set.of("day", "averageLoss", "lossRatio"), averages.keySet());
                 assertEquals(Map.of("day", "2026-01-05", "totalLoss", "9990"),
-                        traffic.network(day, day, false, true).getFirst());
+                        traffic.network(day, day, new NetworkTrafficAccess(false, false, false, false, true)).getFirst());
                 session.rollback();
             }
         }

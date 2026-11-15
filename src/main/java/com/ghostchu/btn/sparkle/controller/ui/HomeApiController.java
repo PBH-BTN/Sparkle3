@@ -99,6 +99,10 @@ public class HomeApiController {
         var enabledModules = new LinkedHashMap<>(homepageStatisticsRefreshService.enabledModules());
         var trafficAccess = adminConfigService.homepageTrafficAccess(principal == null ? null : userService.getById(principal.getUserId()));
         enabledModules.put("network-traffic", trafficAccess.traffic());
+        enabledModules.put("network-reported", trafficAccess.reported());
+        enabledModules.put("network-confirmed", trafficAccess.confirmed());
+        enabledModules.put("network-activity", trafficAccess.activity());
+        enabledModules.put("network-average-loss", trafficAccess.averageLoss());
         enabledModules.put("network-total-loss", trafficAccess.totalLoss());
         return new HomeStats(
                 readStats(

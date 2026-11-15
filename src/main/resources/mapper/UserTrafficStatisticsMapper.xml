@@ -2,54 +2,32 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper">
     <select id="daily" resultType="map">
-        SELECT day::text AS day,upload::text AS upload,download::text AS download,
-               upload_ack::text AS "uploadAck",download_ack::text AS "downloadAck",
-               loss::text AS loss,loss_ratio::text AS "lossRatio",
-               seeding::text AS seeding,downloading::text AS downloading
-        FROM user_traffic_daily WHERE user_id=#{uid}
+        SELECT day::text AS day, upload::text AS upload, download::text AS download,
+               upload_ack::text AS "uploadAck", download_ack::text AS "downloadAck",
+               loss::text AS loss, loss_ratio::text AS "lossRatio",
+               seeding::text AS seeding, downloading::text AS downloading
+        FROM user_traffic_daily WHERE user_id = #{uid}
         ORDER BY day DESC LIMIT #{size} OFFSET #{offset}
     </select>
     <select id="network" resultType="map">
-        WITH samples AS (
-            SELECT day, loss
-            <if test="traffic">
-                , upload, download, upload_ack, download_ack, seeding, downloading,
-                  ROW_NUMBER() OVER (PARTITION BY day ORDER BY loss, user_id) AS position,
-                  COUNT(*) OVER (PARTITION BY day) AS sample_count
-            </if>
-            FROM user_traffic_daily
-            WHERE day BETWEEN #{from} AND #{through}
-        ), totals AS (
-            SELECT day
-            <if test="traffic">
-                , SUM(upload) AS upload, SUM(download) AS download,
-                  SUM(upload_ack) AS upload_ack, SUM(download_ack) AS download_ack,
-                  SUM(seeding) AS seeding, SUM(downloading) AS downloading,
-                  ROUND(AVG(loss) FILTER (WHERE retained)) AS average_loss,
-                  ROUND(AVG(COALESCE(100 * loss / NULLIF(upload, 0), 0))
-                      FILTER (WHERE retained), 8) AS loss_ratio
-            </if>
-            <if test="totalLoss">, SUM(loss) AS total_loss</if>
-            FROM samples
-            <if test="traffic">
-                CROSS JOIN LATERAL (
-                    SELECT position > sample_count / 100 AND position &lt;= sample_count - sample_count / 100 AS retained
-                ) trim
-            </if>
-            GROUP BY day
-        )
-        SELECT days.day::date::text AS day
-        <if test="traffic">
-               , COALESCE(upload, 0)::text AS upload, COALESCE(download, 0)::text AS download,
-               COALESCE(upload_ack, 0)::text AS "uploadAck", COALESCE(download_ack, 0)::text AS "downloadAck",
-               COALESCE(seeding, 0)::text AS seeding, COALESCE(downloading, 0)::text AS downloading,
-               COALESCE(average_loss, 0)::text AS "averageLoss",
-               COALESCE(loss_ratio, 0)::text AS "lossRatio"
+        SELECT day::text AS day
+        <if test="access.reported">
+            , SUM(upload)::text AS upload, SUM(download)::text AS download
         </if>
-        <if test="totalLoss">, COALESCE(total_loss, 0)::text AS "totalLoss"</if>
-        FROM generate_series((SELECT MIN(day) FROM totals)::timestamp,
-                             CAST(#{through} AS timestamp), INTERVAL '1 day') AS days(day)
-        LEFT JOIN totals ON totals.day = days.day::date
-        ORDER BY days.day
+        <if test="access.confirmed">
+            , SUM(upload_ack)::text AS "uploadAck", SUM(download_ack)::text AS "downloadAck"
+        </if>
+        <if test="access.activity">
+            , SUM(seeding)::text AS seeding, SUM(downloading)::text AS downloading
+        </if>
+        <if test="access.averageLoss">
+            , AVG(loss)::text AS "averageLoss",
+              AVG(loss_ratio)::text AS "lossRatio"
+        </if>
+        <if test="access.totalLoss">, SUM(loss)::text AS "totalLoss"</if>
+        FROM user_traffic_daily
+        WHERE day BETWEEN #{from} AND #{through}
+        GROUP BY day
+        ORDER BY day
     </select>
 </mapper>

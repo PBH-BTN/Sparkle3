@@ -59,12 +59,13 @@ class UserTrafficStatisticsControllerTest {
         when(users.getById(7L)).thenReturn(current);
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
                 new SparkleUserDetails(new User().setId(7L).setRole("moderator"), null), null, List.of()));
-        when(config.homepageTrafficAccess(current)).thenReturn(new NetworkTrafficAccess(false, false));
+        when(config.homepageTrafficAccess(current)).thenReturn(new NetworkTrafficAccess(false, false, false, false, false));
         mvc.perform(request).andExpect(status().isForbidden());
         verifyNoInteractions(mapper);
 
-        when(config.homepageTrafficAccess(current)).thenReturn(new NetworkTrafficAccess(true, false));
-        when(mapper.network(any(), any(), eq(true), eq(false)))
+        var access = new NetworkTrafficAccess(false, false, false, true, false);
+        when(config.homepageTrafficAccess(current)).thenReturn(access);
+        when(mapper.network(any(), any(), eq(access)))
                 .thenReturn(List.of(Map.of("day", "2026-01-01", "averageLoss", "10")));
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].metrics.averageLoss").value("10"))

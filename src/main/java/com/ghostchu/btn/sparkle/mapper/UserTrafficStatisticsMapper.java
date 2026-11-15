@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.NetworkTrafficAccess;
 import org.apache.ibatis.annotations.Select;
 import java.time.LocalDate;
 import java.util.List;
@@ -14,5 +15,5 @@ public interface UserTrafficStatisticsMapper {
                                    @Param("size") int size);
 
     List<Map<String, String>> network(@Param("from") LocalDate from, @Param("through") LocalDate through,
-                                     @Param("traffic") boolean traffic, @Param("totalLoss") boolean totalLoss);
+                                     @Param("access") NetworkTrafficAccess access);
 }

@@ -38,6 +38,10 @@ public class DatabaseConfigService {
             "sparkle.homepage.network-traffic-enabled",
             "sparkle.homepage.network-traffic-staff-only",
             "sparkle.homepage.total-loss-staff-only",
+            "sparkle.homepage.reported-staff-only",
+            "sparkle.homepage.confirmed-staff-only",
+            "sparkle.homepage.activity-staff-only",
+            "sparkle.homepage.average-loss-staff-only",
             "sparkle.ping.config.min-protocol-version",
             "sparkle.ping.config.max-protocol-version",
             "sparkle.ping.query-ip.pow-captcha",
@@ -354,8 +358,7 @@ public class DatabaseConfigService {
     }
 
     public int insertIfMissing(String key, String value, String source) {
-        if (configMapper.selectById(key) != null) return 0;
-        int inserted = configMapper.insert(new AppConfigEntry()
+        int inserted = configMapper.insertIfAbsent(new AppConfigEntry()
                 .setConfigKey(key)
                 .setConfigValue(value)
                 .setValueType(typeForValue(value))
@@ -419,6 +422,10 @@ public class DatabaseConfigService {
             evictAfterCommit(key);
         }
         return updated;
+    }
+
+    public String getExternalOverride(String key, String databaseValue) {
+        return hasExternalOverride(key, databaseValue) ? environment.getProperty(key) : null;
     }
 
     public boolean hasExternalOverride(String key, String databaseValue) {
