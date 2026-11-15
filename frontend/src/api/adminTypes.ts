@@ -178,6 +178,7 @@ export interface AdminApplication {
   btnBypass: boolean | null
   installationId: string | null
   lastUserAgent: string | null
+  banCount: string | null
 }
 
 export interface AdminApplicationQuery {
@@ -186,6 +187,7 @@ export interface AdminApplicationQuery {
   keyword?: string
   ownerId?: number
   status?: string
+  banDays?: 1 | 3 | 7
 }
 
 export interface AdminApplicationInput {

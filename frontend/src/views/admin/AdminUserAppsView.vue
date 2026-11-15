@@ -24,13 +24,16 @@ import type {
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { formatDate } = useFormatters()
 const records = ref<AdminApplication[]>([])
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const banDays = ref<1 | 3 | 7>()
+const countFormatter = computed(() => new Intl.NumberFormat(locale.value))
+let latestRequest = 0
 const filters = reactive<{
   keyword: string
   ownerId: number | undefined
@@ -71,12 +74,14 @@ const columns = computed<TableColumnData[]>(() => [
   { title: t('admin.apps.appId'), slotName: 'appId', width: 180 },
   { title: t('admin.apps.comment'), slotName: 'comment', width: 190 },
   { title: t('admin.apps.owner'), slotName: 'owner', width: 170 },
+  ...(banDays.value ? [{ title: t('admin.apps.banCount'), slotName: 'banCount', width: 150 }] : []),
   { title: t('admin.apps.flags'), slotName: 'flags', width: 120 },
   { title: t('admin.common.lastSeenAt'), slotName: 'lastSeenAt', width: 160 },
   { title: t('admin.common.actions'), slotName: 'actions', width: 280 },
 ])
 
 async function load() {
+  const request = ++latestRequest
   loading.value = true
   try {
     const result = await adminApi.applications({
@@ -85,16 +90,26 @@ async function load() {
       keyword: filters.keyword.trim() || undefined,
       ownerId: filters.ownerId,
       status: filters.status || undefined,
+      banDays: banDays.value,
     })
+    if (request !== latestRequest) return
     records.value = result.records
     total.value = result.total
     page.value = result.current
     pageSize.value = result.size
   } catch (error) {
+    if (request !== latestRequest) return
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
-    loading.value = false
+    if (request === latestRequest) loading.value = false
   }
+}
+
+function changeBanDays(value: 1 | 3 | 7 | undefined) {
+  banDays.value = value
+  records.value = []
+  total.value = 0
+  search()
 }
 
 function search() {
@@ -106,7 +121,7 @@ function resetFilters() {
   filters.keyword = ''
   filters.ownerId = undefined
   filters.status = ''
-  search()
+  changeBanDays(undefined)
 }
 
 function openCreate() {
@@ -287,7 +302,7 @@ onMounted(load)
     <a-card class="surface-card filter-card">
       <a-form :model="filters" layout="vertical" @submit="search">
         <a-row :gutter="16">
-          <a-col :xs="24" :md="10">
+          <a-col :xs="24" :md="8">
             <a-form-item :label="t('admin.common.keyword')">
               <a-input v-model="filters.keyword" allow-clear />
             </a-form-item>
@@ -302,6 +317,16 @@ onMounted(load)
               <a-select v-model="filters.status" allow-clear>
                 <a-option value="active">{{ t('admin.common.active') }}</a-option>
                 <a-option value="banned">{{ t('admin.common.banned') }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :md="6">
+            <a-form-item :label="t('admin.apps.banRanking')">
+              <a-select :model-value="banDays" :placeholder="t('admin.apps.creationOrder')" allow-clear
+                @change="(value) => changeBanDays(value as 1 | 3 | 7 | undefined)">
+                <a-option v-for="days in [7, 3, 1]" :key="days" :value="days">
+                  {{ t('admin.apps.banWindow', { count: days }, days) }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -325,7 +350,7 @@ onMounted(load)
         :data="records"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1190 }"
+        :scroll="{ x: banDays ? 1340 : 1190 }"
         row-key="id"
         stripe
       >
@@ -341,15 +366,6 @@ onMounted(load)
                 <template #icon><IconCopy /></template>
               </a-button>
             </a-tooltip>
-            <a-button
-              v-if="!record.bannedAt"
-              type="text"
-              size="mini"
-              status="danger"
-              @click="confirmToggleBanned(record)"
-            >
-              {{ t('admin.apps.quickSuspend') }}
-            </a-button>
           </div>
         </template>
         <template #comment="{ record }">
@@ -360,9 +376,12 @@ onMounted(load)
         </template>
         <template #owner="{ record }">
           <div class="owner-cell">
-            <strong>{{ record.ownerNickname || `#${record.ownerId}` }}</strong>
+            <strong>{{ record.ownerNickname }} #{{ record.ownerId }}</strong>
             <span>{{ record.ownerEmail }}</span>
           </div>
+        </template>
+        <template #banCount="{ record }">
+          {{ record.banCount == null ? '—' : countFormatter.format(BigInt(record.banCount)) }}
         </template>
         <template #flags="{ record }">
           <div class="flag-cell">
@@ -381,6 +400,11 @@ onMounted(load)
         </template>
         <template #actions="{ record }">
           <a-space>
+            <a-button v-if="!record.bannedAt" type="text" size="small" status="danger"
+              @click="confirmToggleBanned(record)">
+              <template #icon><IconLock /></template>
+              {{ t('admin.apps.suspend') }}
+            </a-button>
             <a-button type="text" size="small" @click="openEdit(record)">
               <template #icon><IconEdit /></template>
               {{ t('admin.common.edit') }}
