@@ -61,6 +61,8 @@ public class DatabaseConfigService {
             "sparkle.homepage-statistics-refresh.modules.network-charts.refresh-interval-minutes",
             "sparkle.homepage-statistics-refresh.modules.companion-charts.enabled",
             "sparkle.homepage-statistics-refresh.modules.companion-charts.refresh-interval-minutes",
+            "sparkle.homepage-statistics-refresh.modules.ip-flags.enabled",
+            "sparkle.homepage-statistics-refresh.modules.ip-flags.refresh-interval-minutes",
             "sparkle.analyse.geoip-city-blacklist.enabled",
             "sparkle.analyse.geoip-city-blacklist.schedule",
             "sparkle.analyse.mass-download-monitor.enabled",

@@ -12,6 +12,8 @@ import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrafficDeltaMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
+import com.ghostchu.btn.sparkle.service.HomepageIpFlagService;
+import com.ghostchu.btn.sparkle.service.HomepageStatisticsRefreshService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.ITorrentService;
 import com.ghostchu.btn.sparkle.service.TorrentRegistration;
@@ -54,6 +56,10 @@ import java.util.Set;
 public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, SwarmTracker> implements ISwarmTrackerService {
     @Autowired
     private com.ghostchu.btn.sparkle.service.CareerIngestionService careerIngestionService;
+    @Autowired
+    private HomepageIpFlagService ipFlagService;
+    @Autowired
+    private HomepageStatisticsRefreshService homepageStatisticsRefreshService;
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "torrent_id", "peer_ip", "peer_port", "peer_id", "peer_client_name",
             "peer_progress", "from_peer_traffic", "to_peer_traffic",
@@ -180,6 +186,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         // 使用 Map 进行内存去重，key 为 userapps_id, user_downloader, torrent_id, peer_ip, peer_port
         Map<SwarmKey, SwarmTracker> swarmMap = new HashMap<>();
         Map<Long, TorrentRegistration> torrents = new HashMap<>();
+        List<SwarmTracker> observations = homepageStatisticsRefreshService.isIpFlagsEnabled()
+                ? new ArrayList<>() : null;
 
         for (BtnSwarm swarm : swarms) {
             var lastSeenTime = swarm.getLastTimeSeen()
@@ -215,7 +223,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     peerIp,
                     swarm.getPort()
             );
-            var inet = InetAddress.ofLiteral(swarm.getPeerIp());
             SwarmTracker tracker = new SwarmTracker()
                     .setUserappsId(userAppId)
                     .setUserDownloader(swarm.getDownloader())
@@ -233,7 +240,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                     .setFlags(swarm.getPeerLastFlags())
                     .setFirstTimeSeen(swarm.getFirstTimeSeen().toLocalDateTime().atOffset(ZoneOffset.UTC))
                     .setLastTimeSeen(lastSeenTime)
-                    .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get());
+                    .setPeerGeoip(geoIPManager.queryIPDB(peerIp).geoData().get());
+            // Preserve flags and dates from all accepted observations before keeping the latest swarm row.
+            if (observations != null) {
+                observations.add(tracker);
+            }
             // 如果已存在相同键，比较 lastTimeSeen，保留最新的
             swarmMap.merge(key, tracker, (existing, newTracker) ->
                     newTracker.getLastTimeSeen().isAfter(existing.getLastTimeSeen()) ? newTracker : existing
@@ -281,6 +292,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .toList();
         if (!deltas.isEmpty()) {
             swarmTrafficDeltaMapper.batchInsert(deltas);
+        }
+        if (observations != null) {
+            ipFlagService.observe(observations);
         }
     }
 

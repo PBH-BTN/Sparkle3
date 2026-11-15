@@ -5,9 +5,14 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.ghostchu.btn.sparkle.controller.admin.AdminBanSubmissionController;
 import com.ghostchu.btn.sparkle.controller.admin.AdminContentModerationController;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
+import com.ghostchu.btn.sparkle.controller.ui.HomepageIpFlagController;
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
 import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
+import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
+import com.ghostchu.btn.sparkle.service.HomepageIpFlagService;
+import com.ghostchu.btn.sparkle.service.HomepageStatisticsRefreshService;
 import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
@@ -36,6 +41,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
@@ -97,6 +103,95 @@ class FlywayMigrationIntegrationTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP DATABASE " + database);
         }
+    }
+
+    @Test
+    void dailyIpFlagsPublishOnlyNewBitsAndKeepResultsAfterPruning() throws Exception {
+        var day = LocalDate.now(ZoneOffset.UTC).minusDays(3);
+        var ip = InetAddress.ofLiteral("2001:db8::1");
+        var other = InetAddress.ofLiteral("192.0.2.4");
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE EXTENSION IF NOT EXISTS timescaledb");
+            statement.execute("CREATE TABLE swarm_tracker (last_time_seen timestamptz, peer_ip inet, flags text)");
+            statement.execute("""
+                    CREATE TABLE app_config_entries (
+                        config_key text PRIMARY KEY, config_value text, value_type text, config_group text,
+                        source text, sensitive boolean, hot_reload boolean
+                    )
+                    """);
+            try (var insert = connection.prepareStatement("""
+                    INSERT INTO swarm_tracker VALUES (?, '2001:db8::1', 'd H'), (?, '2001:db8::1', 'X e'),
+                                                     (?, '2001:db8::1', 'd H')
+                    """)) {
+                insert.setObject(1, day.atTime(23, 59).atOffset(ZoneOffset.UTC));
+                insert.setObject(2, day.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC));
+                insert.setObject(3, day.atStartOfDay().atOffset(ZoneOffset.UTC));
+                insert.executeUpdate();
+            }
+        }
+        var flyway = Flyway.configure().dataSource(url, username, password)
+                .baselineVersion("79").target("80").load();
+        flyway.baseline();
+        assertEquals(1, flyway.migrate().migrationsExecuted);
+        flyway.validate();
+
+        var configuration = new Configuration(new Environment("ip-flag-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.addMapper(HomepageIpFlagMapper.class);
+        try (var input = getClass().getResourceAsStream("/mapper/HomepageIpFlagMapper.xml")) {
+            new XMLMapperBuilder(input, configuration, "mapper/HomepageIpFlagMapper.xml",
+                    configuration.getSqlFragments()).parse();
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(HomepageIpFlagMapper.class);
+            var service = new HomepageIpFlagService(mapper);
+            var time = day.atTime(23, 30).atOffset(ZoneOffset.UTC);
+            var seeded = service.daily(day, day.plusDays(1));
+            assertEquals(java.util.Map.of("total", 1L, "dht", 1L, "peerChoked", 1L, "tcp", 1L),
+                    seeded.getFirst().counts());
+            assertEquals(java.util.Map.of("total", 1L, "pex", 1L, "plaintext", 1L, "tcp", 1L),
+                    seeded.getLast().counts());
+            service.observe(List.of(swarmSample(time, ip, "d H"), swarmSample(time, other, null),
+                    swarmSample(time.plusDays(1), ip, "X e")));
+            assertTrue(mapper.hasOlderPending(day.plusDays(1)));
+            assertEquals(1, mapper.publish(1, 17));
+            assertEquals(0, mapper.publish(100, 17));
+            assertEquals(2L, service.daily(day, day).getFirst().counts().get("total"));
+
+            var late = swarmSample(time.withOffsetSameInstant(ZoneOffset.ofHours(8)), ip, "D H P");
+            service.observe(List.of(late, late));
+            assertEquals(1, mapper.publish(100, 17));
+            service.observe(List.of(late));
+            assertEquals(0, mapper.publish(100, 17));
+            var days = service.daily(day, day.plusDays(1));
+            assertEquals(java.util.Map.of("total", 2L, "dht", 1L, "peerChoked", 1L,
+                    "peerUnchoked", 1L, "tcp", 1L, "utp", 1L), days.getFirst().counts());
+            assertEquals(java.util.Map.of("total", 1L, "pex", 1L, "plaintext", 1L, "tcp", 1L),
+                    days.getLast().counts());
+            assertFalse(mapper.hasOlderPending(day.plusDays(1)));
+            assertEquals(1, mapper.prune(day.plusDays(1)).size());
+            assertEquals(days, service.daily(day, day.plusDays(1)));
+
+            var refreshService = mock(HomepageStatisticsRefreshService.class);
+            when(refreshService.isIpFlagsEnabled()).thenReturn(true);
+            var mvc = MockMvcBuilders.standaloneSetup(new HomepageIpFlagController(service, refreshService)).build();
+            mvc.perform(get("/api/ui/home/ip-flags").param("from", day.toString()).param("to", day.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].day").value(day.toString()))
+                    .andExpect(jsonPath("$[0].counts.total").value(2));
+            mvc.perform(get("/api/ui/home/ip-flags").param("from", day.minusDays(90).toString())
+                            .param("to", day.toString()))
+                    .andExpect(status().isBadRequest());
+            when(refreshService.isIpFlagsEnabled()).thenReturn(false);
+            mvc.perform(get("/api/ui/home/ip-flags").param("from", day.toString()).param("to", day.toString()))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    private static SwarmTracker swarmSample(OffsetDateTime time, InetAddress ip, String flags) {
+        return new SwarmTracker().setLastTimeSeen(time).setPeerIp(ip).setFlags(flags);
     }
 
     @Test
@@ -607,7 +702,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("79", latest.info().current().getVersion().getVersion());
+        assertEquals("80", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

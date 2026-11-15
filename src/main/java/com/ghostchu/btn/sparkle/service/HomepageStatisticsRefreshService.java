@@ -41,6 +41,7 @@ public class HomepageStatisticsRefreshService {
 
     private final StatisticsRefreshServiceImpl statisticsRefreshService;
     private final HomeStatisticsService homeStatisticsService;
+    private final HomepageIpFlagService ipFlagService;
     private final DatabaseConfigService databaseConfigService;
     private final TaskStatusService taskStatusService;
     private final ConcurrentMap<String, AtomicBoolean> running = new ConcurrentHashMap<>();
@@ -52,12 +53,14 @@ public class HomepageStatisticsRefreshService {
     public HomepageStatisticsRefreshService(
             StatisticsRefreshServiceImpl statisticsRefreshService,
             HomeStatisticsService homeStatisticsService,
+            HomepageIpFlagService ipFlagService,
             DatabaseConfigService databaseConfigService,
             TaskStatusService taskStatusService,
             TaskManualExecutionService taskManualExecutionService
     ) {
         this.statisticsRefreshService = statisticsRefreshService;
         this.homeStatisticsService = homeStatisticsService;
+        this.ipFlagService = ipFlagService;
         this.databaseConfigService = databaseConfigService;
         this.taskStatusService = taskStatusService;
         long dueAt = System.currentTimeMillis();
@@ -118,6 +121,11 @@ public class HomepageStatisticsRefreshService {
             modules.put(config.module(), config.enabled());
         }
         return Map.copyOf(modules);
+    }
+
+    public boolean isIpFlagsEnabled() {
+        return getConfig().stream().anyMatch(config -> Module.IP_FLAGS.id().equals(config.module())
+                && config.enabled());
     }
 
     public @NotNull AdminResponse getStatus() {
@@ -199,6 +207,9 @@ public class HomepageStatisticsRefreshService {
                 .filter(item -> item.module().equals(module.id()))
                 .findFirst()
                 .orElseThrow();
+        if (module == Module.IP_FLAGS && !config.enabled()) {
+            throw new BusinessException(HttpStatus.CONFLICT, "IP flag statistics are disabled");
+        }
         startRefresh(module, config, "MANUAL", operatorId);
         return getStatus();
     }
@@ -234,6 +245,9 @@ public class HomepageStatisticsRefreshService {
             String trigger,
             @Nullable Long operatorId
     ) {
+        if (module == Module.IP_FLAGS && !config.enabled()) {
+            return false;
+        }
         AtomicBoolean moduleRunning = running.get(module.id());
         if (!moduleRunning.compareAndSet(false, true)) {
             return false;
@@ -267,7 +281,7 @@ public class HomepageStatisticsRefreshService {
             );
             long startedNanos = System.nanoTime();
             try {
-                execute(module);
+                boolean refreshed = execute(module);
                 long durationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
                 runStates.put(module.id(), new ModuleRunState(
                         startedAt,
@@ -277,9 +291,12 @@ public class HomepageStatisticsRefreshService {
                         operatorId,
                         null
                 ));
-                execution.success("Refreshed homepage statistics module " + module.id());
-                log.info("Refreshed homepage statistics module {} in {}ms",
-                        module.id(), durationMs);
+                if (refreshed) {
+                    execution.success("Refreshed homepage statistics module " + module.id());
+                    log.info("Refreshed homepage statistics module {} in {}ms", module.id(), durationMs);
+                } else {
+                    execution.skipped("No pending IP flag statistics");
+                }
             } catch (Exception exception) {
                 long durationMs = Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
                 String message = exception.getMessage() == null
@@ -302,7 +319,7 @@ public class HomepageStatisticsRefreshService {
         return true;
     }
 
-    private void execute(Module module) throws Exception {
+    private boolean execute(Module module) throws Exception {
         switch (module) {
             case BAN_HISTORY -> statisticsRefreshService.onBanCountRefresh();
             case ACTIVE_APPS -> statisticsRefreshService.onUserAppUpdate();
@@ -310,7 +327,11 @@ public class HomepageStatisticsRefreshService {
             case TORRENTS -> statisticsRefreshService.onTorrentUpdate();
             case NETWORK_CHARTS -> homeStatisticsService.refreshNetworkStatistics();
             case COMPANION_CHARTS -> homeStatisticsService.refreshCompanionStatistics();
+            case IP_FLAGS -> {
+                return ipFlagService.publish();
+            }
         }
+        return true;
     }
 
     private @NotNull List<ModuleConfig> getConfig() {
@@ -448,7 +469,8 @@ public class HomepageStatisticsRefreshService {
         SWARM_TRACKER("swarm-tracker", 20),
         TORRENTS("torrents", 40),
         NETWORK_CHARTS("network-charts", 5),
-        COMPANION_CHARTS("companion-charts", 5);
+        COMPANION_CHARTS("companion-charts", 5),
+        IP_FLAGS("ip-flags", 1);
 
         private static final Map<String, Module> BY_ID = java.util.Arrays.stream(values())
                 .collect(java.util.stream.Collectors.toMap(

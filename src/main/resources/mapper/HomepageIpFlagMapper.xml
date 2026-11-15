@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper">
+    <insert id="observe">
+        INSERT INTO homepage_ip_flag_state AS state (day, ip, observed)
+        SELECT #{day}, CAST(input.ip AS inet), input.mask
+        FROM (VALUES
+            <foreach collection="rows" item="row" separator=",">
+                (CAST(#{row.ip} AS text), CAST(#{row.mask} AS integer))
+            </foreach>
+        ) AS input(ip, mask)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM homepage_ip_flag_state existing
+            WHERE existing.day = #{day} AND existing.ip = CAST(input.ip AS inet)
+              AND (existing.observed &amp; input.mask) = input.mask
+        )
+        ORDER BY input.ip COLLATE "C"
+        ON CONFLICT (day, ip) DO UPDATE SET observed = state.observed | EXCLUDED.observed
+        WHERE (state.observed &amp; EXCLUDED.observed) &lt;&gt; EXCLUDED.observed
+    </insert>
+
+    <!-- Mark each bit published in the same statement that adds it to the daily total. -->
+    <select id="publish" resultType="int" affectData="true" flushCache="true">
+        WITH pending AS MATERIALIZED (
+            SELECT day, ip, observed, observed # published AS delta
+            FROM homepage_ip_flag_state
+            WHERE observed &lt;&gt; published
+            ORDER BY day, ip
+            LIMIT #{limit}
+            FOR UPDATE SKIP LOCKED
+        ), marked AS (
+            INSERT INTO homepage_ip_flag_state (day, ip, observed, published)
+            SELECT day, ip, observed, observed FROM pending
+            ON CONFLICT (day, ip) DO UPDATE SET published = EXCLUDED.published
+        ), counts AS (
+            INSERT INTO homepage_ip_flag_daily AS daily (day, metric, ip_count)
+            SELECT day, metric, count(*)
+            FROM pending
+            CROSS JOIN generate_series(0, #{metricCount} - 1) AS metric
+            WHERE (delta &amp; (1 &lt;&lt; metric)) &lt;&gt; 0
+            GROUP BY day, metric
+            ORDER BY day, metric
+            ON CONFLICT (day, metric) DO UPDATE
+            SET ip_count = daily.ip_count + EXCLUDED.ip_count
+        )
+        SELECT count(*)::integer FROM pending
+    </select>
+
+    <select id="hasOlderPending" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM homepage_ip_flag_state
+            WHERE day &lt; #{before} AND observed &lt;&gt; published
+        )
+    </select>
+
+    <select id="prune" resultType="string" affectData="true" flushCache="true">
+        SELECT drop_chunks('homepage_ip_flag_state', older_than => CAST(#{before} AS date))::text
+    </select>
+
+    <select id="daily" resultType="com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper$DailyCount">
+        SELECT day, metric::integer AS metric, ip_count AS count
+        FROM homepage_ip_flag_daily
+        WHERE day BETWEEN #{from} AND #{to}
+        ORDER BY day, metric
+    </select>
+</mapper>
