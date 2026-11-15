@@ -36,6 +36,8 @@ import java.util.Set;
 public class DatabaseConfigService {
     public static final Set<String> HOT_RELOAD_KEYS = Set.of(
             "sparkle.homepage.network-traffic-enabled",
+            "sparkle.homepage.network-traffic-staff-only",
+            "sparkle.homepage.total-loss-staff-only",
             "sparkle.ping.config.min-protocol-version",
             "sparkle.ping.config.max-protocol-version",
             "sparkle.ping.query-ip.pow-captcha",

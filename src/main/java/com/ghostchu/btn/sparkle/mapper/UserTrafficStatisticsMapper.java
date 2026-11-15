@@ -13,5 +13,6 @@ public interface UserTrafficStatisticsMapper {
     List<Map<String, String>> daily(@Param("uid") long uid, @Param("offset") long offset,
                                    @Param("size") int size);
 
-    List<Map<String, String>> network(@Param("from") LocalDate from, @Param("through") LocalDate through);
+    List<Map<String, String>> network(@Param("from") LocalDate from, @Param("through") LocalDate through,
+                                     @Param("traffic") boolean traffic, @Param("totalLoss") boolean totalLoss);
 }

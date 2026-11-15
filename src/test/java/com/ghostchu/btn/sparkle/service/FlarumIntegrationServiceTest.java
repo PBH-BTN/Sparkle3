@@ -94,6 +94,8 @@ class FlarumIntegrationServiceTest {
                 60,
                 7,
                 true,
+                false,
+                true,
                 "{{title}}",
                 "{{content}}"
         ));
@@ -130,7 +132,7 @@ class FlarumIntegrationServiceTest {
                 true,
                 com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
-        when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, true, "{{title}}", "{{content}}"));
+        when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, true, false, true, "{{title}}", "{{content}}"));
 
         UserDataResponse response = service.findByGithubUid("12345");
 
@@ -156,7 +158,7 @@ class FlarumIntegrationServiceTest {
                 true,
                 com.ghostchu.btn.sparkle.constants.LifetimeTrafficVisibility.HIDDEN
         ));
-        when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, true, "{{title}}", "{{content}}"));
+        when(adminConfigService.get()).thenReturn(new RuntimeConfigView(1, 10, false, false, false, 60, 7, true, false, true, "{{title}}", "{{content}}"));
 
         UserDataResponse blurred = service.findByGithubUid("12345");
 

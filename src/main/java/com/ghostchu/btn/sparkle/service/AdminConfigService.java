@@ -1,6 +1,9 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.RuntimeConfigView;
+import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.NetworkTrafficAccess;
+import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.security.AdminPolicy;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +29,8 @@ public class AdminConfigService {
     private static final String SWARM_STATISTICS_WINDOW_DAYS =
             "sparkle.swarm-statistics-track.window-days";
     private static final String HOMEPAGE_NETWORK_TRAFFIC_ENABLED = "sparkle.homepage.network-traffic-enabled";
+    private static final String HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY = "sparkle.homepage.network-traffic-staff-only";
+    private static final String HOMEPAGE_TOTAL_LOSS_STAFF_ONLY = "sparkle.homepage.total-loss-staff-only";
     private static final String USER_CONTACT_EMAIL_SUBJECT_TEMPLATE =
             "sparkle.user-contact-email.subject-template";
     private static final String USER_CONTACT_EMAIL_BODY_TEMPLATE =
@@ -49,6 +54,8 @@ public class AdminConfigService {
                               int swarmStatisticsWindowDays,
                               @Value("${sparkle.homepage.network-traffic-enabled:true}")
                               boolean homepageNetworkTrafficEnabled,
+                              @Value("${sparkle.homepage.network-traffic-staff-only:false}") boolean homepageNetworkTrafficStaffOnly,
+                              @Value("${sparkle.homepage.total-loss-staff-only:true}") boolean homepageTotalLossStaffOnly,
                               @Value("${sparkle.user-contact-email.subject-template}")
                               String userContactEmailSubjectTemplate,
                               @Value("${sparkle.user-contact-email.content-template}")
@@ -63,6 +70,8 @@ public class AdminConfigService {
                 swarmStatisticsRefreshMinutes,
                 swarmStatisticsWindowDays,
                 homepageNetworkTrafficEnabled,
+                homepageNetworkTrafficStaffOnly,
+                homepageTotalLossStaffOnly,
                 userContactEmailSubjectTemplate,
                 userContactEmailBodyTemplate
         );
@@ -83,10 +92,22 @@ public class AdminConfigService {
         }
     }
 
-    public boolean homepageNetworkTrafficEnabled() {
-        boolean configured = get().homepageNetworkTrafficEnabled();
-        return databaseConfigService.hasExternalOverride(HOMEPAGE_NETWORK_TRAFFIC_ENABLED, String.valueOf(configured))
-                ? defaults.homepageNetworkTrafficEnabled() : configured;
+    public NetworkTrafficAccess homepageTrafficAccess(User user) {
+        if (user == null || user.getBannedAt() != null) return new NetworkTrafficAccess(false, false);
+        var config = get();
+        boolean staff = AdminPolicy.hasModeratorAccess(user);
+        boolean trafficEnabled = effectiveBoolean(HOMEPAGE_NETWORK_TRAFFIC_ENABLED,
+                config.homepageNetworkTrafficEnabled(), defaults.homepageNetworkTrafficEnabled());
+        return new NetworkTrafficAccess(
+                trafficEnabled && (staff || !effectiveBoolean(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY,
+                        config.homepageNetworkTrafficStaffOnly(), defaults.homepageNetworkTrafficStaffOnly())),
+                staff || !effectiveBoolean(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY,
+                        config.homepageTotalLossStaffOnly(), defaults.homepageTotalLossStaffOnly())
+        );
+    }
+
+    private boolean effectiveBoolean(String key, boolean configured, boolean fallback) {
+        return databaseConfigService.hasExternalOverride(key, String.valueOf(configured)) ? fallback : configured;
     }
 
     @Transactional
@@ -105,6 +126,12 @@ public class AdminConfigService {
         values.put(SWARM_STATISTICS_WINDOW_DAYS, String.valueOf(normalized.swarmStatisticsWindowDays()));
         if (config.homepageNetworkTrafficEnabled() != null) {
             values.put(HOMEPAGE_NETWORK_TRAFFIC_ENABLED, String.valueOf(normalized.homepageNetworkTrafficEnabled()));
+        }
+        if (config.homepageNetworkTrafficStaffOnly() != null) {
+            values.put(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY, String.valueOf(normalized.homepageNetworkTrafficStaffOnly()));
+        }
+        if (config.homepageTotalLossStaffOnly() != null) {
+            values.put(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY, String.valueOf(normalized.homepageTotalLossStaffOnly()));
         }
         values.put(USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                 normalized.userContactEmailSubjectTemplate());
@@ -128,6 +155,8 @@ public class AdminConfigService {
                     SWARM_STATISTICS_REFRESH_MINUTES,
                     SWARM_STATISTICS_WINDOW_DAYS,
                     HOMEPAGE_NETWORK_TRAFFIC_ENABLED,
+                    HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY,
+                    HOMEPAGE_TOTAL_LOSS_STAFF_ONLY,
                     USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                     USER_CONTACT_EMAIL_BODY_TEMPLATE
             ));
@@ -145,6 +174,8 @@ public class AdminConfigService {
                     parseInt(entries.get(SWARM_STATISTICS_WINDOW_DAYS),
                             defaults.swarmStatisticsWindowDays()),
                     parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_ENABLED), defaults.homepageNetworkTrafficEnabled()),
+                    parseBoolean(entries.get(HOMEPAGE_NETWORK_TRAFFIC_STAFF_ONLY), defaults.homepageNetworkTrafficStaffOnly()),
+                    parseBoolean(entries.get(HOMEPAGE_TOTAL_LOSS_STAFF_ONLY), defaults.homepageTotalLossStaffOnly()),
                     entries.getOrDefault(
                             USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                             defaults.userContactEmailSubjectTemplate()
@@ -192,6 +223,7 @@ public class AdminConfigService {
     }
 
     private RuntimeConfigView normalized(RuntimeConfigView config) {
+        var current = get();
         return new RuntimeConfigView(
                 config.protocolMinVersion(),
                 config.protocolMaxVersion(),
@@ -201,7 +233,11 @@ public class AdminConfigService {
                 config.swarmStatisticsRefreshMinutes(),
                 config.swarmStatisticsWindowDays(),
                 config.homepageNetworkTrafficEnabled() == null
-                        ? get().homepageNetworkTrafficEnabled() : config.homepageNetworkTrafficEnabled(),
+                        ? current.homepageNetworkTrafficEnabled() : config.homepageNetworkTrafficEnabled(),
+                config.homepageNetworkTrafficStaffOnly() == null
+                        ? current.homepageNetworkTrafficStaffOnly() : config.homepageNetworkTrafficStaffOnly(),
+                config.homepageTotalLossStaffOnly() == null
+                        ? current.homepageTotalLossStaffOnly() : config.homepageTotalLossStaffOnly(),
                 config.userContactEmailSubjectTemplate().trim(),
                 config.userContactEmailBodyTemplate().trim()
         );

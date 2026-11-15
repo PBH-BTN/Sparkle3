@@ -10,19 +10,43 @@
         ORDER BY day DESC LIMIT #{size} OFFSET #{offset}
     </select>
     <select id="network" resultType="map">
-        WITH totals AS (
-            SELECT day, SUM(upload) AS upload, SUM(download) AS download,
-                   SUM(upload_ack) AS upload_ack, SUM(download_ack) AS download_ack,
-                   SUM(seeding) AS seeding, SUM(downloading) AS downloading, SUM(loss) AS loss
+        WITH samples AS (
+            SELECT day, loss
+            <if test="traffic">
+                , upload, download, upload_ack, download_ack, seeding, downloading,
+                  ROW_NUMBER() OVER (PARTITION BY day ORDER BY loss, user_id) AS position,
+                  COUNT(*) OVER (PARTITION BY day) AS sample_count
+            </if>
             FROM user_traffic_daily
             WHERE day BETWEEN #{from} AND #{through}
+        ), totals AS (
+            SELECT day
+            <if test="traffic">
+                , SUM(upload) AS upload, SUM(download) AS download,
+                  SUM(upload_ack) AS upload_ack, SUM(download_ack) AS download_ack,
+                  SUM(seeding) AS seeding, SUM(downloading) AS downloading,
+                  ROUND(AVG(loss) FILTER (WHERE retained)) AS average_loss,
+                  ROUND(AVG(COALESCE(100 * loss / NULLIF(upload, 0), 0))
+                      FILTER (WHERE retained), 8) AS loss_ratio
+            </if>
+            <if test="totalLoss">, SUM(loss) AS total_loss</if>
+            FROM samples
+            <if test="traffic">
+                CROSS JOIN LATERAL (
+                    SELECT position > sample_count / 100 AND position &lt;= sample_count - sample_count / 100 AS retained
+                ) trim
+            </if>
             GROUP BY day
         )
-        SELECT days.day::date::text AS day,
-               COALESCE(upload, 0)::text AS upload, COALESCE(download, 0)::text AS download,
+        SELECT days.day::date::text AS day
+        <if test="traffic">
+               , COALESCE(upload, 0)::text AS upload, COALESCE(download, 0)::text AS download,
                COALESCE(upload_ack, 0)::text AS "uploadAck", COALESCE(download_ack, 0)::text AS "downloadAck",
                COALESCE(seeding, 0)::text AS seeding, COALESCE(downloading, 0)::text AS downloading,
-               COALESCE(loss, 0)::text AS loss
+               COALESCE(average_loss, 0)::text AS "averageLoss",
+               COALESCE(loss_ratio, 0)::text AS "lossRatio"
+        </if>
+        <if test="totalLoss">, COALESCE(total_loss, 0)::text AS "totalLoss"</if>
         FROM generate_series((SELECT MIN(day) FROM totals)::timestamp,
                              CAST(#{through} AS timestamp), INTERVAL '1 day') AS days(day)
         LEFT JOIN totals ON totals.day = days.day::date

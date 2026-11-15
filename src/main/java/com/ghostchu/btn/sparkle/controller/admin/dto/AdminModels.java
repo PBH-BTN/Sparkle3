@@ -111,6 +111,8 @@ public final class AdminModels {
             int swarmStatisticsRefreshMinutes,
             int swarmStatisticsWindowDays,
             Boolean homepageNetworkTrafficEnabled,
+            Boolean homepageNetworkTrafficStaffOnly,
+            Boolean homepageTotalLossStaffOnly,
             String userContactEmailSubjectTemplate,
             String userContactEmailBodyTemplate
     ) {

@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.DailyTraffic;
+import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.NetworkTrafficAccess;
 import com.ghostchu.btn.sparkle.controller.ui.dto.TrafficStatisticsModels.TrafficPage;
 import com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,9 @@ public class UserTrafficStatisticsService {
         return new TrafficPage(records,page,size,total,pages);
     }
 
-    public List<DailyTraffic> network() {
+    public List<DailyTraffic> network(NetworkTrafficAccess access) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        return mapper.network(today.minusDays(NETWORK_WINDOW_DAYS - 1), today)
+        return mapper.network(today.minusDays(NETWORK_WINDOW_DAYS - 1), today, access.traffic(), access.totalLoss())
                 .stream().map(UserTrafficStatisticsService::toDailyTraffic).toList();
     }
 

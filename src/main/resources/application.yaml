@@ -377,6 +377,8 @@ sparkle:
       ipv6: 48
   homepage:
     network-traffic-enabled: true
+    network-traffic-staff-only: false
+    total-loss-staff-only: true
   swarm-statistics-track:
     enabled: true
     refresh-interval-minutes: 60

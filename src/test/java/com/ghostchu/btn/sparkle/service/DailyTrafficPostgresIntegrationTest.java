@@ -123,16 +123,32 @@ class DailyTrafficPostgresIntegrationTest {
                             """);
                 }
                 var traffic = session.getMapper(UserTrafficStatisticsMapper.class);
-                var network = traffic.network(LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-04"));
+                var network = traffic.network(LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-04"), true, true);
                 assertEquals(3, network.size());
                 assertEquals("9007199254741073", network.getFirst().get("upload"));
                 assertEquals("30", network.getFirst().get("uploadAck"));
                 assertEquals("80", network.getFirst().get("downloadAck"));
                 assertEquals("120.250000", network.getFirst().get("downloading"));
-                assertEquals("20", network.getFirst().get("loss"));
+                assertEquals("20", network.getFirst().get("totalLoss"));
+                assertEquals("7", network.getFirst().get("averageLoss"));
                 assertEquals("2026-01-03", network.get(1).get("day"));
                 assertEquals("0", network.get(1).get("upload"));
                 assertEquals("5", network.getLast().get("upload"));
+                try (var statement = connection.createStatement()) {
+                    statement.execute("""
+                            INSERT INTO user_traffic_daily (user_id, day, upload, loss)
+                            SELECT id, '2026-01-05', 10000,
+                                   CASE id WHEN 1 THEN 0 WHEN 100 THEN 9010 ELSE 10 END
+                            FROM generate_series(1, 100) AS users(id)
+                            """);
+                }
+                var day = LocalDate.parse("2026-01-05");
+                var averages = traffic.network(day, day, true, false).getFirst();
+                assertEquals("10", averages.get("averageLoss"));
+                assertEquals("0.10000000", averages.get("lossRatio"));
+                assertFalse(averages.containsKey("totalLoss"));
+                assertEquals(Map.of("day", "2026-01-05", "totalLoss", "9990"),
+                        traffic.network(day, day, false, true).getFirst());
                 session.rollback();
             }
         }

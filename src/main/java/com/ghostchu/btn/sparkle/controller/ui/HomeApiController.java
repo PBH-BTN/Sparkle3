@@ -95,9 +95,11 @@ public class HomeApiController {
     }
 
     @GetMapping("/home")
-    public HomeStats home() {
+    public HomeStats home(@AuthenticationPrincipal SparkleUserDetails principal) {
         var enabledModules = new LinkedHashMap<>(homepageStatisticsRefreshService.enabledModules());
-        enabledModules.put("network-traffic", adminConfigService.homepageNetworkTrafficEnabled());
+        var trafficAccess = adminConfigService.homepageTrafficAccess(principal == null ? null : userService.getById(principal.getUserId()));
+        enabledModules.put("network-traffic", trafficAccess.traffic());
+        enabledModules.put("network-total-loss", trafficAccess.totalLoss());
         return new HomeStats(
                 readStats(
                         RedisKeyConstant.STATS_BANHISTORY_ALLTIME,
