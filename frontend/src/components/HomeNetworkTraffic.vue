@@ -40,7 +40,7 @@ const metrics = {
 type Metric = keyof typeof metrics
 
 const cumulativeRows = computed(() => {
-  const totals = { upload: 0n, download: 0n, uploadAck: 0n, downloadAck: 0n, totalLoss: 0n }
+  const totals = { upload: 0n, download: 0n, uploadAck: 0n, downloadAck: 0n }
   const keys = Object.keys(totals) as (keyof typeof totals)[]
   let seeding = 0
   let downloading = 0
@@ -56,6 +56,7 @@ const cumulativeRows = computed(() => {
       ...totals,
       seeding,
       downloading,
+      totalLoss: BigInt(metrics.totalLoss ?? '0'),
       loss: Number(metrics.averageLoss ?? '0'),
       lossRatio: Number(metrics.lossRatio ?? '0'),
     }
