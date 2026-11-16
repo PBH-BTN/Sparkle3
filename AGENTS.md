@@ -22,11 +22,11 @@ Sparkle 3 是一个 Spring Boot 单体应用，同时提供 BTN 客户端 API、
 
 - `/ping/**`：BTN 客户端协议。客户端凭据由 `BasePingController` 校验，部分功能受 PoW 控制。
 - `/api/ui/**`：浏览器用户 API。默认要求登录，少数公开接口在 `SecurityConfig` 中显式放行。
-- `/api/admin/**`：管理员和协管 API。Spring Security 先校验 authority，随后
-  `AdminAccessInterceptor` 每次请求重新读取数据库角色、封禁状态和协管模块权限。
+- `/api/admin/**`：管理员和协管 API。Spring Security 先校验登录状态，随后
+  `AdminAccessInterceptor` 每次请求读取数据库角色、封禁状态和协管模块权限。
 - `/api/integrations/flarum/**`：供 Flarum 扩展调用，使用 `X-Sparkle-Token` 和服务端常量时间比较。
 - `/api/integrations/memberships/**`：会员平台 webhook，使用平台级 webhook token 校验。
-- `/debug/**`：仅管理员可用，不应作为稳定对外 API。
+- `/debug/**`：按数据库中的最新角色校验，仅管理员可用，不应作为稳定对外 API。
 
 ## 目录导览
 
