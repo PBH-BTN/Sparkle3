@@ -82,7 +82,7 @@ export const uiApi = {
     request<HomeCompanionStatisticsResponse>('/api/ui/statistics/companion'),
   rulePreview: () => request<RulePreviewResponse>('/api/ui/rules/preview'),
   dailyTraffic: (page: number, size: number) => request<PageResponse<DailyTraffic>>(`/api/ui/user/traffic?page=${page}&size=${size}`),
-  networkTraffic: () => request<DailyTraffic[]>('/api/ui/user/traffic/network'),
+  networkTraffic: (days: number) => request<DailyTraffic[]>(`/api/ui/user/traffic/network?days=${days}`),
   career: (uid: string) => request<{ metrics: Record<string, string>; lastObservedAt: string | null; observerName: string | null } | null>(`/api/ui/user/career/${uid}`),
   profile: () => request<UserProfileResponse>('/api/ui/user/profile'),
   pointsOverview: () => request<PointsOverview>('/api/ui/points/overview'),

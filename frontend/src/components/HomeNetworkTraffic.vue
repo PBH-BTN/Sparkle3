@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { LineSeriesOption } from 'echarts/charts'
 import type { XAXisComponentOption, YAXisComponentOption } from 'echarts'
@@ -33,42 +33,18 @@ const metrics = {
   downloadAck: 'career.downloadAck',
   seeding: 'career.seeding',
   downloading: 'career.downloading',
-  loss: 'home.networkTrafficAverageLoss',
+  averageLoss: 'home.networkTrafficAverageLoss',
   lossRatio: 'home.networkTrafficAverageLossRatio',
   totalLoss: 'home.networkTrafficTotalLoss',
 } as const
 type Metric = keyof typeof metrics
 
-const cumulativeRows = computed(() => {
-  const totals = { upload: 0n, download: 0n, uploadAck: 0n, downloadAck: 0n }
-  const keys = Object.keys(totals) as (keyof typeof totals)[]
-  let seeding = 0
-  let downloading = 0
-  const start = new Date()
-  start.setUTCDate(start.getUTCDate() - days.value + 1)
-  const firstDay = start.toISOString().slice(0, 10)
-  return records.value.filter(row => row.day >= firstDay).map(({ day, metrics }) => {
-    for (const key of keys) totals[key] += BigInt(metrics[key] ?? '0')
-    seeding += Number(metrics.seeding ?? '0')
-    downloading += Number(metrics.downloading ?? '0')
-    return {
-      day,
-      ...totals,
-      seeding,
-      downloading,
-      totalLoss: BigInt(metrics.totalLoss ?? '0'),
-      loss: Number(metrics.averageLoss ?? '0'),
-      lossRatio: Number(metrics.lossRatio ?? '0'),
-    }
-  })
-})
-
 function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
-  const rows = cumulativeRows.value
+  const rows = records.value
   const names = keys.map(key => t(metrics[key]))
   const option = stackedAreaChartOption(rows.map(row => row.day), keys.map((key, index) => ({
     name: names[index]!,
-    values: rows.map(row => Number(row[key]) / (unit === 'hours' ? 3600 : 1)),
+    values: rows.map(row => Number(row.metrics[key] ?? 0) / (unit === 'hours' ? 3600 : 1)),
   })))
   const axes: YAXisComponentOption[] = [{
     type: 'value',
@@ -102,9 +78,10 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
       const key = keys[names.indexOf(item.seriesName ?? '')]
       const row = rows[item.dataIndex ?? 0]
       if (!key || !row) return ''
+      const metric = row.metrics[key] ?? '0'
       const value = key === 'lossRatio'
-        ? `${Number(row[key].toFixed(2))}%`
-        : unit === 'hours' ? formatHours(Number(row[key])) : formatBytes(row[key])
+        ? `${Number(Number(metric).toFixed(2))}%`
+        : unit === 'hours' ? formatHours(metric) : formatBytes(key === 'averageLoss' ? Number(metric) : metric)
       return formatAxisTooltip([{ ...item, axisValueLabel: index === 0 ? row.day : '', axisValue: '' }], () => value)
     }).join(''),
   }
@@ -116,24 +93,28 @@ const charts = computed(() => {
     { visible: props.showReported, title: 'traffic.chartReported', keys: ['upload', 'download'], unit: 'bytes' },
     { visible: props.showConfirmed, title: 'traffic.chartConfirmed', keys: ['uploadAck', 'downloadAck'], unit: 'bytes' },
     { visible: props.showActivity, title: 'traffic.chartActivity', keys: ['seeding', 'downloading'], unit: 'hours' },
-    { visible: props.showAverageLoss, title: 'home.networkTrafficLossChart', keys: ['loss', 'lossRatio'], unit: 'loss' },
+    { visible: props.showAverageLoss, title: 'home.networkTrafficLossChart', keys: ['averageLoss', 'lossRatio'], unit: 'loss' },
     { visible: props.showTotalLoss, title: 'home.networkTrafficTotalLoss', keys: ['totalLoss'], unit: 'bytes' },
   ] satisfies { visible: boolean; title: string; keys: Metric[]; unit: Parameters<typeof chartOption>[1] }[]
 })
 
+let latestRequest = 0
+
 async function load() {
+  const requestId = ++latestRequest
   loading.value = true
   failed.value = false
   try {
-    records.value = await uiApi.networkTraffic()
+    const rows = await uiApi.networkTraffic(days.value)
+    if (requestId === latestRequest) records.value = rows
   } catch {
-    failed.value = true
+    if (requestId === latestRequest) failed.value = true
   } finally {
-    loading.value = false
+    if (requestId === latestRequest) loading.value = false
   }
 }
 
-onMounted(load)
+watch(days, load, { immediate: true })
 </script>
 
 <template>
@@ -144,7 +125,7 @@ onMounted(load)
       :description="showTraffic ? t('home.networkTrafficDescription') : undefined"
       :ranges="[30, 14, 7]"
     />
-    <a-card v-if="loading || failed || !cumulativeRows.length" class="surface-card network-traffic-state">
+    <a-card v-if="loading || failed || !records.length" class="surface-card network-traffic-state">
       <a-spin v-if="loading" />
       <template v-else-if="failed">
         <p>{{ t('traffic.failed') }}</p>
