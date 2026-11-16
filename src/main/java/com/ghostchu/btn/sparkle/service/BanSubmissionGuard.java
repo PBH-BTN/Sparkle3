@@ -195,7 +195,7 @@ public class BanSubmissionGuard {
     public void cleanup() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);
         var stateCutoff = settings().quietCutoff(now);
-        var eventCutoff = now.minusDays(30);
+        var eventCutoff = now.minusDays(3);
         // The accepted ban timestamp can be at most seven days old.
         var chunks = mapper.dropExpiredFingerprints(now.minusDays(8));
         int removed = mapper.deleteReplayDaysBefore(now.toLocalDate().minusDays(29));
