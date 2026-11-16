@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.export;
 
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
 import com.ghostchu.btn.sparkle.controller.ui.dto.DataExportModels.Category;
 import com.ghostchu.btn.sparkle.controller.ui.dto.DataExportModels.ExportRequest;
 import com.ghostchu.btn.sparkle.controller.ui.dto.DataExportModels.Settings;
@@ -10,6 +11,8 @@ import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.google.common.hash.Hashing;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 
 import java.nio.charset.StandardCharsets;
@@ -26,7 +29,24 @@ class DataExportServiceTest {
     private final DataExportSettings settings = mock(DataExportSettings.class);
     private final ExportQueries queries = mock(ExportQueries.class);
     private final IUserService users = mock(IUserService.class);
-    private final DataExportService service = new DataExportService(jobs, settings, queries, users, mock(UserMessageService.class));
+    private final UserMessageService messages = mock(UserMessageService.class);
+    private final DataExportService service = new DataExportService(jobs, settings, queries, users, messages);
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void settledFailureSendsOneInboxMessageWithTheReturnedCredit(boolean expiredLease) throws Exception {
+        var job = new DataExportJob(UUID.randomUUID(), uid, Category.BANS, "{}", "zh",
+                DataExportService.now(), 10, 100, 72, "RUNNING", null, null, null);
+        when(jobs.fail(job.id(), expiredLease)).thenReturn(1, 0);
+        when(users.getById(uid)).thenReturn(new User().setId(uid));
+
+        service.fail(job, expiredLease);
+        service.fail(job, expiredLease);
+
+        verify(messages).publishSystemToUser(uid, NotificationCategory.DATA_EXPORT,
+                "数据导出失败", "未能准备导出文件，已返还本次导出次数。", false);
+        verifyNoMoreInteractions(messages);
+    }
 
     @Test
     void downloadRequiresTheOwnerValidTokenUnexpiredFileAndCurrentSupporterRole() throws Exception {
