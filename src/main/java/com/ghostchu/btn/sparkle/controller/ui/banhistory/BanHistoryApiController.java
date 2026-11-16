@@ -29,7 +29,8 @@ public class BanHistoryApiController {
      */
     @PostMapping("/query")
     public BanHistoryPageResponse queryBanHistory(@RequestBody BanHistoryQueryDto queryDto) {
-        IPage<BanHistory> page = banHistoryService.queryBanHistory(queryDto);
+        var result = banHistoryService.queryBanHistory(queryDto);
+        IPage<BanHistory> page = result.page();
         
         List<BanHistoryResponseDto> records = page.getRecords().stream()
                 .map(BanHistoryResponseDto::new)
@@ -40,7 +41,8 @@ public class BanHistoryApiController {
                 page.getCurrent(),
                 page.getSize(),
                 page.getTotal(),
-                page.getPages()
+                page.getPages(),
+                result.appliedFilters()
         );
     }
 
@@ -63,6 +65,7 @@ public class BanHistoryApiController {
         private long size;
         private long total;
         private long pages;
+        private IBanHistoryService.TimeRange appliedFilters;
     }
 
     @Data

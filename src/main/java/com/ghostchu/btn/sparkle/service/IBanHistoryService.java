@@ -43,7 +43,13 @@ public interface IBanHistoryService extends IService<BanHistory> {
      * @param queryDto Query parameters
      * @return Paginated ban history records
      */
-    @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto);
+    @NotNull QueryResult queryBanHistory(@NotNull BanHistoryQueryDto queryDto);
+
+    record TimeRange(OffsetDateTime populateTimeStart, OffsetDateTime populateTimeEnd) {
+    }
+
+    record QueryResult(IPage<BanHistory> page, TimeRange appliedFilters) {
+    }
     
     /**
      * Get distinct module names for dropdown selection

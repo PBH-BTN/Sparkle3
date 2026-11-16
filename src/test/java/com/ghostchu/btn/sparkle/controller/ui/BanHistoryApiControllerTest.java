@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.controller.ui;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ghostchu.btn.sparkle.controller.ui.banhistory.BanHistoryApiController;
+import com.ghostchu.btn.sparkle.controller.handler.GlobalExceptionHandler;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.service.impl.BanHistoryServiceImpl;
@@ -57,5 +58,38 @@ class BanHistoryApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.records[0].populateTime").value("2026-11-14T03:00:00Z"))
                 .andExpect(jsonPath("$.records[0].insertTime").doesNotExist());
+    }
+    @Test
+    void acceptsThreeCalendarMonthsAndReturnsAnActionableErrorBeyondTheLimit() throws Exception {
+        var mapper = mock(BanHistoryMapper.class);
+        doAnswer(invocation -> invocation.getArgument(0)).when(mapper).selectPage(any(), any());
+        var service = new BanHistoryServiceImpl();
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+        var controller = new BanHistoryApiController();
+        ReflectionTestUtils.setField(controller, "banHistoryService", service);
+        var mvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        String body = """
+                {"populateTimeStart":"2026-01-31T00:00:00Z","populateTimeEnd":"%s"}
+                """;
+        mvc.perform(post("/api/banhistory/query").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("2026-04-30T00:00:00Z")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appliedFilters.populateTimeEnd").value("2026-04-30T00:00:00Z"));
+        mvc.perform(post("/api/banhistory/query").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("2026-04-30T00:00:01Z")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("ban_history_range_too_long"));
+        mvc.perform(post("/api/banhistory/query").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("2026-01-30T00:00:00Z")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("ban_history_range_reversed"));
+        var response = mvc.perform(post("/api/banhistory/query").contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var filters = com.ghostchu.btn.sparkle.autoconfig.JacksonConfig.objectMapper
+                .readTree(response.getContentAsString()).get("appliedFilters");
+        assertEquals(OffsetDateTime.parse(filters.get("populateTimeEnd").asText()).minusDays(7),
+                OffsetDateTime.parse(filters.get("populateTimeStart").asText()));
     }
 }

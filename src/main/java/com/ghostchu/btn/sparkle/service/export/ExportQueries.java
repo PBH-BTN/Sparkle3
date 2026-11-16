@@ -65,7 +65,9 @@ public class ExportQueries {
                 case BANS -> {
                     var query = json.readValue(serialized, BanHistoryQueryDto.class);
                     checkIp(query.getPeerIp());
-                    BanHistoryServiceImpl.buildQuery(query, now);
+                    var range = BanHistoryServiceImpl.resolveTimeRange(query, now);
+                    query.setPopulateTimeStart(range.populateTimeStart());
+                    query.setPopulateTimeEnd(range.populateTimeEnd());
                     yield json.writeValueAsString(query);
                 }
                 case SWARM -> {
@@ -180,6 +182,10 @@ public class ExportQueries {
         }
     }
 
-    private record SubmissionFilter(String type, int days) {
+    private record SubmissionFilter(String type, Integer days) {
+        private SubmissionFilter {
+            type = type == null ? "bans" : type;
+            days = days == null ? 3 : days;
+        }
     }
 }

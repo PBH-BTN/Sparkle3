@@ -30,14 +30,15 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -214,8 +215,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
-        QueryWrapper<BanHistory> queryWrapper = buildQuery(queryDto, OffsetDateTime.now());
+    public @NotNull QueryResult queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
+        TimeRange range = resolveTimeRange(queryDto, OffsetDateTime.now(ZoneOffset.UTC));
+        QueryWrapper<BanHistory> queryWrapper = buildQuery(queryDto, range);
         // Pagination
         int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
         int size = (queryDto.getSize() != null && queryDto.getSize() > 0)
@@ -236,26 +238,31 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
         }
 
 
-        return this.baseMapper.selectPage(pageRequest, queryWrapper);
+        return new QueryResult(this.baseMapper.selectPage(pageRequest, queryWrapper), range);
     }
 
     public static QueryWrapper<BanHistory> buildQuery(BanHistoryQueryDto queryDto, OffsetDateTime now) {
-        QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
+        return buildQuery(queryDto, resolveTimeRange(queryDto, now));
+    }
 
+    public static TimeRange resolveTimeRange(BanHistoryQueryDto queryDto, OffsetDateTime now) {
         OffsetDateTime populateTimeStart = Objects.requireNonNullElse(queryDto.getPopulateTimeStart(), now.minusDays(7));
         OffsetDateTime populateTimeEnd = Objects.requireNonNullElse(queryDto.getPopulateTimeEnd(), now);
 
         if (populateTimeStart.isAfter(populateTimeEnd)) {
-            throw new IllegalArgumentException("Illegal query duration");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ban_history_range_reversed");
         }
 
-        if (populateTimeStart.until(populateTimeEnd, ChronoUnit.DAYS) > 14) {
-            throw new IllegalArgumentException("The query date start to end duration cannot over 14 days.");
+        if (populateTimeEnd.isAfter(populateTimeStart.withOffsetSameInstant(ZoneOffset.UTC).plusMonths(3))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ban_history_range_too_long");
         }
+        return new TimeRange(populateTimeStart, populateTimeEnd);
+    }
 
-        // Time range filter
-        queryWrapper.ge("populate_time", populateTimeStart)
-                .le("populate_time", populateTimeEnd)
+    private static QueryWrapper<BanHistory> buildQuery(BanHistoryQueryDto queryDto, TimeRange range) {
+        QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
+        queryWrapper.ge("populate_time", range.populateTimeStart())
+                .le("populate_time", range.populateTimeEnd())
                 .eq(queryDto.getTorrentId() != null, "torrent_id", queryDto.getTorrentId())
                 .eq(queryDto.getPeerPort() != null, "peer_port", queryDto.getPeerPort())
                 .likeRight(queryDto.getPeerId() != null && !queryDto.getPeerId().isBlank(), "peer_id", queryDto.getPeerId())

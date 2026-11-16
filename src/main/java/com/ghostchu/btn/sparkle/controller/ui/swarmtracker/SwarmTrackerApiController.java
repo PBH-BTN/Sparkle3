@@ -51,9 +51,10 @@ public class SwarmTrackerApiController {
         if (queryDto.getInfoHash() != null && !queryDto.getInfoHash().isBlank()) {
             String torrentIdentifier = InfoHashUtil.getHashedIdentifier(queryDto.getInfoHash());
             var torrent = torrentService.getTorrentByTorrentIdentifier(torrentIdentifier);
-            if (torrent != null) {
-                torrentId = torrent.getId();
+            if (torrent == null) {
+                return new SwarmTrackerPageResponse(List.of(), queryDto.getPage(), pageSize, 0, 0);
             }
+            torrentId = torrent.getId();
         }
 
         // 解析时间
