@@ -6,6 +6,17 @@ import type {
   UsernameVisibility,
 } from './types'
 
+export interface DataExportSettings {
+  maxRows: number
+  maxFileMiB: number
+  retentionHours: number
+  downloadMbps: number
+  dailySlots: number
+  poolMiB: number
+  promptZh: string
+  promptEn: string
+}
+
 export interface AdminPage<T> {
   records: T[]
   current: number

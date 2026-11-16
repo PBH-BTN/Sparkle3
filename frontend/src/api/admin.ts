@@ -28,6 +28,7 @@ import type {
   AdminPage,
   AdminRuleQuery,
   AdminUser,
+  DataExportSettings,
   AdminUserInput,
   AdminUserQuery,
   BackgroundTaskStatusResponse,
@@ -102,6 +103,9 @@ function queryString(values: object) {
 }
 
 export const adminApi = {
+  exportSettings: () => request<DataExportSettings>('/api/admin/exports'),
+  updateExportSettings: (body: DataExportSettings) =>
+    request<DataExportSettings>('/api/admin/exports', { method: 'PUT', body: JSON.stringify(body) }),
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
   banSubmissions: (query: {
     page: number

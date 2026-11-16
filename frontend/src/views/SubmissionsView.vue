@@ -5,6 +5,7 @@ import type { TableColumnData } from '@arco-design/web-vue'
 import { uiApi } from '@/api'
 import type { SubmissionRecord, SubmissionType } from '@/api/types'
 import PageHeader from '@/components/PageHeader.vue'
+import DataExportButton from '@/components/DataExportButton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TablePager from '@/components/TablePager.vue'
 import { useFormatters } from '@/utils/format'
@@ -104,7 +105,10 @@ onMounted(load)
             {{ t('submissions.days', { days: value }) }}
           </a-radio>
         </a-radio-group>
-        <a-button :loading="loading" @click="load">{{ t('submissions.refresh') }}</a-button>
+        <a-space wrap>
+          <DataExportButton category="SUBMISSIONS" :filters="{ type, days }" :disabled="loading || failed" />
+          <a-button :loading="loading" @click="load">{{ t('submissions.refresh') }}</a-button>
+        </a-space>
       </div>
       <a-tabs v-model:active-key="type">
         <a-tab-pane v-for="value in (['bans', 'clients', 'swarm'] as const)" :key="value" :title="t('submissions.' + value)" />

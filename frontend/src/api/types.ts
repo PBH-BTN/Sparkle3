@@ -27,6 +27,13 @@ export interface PrivacySettings {
 
 export type UserRole = 'user' | 'supporter' | 'moderator' | 'admin'
 
+export type DataExportCategory = 'BANS' | 'CLIENTS' | 'SWARM' | 'TRAFFIC' | 'SUBMISSIONS'
+
+export interface DataExportOptions {
+  slotsAvailable: number
+  prompt: string
+}
+
 export interface SessionUser {
   id: string
   nickname: string
@@ -345,6 +352,7 @@ export interface PrivacyResponse {
 }
 
 export type NotificationCategory =
+  | 'DATA_EXPORT'
   | 'LEGAL_COMPLIANCE'
   | 'ACCOUNT_SECURITY'
   | 'CLIENT_SECURITY'

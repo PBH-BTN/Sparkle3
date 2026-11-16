@@ -1,5 +1,7 @@
 import { request } from './http'
 import type {
+  DataExportCategory,
+  DataExportOptions,
   AccountDeletionReauthenticationResponse,
   AccountDeletionStatus,
   Announcement,
@@ -65,6 +67,10 @@ function postQuery<T>(url: string, body: unknown) {
 }
 
 export const uiApi = {
+  exportOptions: (language: string) =>
+    request<DataExportOptions>(`/api/ui/exports/options?language=${encodeURIComponent(language)}`),
+  requestExport: (body: { category: DataExportCategory; filters: Record<string, unknown>; language: string }) =>
+    request<{ id: string }>('/api/ui/exports', { method: 'POST', body: JSON.stringify(body) }),
   submissions: (query: { type: SubmissionType; days: number; page: number; size: number }) =>
     request<PageResponse<SubmissionRecord>>('/api/ui/submissions?' + new URLSearchParams({
       type: query.type, days: String(query.days), page: String(query.page), size: String(query.size),

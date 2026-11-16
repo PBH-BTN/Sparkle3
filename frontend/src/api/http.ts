@@ -61,11 +61,12 @@ async function performRequest<T>(url: string, init: RequestInit = {}): Promise<T
         && typeof payload.message === 'string' && payload.message.trim()
         ? String(payload.message)
         : i18n.global.t('common.requestFailed')
+    const exportMessage = `exports.${message}`
     const translated = message === 'content_moderation_rejected'
       ? i18n.global.t('common.contentModerationRejected')
       : message === 'user_roles_changed'
         ? i18n.global.t('admin.users.rolesChanged')
-        : message
+        : message.startsWith('export_') && i18n.global.te(exportMessage) ? i18n.global.t(exportMessage) : message
     throw new ApiError(translated, response.status, payload)
   }
 

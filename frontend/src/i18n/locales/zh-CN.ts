@@ -128,6 +128,10 @@ export default {
       email: '邮件',
     },
     categories: {
+      DATA_EXPORT: {
+        name: '数据导出',
+        description: '接收本人申请的数据导出结果和下载链接。',
+      },
       LEGAL_COMPLIANCE: {
         name: '法律与合规与管理员消息',
         description: 'PBH-BTN 团队向您发送的与法律、合规及管理相关的通知，此通知不能被关闭。',
@@ -510,6 +514,21 @@ export default {
     credentialsMissing: '凭据信息已失效，请重新创建或重置应用密钥。',
     createdSuccess: '用户应用创建成功。',
     deletedSuccess: '用户应用已删除。',
+  },
+  exports: {
+    button: '导出',
+    title: '导出数据',
+    start: '开始导出',
+    queued: '导出请求已提交。准备就绪后，下载链接将通过站内信发送。',
+    download: '下载导出文件',
+    export_supporter_required: '只有支持者可以导出数据。',
+    export_invalid_filters: '查询条件无效。请检查筛选条件后重试。',
+    export_quota_exhausted: '今日导出次数已用完。',
+    export_pool_full: '导出存储空间已满。请稍后重试。',
+    export_download_unavailable: '下载链接无效或已过期。',
+    export_download_busy: '下载暂时不可用。请稍后重试。',
+    export_download_connections: '同时下载的连接数已达 32 个。请关闭部分连接后重试。',
+    export_invalid_settings: '请填写有效的设置，文件池容量须至少等于单次文件大小上限。',
   },
   roles: {
     user: '普通用户',
@@ -1241,6 +1260,22 @@ export default {
         AFTER_DELETE: '删除后刷新',
       },
       items: {
+        'data-export-worker': {
+          name: '生成导出文件',
+          description: '读取已排队的导出请求，生成文件后通知申请用户。',
+        },
+        'data-export-cleanup': {
+          name: '清理导出文件',
+          description: '清理到期文件并结算已中断的导出任务。',
+        },
+        'supporter-role-event': {
+          name: '检查支持者资格',
+          description: '交易入账或账号绑定后，检查是否达到支持者门槛。',
+        },
+        'supporter-role-reconcile': {
+          name: '补发支持者角色',
+          description: '定期检查已绑定账号的历史付款，为符合条件的用户授予支持者角色。',
+        },
         'ban-submission-cleanup': {
           name: '清理封禁上报记录',
           description: '清理已过期的封禁指纹和检测摘要。',
@@ -1580,6 +1615,25 @@ export default {
       source: '来源',
       issuedAt: '签发时间',
       expiresAt: '到期时间',
+    },
+    exports: {
+      title: '数据导出',
+      maxRows: '单次记录数上限',
+      maxFileMiB: '单次压缩大小上限',
+      retentionHours: '文件有效期',
+      downloadMbps: '每用户下载总速率',
+      dailySlots: '每用户每日导出次数',
+      poolMiB: '文件池容量',
+      promptZh: '确认弹窗（简体中文）',
+      promptEn: '确认弹窗（英文）',
+      placeholders: '文案可使用以下占位符。',
+      units: {
+        rows: '条',
+        mib: 'MiB',
+        hours: '小时',
+        mbps: 'Mbps',
+        times: '次',
+      },
     },
     memberships: {
       title: '捐赠支持与对账',
@@ -1950,14 +2004,6 @@ export default {
         'dynamic-torrent-size-gib': '种子体积单位（GiB）',
       },
       items: {
-        'supporter-role-event': {
-          name: '检查支持者资格',
-          description: '交易入账或账号绑定后，检查是否达到支持者门槛。',
-        },
-        'supporter-role-reconcile': {
-          name: '补发支持者角色',
-          description: '定期检查已绑定账号的历史付款，为符合条件的用户授予支持者角色。',
-        },
         'untrusted-vote': {
           name: '不受信任投票聚合',
           description: '汇总多个 BTN 用户应用对同一 Peer IP 的封禁投票并生成聚合规则。',

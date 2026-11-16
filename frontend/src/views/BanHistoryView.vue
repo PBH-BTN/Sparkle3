@@ -12,6 +12,7 @@ import {
   IconSearch,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import DataExportButton from '@/components/DataExportButton.vue'
 import SuspensionModal from '@/components/admin/SuspensionModal.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import EChart from '@/components/EChart.vue'
@@ -94,6 +95,7 @@ function buildQuery(): BanQueryFilters {
 
 const {
   records,
+  appliedQuery,
   loading,
   page,
   pageSize,
@@ -384,6 +386,7 @@ onMounted(async () => {
             <template #icon><IconRefresh /></template>
             {{ t('common.reset') }}
           </a-button>
+          <DataExportButton category="BANS" :filters="appliedQuery" :disabled="loading" />
           <a-button type="primary" html-type="submit">
             <template #icon><IconSearch /></template>
             {{ t('common.query') }}

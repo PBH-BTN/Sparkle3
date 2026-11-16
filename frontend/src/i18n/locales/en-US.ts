@@ -129,6 +129,10 @@ export default {
       email: 'Email',
     },
     categories: {
+      DATA_EXPORT: {
+        name: 'Data export',
+        description: 'Receive the results and download links for your data export requests.',
+      },
       LEGAL_COMPLIANCE: {
         name: 'Legal, compliance & administration',
         description:
@@ -527,6 +531,21 @@ export default {
       'These credentials are no longer available. Create an application or reset its secret again.',
     createdSuccess: 'User application created.',
     deletedSuccess: 'User application deleted.',
+  },
+  exports: {
+    button: 'Export',
+    title: 'Export data',
+    start: 'Start export',
+    queued: 'Export requested. The download link will appear in your inbox when the file is ready.',
+    download: 'Download export',
+    export_supporter_required: 'Data export is available to supporters.',
+    export_invalid_filters: 'Check your filters and try again.',
+    export_quota_exhausted: 'You have used all your exports for today.',
+    export_pool_full: 'Export storage is full. Try again later.',
+    export_download_unavailable: 'This download link is invalid or has expired.',
+    export_download_busy: 'Downloads are temporarily unavailable. Try again later.',
+    export_download_connections: 'You already have 32 download connections. Close some connections and try again.',
+    export_invalid_settings: 'Enter valid settings. The file pool must be at least as large as the individual file limit.',
   },
   roles: {
     user: 'User',
@@ -1263,6 +1282,22 @@ export default {
         AFTER_DELETE: 'Post-delete refresh',
       },
       items: {
+        'data-export-worker': {
+          name: 'Generate data exports',
+          description: 'Generate queued export files and notify the requesting users.',
+        },
+        'data-export-cleanup': {
+          name: 'Clean up data exports',
+          description: 'Remove expired files and settle interrupted exports.',
+        },
+        'supporter-role-event': {
+          name: 'Check supporter eligibility',
+          description: 'Check the supporter threshold after a payment posts or an account is linked.',
+        },
+        'supporter-role-reconcile': {
+          name: 'Reconcile supporter roles',
+          description: 'Review linked payment history and grant the supporter role to eligible users.',
+        },
         'ban-submission-cleanup': {
           name: 'Clean up ban submission records',
           description: 'Remove expired ban fingerprints and detection summaries.',
@@ -1608,6 +1643,25 @@ export default {
       source: 'Source',
       issuedAt: 'Issued at',
       expiresAt: 'Expires at',
+    },
+    exports: {
+      title: 'Data export',
+      maxRows: 'Maximum records per export',
+      maxFileMiB: 'Compressed size limit per export',
+      retentionHours: 'File lifetime',
+      downloadMbps: 'Total download rate per user',
+      dailySlots: 'Daily exports per user',
+      poolMiB: 'File pool capacity',
+      promptZh: 'Confirmation text (Simplified Chinese)',
+      promptEn: 'Confirmation text (English)',
+      placeholders: 'Use these placeholders in the confirmation text.',
+      units: {
+        rows: 'rows',
+        mib: 'MiB',
+        hours: 'hours',
+        mbps: 'Mbps',
+        times: 'exports',
+      },
     },
     memberships: {
       title: 'Donations & reconciliation',
@@ -1987,14 +2041,6 @@ export default {
         'dynamic-torrent-size-gib': 'Torrent size unit (GiB)',
       },
       items: {
-        'supporter-role-event': {
-          name: 'Check supporter eligibility',
-          description: 'Check the supporter threshold after a payment posts or an account is linked.',
-        },
-        'supporter-role-reconcile': {
-          name: 'Reconcile supporter roles',
-          description: 'Review linked payment history and grant the supporter role to eligible users.',
-        },
         'untrusted-vote': {
           name: 'Untrusted vote aggregation',
           description:

@@ -8,6 +8,7 @@ import type { TableColumnData } from '@arco-design/web-vue'
 import { uiApi } from '@/api'
 import type { DailyTraffic } from '@/api/types'
 import PageHeader from '@/components/PageHeader.vue'
+import DataExportButton from '@/components/DataExportButton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import TablePager from '@/components/TablePager.vue'
 import EChart from '@/components/EChart.vue'
@@ -144,7 +145,10 @@ watch([page, size], load, { immediate: true })
     <a-card class="surface-card table-card">
       <div class="traffic-toolbar">
         <p class="traffic-note">{{ t('traffic.note', { date: statisticsStartedOn }) }}</p>
-        <a-button :loading="loading" @click="load">{{ t('traffic.refresh') }}</a-button>
+        <a-space wrap>
+          <DataExportButton category="TRAFFIC" :filters="{}" :disabled="loading || failed" />
+          <a-button :loading="loading" @click="load">{{ t('traffic.refresh') }}</a-button>
+        </a-space>
       </div>
       <p class="traffic-note">{{ t('traffic.timeNote') }}</p>
       <p class="traffic-note">{{ t('traffic.lossHelp') }}</p>
