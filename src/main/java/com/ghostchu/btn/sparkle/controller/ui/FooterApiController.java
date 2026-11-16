@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.FooterConfigService;
 import com.ghostchu.btn.sparkle.service.FooterMetricsService;
 import com.ghostchu.btn.sparkle.service.FooterVisitorService;
+import com.ghostchu.btn.sparkle.service.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -34,6 +35,7 @@ public class FooterApiController {
     private final FooterConfigService configService;
     private final FooterMetricsService metricsService;
     private final FooterVisitorService visitorService;
+    private final IUserService userService;
 
     @GetMapping
     public ResponseEntity<FooterResponse> footer(
@@ -42,7 +44,7 @@ public class FooterApiController {
     ) {
         FooterConfigView config = configService.get();
         boolean authenticated = principal != null;
-        boolean admin = AdminPolicy.isAdmin(principal);
+        boolean admin = authenticated && AdminPolicy.isAdmin(userService.getById(principal.getUserId()));
         Map<String, FooterMetricSetting> metricSettings = metricSettings(config);
 
         boolean disclaimerVisible = canView(config.disclaimerAudience(), authenticated, admin);

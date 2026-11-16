@@ -12,6 +12,8 @@ import com.ghostchu.btn.sparkle.mapper.MemberTransactionAuditEventMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
+import com.ghostchu.btn.sparkle.service.membership.SupporterEligibilityChanged;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -36,12 +38,14 @@ class MemberTransactionLedgerServiceTest {
     private final ObjectMapper objectMapper = JsonMapper.builder()
             .addModule(new JavaTimeModule())
             .build();
+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MemberTransactionLedgerService service =
             new MemberTransactionLedgerService(
                     transactionMapper,
                     syncRunMapper,
                     auditMapper,
-                    objectMapper
+                    objectMapper,
+                    events
             );
 
     @Test
@@ -53,6 +57,7 @@ class MemberTransactionLedgerServiceTest {
                 service.begin(MemberPlatform.PATREON);
         boolean changed = service.apply(session, transaction("TX-1"));
 
+        verify(events).publishEvent(SupporterEligibilityChanged.payment("PATREON", "patron-1"));
         assertEquals(1, session.recordsSeen());
         assertEquals(1, session.created());
         verify(transactionMapper).upsert(any(MemberTransaction.class));

@@ -10,6 +10,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.AdminModels.PageResult;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserRel;
 import com.ghostchu.btn.sparkle.entity.Userapp;
+import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserRelMapper;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
@@ -21,6 +22,7 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.points.PointsService;
 import com.ghostchu.btn.sparkle.util.SuspensionStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,17 +40,22 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminUserController {
     private static final OffsetDateTime NEVER = OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
 
     private final IUserService userService;
+    private final UserMapper userMapper;
     private final AdminSuspensionService suspensionService;
     private final IUserappService userappService;
     private final UserRelMapper userRelMapper;
@@ -78,8 +85,10 @@ public class AdminUserController {
                 }
             });
         }
-        if (role != null && !role.isBlank()) {
-            wrapper.eq("role", role.trim());
+        if ("user".equals(role)) {
+            wrapper.apply("roles = ARRAY['user']");
+        } else if (role != null && !role.isBlank()) {
+            wrapper.apply("{0} = ANY(roles)", role.trim());
         }
         if ("banned".equalsIgnoreCase(status)) {
             wrapper.apply(SuspensionStatus.SUSPENDED_SQL);
@@ -108,7 +117,8 @@ public class AdminUserController {
 
     @PostMapping
     @Transactional
-    public AdminUserView create(@RequestBody CreateUserRequest request) {
+    public AdminUserView create(@RequestBody CreateUserRequest request,
+                                @AuthenticationPrincipal SparkleUserDetails principal) {
         validateUserValues(request.email(), request.nickname());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (userService.count(new QueryWrapper<User>().eq("email", email)) > 0) {
@@ -120,10 +130,13 @@ public class AdminUserController {
                 .setAvatar(blankToDefault(request.avatarUrl(), "/img/anonymous-user.png"))
                 .setNicknameModerationStatus("APPROVED")
                 .setAvatarModerationStatus("APPROVED")
-                .setRole(normalizeRole(request.role()))
+                .setRoles(normalizeRoles(request.roles(), request.role(), List.of("user")).toArray(String[]::new))
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(NEVER);
         userService.save(user);
+        if (user.roleNames().size() > 1) {
+            log.info("Admin {} assigned roles {} to new user {}", operatorId(principal), user.roleNames(), user.getId());
+        }
         userPrivacyService.ensure(user.getId());
         UserPrivacySettings privacy = userPrivacyService.update(
                 user.getId(),
@@ -142,7 +155,14 @@ public class AdminUserController {
     public AdminUserView update(@PathVariable long id,
                                 @RequestBody UpdateUserRequest request,
                                 @AuthenticationPrincipal SparkleUserDetails principal) {
-        User user = requireUser(id);
+        User user = userMapper.selectForUpdate(id);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        List<String> previousRoles = user.roleNames();
+        if (request.previousRoles() != null && !new HashSet<>(request.previousRoles()).equals(Set.copyOf(previousRoles))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "user_roles_changed");
+        }
         validateUserValues(request.email(), request.nickname());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (userService.count(new QueryWrapper<User>()
@@ -150,8 +170,11 @@ public class AdminUserController {
                 .ne("id", id)) > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
-        String role = normalizeRole(request.role());
-        if (principal != null && principal.getUserId() == id && !"admin".equals(role)) {
+        boolean unchangedLegacyRole = request.roles() == null && request.role() != null
+                && user.getRole().equalsIgnoreCase(request.role().trim());
+        List<String> roles = unchangedLegacyRole
+                ? previousRoles : normalizeRoles(request.roles(), request.role(), previousRoles);
+        if (principal != null && principal.getUserId() == id && !roles.contains("admin")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot remove your own admin role");
         }
         user.setEmail(email)
@@ -160,9 +183,14 @@ public class AdminUserController {
                 .setNicknameModerationStatus("APPROVED")
                 .setAvatarModerationStatus("APPROVED")
                 .setNicknameModerationReason(null)
-                .setAvatarModerationReason(null)
-                .setRole(role);
+                .setAvatarModerationReason(null);
         userService.updateById(user);
+        if (!Set.copyOf(roles).equals(Set.copyOf(previousRoles))) {
+            String[] updatedRoles = roles.toArray(String[]::new);
+            userMapper.replaceRoles(id, updatedRoles);
+            user.setRoles(updatedRoles);
+            log.info("Admin {} changed roles for user {} from {} to {}", operatorId(principal), id, previousRoles, roles);
+        }
         UserPrivacySettings privacy = userPrivacyService.update(
                 id,
                 request.avatarVisibility() == null
@@ -285,6 +313,7 @@ public class AdminUserController {
                 user.getNickname(),
                 user.getAvatarUrl(),
                 user.getRole(),
+                user.roleNames(),
                 privacy.avatarVisibility().name(),
                 privacy.usernameVisibility().name(),
                 privacy.pointsVisibility().name(),
@@ -313,14 +342,33 @@ public class AdminUserController {
         }
     }
 
-    private String normalizeRole(String role) {
-        if ("admin".equalsIgnoreCase(role)) {
-            return "admin";
+    private List<String> normalizeRoles(List<String> roles, String legacyRole, List<String> currentRoles) {
+        if (roles == null && legacyRole == null) {
+            return currentRoles;
         }
-        if ("moderator".equalsIgnoreCase(role)) {
-            return "moderator";
+        Set<String> result = new LinkedHashSet<>();
+        result.add("user");
+        if (roles == null) {
+            String role = legacyRole.trim().toLowerCase(Locale.ROOT);
+            if ("admin".equals(role) || "moderator".equals(role)) {
+                result.add(role);
+            }
+            if ("supporter".equals(role) || currentRoles.contains("supporter")) {
+                result.add("supporter");
+            }
+        } else {
+            for (String role : roles) {
+                if (role == null || !Set.of("user", "admin", "moderator", "supporter").contains(role)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select valid user roles");
+                }
+                result.add(role);
+            }
         }
-        return "user";
+        return List.copyOf(result);
+    }
+
+    private Long operatorId(SparkleUserDetails principal) {
+        return principal == null ? null : principal.getUserId();
     }
 
     private String blankToDefault(String value, String defaultValue) {
@@ -340,6 +388,7 @@ public class AdminUserController {
             String nickname,
             String avatarUrl,
             String role,
+            List<String> roles,
             AvatarVisibility avatarVisibility,
             UsernameVisibility usernameVisibility,
             PointsVisibility pointsVisibility
@@ -351,6 +400,8 @@ public class AdminUserController {
             String nickname,
             String avatarUrl,
             String role,
+            List<String> roles,
+            List<String> previousRoles,
             AvatarVisibility avatarVisibility,
             UsernameVisibility usernameVisibility,
             PointsVisibility pointsVisibility

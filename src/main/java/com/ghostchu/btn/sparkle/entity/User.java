@@ -11,11 +11,15 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.apache.ibatis.type.ArrayTypeHandler;
+import org.apache.ibatis.type.JdbcType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * <p>
@@ -62,8 +66,34 @@ public class User implements Serializable {
     @TableField(value = "unban_at", updateStrategy = FieldStrategy.NEVER)
     private OffsetDateTime unbanAt;
 
-    @TableField("role")
+    @TableField(value = "roles", jdbcType = JdbcType.ARRAY, typeHandler = ArrayTypeHandler.class,
+            updateStrategy = FieldStrategy.NEVER)
+    private String[] roles;
+
+    // Retain the old field for sessions serialized before the roles migration.
+    @TableField(exist = false)
     private String role;
+
+    public List<String> roleNames() {
+        if (roles != null) {
+            return List.of(roles);
+        }
+        String legacy = role == null ? "" : role.trim().toLowerCase(Locale.ROOT);
+        return switch (legacy) {
+            case "admin", "role_admin" -> List.of("user", "admin");
+            case "moderator", "role_moderator" -> List.of("user", "moderator");
+            case "supporter" -> List.of("user", "supporter");
+            default -> List.of("user");
+        };
+    }
+
+    public String getRole() {
+        var names = roleNames();
+        if (names.contains("admin")) return "admin";
+        if (names.contains("moderator")) return "moderator";
+        if (names.contains("supporter")) return "supporter";
+        return "user";
+    }
 
     @TableField("privacy_level")
     private UserPrivacyLevel privacyLevel;

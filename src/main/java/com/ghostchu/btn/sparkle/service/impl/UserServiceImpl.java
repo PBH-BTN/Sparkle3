@@ -115,7 +115,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setAvatar(githubAvatarUrl)
                 .setRegisterAt(OffsetDateTime.now())
                 .setLastLoginAt(OffsetDateTime.now())
-                .setRole("user")
                 .setNicknameModerationStatus(nicknameRejected ? "REJECTED" : "APPROVED")
                 .setNicknameModerationReason(nicknameRejected ? ContentModerationService.CONTENT_REJECTED : null)
                 .setAvatarModerationStatus("APPROVED")

@@ -60,6 +60,7 @@ public final class AdminModels {
             String nickname,
             String avatarUrl,
             String role,
+            List<String> roles,
             String avatarVisibility,
             String usernameVisibility,
             String pointsVisibility,

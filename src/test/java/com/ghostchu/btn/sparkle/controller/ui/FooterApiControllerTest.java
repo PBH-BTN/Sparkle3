@@ -10,16 +10,15 @@ import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.FooterConfigService;
 import com.ghostchu.btn.sparkle.service.FooterMetricsService;
 import com.ghostchu.btn.sparkle.service.FooterVisitorService;
+import com.ghostchu.btn.sparkle.service.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.doReturn;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,23 +32,21 @@ class FooterApiControllerTest {
                 "", FooterAudience.ADMIN, List.of(), FooterAudience.ADMIN, FooterAudience.ADMIN,
                 FooterAudience.ADMIN, List.of(), buttons));
         var controller = new FooterApiController(configService, mock(FooterMetricsService.class),
-                mock(FooterVisitorService.class));
+                mock(FooterVisitorService.class), mock(IUserService.class));
         var response = controller.footer(null, mock(HttpServletRequest.class));
         assertNotNull(response.getBody());
         assertEquals(buttons, response.getBody().supportButtons());
     }
 
     @Test
-    void adminAuthorityCanViewAdminOnlyMetricsWithStaleUserRole() {
+    void currentRolesControlAdminOnlyMetricsForAnExistingSession() {
         FooterConfigService configService = mock(FooterConfigService.class);
         FooterMetricsService metricsService = mock(FooterMetricsService.class);
         FooterVisitorService visitorService = mock(FooterVisitorService.class);
         HttpServletRequest request = mock(HttpServletRequest.class);
-        SparkleUserDetails principal = mock(SparkleUserDetails.class);
-
-        doReturn(List.<GrantedAuthority>of(new SimpleGrantedAuthority("admin")))
-                .when(principal).getAuthorities();
-        when(principal.getUser()).thenReturn(new User().setRole("user"));
+        IUserService users = mock(IUserService.class);
+        var principal = new SparkleUserDetails(new User().setId(1L).setRole("user"), null);
+        when(users.getById(1L)).thenReturn(new User().setRoles(new String[]{"user", "admin", "supporter"}));
         when(configService.get()).thenReturn(new FooterConfigView(
                 "",
                 "",
@@ -74,11 +71,14 @@ class FooterApiControllerTest {
         ));
 
         FooterApiController controller =
-                new FooterApiController(configService, metricsService, visitorService);
+                new FooterApiController(configService, metricsService, visitorService, users);
         var response = controller.footer(principal, request);
 
         assertNotNull(response.getBody());
         assertNotNull(response.getBody().performance());
         assertEquals(1.0, response.getBody().performance().loadAverage1());
+
+        when(users.getById(1L)).thenReturn(new User().setRoles(new String[]{"user", "supporter"}));
+        assertNull(controller.footer(principal, request).getBody().performance());
     }
 }

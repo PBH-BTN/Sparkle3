@@ -171,7 +171,6 @@ public class AccountDeletionFinalizer {
                 .setNicknameModerationReason(null)
                 .setAvatarModerationReason(null)
                 .setPrivacyLevel(UserPrivacyLevel.HIGH)
-                .setRole("user")
                 .setBannedAt(userEntity.getBannedAt() == null
                         ? now : userEntity.getBannedAt())
                 .setBannedReason(UserAccountDeletionService.DELETED_APP_REASON);
@@ -180,6 +179,7 @@ public class AccountDeletionFinalizer {
                 .set(User::getBannedAt, userEntity.getBannedAt())
                 .set(User::getBannedReason, userEntity.getBannedReason())
                 .set(User::getUnbanAt, null));
+        userMapper.clearRolesForDeletedUser(userId);
         careerMapper.deleteEvents(userId);
         careerMapper.deleteDaily(userId);
         careerMapper.deleteTrafficDaily(userId);

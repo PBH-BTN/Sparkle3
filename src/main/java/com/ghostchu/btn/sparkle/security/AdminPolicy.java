@@ -6,6 +6,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 
 public final class AdminPolicy {
@@ -20,26 +21,13 @@ public final class AdminPolicy {
     public static boolean isAdmin(User user) {
         return user != null
                 && !user.isSuspended()
-                && isAdminRole(user.getRole());
-    }
-
-    public static boolean isAdmin(SparkleUserDetails userDetails) {
-        if (userDetails == null || userDetails.getUser() == null) {
-            return false;
-        }
-        if (userDetails.getUser().isSuspended()) {
-            return false;
-        }
-        return isAdmin(userDetails.getUser())
-                || hasAdminAuthority(userDetails.getAuthorities());
+                && user.roleNames().contains(ADMIN_AUTHORITY);
     }
 
     public static boolean isModerator(User user) {
         return user != null
                 && !user.isSuspended()
-                && MODERATOR_AUTHORITY.equalsIgnoreCase(
-                        user.getRole() == null ? "" : user.getRole().trim()
-                );
+                && user.roleNames().contains(MODERATOR_AUTHORITY);
     }
 
     /**
@@ -53,17 +41,15 @@ public final class AdminPolicy {
         Set<String> authorities = new LinkedHashSet<>();
         authorities.add("ROLE_USER");
         authorities.add("user");
-        if (isAdmin(user)) {
-            authorities.add(ADMIN_AUTHORITY);
-            authorities.add(ROLE_ADMIN_AUTHORITY);
-        }
-        if (hasModeratorAccess(user)) {
-            authorities.add(MODERATOR_AUTHORITY);
-            authorities.add(ROLE_MODERATOR_AUTHORITY);
-        }
-        if (user != null && user.getRole() != null && !user.getRole().isBlank()) {
-            authorities.add(user.getRole());
-            authorities.add("ROLE_" + user.getRole().trim().toUpperCase());
+        if (user != null && !user.isSuspended()) {
+            for (String role : user.roleNames()) {
+                authorities.add(role);
+                authorities.add("ROLE_" + role.toUpperCase(Locale.ROOT));
+            }
+            if (isAdmin(user)) {
+                authorities.add(MODERATOR_AUTHORITY);
+                authorities.add(ROLE_MODERATOR_AUTHORITY);
+            }
         }
         return authorities.stream()
                 .<GrantedAuthority>map(SimpleGrantedAuthority::new)
@@ -95,21 +81,4 @@ public final class AdminPolicy {
                 || requestUri.startsWith("/api/admin/messages");
     }
 
-    private static boolean hasAdminAuthority(Collection<? extends GrantedAuthority> authorities) {
-        return authorities != null && authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(AdminPolicy::isAdminAuthority);
-    }
-
-    private static boolean isAdminAuthority(String authority) {
-        return authority != null
-                && (ADMIN_AUTHORITY.equalsIgnoreCase(authority)
-                || ROLE_ADMIN_AUTHORITY.equalsIgnoreCase(authority));
-    }
-
-    private static boolean isAdminRole(String role) {
-        return role != null
-                && (ADMIN_AUTHORITY.equalsIgnoreCase(role.trim())
-                || ROLE_ADMIN_AUTHORITY.equalsIgnoreCase(role.trim()));
-    }
 }

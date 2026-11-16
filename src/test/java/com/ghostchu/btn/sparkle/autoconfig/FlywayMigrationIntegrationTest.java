@@ -18,6 +18,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
 import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
+import com.ghostchu.btn.sparkle.mapper.SupporterRoleMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
@@ -51,6 +52,7 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.mock.env.MockEnvironment;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -132,7 +134,7 @@ class FlywayMigrationIntegrationTest {
                     INSERT INTO userapp VALUES (2, NULL, NULL);
                     """);
         }
-        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").load();
+        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").target("81").load();
         flyway.baseline();
         assertEquals(1, flyway.migrate().migrationsExecuted);
         flyway.validate();
@@ -157,7 +159,7 @@ class FlywayMigrationIntegrationTest {
             when(apps.getById(2L)).thenReturn(app);
             when(privacy.get(1L)).thenReturn(UserPrivacySettings.defaults(1L));
             var mvc = MockMvcBuilders.standaloneSetup(
-                            new AdminUserController(users, service, apps, null, null, privacy),
+                            new AdminUserController(users, null, service, apps, null, null, privacy),
                             new AdminUserApplicationController(apps, users, service))
                     .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                     .setControllerAdvice(new GlobalExceptionHandler())
@@ -731,13 +733,13 @@ class FlywayMigrationIntegrationTest {
             try (var result = statement.executeQuery("""
                     INSERT INTO public."user" (
                         avatar, email, nickname, register_at, last_login_at,
-                        role, privacy_level
+                        privacy_level
                     )
                     VALUES (
                         '/img/anonymous-user.png',
                         'points-migration-test@example.invalid',
                         'points-migration-test',
-                        NOW(), NOW(), 'user', 2
+                        NOW(), NOW(), 2
                     )
                     RETURNING id
                     """)) {
@@ -787,6 +789,89 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void preservesLegacyRolesAndGrantsSupporterOnceAcrossPlatforms() throws Exception {
+        Flyway.configure().dataSource(url, username, password).target("81").load().migrate();
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO "user" (id, email, nickname, role, avatar, register_at, last_login_at)
+                    VALUES (101, 'admin@example.invalid', 'Admin', 'ROLE_ADMIN', '/img/anonymous-user.png', now(), now()),
+                           (102, 'moderator@example.invalid', 'Moderator', 'moderator', '/img/anonymous-user.png', now(), now())
+                    """);
+        }
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO member_platform_bindings (provider, btn_user_id, external_user_id, proof)
+                    VALUES ('AFDIAN', 101, 'afdian-1', 'a'), ('MIANBAODUO', 101, 'mianbao-1', 'm'),
+                           ('PATREON', 101, 'patron-1', 'p'), ('AFDIAN', 102, 'afdian-2', 'b');
+                    INSERT INTO currency_exchange_rates (base_currency, quote_currency, rate_to_base)
+                    VALUES ('EUR', 'USD', 0.8), ('EUR', 'CNY', 0.1);
+                    INSERT INTO member_transactions (provider, external_transaction_id, external_user_id,
+                        transaction_type, amount, currency, amount_cny, amount_base, base_currency,
+                        transaction_status, remote_present, license_consumed)
+                    VALUES ('AFDIAN', 'a1', 'afdian-1', 'DONATION', 30, 'CNY', 25, 30, 'CNY', '2', TRUE, TRUE),
+                           ('MIANBAODUO', 'm1', 'mianbao-1', 'PRODUCT', 30, 'CNY', 30, 30, 'CNY', 'PAID', TRUE, TRUE),
+                           ('PATREON', 'p1', 'patron-1', 'DONATION', 5, 'USD', 4, 4, 'EUR', 'ACTIVE', TRUE, FALSE),
+                           ('AFDIAN', 'a2', 'afdian-1', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', 'REFUNDED', TRUE, FALSE),
+                           ('AFDIAN', 'a3', 'afdian-1', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', '2', FALSE, FALSE),
+                           ('AFDIAN', 'a4', 'unbound', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', '2', TRUE, FALSE),
+                           ('AFDIAN', 'a5', 'afdian-2', 'DONATION', 200, 'CNY', 200, 200, 'CNY', '2', TRUE, FALSE);
+                    """);
+        }
+
+        var configuration = new MybatisConfiguration(new Environment("supporter-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.setMapUnderscoreToCamelCase(true);
+        var interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        configuration.addInterceptor(interceptor);
+        for (String mapper : List.of("mapper/UserMapper.xml", "mapper/SupporterRoleMapper.xml")) {
+            try (var input = getClass().getResourceAsStream("/" + mapper)) {
+                new XMLMapperBuilder(input, configuration, mapper, configuration.getSqlFragments()).parse();
+            }
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var session = factory.openSession(true)) {
+            var users = session.getMapper(UserMapper.class);
+            var supporters = session.getMapper(SupporterRoleMapper.class);
+            assertEquals(List.of("user", "admin"), users.selectById(101L).roleNames());
+            assertEquals(List.of("user", "moderator"), users.selectForUpdate(102L).roleNames());
+            assertEquals(101L, supporters.findBoundUser("AFDIAN", "afdian-1"));
+            assertEquals(List.of(101L, 102L), supporters.findCandidates(0, 200));
+            assertTrue(supporters.needsCnyRates());
+            assertEquals(0, supporters.grantEligible(List.of(101L), new BigDecimal("100.01")));
+
+            users.replaceRoles(102L, new String[]{"user", "moderator", "supporter"});
+            users.replaceRoles(102L, new String[]{"user", "moderator"});
+        }
+
+        Callable<Integer> grant = () -> {
+            try (var session = factory.openSession(true)) {
+                return session.getMapper(SupporterRoleMapper.class)
+                        .grantEligible(List.of(101L), new BigDecimal("100.00"));
+            }
+        };
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var results = executor.invokeAll(List.of(grant, grant));
+            assertEquals(1, results.get(0).get() + results.get(1).get());
+        }
+        try (var session = factory.openSession(true)) {
+            var users = session.getMapper(UserMapper.class);
+            var supporters = session.getMapper(SupporterRoleMapper.class);
+            assertEquals(List.of("user", "admin", "supporter"), users.selectById(101L).roleNames());
+            users.replaceRoles(101L, new String[]{"user", "admin"});
+            assertTrue(supporters.findCandidates(0, 200).isEmpty());
+            assertEquals(0, supporters.grantEligible(List.of(101L, 102L), BigDecimal.ONE));
+            assertEquals(List.of("user", "admin"), users.selectForUpdate(101L).roleNames());
+            assertEquals(List.of("user", "moderator"), users.selectForUpdate(102L).roleNames());
+            users.clearRolesForDeletedUser(102L);
+            assertEquals(List.of("user"), users.selectById(102L).roleNames());
+        }
+    }
+
+    @Test
     void upgradesAnAlreadyAppliedIncrementalV68WithoutRepair() throws Exception {
         Flyway.configure().dataSource(url, username, password).target("68")
                 .locations("classpath:db/migration").load().migrate();
@@ -803,7 +888,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("81", latest.info().current().getVersion().getVersion());
+        assertEquals("82", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

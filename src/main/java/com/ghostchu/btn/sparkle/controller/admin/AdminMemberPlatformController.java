@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.Provid
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.ProviderView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SettingsView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SyncOutcome;
+import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformModels.SupporterSettings;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.LicensePage;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.ReconciliationView;
 import com.ghostchu.btn.sparkle.controller.admin.dto.MemberPlatformAdminModels.TransactionPage;
@@ -17,6 +18,7 @@ import com.ghostchu.btn.sparkle.service.ExchangeRateService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformService;
 import com.ghostchu.btn.sparkle.service.MemberPlatformAdminService;
 import com.ghostchu.btn.sparkle.service.PbhLicenseService;
+import com.ghostchu.btn.sparkle.service.SupporterRoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,10 +42,25 @@ public class AdminMemberPlatformController {
     private final ExchangeRateService exchangeRateService;
     private final AfdianSettingsService afdianSettingsService;
     private final PbhLicenseService licenseService;
+    private final SupporterRoleService supporterRoleService;
 
     @GetMapping
     public SettingsView settings() {
         return memberPlatformService.settings();
+    }
+
+    @GetMapping("/supporter")
+    public SupporterSettings supporterSettings() {
+        return new SupporterSettings(supporterRoleService.threshold().toPlainString());
+    }
+
+    @PutMapping("/supporter")
+    public SupporterSettings updateSupporterSettings(
+            @RequestBody SupporterSettings request,
+            @AuthenticationPrincipal SparkleUserDetails principal
+    ) throws BusinessException {
+        supporterRoleService.updateThreshold(request.thresholdCny(), principal == null ? null : principal.getUserId());
+        return supporterSettings();
     }
 
     @GetMapping("/license")
