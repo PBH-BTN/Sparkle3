@@ -678,6 +678,8 @@ export default {
     saveSuccess: 'Privacy settings saved.',
   },
   banHistory: {
+    ban_history_range_too_long: 'Ban history queries can cover up to 3 months. Shorten the date range and try again.',
+    ban_history_range_reversed: 'The start time must be on or before the end time.',
     fromPeerTraffic: 'Traffic from peer',
     toPeerTraffic: 'Traffic to peer',
     title: 'Ban history',

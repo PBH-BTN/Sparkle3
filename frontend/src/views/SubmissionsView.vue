@@ -21,6 +21,7 @@ const pageSize = ref(20)
 const records = ref<SubmissionRecord[]>([])
 const total = ref(0)
 const loading = ref(false)
+const canExport = ref(false)
 const failed = ref(false)
 const structuredRecord = ref<SubmissionRecord | null>(null)
 const structuredVisible = ref(false)
@@ -62,7 +63,8 @@ function showStructuredData(record: SubmissionRecord) {
   structuredVisible.value = true
 }
 
-async function load() {
+async function load(explicitSearch = false) {
+  if (explicitSearch) canExport.value = false
   const id = ++requestId
   loading.value = true
   failed.value = false
@@ -71,6 +73,7 @@ async function load() {
   try {
     const result = await uiApi.submissions({ type: type.value, days: days.value, page: page.value, size: pageSize.value })
     if (id !== requestId) return
+    if (explicitSearch) canExport.value = true
     records.value = result.records
     total.value = result.total
   } catch {
@@ -91,7 +94,10 @@ function changePageSize(value: number) {
   pageSize.value = value
   search()
 }
-watch([type, days], search)
+watch([type, days], () => {
+  canExport.value = false
+  search()
+})
 onMounted(load)
 </script>
 
@@ -106,8 +112,8 @@ onMounted(load)
           </a-radio>
         </a-radio-group>
         <a-space wrap>
-          <DataExportButton category="SUBMISSIONS" :filters="{ type, days }" :disabled="loading || failed" />
-          <a-button :loading="loading" @click="load">{{ t('submissions.refresh') }}</a-button>
+          <DataExportButton category="SUBMISSIONS" :filters="{ type, days }" :disabled="loading || failed || !canExport" />
+          <a-button :loading="loading" @click="load(true)">{{ t('submissions.refresh') }}</a-button>
         </a-space>
       </div>
       <a-tabs v-model:active-key="type">
@@ -116,7 +122,7 @@ onMounted(load)
       <p class="submission-note">{{ t('submissions.note') }}</p>
       <a-alert v-if="failed" type="error">
         {{ t('submissions.failed') }}
-        <template #action><a-button size="small" @click="load">{{ t('submissions.retry') }}</a-button></template>
+        <template #action><a-button size="small" @click="load()">{{ t('submissions.retry') }}</a-button></template>
       </a-alert>
       <a-table v-else :columns="columns" :data="records" :loading="loading" :pagination="false" :scroll="{ x: tableWidth }" row-key="id" stripe>
         <template v-for="field in ['submittedAt', 'insertTime', 'populateTime', 'firstTimeSeen', 'lastTimeSeen']" :key="field" #[field]="{ record }">

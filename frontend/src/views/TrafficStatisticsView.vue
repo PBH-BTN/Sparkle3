@@ -24,6 +24,7 @@ const size = ref(20)
 const total = ref(0)
 const records = ref<DailyTraffic[]>([])
 const loading = ref(false)
+const canExport = ref(false)
 const failed = ref(false)
 let sequence = 0
 const metrics = [
@@ -120,13 +121,15 @@ const charts = computed(() => [
   { key: 'loss', title: t('traffic.chartLoss'), option: chartOption(['loss', 'lossRatio'], 'loss') },
 ])
 
-async function load() {
+async function load(explicitSearch = false) {
+  if (explicitSearch) canExport.value = false
   const request = ++sequence
   loading.value = true
   failed.value = false
   try {
     const result = await uiApi.dailyTraffic(page.value, size.value)
     if (request !== sequence) return
+    if (explicitSearch) canExport.value = true
     records.value = result.records
     total.value = result.total
   } catch {
@@ -136,7 +139,7 @@ async function load() {
   }
 }
 function changeSize(value: number) { size.value = value; page.value = 1 }
-watch([page, size], load, { immediate: true })
+watch([page, size], () => load(), { immediate: true })
 </script>
 
 <template>
@@ -146,8 +149,8 @@ watch([page, size], load, { immediate: true })
       <div class="traffic-toolbar">
         <p class="traffic-note">{{ t('traffic.note', { date: statisticsStartedOn }) }}</p>
         <a-space wrap>
-          <DataExportButton category="TRAFFIC" :filters="{}" :disabled="loading || failed" />
-          <a-button :loading="loading" @click="load">{{ t('traffic.refresh') }}</a-button>
+          <DataExportButton category="TRAFFIC" :filters="{}" :disabled="loading || failed || !canExport" />
+          <a-button :loading="loading" @click="load(true)">{{ t('traffic.refresh') }}</a-button>
         </a-space>
       </div>
       <p class="traffic-note">{{ t('traffic.timeNote') }}</p>

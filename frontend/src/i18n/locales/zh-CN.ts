@@ -660,6 +660,8 @@ export default {
     saveSuccess: '隐私设置已保存。',
   },
   banHistory: {
+    ban_history_range_too_long: '封禁记录最多可查询 3 个月。请缩短时间范围后重试。',
+    ban_history_range_reversed: '开始时间不能晚于结束时间。',
     fromPeerTraffic: '从 Peer 获取流量',
     toPeerTraffic: '发送到 Peer 流量',
     title: '封禁记录',

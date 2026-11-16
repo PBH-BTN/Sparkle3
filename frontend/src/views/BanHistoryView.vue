@@ -96,6 +96,8 @@ function buildQuery(): BanQueryFilters {
 const {
   records,
   appliedQuery,
+  canExport,
+  submitSearch,
   loading,
   page,
   pageSize,
@@ -309,7 +311,7 @@ onMounted(async () => {
     </a-row>
 
     <a-card class="surface-card filter-card">
-      <a-form :model="form" layout="vertical" @submit="search">
+      <a-form :model="form" layout="vertical" @submit="submitSearch">
         <a-row :gutter="16">
           <a-col :xs="24" :sm="12" :lg="6">
             <a-form-item :label="t('banHistory.torrentId')">
@@ -386,7 +388,7 @@ onMounted(async () => {
             <template #icon><IconRefresh /></template>
             {{ t('common.reset') }}
           </a-button>
-          <DataExportButton category="BANS" :filters="appliedQuery" :disabled="loading" />
+          <DataExportButton category="BANS" :filters="appliedQuery" :disabled="loading || !canExport" />
           <a-button type="primary" html-type="submit">
             <template #icon><IconSearch /></template>
             {{ t('common.query') }}

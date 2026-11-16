@@ -571,7 +571,8 @@ export interface ApplicationCredentials {
   appSecret: string
 }
 
-export interface PageResponse<T> {
+export interface PageResponse<T, Q = never> {
+  appliedFilters?: Partial<Q>
   records: T[]
   current: number
   size: number

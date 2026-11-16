@@ -59,8 +59,8 @@ import type {
   UnreadMessageCount,
 } from './types'
 
-function postQuery<T>(url: string, body: unknown) {
-  return request<PageResponse<T>>(url, {
+function postQuery<T, Q = never>(url: string, body: unknown) {
+  return request<PageResponse<T, Q>>(url, {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -236,7 +236,7 @@ export const uiApi = {
 
 export const historyApi = {
   queryBanHistory: (body: BanHistoryQuery) =>
-    postQuery<BanHistoryRecord>('/api/banhistory/query', body),
+    postQuery<BanHistoryRecord, Pick<BanHistoryQuery, 'populateTimeStart' | 'populateTimeEnd'>>('/api/banhistory/query', body),
   banHistoryOptions: () => request<FilterOptions>('/api/banhistory/options'),
   queryClientDiscovery: (body: ClientDiscoveryQuery) =>
     postQuery<ClientDiscoveryRecord>('/api/clientdiscovery/query', body),

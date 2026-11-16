@@ -18,7 +18,7 @@ interface PagedQueryOptions {
 }
 
 export function usePagedQuery<T, Q extends Record<string, unknown>>(
-  fetcher: (query: Q & PageParameters) => Promise<PageResponse<T>>,
+  fetcher: (query: Q & PageParameters) => Promise<PageResponse<T, Q>>,
   buildQuery: () => Q,
   options: PagedQueryOptions,
 ) {
@@ -34,12 +34,18 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
 
   const appliedQuery = shallowRef<(Q & Pick<PageParameters, 'sortBy' | 'sortOrder'>) | null>(null)
 
-  async function run() {
+  const canExport = ref(false)
+  let sequence = 0
+
+  async function run(explicitSearch = false) {
+    const request = ++sequence
     loading.value = true
     try {
       const query = { ...buildQuery(), sortBy: sortBy.value, sortOrder: sortOrder.value }
       const result = await fetcher({ ...query, page: page.value, size: pageSize.value })
-      appliedQuery.value = query
+      if (request !== sequence) return
+      appliedQuery.value = { ...query, ...result.appliedFilters }
+      if (explicitSearch) canExport.value = true
       records.value = result.records
       total.value = result.total
       pages.value = result.pages
@@ -48,19 +54,28 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
         pageSize.value = result.size
       }
     } catch (error) {
+      if (request !== sequence) return
+      canExport.value = false
       appliedQuery.value = null
       records.value = []
       total.value = 0
       pages.value = 0
       Message.error(errorMessage(error, t('common.requestFailed')))
     } finally {
-      loading.value = false
+      if (request === sequence) loading.value = false
     }
   }
 
   async function search() {
+    canExport.value = false
     page.value = 1
     await run()
+  }
+
+  async function submitSearch() {
+    canExport.value = false
+    page.value = 1
+    await run(true)
   }
 
   async function changePage(nextPage: number) {
@@ -85,6 +100,8 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
   return {
     records,
     appliedQuery,
+    canExport,
+    submitSearch,
     loading,
     page,
     pageSize,
