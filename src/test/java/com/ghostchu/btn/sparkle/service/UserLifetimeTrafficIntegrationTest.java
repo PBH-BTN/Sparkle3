@@ -1,20 +1,33 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.entity.BanHistory;
+import com.ghostchu.btn.sparkle.entity.SwarmTracker;
+import com.ghostchu.btn.sparkle.mapper.CareerBatchMapper;
 import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.Mockito.mock;
 
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_ALLOW_DESTRUCTIVE", matches = "true")
@@ -146,9 +159,72 @@ class UserLifetimeTrafficIntegrationTest {
                     }
 
                 }
+                assertConcurrentReportsWithOppositeBatchOrder(factory);
             } finally {
                 statement.execute("DROP DATABASE " + database + " WITH (FORCE)");
             }
+        }
+    }
+
+    private void assertConcurrentReportsWithOppositeBatchOrder(SqlSessionFactory factory) throws Exception {
+        var firstDay = OffsetDateTime.parse("2026-03-05T12:00:00Z");
+        var secondDay = firstDay.plusDays(1);
+        var ip = InetAddress.ofLiteral("192.0.2.2");
+        var swarm = IntStream.rangeClosed(1, 501).mapToObj(port -> new SwarmTracker()
+                .setUserappsId(1L).setUserDownloader("concurrent").setTorrentId(1L)
+                .setPeerIp(ip).setPeerPort(port)
+                .setFirstTimeSeen(firstDay.minusDays(1)).setLastTimeSeen(port <= 500 ? secondDay : firstDay)
+                .setToPeerTraffic(1L).setFromPeerTraffic(0L)
+                .setToPeerTrafficOffset(1L).setFromPeerTrafficOffset(0L).setUserProgress(1)).toList();
+        var bans = IntStream.rangeClosed(1, 501).mapToObj(port -> new BanHistory()
+                .setUserappsId(1L).setTorrentId(1L).setPeerIp(ip).setPeerPort(port)
+                .setPopulateTime(port <= 500 ? firstDay : secondDay)
+                .setModuleName("test").setRule("concurrent").setToPeerTraffic(1L)).toList();
+        var firstChunksWritten = new CyclicBarrier(2);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var swarmResult = executor.submit(() -> {
+                writeConcurrentReport(factory, firstChunksWritten, "swarm", service -> service.swarmBatch(1, swarm));
+                return null;
+            });
+            var banResult = executor.submit(() -> {
+                writeConcurrentReport(factory, firstChunksWritten, "bans", service -> service.bans(1, bans));
+                return null;
+            });
+            swarmResult.get(20, TimeUnit.SECONDS);
+            banResult.get(20, TimeUnit.SECONDS);
+        }
+        try (var session = factory.openSession();
+             var sql = session.getConnection().createStatement();
+             var result = sql.executeQuery("""
+                     SELECT upload, loss FROM user_traffic_daily
+                     WHERE user_id = 1 AND day BETWEEN '2026-03-05' AND '2026-03-06'
+                     ORDER BY day
+                     """)) {
+            assertTrue(result.next());
+            assertEquals(501, result.getInt("upload"));
+            assertEquals(500, result.getInt("loss"));
+            assertTrue(result.next());
+            assertEquals(501, result.getInt("upload"));
+            assertEquals(1, result.getInt("loss"));
+            assertFalse(result.next());
+        }
+    }
+
+    private void writeConcurrentReport(SqlSessionFactory factory, CyclicBarrier barrier, String method,
+                                       java.util.function.Consumer<CareerIngestionService> report) throws Exception {
+        try (var session = factory.openSession(); var sql = session.getConnection().createStatement()) {
+            sql.execute("SET LOCAL statement_timeout = '10s'");
+            var delegate = delegatesTo(session.getMapper(CareerBatchMapper.class));
+            var firstChunk = new AtomicBoolean(true);
+            var mapper = mock(CareerBatchMapper.class, invocation -> {
+                var result = delegate.answer(invocation);
+                if (invocation.getMethod().getName().equals(method) && firstChunk.getAndSet(false)) {
+                    barrier.await(10, TimeUnit.SECONDS);
+                }
+                return result;
+            });
+            report.accept(new CareerIngestionService(mapper, runtimeConfig()));
+            session.commit();
         }
     }
 

@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.CareerBatchMapper">
-    <insert id="swarm">
+    <resultMap id="dailyTrafficDelta" type="com.ghostchu.btn.sparkle.mapper.CareerBatchMapper$DailyTrafficDelta">
+        <constructor>
+            <idArg column="user_id" javaType="_long"/>
+            <idArg column="day" javaType="java.time.LocalDate"/>
+            <arg column="upload" javaType="java.math.BigDecimal"/>
+            <arg column="download" javaType="java.math.BigDecimal"/>
+            <arg column="upload_ack" javaType="java.math.BigDecimal"/>
+            <arg column="download_ack" javaType="java.math.BigDecimal"/>
+            <arg column="loss" javaType="java.math.BigDecimal"/>
+            <arg column="seeding" javaType="java.math.BigDecimal"/>
+            <arg column="downloading" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+    <select id="swarm" resultMap="dailyTrafficDelta" affectData="true" flushCache="true" useCache="false">
         WITH input(user_id,session_key,upload,download,initial_upload,initial_download,at,ip,torrent_id,seeding,observation_key) AS MATERIALIZED (
             VALUES
             <foreach collection="rows" item="r" separator=",">
@@ -89,15 +102,12 @@
                 (days.day+1)::timestamp AT TIME ZONE 'UTC','[)') AS period) clipped
             WHERE NOT isempty(clipped.period)
         )
-        INSERT INTO user_traffic_daily AS d(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
-        SELECT user_id,day,SUM(upload),SUM(download),SUM(upload_ack),SUM(download_ack),SUM(loss),SUM(seeding),SUM(downloading)
-        FROM daily_values GROUP BY user_id,day ORDER BY user_id,day
-        ON CONFLICT(user_id,day) DO UPDATE SET
-            upload=d.upload+EXCLUDED.upload,download=d.download+EXCLUDED.download,
-            upload_ack=d.upload_ack+EXCLUDED.upload_ack,download_ack=d.download_ack+EXCLUDED.download_ack,
-            loss=d.loss+EXCLUDED.loss,seeding=d.seeding+EXCLUDED.seeding,downloading=d.downloading+EXCLUDED.downloading
-    </insert>
-    <insert id="bans">
+        SELECT user_id,day,SUM(upload) AS upload,SUM(download) AS download,
+            SUM(upload_ack) AS upload_ack,SUM(download_ack) AS download_ack,SUM(loss) AS loss,
+            SUM(seeding) AS seeding,SUM(downloading) AS downloading
+        FROM daily_values GROUP BY user_id,day
+    </select>
+    <select id="bans" resultMap="dailyTrafficDelta" affectData="true" flushCache="true" useCache="false">
         WITH input(user_id,fingerprint,at,ip,upload,download) AS MATERIALIZED (
             VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet,#{r.upload}::bigint,#{r.download}::bigint)</foreach>
         ), observed AS (
@@ -110,24 +120,36 @@
             SELECT user_id,'ban',fingerprint,at,NULL::bigint FROM input
             UNION ALL SELECT owner,'observation',fingerprint,at,reporter FROM observed
             ON CONFLICT DO NOTHING RETURNING user_id,kind,fingerprint,observed_at
-        ), traffic_daily AS (
-            INSERT INTO user_traffic_daily AS d(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
-            SELECT a.user_id,(a.observed_at AT TIME ZONE 'UTC')::date,
-                SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END),
-                SUM(CASE WHEN a.kind='ban' THEN i.download ELSE 0 END),
-                SUM(CASE WHEN a.kind='observation' THEN i.download ELSE 0 END),
-                SUM(CASE WHEN a.kind='observation' THEN i.upload ELSE 0 END),
-                SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END),0,0
-            FROM added a JOIN (SELECT DISTINCT ON (fingerprint) * FROM input ORDER BY fingerprint) i USING(fingerprint)
-            GROUP BY 1,2 ORDER BY 1,2
+        ), daily AS (
+            INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
+            SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
+            ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
+        )
+        SELECT a.user_id,(a.observed_at AT TIME ZONE 'UTC')::date AS day,
+            SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END) AS upload,
+            SUM(CASE WHEN a.kind='ban' THEN i.download ELSE 0 END) AS download,
+            SUM(CASE WHEN a.kind='observation' THEN i.download ELSE 0 END) AS upload_ack,
+            SUM(CASE WHEN a.kind='observation' THEN i.upload ELSE 0 END) AS download_ack,
+            SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END) AS loss,
+            0::numeric AS seeding,0::numeric AS downloading
+        FROM added a JOIN (SELECT DISTINCT ON (fingerprint) * FROM input ORDER BY fingerprint) i USING(fingerprint)
+        GROUP BY 1,2
+    </select>
+    <insert id="upsertDailyTraffic">
+        INSERT INTO user_traffic_daily AS d(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
+        SELECT user_id,day,SUM(upload),SUM(download),SUM(upload_ack),SUM(download_ack),SUM(loss),SUM(seeding),SUM(downloading)
+        FROM (VALUES
+            <foreach collection="rows" item="r" separator=",">
+                (#{r.userId}::bigint,#{r.day}::date,#{r.upload}::numeric,#{r.download}::numeric,
+                 #{r.uploadAck}::numeric,#{r.downloadAck}::numeric,#{r.loss}::numeric,
+                 #{r.seeding}::numeric,#{r.downloading}::numeric)
+            </foreach>
+        ) AS deltas(user_id,day,upload,download,upload_ack,download_ack,loss,seeding,downloading)
+        GROUP BY user_id,day ORDER BY user_id,day
         ON CONFLICT(user_id,day) DO UPDATE SET
             upload=d.upload+EXCLUDED.upload,download=d.download+EXCLUDED.download,
             upload_ack=d.upload_ack+EXCLUDED.upload_ack,download_ack=d.download_ack+EXCLUDED.download_ack,
             loss=d.loss+EXCLUDED.loss,seeding=d.seeding+EXCLUDED.seeding,downloading=d.downloading+EXCLUDED.downloading
-        )
-        INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
-        SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
-        ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
     </insert>
     <insert id="features">
         WITH input(fingerprint,at) AS (VALUES <foreach collection="rows" item="r" separator=",">(#{r.key}::uuid,#{r.moment}::timestamptz)</foreach>), added AS (
