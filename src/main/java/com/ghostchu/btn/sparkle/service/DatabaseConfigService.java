@@ -280,6 +280,7 @@ public class DatabaseConfigService {
                 || key.startsWith("sparkle.github-community.")
                 || key.startsWith("sparkle.afdian.")
                 || key.startsWith("sparkle.memberships.")
+                || key.startsWith("sparkle.exports.")
                 || key.startsWith("sparkle.security.")
                 || key.startsWith("sparkle.userapp.auto-account.")
                 || key.startsWith("sparkle.banhistory.")

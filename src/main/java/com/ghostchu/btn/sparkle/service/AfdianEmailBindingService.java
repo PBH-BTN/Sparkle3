@@ -3,8 +3,10 @@ package com.ghostchu.btn.sparkle.service;
 import com.ghostchu.btn.sparkle.mapper.AfdianEmailBindingMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.service.membership.SupporterEligibilityChanged;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AfdianEmailBindingService {
     private final AfdianEmailBindingMapper mapper;
     private final UserMapper userMapper;
+    private final ApplicationEventPublisher events;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean bind(String externalId, String orderId, String remark) throws BusinessException {
@@ -34,6 +37,7 @@ public class AfdianEmailBindingService {
             // Roll back both writes if a manual bind or another scan won a uniqueness race.
             throw new BusinessException(HttpStatus.CONFLICT, "The membership account is already linked.");
         }
+        events.publishEvent(SupporterEligibilityChanged.binding(user.getId()));
         log.info("Afdian account linked to BTN user {} using a purchase remark", user.getId());
         return true;
     }

@@ -24,7 +24,7 @@ public class AdminAccessInterceptor implements HandlerInterceptor {
         if (principal instanceof SparkleUserDetails userDetails) {
             var user = userService.getById(userDetails.getUserId());
             boolean admin = AdminPolicy.isAdmin(user);
-            boolean moderator = AdminPolicy.isModerator(user);
+            boolean moderator = AdminPolicy.isModerator(user) && !request.getRequestURI().startsWith("/debug/");
             allowed = admin
                     || (moderator
                     && AdminPolicy.canAccessModeratorModule(request.getRequestURI()));

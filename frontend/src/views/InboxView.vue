@@ -33,6 +33,16 @@ const reply = ref('')
 const sending = ref(false)
 let conversationRequest = 0
 
+function exportLink(message: InboxMessage) {
+  if (message.senderKind !== 'SYSTEM' || message.category !== 'DATA_EXPORT') return undefined
+  return message.content.match(/\n(\/api\/ui\/exports\/[0-9a-f-]{36}\/download\?token=[A-Za-z0-9_-]{43})$/)?.[1]
+}
+
+function messageText(message: InboxMessage) {
+  const link = exportLink(message)
+  return link ? message.content.slice(0, -(link.length + 1)) : message.content
+}
+
 async function loadConversation(older = false) {
   if (!selected.value) return
   const requestId = ++conversationRequest
@@ -191,7 +201,7 @@ onMounted(load)
                   {{ t('inbox.system') }}
                 </a-tag>
               </span>
-              <span class="message-preview"><template v-if="message.outgoing">{{ t('inbox.you') }}: </template>{{ message.content }}</span>
+              <span class="message-preview"><template v-if="message.outgoing">{{ t('inbox.you') }}: </template>{{ messageText(message) }}</span>
             </span>
             <time class="message-time" :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
             <span v-if="!message.read" class="unread-dot" />
@@ -231,7 +241,10 @@ onMounted(load)
                 <a-tag v-if="message.emailForced" size="small" color="orange">{{ t('inbox.forcedEmail') }}</a-tag>
               </div>
               <strong class="conversation-subject">{{ message.subject }}</strong>
-              <div class="detail-content">{{ message.content }}</div>
+              <div class="detail-content">{{ messageText(message) }}</div>
+              <a v-if="exportLink(message)" :href="exportLink(message)" referrerpolicy="no-referrer" download>
+                {{ t('exports.download') }}
+              </a>
               <div class="bubble-footer">
                 <time :datetime="message.createdAt">{{ formatDate(message.createdAt) }}</time>
                 <a-popconfirm v-if="!message.outgoing" :content="t('inbox.deleteConfirm')" @ok="remove(message)">

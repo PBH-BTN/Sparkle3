@@ -77,6 +77,17 @@ class LicenseRevocationSecurityTest {
                     .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
                     .contentType("application/json").content(body)).andExpect(status().isOk());
             verify(service).revoke(null, "key", "reason", 1L);
+
+            var supporter = new User().setId(3L).setRoles(new String[]{"user", "supporter"});
+            var oldSession = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                    .user(new SparkleUserDetails(supporter, null));
+            when(users.getById(3L)).thenReturn(supporter);
+            mvc.perform(get(adminPath).servletPath(adminPath).with(oldSession)).andExpect(status().isForbidden());
+            when(users.getById(3L)).thenReturn(new User().setId(3L)
+                    .setRoles(new String[]{"user", "supporter", "admin"}));
+            mvc.perform(get(adminPath).servletPath(adminPath).with(oldSession)).andExpect(status().isOk());
+            when(users.getById(1L)).thenReturn(supporter);
+            mvc.perform(get(adminPath).servletPath(adminPath).with(auth)).andExpect(status().isForbidden());
         }
     }
 }

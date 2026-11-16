@@ -6,6 +6,7 @@ import type { EChartsCoreOption } from 'echarts/core'
 import type { TableColumnData } from '@arco-design/web-vue'
 import { IconRefresh, IconSearch } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import DataExportButton from '@/components/DataExportButton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import EChart from '@/components/EChart.vue'
 import TablePager from '@/components/TablePager.vue'
@@ -61,6 +62,7 @@ function buildQuery(): Filters {
 
 const {
   records,
+  appliedQuery,
   loading,
   page,
   pageSize,
@@ -368,6 +370,7 @@ onMounted(() => {
             <template #icon><IconRefresh /></template>
             {{ t('common.reset') }}
           </a-button>
+          <DataExportButton category="SWARM" :filters="appliedQuery" :disabled="loading" />
           <a-button type="primary" html-type="submit">
             <template #icon><IconSearch /></template>
             {{ t('common.query') }}

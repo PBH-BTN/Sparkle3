@@ -292,6 +292,11 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminIpQueryCommentsView.vue'),
         },
         {
+          path: 'exports',
+          name: 'admin-data-exports',
+          component: () => import('@/views/admin/AdminDataExportsView.vue'),
+        },
+        {
           path: 'database-config',
           name: 'admin-database-config',
           component: () => import('@/views/admin/AdminDatabaseConfigView.vue'),

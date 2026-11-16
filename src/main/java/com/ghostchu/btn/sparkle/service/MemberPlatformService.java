@@ -24,12 +24,14 @@ import com.ghostchu.btn.sparkle.service.membership.MemberPlatformAdapter;
 import com.ghostchu.btn.sparkle.service.membership.MemberPlatformCredentials;
 import com.ghostchu.btn.sparkle.service.membership.MemberPlatformSnapshot;
 import com.ghostchu.btn.sparkle.service.membership.PlatformTransaction;
+import com.ghostchu.btn.sparkle.service.membership.SupporterEligibilityChanged;
 import com.ghostchu.btn.sparkle.service.tasks.MonitoredScheduledTask;
 import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.service.tasks.TaskScheduleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -84,6 +86,7 @@ public class MemberPlatformService {
     private final ExchangeRateService exchangeRateService;
     private final AfdianSettingsService afdianSettingsService;
     private final MemberTransactionLedgerService ledgerService;
+    private final ApplicationEventPublisher events;
     private final List<MemberPlatformAdapter> adapters;
     private final Map<MemberPlatform, ReentrantLock> syncLocks =
             new ConcurrentHashMap<>();
@@ -264,6 +267,7 @@ public class MemberPlatformService {
                     "This " + provider.name()
                             + " account or Sparkle user already has a different binding");
         }
+        events.publishEvent(SupporterEligibilityChanged.binding(userId));
         return bindingView(userId, provider, true);
     }
 

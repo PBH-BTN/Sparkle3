@@ -129,6 +129,10 @@ export default {
       email: 'Email',
     },
     categories: {
+      DATA_EXPORT: {
+        name: 'Data export',
+        description: 'Receive the results and download links for your data export requests.',
+      },
       LEGAL_COMPLIANCE: {
         name: 'Legal, compliance & administration',
         description:
@@ -528,7 +532,29 @@ export default {
     createdSuccess: 'User application created.',
     deletedSuccess: 'User application deleted.',
   },
+  exports: {
+    button: 'Export',
+    title: 'Export data',
+    start: 'Start export',
+    queued: 'Export requested. The download link will appear in your inbox when the file is ready.',
+    download: 'Download export',
+    export_supporter_required: 'Data export is available to supporters.',
+    export_invalid_filters: 'Check your filters and try again.',
+    export_quota_exhausted: 'You have used all your exports for today.',
+    export_pool_full: 'Export storage is full. Try again later.',
+    export_download_unavailable: 'This download link is invalid or has expired.',
+    export_download_busy: 'Downloads are temporarily unavailable. Try again later.',
+    export_download_connections: 'You already have 32 download connections. Close some connections and try again.',
+    export_invalid_settings: 'Enter valid settings. The file pool must be at least as large as the individual file limit.',
+  },
+  roles: {
+    user: 'User',
+    supporter: 'Supporter',
+    moderator: 'Moderator',
+    admin: 'Administrator',
+  },
   profile: {
+    roles: 'Roles',
     nicknameRejectedByDictionary: 'Your display name did not pass moderation. Update it on GitHub and sign in again.',
     title: 'Profile',
     email: 'Email',
@@ -1256,6 +1282,22 @@ export default {
         AFTER_DELETE: 'Post-delete refresh',
       },
       items: {
+        'data-export-worker': {
+          name: 'Generate data exports',
+          description: 'Generate queued export files and notify the requesting users.',
+        },
+        'data-export-cleanup': {
+          name: 'Clean up data exports',
+          description: 'Remove expired files and settle interrupted exports.',
+        },
+        'supporter-role-event': {
+          name: 'Check supporter eligibility',
+          description: 'Check the supporter threshold after a payment posts or an account is linked.',
+        },
+        'supporter-role-reconcile': {
+          name: 'Reconcile supporter roles',
+          description: 'Review linked payment history and grant the supporter role to eligible users.',
+        },
         'ban-submission-cleanup': {
           name: 'Clean up ban submission records',
           description: 'Remove expired ban fingerprints and detection summaries.',
@@ -1602,12 +1644,35 @@ export default {
       issuedAt: 'Issued at',
       expiresAt: 'Expires at',
     },
+    exports: {
+      title: 'Data export',
+      maxRows: 'Maximum records per export',
+      maxFileMiB: 'Compressed size limit per export',
+      retentionHours: 'File lifetime',
+      downloadMbps: 'Total download rate per user',
+      dailySlots: 'Daily exports per user',
+      poolMiB: 'File pool capacity',
+      promptZh: 'Confirmation text (Simplified Chinese)',
+      promptEn: 'Confirmation text (English)',
+      placeholders: 'Use these placeholders in the confirmation text.',
+      units: {
+        rows: 'rows',
+        mib: 'MiB',
+        hours: 'hours',
+        mbps: 'Mbps',
+        times: 'exports',
+      },
+    },
     memberships: {
       title: 'Donations & reconciliation',
       description:
         'Patreon syncs members and lifetime support through its official API. Ko-fi delivers real-time payments through its official webhook. Mianbaoduo syncs product orders with a developer key. Liandong publishes no order API, so it is not synced automatically.',
       integrationHint:
         'Platform credentials stay on the server. Afdian, Patreon, and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
+      supporterTitle: 'Supporter role',
+      supporterThreshold: 'Lifetime payment threshold',
+      supporterHint: 'Combines donations, subscriptions, and purchases from linked platforms. Enter 0 to disable automatic grants. A revoked role can only be restored by an administrator.',
+      supporterThresholdInvalid: 'Enter an amount from 0 to 1 billion CNY with up to two decimal places.',
       licenseTitle: 'PBHLicense issuance rules',
       licenseSaved: 'Licence issuance rules saved.',
       notConfigured: 'Not configured',
@@ -1800,9 +1865,9 @@ export default {
       suspend: 'Suspend',
       restore: 'Restore',
       suspendTitle: 'Suspend account',
-      adminRole: 'Administrator',
-      moderatorRole: 'Moderator',
-      userRole: 'User',
+      additionalRoles: 'Additional roles',
+      rolesChanged: 'The roles changed. Reopen the user to edit them.',
+      userOnly: 'Basic users only',
       neverLogin: 'Never',
       emailRequired: 'Enter a valid email address.',
       nicknameRequired: 'Enter a nickname.',

@@ -66,6 +66,8 @@ const licenseForm = reactive({
 })
 const savingAfdian = ref(false)
 const savingLicense = ref(false)
+const savingSupporter = ref(false)
+const supporterForm = reactive({ thresholdCny: '' })
 const currencyForm = reactive({
   baseCurrency: 'CNY',
   exchangeRateApiUrl: 'https://open.er-api.com/v6/latest/{currency}',
@@ -144,15 +146,17 @@ const auditColumns = (): TableColumnData[] => [
 async function load() {
   loading.value = true
   try {
-    const [data, afdian, license, reconciliationData] = await Promise.all([
+    const [data, afdian, license, reconciliationData, supporter] = await Promise.all([
       adminApi.memberPlatformSettings(),
       adminApi.afdianSettings(),
       adminApi.membershipLicenseSettings(),
       adminApi.memberPlatformReconciliation({ limit: 50 }),
+      adminApi.supporterSettings(),
     ])
     settings.value = data
     applyAfdian(afdian)
     applyLicense(license)
+    supporterForm.thresholdCny = supporter.thresholdCny
     reconciliation.value = reconciliationData
     currencyForm.baseCurrency = data.baseCurrency
     currencyForm.exchangeRateApiUrl = data.exchangeRateApiUrl
@@ -162,6 +166,24 @@ async function load() {
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
     loading.value = false
+  }
+}
+
+async function saveSupporter() {
+  const thresholdCny = supporterForm.thresholdCny.trim()
+  if (!/^[0-9]{1,10}(\.[0-9]{1,2})?$/.test(thresholdCny) || Number(thresholdCny) > 1_000_000_000) {
+    Message.warning(t('admin.memberships.supporterThresholdInvalid'))
+    return
+  }
+  savingSupporter.value = true
+  try {
+    const updated = await adminApi.updateSupporterSettings({ thresholdCny })
+    supporterForm.thresholdCny = updated.thresholdCny
+    Message.success(t('admin.common.updated'))
+  } catch (error) {
+    Message.error(errorMessage(error, t('common.requestFailed')))
+  } finally {
+    savingSupporter.value = false
   }
 }
 
@@ -531,6 +553,20 @@ onMounted(load)
     <AfdianMessageImport @completed="load" />
 
     <a-spin :loading="loading" class="admin-spin">
+      <a-card class="surface-card">
+        <template #title>{{ t('admin.memberships.supporterTitle') }}</template>
+        <p class="muted">{{ t('admin.memberships.supporterHint') }}</p>
+        <a-form :model="supporterForm" layout="vertical" @submit="saveSupporter">
+          <a-form-item :label="t('admin.memberships.supporterThreshold')">
+            <a-input v-model="supporterForm.thresholdCny" add-before="CNY" :max-length="13" />
+          </a-form-item>
+          <a-button type="primary" html-type="submit" :loading="savingSupporter" :disabled="loading">
+            <template #icon><IconSave /></template>
+            {{ t('admin.common.save') }}
+          </a-button>
+        </a-form>
+      </a-card>
+
       <div class="provider-grid">
         <a-card class="surface-card provider-card">
           <template #title>

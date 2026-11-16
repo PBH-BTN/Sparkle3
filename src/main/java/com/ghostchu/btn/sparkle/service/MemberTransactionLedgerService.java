@@ -10,7 +10,9 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.MemberPlatformSyncRunMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberTransactionAuditEventMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper;
+import com.ghostchu.btn.sparkle.service.membership.SupporterEligibilityChanged;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class MemberTransactionLedgerService {
     private final MemberPlatformSyncRunMapper syncRunMapper;
     private final MemberTransactionAuditEventMapper auditEventMapper;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher events;
 
     @Transactional(rollbackFor = Exception.class)
     public SyncSession begin(MemberPlatform provider) throws BusinessException {
@@ -101,6 +104,7 @@ public class MemberTransactionLedgerService {
             session.created++;
             session.recordsSeen++;
             audit(session, candidate, "CREATED", List.of(), null, candidate);
+            publishPaymentChange(candidate);
             return true;
         }
 
@@ -123,7 +127,12 @@ public class MemberTransactionLedgerService {
         if (restored) {
             audit(session, candidate, "RESTORED_REMOTE", List.of(), existing, candidate);
         }
+        publishPaymentChange(candidate);
         return true;
+    }
+
+    private void publishPaymentChange(MemberTransaction transaction) {
+        events.publishEvent(SupporterEligibilityChanged.payment(transaction.getProvider(), transaction.getExternalUserId()));
     }
 
     public void recordPage(SyncSession session) {

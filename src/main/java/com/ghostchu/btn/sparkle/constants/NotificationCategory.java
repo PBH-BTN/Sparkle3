@@ -6,6 +6,7 @@ import java.util.Optional;
 public enum NotificationCategory {
     LEGAL_COMPLIANCE(true),
     ACCOUNT_SECURITY(true),
+    DATA_EXPORT(true),
     CLIENT_SECURITY(false),
     MAJOR_ANNOUNCEMENT(false),
     DAILY_ANNOUNCEMENT(false),

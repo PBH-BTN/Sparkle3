@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.ExportQueryMapper">
+    <!-- The services supply wrappers with fixed identifiers and bound filter values. -->
+    <select id="bans" resultType="map" fetchSize="256" timeout="900" useCache="false">
+        SELECT populate_time, torrent_id, peer_ip, peer_port, peer_id,
+               peer_client_name, peer_progress, from_peer_traffic, to_peer_traffic,
+               peer_geoip::text AS geo, module_name, rule, description, structured_data::text
+        FROM ban_history b ${ew.customSqlSegment} LIMIT #{limit}
+    </select>
+
+    <select id="clients" resultType="map" fetchSize="256" timeout="900" useCache="false">
+        SELECT peer_id, peer_client_name, client_type, client_semver, found_at
+        FROM client_discovery ${ew.customSqlSegment} LIMIT #{limit}
+    </select>
+
+    <select id="swarm" resultType="map" fetchSize="256" timeout="900" useCache="false">
+        SELECT torrent_id, peer_ip, peer_port, peer_id, peer_client_name, peer_progress,
+               from_peer_traffic, to_peer_traffic, flags, first_time_seen, last_time_seen, user_progress
+        FROM swarm_tracker s ${ew.customSqlSegment} LIMIT #{limit}
+    </select>
+</mapper>

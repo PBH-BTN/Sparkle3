@@ -20,9 +20,11 @@ import com.ghostchu.btn.sparkle.mapper.MemberPlatformBindingMapper;
 import com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper;
 import com.ghostchu.btn.sparkle.service.AfdianClient.AfdianOrder;
 import com.ghostchu.btn.sparkle.service.AfdianClient.OrderPage;
+import com.ghostchu.btn.sparkle.service.membership.SupporterEligibilityChanged;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -60,6 +62,7 @@ public class AfdianIntegrationService {
     private final PbhLicenseService licenseService;
     private final ExchangeRateService exchangeRateService;
     private final MemberTransactionLedgerService ledgerService;
+    private final ApplicationEventPublisher events;
     private final AfdianEmailBindingService emailBinding;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -166,6 +169,7 @@ public class AfdianIntegrationService {
                     "Unable to link Afdian account");
         }
         updateBindingSuccess(btnUserId, order.afdianName(), order.afdianAvatar());
+        events.publishEvent(SupporterEligibilityChanged.binding(btnUserId));
         return publicBinding(btnUserId);
     }
 

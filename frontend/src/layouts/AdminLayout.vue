@@ -82,6 +82,7 @@ const allItems = computed(() => [
   { key: '/admin/btn', label: t('admin.nav.btn'), icon: IconThunderbolt },
   { key: '/admin/modules', label: t('admin.nav.modules'), icon: IconCode },
   { key: '/admin/rules', label: t('admin.nav.rules'), icon: IconCode },
+  { key: '/admin/exports', label: t('admin.exports.title'), icon: IconFile },
   { key: '/admin/database-config', label: t('admin.nav.databaseConfig'), icon: IconFile },
   {
     key: '/admin/user-contact-emails',

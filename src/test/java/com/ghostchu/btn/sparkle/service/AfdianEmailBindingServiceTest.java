@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 class AfdianEmailBindingServiceTest {
     private final AfdianEmailBindingMapper mapper = mock(AfdianEmailBindingMapper.class);
     private final UserMapper users = mock(UserMapper.class);
-    private final AfdianEmailBindingService service = new AfdianEmailBindingService(mapper, users);
+    private final AfdianEmailBindingService service = new AfdianEmailBindingService(mapper, users, mock(org.springframework.context.ApplicationEventPublisher.class));
 
     private User stubUser() {
         User user = new User().setId(42L).setEmail("buyer@example.test");

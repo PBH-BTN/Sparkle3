@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.SupporterRoleMapper">
+    <sql id="eligibleAccount">
+        u.supporter_auto_granted_at IS NULL
+        AND u.supporter_revoked_at IS NULL
+        AND NOT ('supporter' = ANY(u.roles))
+    </sql>
+
+    <sql id="completedPayment">
+        t.remote_present
+        AND UPPER(TRIM(t.transaction_status)) IN ('2', 'PAID', 'COMPLETED', 'SUCCEEDED', 'SUCCESS', 'ACTIVE')
+        AND t.amount &gt; 0
+    </sql>
+
+    <select id="findBoundUser" resultType="long">
+        SELECT btn_user_id FROM member_platform_bindings
+        WHERE provider = #{provider} AND external_user_id = #{externalUserId}
+    </select>
+
+    <select id="findCandidates" resultType="long">
+        SELECT u.id
+        FROM "user" u
+        WHERE u.id &gt; #{after}
+          AND <include refid="eligibleAccount"/>
+          AND EXISTS (SELECT 1 FROM member_platform_bindings b WHERE b.btn_user_id = u.id)
+        ORDER BY u.id LIMIT #{limit}
+    </select>
+
+    <select id="needsCnyRates" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM member_platform_bindings b
+            JOIN "user" u ON u.id = b.btn_user_id
+            JOIN member_transactions t ON t.provider = b.provider AND t.external_user_id = b.external_user_id
+            WHERE <include refid="eligibleAccount"/>
+              AND <include refid="completedPayment"/>
+              AND t.currency &lt;&gt; 'CNY' AND t.base_currency IS DISTINCT FROM 'CNY'
+        )
+    </select>
+
+    <update id="grantEligible">
+        UPDATE "user" u
+        SET roles = array_append(u.roles, 'supporter'), supporter_auto_granted_at = now()
+        WHERE <include refid="eligibleAccount"/>
+          AND u.id IN
+          <foreach collection="userIds" item="id" open="(" separator="," close=")">
+              #{id}
+          </foreach>
+          AND (
+              SELECT SUM(CASE
+                  WHEN t.currency = 'CNY' THEN t.amount
+                  WHEN t.base_currency = 'CNY' THEN t.amount_base
+                  ELSE ROUND(t.amount * COALESCE(cny.rate_to_base,
+                      CASE WHEN t.currency = t.base_currency THEN 1 ELSE original.rate_to_base END
+                          / NULLIF(base.rate_to_base, 0)), 2)
+              END)
+              FROM member_platform_bindings b
+              JOIN member_transactions t ON t.provider = b.provider AND t.external_user_id = b.external_user_id
+              LEFT JOIN currency_exchange_rates cny ON cny.base_currency = 'CNY' AND cny.quote_currency = t.currency
+              LEFT JOIN currency_exchange_rates original ON original.base_currency = t.base_currency
+                  AND original.quote_currency = t.currency
+              LEFT JOIN currency_exchange_rates base ON base.base_currency = t.base_currency AND base.quote_currency = 'CNY'
+              WHERE b.btn_user_id = u.id AND <include refid="completedPayment"/>
+          ) &gt;= #{threshold}
+    </update>
+</mapper>

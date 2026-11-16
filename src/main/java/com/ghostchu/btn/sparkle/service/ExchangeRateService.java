@@ -93,6 +93,10 @@ public class ExchangeRateService {
         refreshRates(baseCurrency());
     }
 
+    void ensureCnyRates() throws BusinessException {
+        rateToBase("CNY", "CNY");
+    }
+
     private BigDecimal rateToBase(String base, String quote)
             throws BusinessException {
         List<CachedRate> cached = cachedRates(base, quote);

@@ -25,6 +25,15 @@ export interface PrivacySettings {
   lifetimeTrafficVisibility: LifetimeTrafficVisibility
 }
 
+export type UserRole = 'user' | 'supporter' | 'moderator' | 'admin'
+
+export type DataExportCategory = 'BANS' | 'CLIENTS' | 'SWARM' | 'TRAFFIC' | 'SUBMISSIONS'
+
+export interface DataExportOptions {
+  slotsAvailable: number
+  prompt: string
+}
+
 export interface SessionUser {
   id: string
   nickname: string
@@ -34,7 +43,8 @@ export interface SessionUser {
   bannedAt: string | null
   bannedReason: string | null
   unbanAt: string | null
-  role: string
+  role: UserRole
+  roles: UserRole[]
   admin: boolean
   moderator: boolean
   privacy: PrivacySettings
@@ -342,6 +352,7 @@ export interface PrivacyResponse {
 }
 
 export type NotificationCategory =
+  | 'DATA_EXPORT'
   | 'LEGAL_COMPLIANCE'
   | 'ACCOUNT_SECURITY'
   | 'CLIENT_SECURITY'

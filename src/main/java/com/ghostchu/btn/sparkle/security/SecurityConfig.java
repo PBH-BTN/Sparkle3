@@ -60,11 +60,8 @@ public class SecurityConfig {
                                 .requestMatchers("/api/ui/notices").permitAll()
                                 .requestMatchers("/api/integrations/flarum/**").permitAll()
                                 .requestMatchers("/api/integrations/memberships/**").permitAll()
-                                .requestMatchers("/admin", "/admin/**")
-                                .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
-                                .requestMatchers("/api/admin/**")
-                                .hasAnyAuthority(AdminPolicy.ADMIN_AUTHORITY, AdminPolicy.MODERATOR_AUTHORITY)
-                                .requestMatchers("/debug/**").hasAuthority(AdminPolicy.ADMIN_AUTHORITY)
+                                // AdminAccessInterceptor authorizes these routes against current database roles.
+                                .requestMatchers("/admin", "/admin/**", "/api/admin/**", "/debug/**").authenticated()
                                 .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
                                 .requestMatchers("/api/**").authenticated()
                                 .anyRequest().authenticated())

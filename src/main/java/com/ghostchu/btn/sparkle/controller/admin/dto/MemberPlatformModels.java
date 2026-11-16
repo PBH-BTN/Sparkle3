@@ -4,6 +4,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public final class MemberPlatformModels {
+    public record SupporterSettings(String thresholdCny) {
+    }
+
     private MemberPlatformModels() {
     }
 

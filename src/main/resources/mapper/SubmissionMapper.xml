@@ -22,6 +22,20 @@
                r.populate_time, r.peer_ip, r.peer_port, r.peer_progress,
                r.reporter_progress, r.flags, r.peer_geoip, r.rule, r.description, r.structured_data,
                r.first_time_seen, r.last_time_seen, r.user_progress
+        <include refid="submissionSource"/>
+        ORDER BY r.submitted_at DESC, r.id DESC
+    </select>
+    <select id="exportRows" resultType="map" fetchSize="256" timeout="900" useCache="false">
+        SELECT a.comment AS application, r.submitted_at, r.peer_id, r.client_name,
+               r.module_name, r.client_type, r.client_version, r.torrent_id,
+               r.uploaded::bigint AS uploaded, r.downloaded::bigint AS downloaded,
+               r.populate_time, r.peer_ip, r.peer_port, r.peer_progress,
+               r.reporter_progress, r.flags, r.peer_geoip::text AS geo, r.rule, r.description, r.structured_data::text,
+               r.first_time_seen, r.last_time_seen, r.user_progress
+        <include refid="submissionSource"/>
+        ORDER BY r.submitted_at DESC, r.id DESC LIMIT #{limit}
+    </select>
+    <sql id="submissionSource">
         FROM (
         <choose>
             <when test="type == 'bans'">
@@ -64,6 +78,5 @@
             </otherwise>
         </choose>
         ) r JOIN userapp a ON a.id = r.app AND a.owner = #{owner}
-        ORDER BY r.submitted_at DESC, r.id DESC
-    </select>
+    </sql>
 </mapper>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.DataExportJobMapper">
+    <sql id="jobColumns">
+        id, user_id, category, filters::text, language, requested_at, max_rows,
+        max_bytes, retention_hours, status, expires_at, file_bytes, download_digest
+    </sql>
+
+    <select id="lockAdmission" resultType="string" flushCache="true">
+        SELECT config_key FROM app_config_entries
+        WHERE config_key = 'sparkle.exports.pool-mib' FOR UPDATE
+    </select>
+
+    <select id="usedSlots" resultType="long">
+        SELECT count(*) FROM data_export_jobs
+        WHERE user_id = #{uid} AND quota_day = #{day} AND status &lt;&gt; 'FAILED'
+    </select>
+
+    <select id="reservedBytes" resultType="long">
+        SELECT COALESCE(SUM(CASE WHEN status = 'READY' THEN file_bytes ELSE max_bytes END), 0)
+        FROM data_export_jobs
+        WHERE status IN ('QUEUED', 'RUNNING', 'READY')
+    </select>
+
+    <insert id="enqueue">
+        INSERT INTO data_export_jobs
+          (id, user_id, category, filters, language, request_ip, user_agent, requested_at,
+           quota_day, status, max_rows, max_bytes, retention_hours)
+        VALUES (#{job.id}, #{job.userId}, #{job.category}, CAST(#{job.filters} AS jsonb),
+                #{job.language}, CAST(#{ip} AS inet), #{agent}, #{job.requestedAt}, #{day},
+                'QUEUED', #{job.maxRows}, #{job.maxBytes}, #{job.retentionHours})
+    </insert>
+
+    <select id="claim" resultType="com.ghostchu.btn.sparkle.service.export.DataExportJob"
+            affectData="true" flushCache="true">
+        UPDATE data_export_jobs SET status = 'RUNNING', lease_until = now() + interval '30 minutes'
+        WHERE id = (
+            SELECT id FROM data_export_jobs
+            WHERE status = 'QUEUED'
+              AND NOT EXISTS (SELECT 1 FROM data_export_jobs WHERE status = 'RUNNING')
+            ORDER BY requested_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+        )
+        RETURNING <include refid="jobColumns"/>
+    </select>
+
+    <update id="renew">
+        UPDATE data_export_jobs SET lease_until = now() + interval '30 minutes'
+        WHERE id = #{id} AND status = 'RUNNING' AND lease_until &gt; now()
+    </update>
+
+    <update id="ready">
+        UPDATE data_export_jobs
+        SET status = 'READY', finished_at = now(), expires_at = #{expires}, row_count = #{rows},
+            file_bytes = #{bytes}, download_digest = #{digest}, truncated = #{truncated}, lease_until = NULL
+        WHERE id = #{id} AND status = 'RUNNING' AND lease_until &gt; now()
+    </update>
+
+    <update id="fail">
+        UPDATE data_export_jobs SET status = 'FAILED', finished_at = now(), lease_until = NULL
+        WHERE id = #{id} AND status = 'RUNNING'
+        <if test="staleOnly">AND lease_until &lt;= now()</if>
+    </update>
+
+    <select id="stale" resultType="com.ghostchu.btn.sparkle.service.export.DataExportJob">
+        SELECT <include refid="jobColumns"/> FROM data_export_jobs
+        WHERE status = 'RUNNING' AND lease_until &lt;= now()
+        ORDER BY requested_at LIMIT 50
+    </select>
+
+    <select id="removable" resultType="com.ghostchu.btn.sparkle.service.export.DataExportJob">
+        SELECT <include refid="jobColumns"/> FROM data_export_jobs
+        WHERE files_removed_at IS NULL
+          AND (status = 'FAILED' OR (status = 'READY' AND expires_at &lt;= now()))
+        ORDER BY finished_at LIMIT 100
+    </select>
+
+    <update id="removed">
+        UPDATE data_export_jobs
+        SET status = CASE WHEN status = 'READY' THEN 'EXPIRED' ELSE status END,
+            download_digest = NULL, files_removed_at = now()
+        WHERE id = #{id} AND files_removed_at IS NULL
+          AND (status = 'FAILED' OR (status = 'READY' AND expires_at &lt;= now()))
+    </update>
+
+    <select id="find" resultType="com.ghostchu.btn.sparkle.service.export.DataExportJob">
+        SELECT <include refid="jobColumns"/> FROM data_export_jobs WHERE id = #{id} AND user_id = #{uid}
+    </select>
+</mapper>

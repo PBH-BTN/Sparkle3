@@ -9,6 +9,11 @@
         FROM user_traffic_daily WHERE user_id = #{uid}
         ORDER BY day DESC LIMIT #{size} OFFSET #{offset}
     </select>
+    <select id="exportDaily" resultType="map" fetchSize="256" timeout="900" useCache="false">
+        SELECT day, upload, download, upload_ack, download_ack, seeding, downloading, loss, loss_ratio
+        FROM user_traffic_daily WHERE user_id = #{uid}
+        ORDER BY day DESC LIMIT #{limit}
+    </select>
     <select id="network" resultType="map">
         SELECT day::text AS day
         <if test="access.reported">

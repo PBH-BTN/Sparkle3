@@ -123,6 +123,11 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             @Nullable String sortOrder,
             @NotNull Page<ClientDiscovery> page) {
 
+        return this.baseMapper.selectPage(page, buildQuery(peerId, peerClientName, clientType, clientSemver, sortBy, sortOrder));
+    }
+
+    public static QueryWrapper<ClientDiscovery> buildQuery(String peerId, String peerClientName, String clientType,
+                                                           String clientSemver, String sortBy, String sortOrder) {
         QueryWrapper<ClientDiscovery> wrapper = new QueryWrapper<>();
 
         // 添加查询条件
@@ -140,7 +145,7 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
             wrapper.orderByAsc(sort);
         }
 
-        return this.baseMapper.selectPage(page, wrapper);
+        return wrapper;
     }
 
     @Override

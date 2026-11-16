@@ -18,6 +18,7 @@ import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
 import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
+import com.ghostchu.btn.sparkle.mapper.SupporterRoleMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
@@ -51,6 +52,7 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.mock.env.MockEnvironment;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -132,7 +134,7 @@ class FlywayMigrationIntegrationTest {
                     INSERT INTO userapp VALUES (2, NULL, NULL);
                     """);
         }
-        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").load();
+        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").target("81").load();
         flyway.baseline();
         assertEquals(1, flyway.migrate().migrationsExecuted);
         flyway.validate();
@@ -157,7 +159,7 @@ class FlywayMigrationIntegrationTest {
             when(apps.getById(2L)).thenReturn(app);
             when(privacy.get(1L)).thenReturn(UserPrivacySettings.defaults(1L));
             var mvc = MockMvcBuilders.standaloneSetup(
-                            new AdminUserController(users, service, apps, null, null, privacy),
+                            new AdminUserController(users, null, service, apps, null, null, privacy),
                             new AdminUserApplicationController(apps, users, service))
                     .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                     .setControllerAdvice(new GlobalExceptionHandler())
@@ -731,13 +733,13 @@ class FlywayMigrationIntegrationTest {
             try (var result = statement.executeQuery("""
                     INSERT INTO public."user" (
                         avatar, email, nickname, register_at, last_login_at,
-                        role, privacy_level
+                        privacy_level
                     )
                     VALUES (
                         '/img/anonymous-user.png',
                         'points-migration-test@example.invalid',
                         'points-migration-test',
-                        NOW(), NOW(), 'user', 2
+                        NOW(), NOW(), 2
                     )
                     RETURNING id
                     """)) {
@@ -787,6 +789,191 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void queuesAuditsAndStreamsUserExports() throws Exception {
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO userapp (id, app_id, app_secret, created_at, owner, comment)
+                    VALUES (101, 'a', 'fixture', now(), 10, 'Own application'),
+                           (102, 'b', 'fixture', now(), 20, 'Other application');
+                    INSERT INTO ban_history (insert_time, populate_time, userapps_id, torrent_id, peer_ip,
+                        peer_port, peer_progress, to_peer_traffic, from_peer_traffic, module_name, rule, structured_data)
+                    VALUES (now(), now(), 101, 1, '192.0.2.1', 123, 1, 0, 0, 'Test', 'own', '{"port":123}'),
+                           (now(), now(), 102, 1, '192.0.2.2', 456, 1, 0, 0, 'Test', 'other', '{}');
+                    INSERT INTO client_discovery (hash, found_at, found_userapps_id, peer_id, peer_client_name)
+                    VALUES (1, now(), 101, 'P1', 'Client One');
+                    INSERT INTO swarm_tracker (userapps_id, user_downloader, torrent_id, peer_ip, peer_port,
+                        peer_progress, from_peer_traffic, to_peer_traffic, from_peer_traffic_offset,
+                        to_peer_traffic_offset, first_time_seen, last_time_seen, user_progress)
+                    VALUES (101, 'fixture', 1, '192.0.2.3', 123, 1, 0, 0, 0, 0, now(), now(), 1);
+                    INSERT INTO user_traffic_daily (user_id, day, upload) VALUES
+                        (10, current_date, 9007199254740993), (20, current_date, 10);
+                    """);
+        }
+        var configuration = new MybatisConfiguration(new Environment("data-export-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.getTypeHandlerRegistry().register(com.ghostchu.btn.sparkle.converter.UuidTypeHandler.class);
+        var interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        configuration.addInterceptor(interceptor);
+        for (String file : List.of("DataExportJobMapper", "ExportQueryMapper", "SubmissionMapper",
+                "UserTrafficStatisticsMapper")) {
+            String path = "mapper/" + file + ".xml";
+            try (var input = getClass().getResourceAsStream("/" + path)) {
+                new XMLMapperBuilder(input, configuration, path, configuration.getSqlFragments()).parse();
+            }
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        var id = UUID.randomUUID();
+        var category = com.ghostchu.btn.sparkle.controller.ui.dto.DataExportModels.Category.BANS;
+        var job = new com.ghostchu.btn.sparkle.service.export.DataExportJob(id, 10, category, "{}", "zh", now,
+                100, 200, 72, "QUEUED", null, null, null);
+        try (var session = factory.openSession(false)) {
+            var jobs = session.getMapper(com.ghostchu.btn.sparkle.mapper.DataExportJobMapper.class);
+            assertEquals("sparkle.exports.pool-mib", jobs.lockAdmission());
+            assertEquals(1, jobs.enqueue(job, now.toLocalDate(), "192.0.2.10", "Test Client"));
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            assertEquals(200L, jobs.reservedBytes());
+            var claimed = jobs.claim();
+            assertEquals(id, claimed.id());
+            assertEquals(category, claimed.category());
+            assertEquals("RUNNING", claimed.status());
+            assertNull(jobs.claim());
+            assertEquals(1, jobs.renew(id));
+            assertNull(jobs.find(id, 20));
+            assertEquals(1, jobs.ready(id, 1, 123, false, "fixture", now.minusSeconds(1)));
+            assertEquals(123L, jobs.reservedBytes());
+            assertEquals(id, jobs.removable().getFirst().id());
+            assertEquals(1, jobs.removed(id));
+            assertEquals("EXPIRED", jobs.find(id, 10).status());
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            assertEquals(0L, jobs.reservedBytes());
+            var failed = new com.ghostchu.btn.sparkle.service.export.DataExportJob(UUID.randomUUID(), 10, category,
+                    "{}", "zh", now, 100, 200, 72, "QUEUED", null, null, null);
+            assertEquals(1, jobs.enqueue(failed, now.toLocalDate(), "192.0.2.10", "Test Client"));
+            assertEquals(failed.id(), jobs.claim().id());
+            assertEquals(1, jobs.fail(failed.id(), false));
+            assertEquals(0, jobs.fail(failed.id(), false));
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            session.commit();
+
+            var export = session.getMapper(com.ghostchu.btn.sparkle.mapper.ExportQueryMapper.class);
+            var bans = new QueryWrapper<>().eq("rule", "own").orderByDesc("populate_time");
+            try (var cursor = export.bans(bans, 10)) {
+                var rows = cursor.iterator();
+                var row = rows.next();
+                assertTrue(row.get("structured_data").toString().contains("123"));
+                assertFalse(row.containsKey("userapps_id"));
+                assertFalse(rows.hasNext());
+            }
+            try (var cursor = export.clients(new QueryWrapper<>().orderByAsc("found_at"), 10)) {
+                assertEquals("Client One", cursor.iterator().next().get("peer_client_name"));
+            }
+            try (var cursor = export.swarm(new QueryWrapper<>().orderByAsc("last_time_seen"), 10)) {
+                assertEquals(123, cursor.iterator().next().get("peer_port"));
+            }
+            var submissions = session.getMapper(com.ghostchu.btn.sparkle.mapper.SubmissionMapper.class);
+            for (String type : List.of("bans", "clients", "swarm")) {
+                try (var cursor = submissions.exportRows(10, List.of(101L, 102L), type, now.minusDays(1), now, 10)) {
+                    var rows = cursor.iterator();
+                    assertEquals("Own application", rows.next().get("application"));
+                    assertFalse(rows.hasNext());
+                }
+            }
+            var traffic = session.getMapper(com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper.class);
+            try (var cursor = traffic.exportDaily(10, 10)) {
+                var rows = cursor.iterator();
+                assertEquals(new BigDecimal("9007199254740993"), rows.next().get("upload"));
+                assertFalse(rows.hasNext());
+            }
+        }
+    }
+
+    @Test
+    void preservesLegacyRolesAndGrantsSupporterOnceAcrossPlatforms() throws Exception {
+        Flyway.configure().dataSource(url, username, password).target("81").load().migrate();
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO "user" (id, email, nickname, role, avatar, register_at, last_login_at)
+                    VALUES (101, 'admin@example.invalid', 'Admin', 'ROLE_ADMIN', '/img/anonymous-user.png', now(), now()),
+                           (102, 'moderator@example.invalid', 'Moderator', 'moderator', '/img/anonymous-user.png', now(), now())
+                    """);
+        }
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        try (var connection = connect(url, username, password);
+             var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO member_platform_bindings (provider, btn_user_id, external_user_id, proof)
+                    VALUES ('AFDIAN', 101, 'afdian-1', 'a'), ('MIANBAODUO', 101, 'mianbao-1', 'm'),
+                           ('PATREON', 101, 'patron-1', 'p'), ('AFDIAN', 102, 'afdian-2', 'b');
+                    INSERT INTO currency_exchange_rates (base_currency, quote_currency, rate_to_base)
+                    VALUES ('EUR', 'USD', 0.8), ('EUR', 'CNY', 0.1);
+                    INSERT INTO member_transactions (provider, external_transaction_id, external_user_id,
+                        transaction_type, amount, currency, amount_cny, amount_base, base_currency,
+                        transaction_status, remote_present, license_consumed)
+                    VALUES ('AFDIAN', 'a1', 'afdian-1', 'DONATION', 30, 'CNY', 25, 30, 'CNY', '2', TRUE, TRUE),
+                           ('MIANBAODUO', 'm1', 'mianbao-1', 'PRODUCT', 30, 'CNY', 30, 30, 'CNY', 'PAID', TRUE, TRUE),
+                           ('PATREON', 'p1', 'patron-1', 'DONATION', 5, 'USD', 4, 4, 'EUR', 'ACTIVE', TRUE, FALSE),
+                           ('AFDIAN', 'a2', 'afdian-1', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', 'REFUNDED', TRUE, FALSE),
+                           ('AFDIAN', 'a3', 'afdian-1', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', '2', FALSE, FALSE),
+                           ('AFDIAN', 'a4', 'unbound', 'DONATION', 1000, 'CNY', 1000, 1000, 'CNY', '2', TRUE, FALSE),
+                           ('AFDIAN', 'a5', 'afdian-2', 'DONATION', 200, 'CNY', 200, 200, 'CNY', '2', TRUE, FALSE);
+                    """);
+        }
+
+        var configuration = new MybatisConfiguration(new Environment("supporter-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.setMapUnderscoreToCamelCase(true);
+        var interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        configuration.addInterceptor(interceptor);
+        for (String mapper : List.of("mapper/UserMapper.xml", "mapper/SupporterRoleMapper.xml")) {
+            try (var input = getClass().getResourceAsStream("/" + mapper)) {
+                new XMLMapperBuilder(input, configuration, mapper, configuration.getSqlFragments()).parse();
+            }
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var session = factory.openSession(true)) {
+            var users = session.getMapper(UserMapper.class);
+            var supporters = session.getMapper(SupporterRoleMapper.class);
+            assertEquals(List.of("user", "admin"), users.selectById(101L).roleNames());
+            assertEquals(List.of("user", "moderator"), users.selectForUpdate(102L).roleNames());
+            assertEquals(101L, supporters.findBoundUser("AFDIAN", "afdian-1"));
+            assertEquals(List.of(101L, 102L), supporters.findCandidates(0, 200));
+            assertTrue(supporters.needsCnyRates());
+            assertEquals(0, supporters.grantEligible(List.of(101L), new BigDecimal("100.01")));
+
+            users.replaceRoles(102L, new String[]{"user", "moderator", "supporter"});
+            users.replaceRoles(102L, new String[]{"user", "moderator"});
+        }
+
+        Callable<Integer> grant = () -> {
+            try (var session = factory.openSession(true)) {
+                return session.getMapper(SupporterRoleMapper.class)
+                        .grantEligible(List.of(101L), new BigDecimal("100.00"));
+            }
+        };
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var results = executor.invokeAll(List.of(grant, grant));
+            assertEquals(1, results.get(0).get() + results.get(1).get());
+        }
+        try (var session = factory.openSession(true)) {
+            var users = session.getMapper(UserMapper.class);
+            var supporters = session.getMapper(SupporterRoleMapper.class);
+            assertEquals(List.of("user", "admin", "supporter"), users.selectById(101L).roleNames());
+            users.replaceRoles(101L, new String[]{"user", "admin"});
+            assertTrue(supporters.findCandidates(0, 200).isEmpty());
+            assertEquals(0, supporters.grantEligible(List.of(101L, 102L), BigDecimal.ONE));
+            assertEquals(List.of("user", "admin"), users.selectForUpdate(101L).roleNames());
+            assertEquals(List.of("user", "moderator"), users.selectForUpdate(102L).roleNames());
+            users.clearRolesForDeletedUser(102L);
+            assertEquals(List.of("user"), users.selectById(102L).roleNames());
+        }
+    }
+
+    @Test
     void upgradesAnAlreadyAppliedIncrementalV68WithoutRepair() throws Exception {
         Flyway.configure().dataSource(url, username, password).target("68")
                 .locations("classpath:db/migration").load().migrate();
@@ -803,7 +990,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("81", latest.info().current().getVersion().getVersion());
+        assertEquals("83", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

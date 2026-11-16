@@ -36,7 +36,7 @@ async function save() {
         preferences.value.map((item) => ({
           category: item.category,
           inboxEnabled: item.locked ? true : item.inboxEnabled,
-          emailEnabled: item.locked ? true : item.emailEnabled,
+          emailEnabled: item.emailEnabled,
         })),
       )
     ).preferences

@@ -215,12 +215,33 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
 
     @Override
     public @NotNull IPage<BanHistory> queryBanHistory(@NotNull BanHistoryQueryDto queryDto) {
+        QueryWrapper<BanHistory> queryWrapper = buildQuery(queryDto, OffsetDateTime.now());
+        // Pagination
+        int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
+        int size = (queryDto.getSize() != null && queryDto.getSize() > 0)
+                ? Math.min(queryDto.getSize(), 100)
+                : 100;
+
+        Page<BanHistory> pageRequest = new Page<>(page, size);
+
+        // Disable count query if there are no search conditions to improve performance
+        if (!hasSearchConditions(queryDto)) {
+            pageRequest.setSearchCount(false);
+        }
+
+
+        if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
+            pageRequest.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            pageRequest.setOptimizeJoinOfCountSql(false);
+        }
+
+
+        return this.baseMapper.selectPage(pageRequest, queryWrapper);
+    }
+
+    public static QueryWrapper<BanHistory> buildQuery(BanHistoryQueryDto queryDto, OffsetDateTime now) {
         QueryWrapper<BanHistory> queryWrapper = new QueryWrapper<>();
 
-        // Check if there are any search conditions
-        boolean hasSearchConditions = hasSearchConditions(queryDto);
-
-        OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime populateTimeStart = Objects.requireNonNullElse(queryDto.getPopulateTimeStart(), now.minusDays(7));
         OffsetDateTime populateTimeEnd = Objects.requireNonNullElse(queryDto.getPopulateTimeEnd(), now);
 
@@ -257,28 +278,10 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             queryWrapper.orderByDesc(sortBy);
         }
 
-        // Pagination
-        int page = (queryDto.getPage() != null && queryDto.getPage() > 0) ? queryDto.getPage() : 1;
-        int size = (queryDto.getSize() != null && queryDto.getSize() > 0)
-                ? Math.min(queryDto.getSize(), 100)
-                : 100;
-
-        Page<BanHistory> pageRequest = new Page<>(page, size);
-
-        // Disable count query if there are no search conditions to improve performance
-        if (!hasSearchConditions) {
-            pageRequest.setSearchCount(false);
-        }
-
-
         if (queryDto.getPeerIp() != null && !queryDto.getPeerIp().isBlank()) {
             queryWrapper.apply("peer_ip <<= {0}::inet", queryDto.getPeerIp());
-            pageRequest.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-            pageRequest.setOptimizeJoinOfCountSql(false);
         }
-
-
-        return this.baseMapper.selectPage(pageRequest, queryWrapper);
+        return queryWrapper;
     }
 
     /**

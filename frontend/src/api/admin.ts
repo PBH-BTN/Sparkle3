@@ -28,6 +28,7 @@ import type {
   AdminPage,
   AdminRuleQuery,
   AdminUser,
+  DataExportSettings,
   AdminUserInput,
   AdminUserQuery,
   BackgroundTaskStatusResponse,
@@ -59,6 +60,7 @@ import type {
   GithubSyncTargetRunResult,
   GithubSyncUpdateSettings,
   LicenseSettings,
+  SupporterSettings,
   MailIngestionStatus,
   MailSettings,
   MailSettingsUpdate,
@@ -101,6 +103,9 @@ function queryString(values: object) {
 }
 
 export const adminApi = {
+  exportSettings: () => request<DataExportSettings>('/api/admin/exports'),
+  updateExportSettings: (body: DataExportSettings) =>
+    request<DataExportSettings>('/api/admin/exports', { method: 'PUT', body: JSON.stringify(body) }),
   dashboard: () => request<AdminDashboard>('/api/admin/dashboard'),
   banSubmissions: (query: {
     page: number
@@ -504,6 +509,13 @@ export const adminApi = {
     }),
   memberPlatformSettings: () =>
     request<MemberPlatformSettings>('/api/admin/memberships'),
+  supporterSettings: () =>
+    request<SupporterSettings>('/api/admin/memberships/supporter'),
+  updateSupporterSettings: (body: SupporterSettings) =>
+    request<SupporterSettings>('/api/admin/memberships/supporter', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   membershipLicenseSettings: () =>
     request<LicenseSettings>('/api/admin/memberships/license'),
   updateMembershipLicenseSettings: (body: {

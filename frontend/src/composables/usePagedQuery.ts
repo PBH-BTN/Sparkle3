@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import type { PageResponse } from '@/api/types'
@@ -32,16 +32,14 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
   const sortBy = ref(options.sortBy)
   const sortOrder = ref<'asc' | 'desc'>(options.sortOrder ?? 'desc')
 
+  const appliedQuery = shallowRef<(Q & Pick<PageParameters, 'sortBy' | 'sortOrder'>) | null>(null)
+
   async function run() {
     loading.value = true
     try {
-      const result = await fetcher({
-        ...buildQuery(),
-        page: page.value,
-        size: pageSize.value,
-        sortBy: sortBy.value,
-        sortOrder: sortOrder.value,
-      })
+      const query = { ...buildQuery(), sortBy: sortBy.value, sortOrder: sortOrder.value }
+      const result = await fetcher({ ...query, page: page.value, size: pageSize.value })
+      appliedQuery.value = query
       records.value = result.records
       total.value = result.total
       pages.value = result.pages
@@ -50,6 +48,7 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
         pageSize.value = result.size
       }
     } catch (error) {
+      appliedQuery.value = null
       records.value = []
       total.value = 0
       pages.value = 0
@@ -85,6 +84,7 @@ export function usePagedQuery<T, Q extends Record<string, unknown>>(
 
   return {
     records,
+    appliedQuery,
     loading,
     page,
     pageSize,

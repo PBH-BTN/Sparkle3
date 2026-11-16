@@ -33,15 +33,11 @@ public class NotificationPreferenceService {
         List<NotificationPreference> preferences = new ArrayList<>();
         for (NotificationCategory category : NotificationCategory.values()) {
             StoredPreference value = stored.get(category);
-            boolean locked = category.isMandatory();
-            preferences.add(new NotificationPreference(
-                    category,
-                    locked || value == null || value.inboxEnabled(),
-                    locked || (value == null
-                            ? NotificationPreference.defaults(category).emailEnabled()
-                            : value.emailEnabled()),
-                    locked
-            ));
+            if (category.isMandatory() || value == null) {
+                preferences.add(NotificationPreference.defaults(category));
+            } else {
+                preferences.add(new NotificationPreference(category, value.inboxEnabled(), value.emailEnabled(), false));
+            }
         }
         return preferences;
     }
@@ -85,10 +81,9 @@ public class NotificationPreferenceService {
                     || requested == null
                     || requested[0] == null
                     || requested[0];
-            boolean email = category.isMandatory()
-                    || (requested == null || requested[1] == null
+            boolean email = category.isMandatory() || requested == null || requested[1] == null
                     ? NotificationPreference.defaults(category).emailEnabled()
-                    : requested[1]);
+                    : requested[1];
             UserNotificationPreference row = preferenceMapper.selectOne(
                     new QueryWrapper<UserNotificationPreference>()
                             .eq("user_id", userId)

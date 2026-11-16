@@ -128,6 +128,10 @@ export default {
       email: '邮件',
     },
     categories: {
+      DATA_EXPORT: {
+        name: '数据导出',
+        description: '接收本人申请的数据导出结果和下载链接。',
+      },
       LEGAL_COMPLIANCE: {
         name: '法律与合规与管理员消息',
         description: 'PBH-BTN 团队向您发送的与法律、合规及管理相关的通知，此通知不能被关闭。',
@@ -511,7 +515,29 @@ export default {
     createdSuccess: '用户应用创建成功。',
     deletedSuccess: '用户应用已删除。',
   },
+  exports: {
+    button: '导出',
+    title: '导出数据',
+    start: '开始导出',
+    queued: '导出请求已提交。准备就绪后，下载链接将通过站内信发送。',
+    download: '下载导出文件',
+    export_supporter_required: '只有支持者可以导出数据。',
+    export_invalid_filters: '查询条件无效。请检查筛选条件后重试。',
+    export_quota_exhausted: '今日导出次数已用完。',
+    export_pool_full: '导出存储空间已满。请稍后重试。',
+    export_download_unavailable: '下载链接无效或已过期。',
+    export_download_busy: '下载暂时不可用。请稍后重试。',
+    export_download_connections: '同时下载的连接数已达 32 个。请关闭部分连接后重试。',
+    export_invalid_settings: '请填写有效的设置，文件池容量须至少等于单次文件大小上限。',
+  },
+  roles: {
+    user: '普通用户',
+    supporter: '支持者',
+    moderator: '协管',
+    admin: '管理员',
+  },
   profile: {
+    roles: '角色',
     nicknameRejectedByDictionary: '昵称未通过审核。请修改 GitHub 昵称后重新登录。',
     title: '个人资料',
     email: '电子邮件',
@@ -1234,6 +1260,22 @@ export default {
         AFTER_DELETE: '删除后刷新',
       },
       items: {
+        'data-export-worker': {
+          name: '生成导出文件',
+          description: '读取已排队的导出请求，生成文件后通知申请用户。',
+        },
+        'data-export-cleanup': {
+          name: '清理导出文件',
+          description: '清理到期文件并结算已中断的导出任务。',
+        },
+        'supporter-role-event': {
+          name: '检查支持者资格',
+          description: '交易入账或账号绑定后，检查是否达到支持者门槛。',
+        },
+        'supporter-role-reconcile': {
+          name: '补发支持者角色',
+          description: '定期检查已绑定账号的历史付款，为符合条件的用户授予支持者角色。',
+        },
         'ban-submission-cleanup': {
           name: '清理封禁上报记录',
           description: '清理已过期的封禁指纹和检测摘要。',
@@ -1574,12 +1616,35 @@ export default {
       issuedAt: '签发时间',
       expiresAt: '到期时间',
     },
+    exports: {
+      title: '数据导出',
+      maxRows: '单次记录数上限',
+      maxFileMiB: '单次压缩大小上限',
+      retentionHours: '文件有效期',
+      downloadMbps: '每用户下载总速率',
+      dailySlots: '每用户每日导出次数',
+      poolMiB: '文件池容量',
+      promptZh: '确认弹窗（简体中文）',
+      promptEn: '确认弹窗（英文）',
+      placeholders: '文案可使用以下占位符。',
+      units: {
+        rows: '条',
+        mib: 'MiB',
+        hours: '小时',
+        mbps: 'Mbps',
+        times: '次',
+      },
+    },
     memberships: {
       title: '捐赠支持与对账',
       description:
         'Patreon 使用官方 API 同步会员与累计支持金额，Ko-fi 使用官方 Webhook 接收实时支付，面包多使用开发者 Key 同步作品订单。链动小铺没有公开的订单 API，暂不提供自动同步。',
       integrationHint:
         '平台凭据只保存在服务端。爱发电、Patreon 与面包多支持完整历史同步与远端缺失对账；Ko-fi 没有历史查询接口，只能接收启用 Webhook 之后的新交易。所有平台的商品与捐赠统一进入本地账本，并按同一套规则生成 PBHLicense 槽位。',
+      supporterTitle: '支持者角色',
+      supporterThreshold: '累计付款门槛',
+      supporterHint: '合计已绑定平台的捐赠、订阅和商品付款。填 0 可关闭自动授予。角色被撤销后，系统不会再次自动授予。',
+      supporterThresholdInvalid: '输入 0 至 10 亿元之间的金额，最多保留两位小数。',
       licenseTitle: 'PBHLicense 签发规则',
       licenseSaved: '许可证签发规则已保存。',
       notConfigured: '未配置',
@@ -1767,9 +1832,9 @@ export default {
       suspend: '停用',
       restore: '恢复',
       suspendTitle: '停用账户',
-      adminRole: '管理员',
-      moderatorRole: '协管',
-      userRole: '普通用户',
+      additionalRoles: '附加角色',
+      rolesChanged: '角色已变更。请重新打开用户资料后再编辑。',
+      userOnly: '仅普通用户',
       neverLogin: '从未登录',
       emailRequired: '请输入有效邮箱。',
       nicknameRequired: '请输入昵称。',

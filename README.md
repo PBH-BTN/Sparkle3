@@ -129,8 +129,8 @@ pnpm --dir frontend build
 后台运行设置保存在 PostgreSQL 表 `app_config_entries`，并保留 `application.yaml` 中的值作为默认值。
 数据库、Redis、OAuth、邮件、Sentry 和令牌等敏感配置不会暴露在后台。
 
-管理 API 位于 `/api/admin/**`，除 Spring Security 的 `admin` / `moderator` authority 校验外，
-还会在每次请求时重新检查数据库中的最新角色与停用状态。协管仅能访问任务状态与计划、公告管理、
+管理 API 位于 `/api/admin/**`。Spring Security 校验登录状态，后台与调试入口会在每次请求时检查
+数据库中的最新角色与停用状态。协管仅能访问任务状态与计划、公告管理、
 站内信群发、应用管理、GitHub 规则同步、BTN 管理、封禁模块管理和手动规则模块。
 
 存储统计会自动识别 TimescaleDB 2.18 以前的 `hypertable_compression_stats` 和 2.18+ 的
@@ -148,11 +148,42 @@ chunk 删除历史数据，因此手动 cutoff 的实际边界可能早于所选
 “命中规则的 IP”改为每条有效命中直接计奖，仍受每日上限约束，不再按 IP 去重；
 `point_claims` 继续用于活跃应用每日领取。
 
+## 支持者数据导出
+
+支持者可在查询操作旁导出封禁记录、特征发现、种群检视、个人每日流量和个人提交记录。
+导出使用当前已应用的筛选及排序，并按页面可见字段生成 UTF-8 CSV。封禁记录和个人封禁提交的详情
+以 JSON 文本写入 `structured_data` 列。个人导出始终限定到申请账号。
+CSV 以分段压缩的 `.csv.xz` 文件交付。压缩大小达到阈值时保留使其达到或超过阈值的完整记录。
+
+管理员在「数据导出」设置每日次数、行数、压缩后大小、有效期、限速、文件池及中英文确认文案。
+默认每日 5 次（UTC 自然日）、每次 100 万条或 15,360 MiB、文件就绪后保留 72 小时、
+每账号合计 300 Mbps、文件池 102,400 MiB。文件池统计已就绪文件和排队或处理中的容量预留。
+成功或失败均通过站内信通知，生成失败会返还原申请日的次数。下载时需登录申请账号并保留支持者
+角色。限时链接携带随机鉴权参数，支持 HTTP Range；每个账号至多 32 条下载连接，跨实例共用额度和限速。
+
+V83 新增导出任务与审计表 `data_export_jobs`，记录操作时间、申请人、数据类别、行数、最终大小、
+IP、User-Agent 和结果。到期清理文件后仍保留审计记录。导出文件默认位于 `data/exports`，容器
+部署可挂载 `/app/data`，也可通过 `sparkle.exports.directory` 指定保存目录。多实例须使用同一数据库、
+Redis 和共享目录，目录需要支持原子重命名。反向代理应关闭该下载路径的响应缓冲和缓存，
+并从该路径的访问日志中省略查询串，避免记录下载鉴权参数。
+
+浏览器接口为 `GET /api/ui/exports/options`、`POST /api/ui/exports` 和
+`GET /api/ui/exports/{id}/download`。后台通过 `GET/PUT /api/admin/exports` 管理设置。
+Range 及限速集成测试可通过 `SPARKLE_EXPORT_TEST_REDIS_PORT` 指向本机专用 Redis 后运行。
+
 ## 捐赠支持与 PBHLicense
 
 爱发电、Patreon、Ko-fi、面包多都是“捐赠支持”的组成部分，统一写入 `member_transactions`
 账本，用户通过 `member_platform_bindings` 关联账号。用户设置中只有一个“捐赠支持与许可证”
 入口，后台也只有一个“捐赠支持”页，不再单独展示爱发电。
+
+管理员可在「捐赠支持 → 支持者角色」设置累计付款的人民币门槛。默认值为 0，表示关闭自动授予。
+系统汇总用户当前绑定的各平台上已完成且仍有效的捐赠、订阅付款和商品订单。金额以人民币计，
+外币订单使用账本的人民币结算金额或平台汇率缓存折算。许可证的签发、使用和吊销不影响这项累计。
+交易入账或账号绑定成功后会触发检查，计划任务每 15 分钟补查已有交易。
+满足门槛时，系统在保留原有角色的同时授予支持者角色，并永久记录该用户已自动获授。管理员可在
+「用户管理」手动授予或撤销支持者角色。撤销后只可手动恢复。调整门槛或解绑账号不会撤销已获授角色。
+
 许可证槽位由 `PbhLicenseService` 按同一套规则计算：商品交易按订单产生槽位，捐赠/订阅按
 结算货币累计，每达到配置金额产生一个槽位；签发规则由所有平台共用。
 
@@ -307,11 +338,18 @@ Redis 不可用时直接回退数据库。敏感配置不会写入这份缓存�
 `app_config_entries` 表由 Flyway `V23` 创建。数据库账号只有 DML 权限时，需要数据库管理员
 提前授予 schema DDL 权限，否则应用会按设计拒绝启动，避免运行在结构不完整的数据库上。
 
+V82 把旧的单角色迁移为角色数组。已有管理员和协管权限随迁移保留。部署时先停止旧版本实例，
+再启动新版本执行迁移，因为 V82 会移除旧的单角色列。会话、个人资料与后台用户 API 通过 `roles`
+返回所有已分配角色，并保留原有的 `role` 字段供旧客户端读取。后台用户更新接受 `roles`，
+可一并发送读取时的 `previousRoles` 以防覆盖并发变更。
+
 首次启用后台时，可由数据库管理员为已有账户授予角色：
 
 ```sql
-UPDATE "user" SET role = 'admin' WHERE id = <user-id>;
-UPDATE "user" SET role = 'moderator' WHERE id = <user-id>;
+UPDATE "user" SET roles = array_append(roles, 'admin')
+WHERE id = <user-id> AND NOT ('admin' = ANY(roles));
+UPDATE "user" SET roles = array_append(roles, 'moderator')
+WHERE id = <user-id> AND NOT ('moderator' = ANY(roles));
 ```
 
 隐私设置自 Flyway `V46` 起保存在独立的 `user_privacy_settings` 表，支持原始/模糊/隐藏头像、
@@ -391,6 +429,7 @@ V64 删除本功能表的外键和 CHECK，保留 ON CONFLICT 所必需的主键
 必须填写原因并确认；吊销记录永久保存字段摘要、原因、操作时间和管理员 UID，不保存独立许可证明文。
 独立许可证必须可由官方公钥或当前配置的签发密钥验证。重复吊销保留首次吊销记录，不提供撤销操作。
 
+- `GET/PUT /api/admin/memberships/supporter` 读取和更新自动授予门槛，使用字段 `thresholdCny`（十进制字符串）。
 - `POST /api/admin/memberships/license-revocations`：接收 `licenseId` 或 `licenseKey`（二选一），以及 `reason`（最多 500 字符）。仅管理员可用，保留 SPA CSRF 校验。
 - `GET /api/admin/memberships/license-revocations?page=1&size=20`：分页查询吊销记录，最大每页 100 条。
 - `GET /peerbanhelper/v1/licenses/checkRevoke`：匿名客户端查询，直接返回 `{"revoked":true}` 或 `{"revoked":false}`，没有响应包装。
