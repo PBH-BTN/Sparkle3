@@ -789,6 +789,108 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void queuesAuditsAndStreamsUserExports() throws Exception {
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
+            statement.execute("""
+                    INSERT INTO userapp (id, app_id, app_secret, created_at, owner, comment)
+                    VALUES (101, 'a', 'fixture', now(), 10, 'Own application'),
+                           (102, 'b', 'fixture', now(), 20, 'Other application');
+                    INSERT INTO ban_history (insert_time, populate_time, userapps_id, torrent_id, peer_ip,
+                        peer_port, peer_progress, to_peer_traffic, from_peer_traffic, module_name, rule, structured_data)
+                    VALUES (now(), now(), 101, 1, '192.0.2.1', 123, 1, 0, 0, 'Test', 'own', '{"port":123}'),
+                           (now(), now(), 102, 1, '192.0.2.2', 456, 1, 0, 0, 'Test', 'other', '{}');
+                    INSERT INTO client_discovery (hash, found_at, found_userapps_id, peer_id, peer_client_name)
+                    VALUES (1, now(), 101, 'P1', 'Client One');
+                    INSERT INTO swarm_tracker (userapps_id, user_downloader, torrent_id, peer_ip, peer_port,
+                        peer_progress, from_peer_traffic, to_peer_traffic, from_peer_traffic_offset,
+                        to_peer_traffic_offset, first_time_seen, last_time_seen, user_progress)
+                    VALUES (101, 'fixture', 1, '192.0.2.3', 123, 1, 0, 0, 0, 0, now(), now(), 1);
+                    INSERT INTO user_traffic_daily (user_id, day, upload) VALUES
+                        (10, current_date, 9007199254740993), (20, current_date, 10);
+                    """);
+        }
+        var configuration = new MybatisConfiguration(new Environment("data-export-test", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.getTypeHandlerRegistry().register(com.ghostchu.btn.sparkle.converter.UuidTypeHandler.class);
+        var interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        configuration.addInterceptor(interceptor);
+        for (String file : List.of("DataExportJobMapper", "ExportQueryMapper", "SubmissionMapper",
+                "UserTrafficStatisticsMapper")) {
+            String path = "mapper/" + file + ".xml";
+            try (var input = getClass().getResourceAsStream("/" + path)) {
+                new XMLMapperBuilder(input, configuration, path, configuration.getSqlFragments()).parse();
+            }
+        }
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        var id = UUID.randomUUID();
+        var category = com.ghostchu.btn.sparkle.controller.ui.dto.DataExportModels.Category.BANS;
+        var job = new com.ghostchu.btn.sparkle.service.export.DataExportJob(id, 10, category, "{}", "zh", now,
+                100, 200, 72, "QUEUED", null, null, null);
+        try (var session = factory.openSession(false)) {
+            var jobs = session.getMapper(com.ghostchu.btn.sparkle.mapper.DataExportJobMapper.class);
+            assertEquals("sparkle.exports.pool-mib", jobs.lockAdmission());
+            assertEquals(1, jobs.enqueue(job, now.toLocalDate(), "192.0.2.10", "Test Client"));
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            assertEquals(200L, jobs.reservedBytes());
+            var claimed = jobs.claim();
+            assertEquals(id, claimed.id());
+            assertEquals(category, claimed.category());
+            assertEquals("RUNNING", claimed.status());
+            assertNull(jobs.claim());
+            assertEquals(1, jobs.renew(id));
+            assertNull(jobs.find(id, 20));
+            assertEquals(1, jobs.ready(id, 1, 123, false, "fixture", now.minusSeconds(1)));
+            assertEquals(123L, jobs.reservedBytes());
+            assertEquals(id, jobs.removable().getFirst().id());
+            assertEquals(1, jobs.removed(id));
+            assertEquals("EXPIRED", jobs.find(id, 10).status());
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            assertEquals(0L, jobs.reservedBytes());
+            var failed = new com.ghostchu.btn.sparkle.service.export.DataExportJob(UUID.randomUUID(), 10, category,
+                    "{}", "zh", now, 100, 200, 72, "QUEUED", null, null, null);
+            assertEquals(1, jobs.enqueue(failed, now.toLocalDate(), "192.0.2.10", "Test Client"));
+            assertEquals(failed.id(), jobs.claim().id());
+            assertEquals(1, jobs.fail(failed.id(), false));
+            assertEquals(0, jobs.fail(failed.id(), false));
+            assertEquals(1L, jobs.usedSlots(10, now.toLocalDate()));
+            session.commit();
+
+            var export = session.getMapper(com.ghostchu.btn.sparkle.mapper.ExportQueryMapper.class);
+            var bans = new QueryWrapper<>().eq("rule", "own").orderByDesc("populate_time");
+            try (var cursor = export.bans(bans, 10)) {
+                var rows = cursor.iterator();
+                var row = rows.next();
+                assertTrue(row.get("structured_data").toString().contains("123"));
+                assertFalse(row.containsKey("userapps_id"));
+                assertFalse(rows.hasNext());
+            }
+            try (var cursor = export.clients(new QueryWrapper<>().orderByAsc("found_at"), 10)) {
+                assertEquals("Client One", cursor.iterator().next().get("peer_client_name"));
+            }
+            try (var cursor = export.swarm(new QueryWrapper<>().orderByAsc("last_time_seen"), 10)) {
+                assertEquals(123, cursor.iterator().next().get("peer_port"));
+            }
+            var submissions = session.getMapper(com.ghostchu.btn.sparkle.mapper.SubmissionMapper.class);
+            for (String type : List.of("bans", "clients", "swarm")) {
+                try (var cursor = submissions.exportRows(10, List.of(101L, 102L), type, now.minusDays(1), now, 10)) {
+                    var rows = cursor.iterator();
+                    assertEquals("Own application", rows.next().get("application"));
+                    assertFalse(rows.hasNext());
+                }
+            }
+            var traffic = session.getMapper(com.ghostchu.btn.sparkle.mapper.UserTrafficStatisticsMapper.class);
+            try (var cursor = traffic.exportDaily(10, 10)) {
+                var rows = cursor.iterator();
+                assertEquals(new BigDecimal("9007199254740993"), rows.next().get("upload"));
+                assertFalse(rows.hasNext());
+            }
+        }
+    }
+
+    @Test
     void preservesLegacyRolesAndGrantsSupporterOnceAcrossPlatforms() throws Exception {
         Flyway.configure().dataSource(url, username, password).target("81").load().migrate();
         try (var connection = connect(url, username, password);
@@ -888,7 +990,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("82", latest.info().current().getVersion().getVersion());
+        assertEquals("83", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

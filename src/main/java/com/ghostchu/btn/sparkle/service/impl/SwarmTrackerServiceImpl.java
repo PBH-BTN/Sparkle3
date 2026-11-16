@@ -414,15 +414,30 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             @Nullable String sortOrder,
             @NotNull Page<SwarmTracker> page) {
 
+        boolean hasSearchConditions = hasSearchConditions(torrentId, peerIp, peerPort, peerId, peerClientName,
+                peerProgress, fromPeerTraffic, toPeerTraffic, flags, firstTimeSeenAfter, lastTimeSeenAfter, userProgress);
+        // Disable count query if there are no search conditions to improve performance
+        if (!hasSearchConditions) {
+            page.setSearchCount(false);
+        }
+
+        if (peerIp != null && !peerIp.isBlank()) {
+            page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
+            page.setOptimizeJoinOfCountSql(false);
+        }
+
+
+        return this.baseMapper.selectPage(page, buildQuery(torrentId, peerIp, peerPort, peerId, peerClientName,
+                peerProgress, fromPeerTraffic, toPeerTraffic, flags, firstTimeSeenAfter, lastTimeSeenAfter,
+                userProgress, sortBy, sortOrder));
+    }
+
+    public static QueryWrapper<SwarmTracker> buildQuery(Long torrentId, String peerIp, Integer peerPort,
+                                                        String peerId, String peerClientName, Double peerProgress,
+                                                        Long fromPeerTraffic, Long toPeerTraffic, String flags,
+                                                        OffsetDateTime firstTimeSeenAfter, OffsetDateTime lastTimeSeenAfter,
+                                                        Double userProgress, String sortBy, String sortOrder) {
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<>();
-
-        // Check if there are any search conditions
-        boolean hasSearchConditions = hasSearchConditions(
-                torrentId, peerIp, peerPort, peerId, peerClientName,
-                peerProgress, fromPeerTraffic, toPeerTraffic, flags,
-                firstTimeSeenAfter, lastTimeSeenAfter, userProgress
-        );
-
         // 添加查询条件
         wrapper.eq(torrentId != null, "torrent_id", torrentId)
                 .eq(peerPort != null, "peer_port", peerPort)
@@ -436,17 +451,9 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 .ge(lastTimeSeenAfter != null, "last_time_seen", lastTimeSeenAfter)
                 .eq(userProgress != null, "user_progress", userProgress);
 
-        // Disable count query if there are no search conditions to improve performance
-        if (!hasSearchConditions) {
-            page.setSearchCount(false);
-        }
-
         if (peerIp != null && !peerIp.isBlank()) {
             wrapper.apply("peer_ip <<= {0}::inet", peerIp);
-            page.setOptimizeCountSql(false); // workarond for c.b.m.e.p.i.PaginationInnerInterceptor   : optimize this sql to a count sql has exception, sql:"SELECT  id,userapps_id,user_downloader,torrent_id,peer_ip,peer_port,peer_id,peer_client_name,peer_progress,from_peer_traffic,to_peer_traffic,from_peer_traffic_offset,to_peer_traffic_offset,flags,first_time_seen,last_time_seen,user_progress  FROM swarm_tracker      WHERE  (last_time_seen >= ? AND peer_ip <<= ?::inet) ORDER BY last_time_seen DESC", exception java.util.concurrent.ExecutionException: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "<<" "<<" at line 1, column 306. Was expecting one of: ")"
-            page.setOptimizeJoinOfCountSql(false);
         }
-
 
         // 添加排序
         String sort = sortBy != null && SORTABLE_FIELDS.contains(sortBy) ? sortBy : "last_time_seen";
@@ -456,9 +463,7 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         } else {
             wrapper.orderByAsc(sort);
         }
-
-
-        return this.baseMapper.selectPage(page, wrapper);
+        return wrapper;
     }
 
     @Override

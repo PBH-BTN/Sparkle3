@@ -19,7 +19,7 @@ class NotificationPreferenceServiceTest {
     private final NotificationPreferenceService service = new NotificationPreferenceService(mapper);
     private static final Set<NotificationCategory> EMAIL_OFF = Set.of(
             NotificationCategory.GENERAL_NOTICE, NotificationCategory.CHANGELOG,
-            NotificationCategory.DAILY_ANNOUNCEMENT);
+            NotificationCategory.DAILY_ANNOUNCEMENT, NotificationCategory.DATA_EXPORT);
 
     @Test
     void unsetPreferencesUseSameDefaultsForDisplayAndDelivery() {
@@ -39,7 +39,7 @@ class NotificationPreferenceServiceTest {
             when(mapper.selectList(any())).thenReturn(List.of(row));
             when(mapper.selectOne(any())).thenReturn(row);
             NotificationPreference preference = service.preference(1L, category);
-            assertTrue(preference.emailEnabled());
+            assertEquals(category != NotificationCategory.DATA_EXPORT, preference.emailEnabled());
             assertEquals(category.isMandatory(), preference.inboxEnabled());
             assertEquals(preference, service.list(1L).stream()
                     .filter(item -> item.category() == category).findFirst().orElseThrow());

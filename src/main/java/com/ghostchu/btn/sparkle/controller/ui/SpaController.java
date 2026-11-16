@@ -63,6 +63,7 @@ public class SpaController {
             "/admin/ai-moderation",
             "/admin/content-moderation",
             "/admin/ip-query-comments",
+            "/admin/exports",
             "/admin/database-config",
             "/oauth/error",
             "/ping/queryIp/widget"
