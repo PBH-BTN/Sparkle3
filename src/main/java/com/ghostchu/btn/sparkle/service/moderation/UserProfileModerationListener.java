@@ -26,26 +26,22 @@ public class UserProfileModerationListener {
             descriptionKey = "admin.tasks.items.profile-moderation-enqueue.description",
             scheduleType = TaskScheduleType.EVENT)
     public void reviewChangedProfile(UserProfileChangedEvent event) {
+        if (event.nicknameChanged()) {
+            enqueue(event.userId(), "nickname", () -> moderationService.enqueueUsername(
+                    event.userId(), event.nicknameGeneration(), event.nickname()));
+        }
+        if (event.avatarChanged()) {
+            enqueue(event.userId(), "avatar", () -> moderationService.enqueueAvatar(
+                    event.userId(), event.avatarGeneration(), event.avatarUrl(), event.nickname()));
+        }
+    }
+
+    private void enqueue(long userId, String field, Runnable review) {
         try {
-            if (event.nicknameChanged()) {
-                moderationService.enqueueUsername(
-                        event.userId(),
-                        event.nicknameGeneration(),
-                        event.nickname()
-                );
-            }
-            if (event.avatarChanged()) {
-                moderationService.enqueueAvatar(
-                        event.userId(),
-                        event.avatarGeneration(),
-                        event.avatarUrl(),
-                        event.nickname()
-                );
-            }
+            review.run();
         } catch (Exception exception) {
             MonitoredTaskOutcome.failure("One or more operations failed; see server logs");
-            log.error("Unable to enqueue profile moderation for user {}: {}",
-                    event.userId(), exception.getMessage(), exception);
+            log.error("Unable to enqueue {} moderation for user {}", field, userId, exception);
         }
     }
 }
