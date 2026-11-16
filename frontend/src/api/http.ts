@@ -63,7 +63,9 @@ async function performRequest<T>(url: string, init: RequestInit = {}): Promise<T
         : i18n.global.t('common.requestFailed')
     const translated = message === 'content_moderation_rejected'
       ? i18n.global.t('common.contentModerationRejected')
-      : message
+      : message === 'user_roles_changed'
+        ? i18n.global.t('admin.users.rolesChanged')
+        : message
     throw new ApiError(translated, response.status, payload)
   }
 

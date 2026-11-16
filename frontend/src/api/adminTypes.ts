@@ -2,6 +2,7 @@ import type {
   AvatarVisibility,
   NavigationIcon,
   PointsVisibility,
+  UserRole,
   UsernameVisibility,
 } from './types'
 
@@ -155,7 +156,7 @@ export interface AdminUser {
   email: string
   nickname: string
   avatarUrl: string
-  role: 'user' | 'admin' | 'moderator' | string
+  roles: UserRole[]
   avatarVisibility: AvatarVisibility
   usernameVisibility: UsernameVisibility
   pointsVisibility: PointsVisibility
@@ -180,7 +181,8 @@ export interface AdminUserInput {
   email: string
   nickname: string
   avatarUrl: string
-  role: 'user' | 'admin' | 'moderator'
+  roles: UserRole[]
+  previousRoles?: UserRole[]
   avatarVisibility: AvatarVisibility
   usernameVisibility: UsernameVisibility
   pointsVisibility: PointsVisibility
@@ -890,6 +892,10 @@ export interface AfdianSettings {
   bindings: AfdianAdminBinding[]
   recentDonations: AfdianAdminDonation[]
   recentLicenses: AfdianAdminLicense[]
+}
+
+export interface SupporterSettings {
+  thresholdCny: string
 }
 
 export interface LicenseSettings {

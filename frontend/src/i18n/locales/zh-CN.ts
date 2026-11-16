@@ -511,7 +511,14 @@ export default {
     createdSuccess: '用户应用创建成功。',
     deletedSuccess: '用户应用已删除。',
   },
+  roles: {
+    user: '普通用户',
+    supporter: '支持者',
+    moderator: '协管',
+    admin: '管理员',
+  },
   profile: {
+    roles: '角色',
     nicknameRejectedByDictionary: '昵称未通过审核。请修改 GitHub 昵称后重新登录。',
     title: '个人资料',
     email: '电子邮件',
@@ -1580,6 +1587,10 @@ export default {
         'Patreon 使用官方 API 同步会员与累计支持金额，Ko-fi 使用官方 Webhook 接收实时支付，面包多使用开发者 Key 同步作品订单。链动小铺没有公开的订单 API，暂不提供自动同步。',
       integrationHint:
         '平台凭据只保存在服务端。爱发电、Patreon 与面包多支持完整历史同步与远端缺失对账；Ko-fi 没有历史查询接口，只能接收启用 Webhook 之后的新交易。所有平台的商品与捐赠统一进入本地账本，并按同一套规则生成 PBHLicense 槽位。',
+      supporterTitle: '支持者角色',
+      supporterThreshold: '累计付款门槛',
+      supporterHint: '合计已绑定平台的捐赠、订阅和商品付款。填 0 可关闭自动授予。角色被撤销后，系统不会再次自动授予。',
+      supporterThresholdInvalid: '输入 0 至 10 亿元之间的金额，最多保留两位小数。',
       licenseTitle: 'PBHLicense 签发规则',
       licenseSaved: '许可证签发规则已保存。',
       notConfigured: '未配置',
@@ -1767,9 +1778,9 @@ export default {
       suspend: '停用',
       restore: '恢复',
       suspendTitle: '停用账户',
-      adminRole: '管理员',
-      moderatorRole: '协管',
-      userRole: '普通用户',
+      additionalRoles: '附加角色',
+      rolesChanged: '角色已变更。请重新打开用户资料后再编辑。',
+      userOnly: '仅普通用户',
       neverLogin: '从未登录',
       emailRequired: '请输入有效邮箱。',
       nicknameRequired: '请输入昵称。',
@@ -1939,6 +1950,14 @@ export default {
         'dynamic-torrent-size-gib': '种子体积单位（GiB）',
       },
       items: {
+        'supporter-role-event': {
+          name: '检查支持者资格',
+          description: '交易入账或账号绑定后，检查是否达到支持者门槛。',
+        },
+        'supporter-role-reconcile': {
+          name: '补发支持者角色',
+          description: '定期检查已绑定账号的历史付款，为符合条件的用户授予支持者角色。',
+        },
         'untrusted-vote': {
           name: '不受信任投票聚合',
           description: '汇总多个 BTN 用户应用对同一 Peer IP 的封禁投票并生成聚合规则。',

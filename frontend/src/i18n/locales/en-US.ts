@@ -528,7 +528,14 @@ export default {
     createdSuccess: 'User application created.',
     deletedSuccess: 'User application deleted.',
   },
+  roles: {
+    user: 'User',
+    supporter: 'Supporter',
+    moderator: 'Moderator',
+    admin: 'Administrator',
+  },
   profile: {
+    roles: 'Roles',
     nicknameRejectedByDictionary: 'Your display name did not pass moderation. Update it on GitHub and sign in again.',
     title: 'Profile',
     email: 'Email',
@@ -1608,6 +1615,10 @@ export default {
         'Patreon syncs members and lifetime support through its official API. Ko-fi delivers real-time payments through its official webhook. Mianbaoduo syncs product orders with a developer key. Liandong publishes no order API, so it is not synced automatically.',
       integrationHint:
         'Platform credentials stay on the server. Afdian, Patreon, and Mianbaoduo support full history sync and remote-missing reconciliation; Ko-fi has no history API and can only receive payments made after its webhook is enabled. Product purchases and donations from every platform share one ledger and the same PBHLicense slot rules.',
+      supporterTitle: 'Supporter role',
+      supporterThreshold: 'Lifetime payment threshold',
+      supporterHint: 'Combines donations, subscriptions, and purchases from linked platforms. Enter 0 to disable automatic grants. A revoked role can only be restored by an administrator.',
+      supporterThresholdInvalid: 'Enter an amount from 0 to 1 billion CNY with up to two decimal places.',
       licenseTitle: 'PBHLicense issuance rules',
       licenseSaved: 'Licence issuance rules saved.',
       notConfigured: 'Not configured',
@@ -1800,9 +1811,9 @@ export default {
       suspend: 'Suspend',
       restore: 'Restore',
       suspendTitle: 'Suspend account',
-      adminRole: 'Administrator',
-      moderatorRole: 'Moderator',
-      userRole: 'User',
+      additionalRoles: 'Additional roles',
+      rolesChanged: 'The roles changed. Reopen the user to edit them.',
+      userOnly: 'Basic users only',
       neverLogin: 'Never',
       emailRequired: 'Enter a valid email address.',
       nicknameRequired: 'Enter a nickname.',
@@ -1976,6 +1987,14 @@ export default {
         'dynamic-torrent-size-gib': 'Torrent size unit (GiB)',
       },
       items: {
+        'supporter-role-event': {
+          name: 'Check supporter eligibility',
+          description: 'Check the supporter threshold after a payment posts or an account is linked.',
+        },
+        'supporter-role-reconcile': {
+          name: 'Reconcile supporter roles',
+          description: 'Review linked payment history and grant the supporter role to eligible users.',
+        },
         'untrusted-vote': {
           name: 'Untrusted vote aggregation',
           description:

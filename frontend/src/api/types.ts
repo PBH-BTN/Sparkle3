@@ -25,6 +25,8 @@ export interface PrivacySettings {
   lifetimeTrafficVisibility: LifetimeTrafficVisibility
 }
 
+export type UserRole = 'user' | 'supporter' | 'moderator' | 'admin'
+
 export interface SessionUser {
   id: string
   nickname: string
@@ -34,7 +36,8 @@ export interface SessionUser {
   bannedAt: string | null
   bannedReason: string | null
   unbanAt: string | null
-  role: string
+  role: UserRole
+  roles: UserRole[]
   admin: boolean
   moderator: boolean
   privacy: PrivacySettings

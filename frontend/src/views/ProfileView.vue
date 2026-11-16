@@ -163,6 +163,13 @@ onMounted(async () => {
             <a-descriptions-item :label="t('profile.email')">
               {{ profile.user.email }}
             </a-descriptions-item>
+            <a-descriptions-item :label="t('profile.roles')">
+              <a-space wrap>
+                <a-tag v-for="role in profile.user.roles" :key="role" :color="role === 'supporter' ? 'green' : undefined">
+                  {{ t(`roles.${role}`) }}
+                </a-tag>
+              </a-space>
+            </a-descriptions-item>
             <a-descriptions-item :label="t('profile.registerAt')">
               {{ formatDate(profile.user.registerAt) }}
             </a-descriptions-item>

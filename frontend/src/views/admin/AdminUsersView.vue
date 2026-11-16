@@ -18,12 +18,21 @@ import TablePager from '@/components/TablePager.vue'
 import SuspensionModal from '@/components/admin/SuspensionModal.vue'
 import { adminApi } from '@/api/admin'
 import type { AdminUser, AdminUserInput } from '@/api/adminTypes'
+import type { UserRole } from '@/api/types'
+import { ApiError } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
 const { formatDate, formatPointBytes } = useFormatters()
 const session = useSessionStore()
+const editableRoles: UserRole[] = ['supporter', 'moderator', 'admin']
+const roleColors: Record<UserRole, string> = {
+  user: 'gray',
+  supporter: 'green',
+  moderator: 'purple',
+  admin: 'arcoblue',
+}
 const records = ref<AdminUser[]>([])
 const loading = ref(false)
 const page = ref(1)
@@ -42,7 +51,7 @@ const editorForm = reactive<AdminUserInput>({
   email: '',
   nickname: '',
   avatarUrl: '/img/anonymous-user.png',
-  role: 'user',
+  roles: [],
   avatarVisibility: 'BLURRED',
   usernameVisibility: 'BLURRED',
   pointsVisibility: 'SHOW',
@@ -119,7 +128,8 @@ function openCreate() {
     email: '',
     nickname: '',
     avatarUrl: '/img/anonymous-user.png',
-    role: 'user',
+    roles: [],
+    previousRoles: undefined,
     avatarVisibility: 'BLURRED',
     usernameVisibility: 'BLURRED',
     pointsVisibility: 'SHOW',
@@ -133,7 +143,8 @@ function openEdit(user: AdminUser) {
     email: user.email,
     nickname: user.nickname,
     avatarUrl: user.avatarUrl,
-    role: user.role === 'admin' || user.role === 'moderator' ? user.role : 'user',
+    roles: user.roles.filter((role) => role !== 'user'),
+    previousRoles: [...user.roles],
     avatarVisibility: user.avatarVisibility,
     usernameVisibility: user.usernameVisibility,
     pointsVisibility: user.pointsVisibility,
@@ -162,7 +173,13 @@ async function saveUser() {
     editorVisible.value = false
     await load()
   } catch (error) {
-    Message.error(errorMessage(error, t('common.requestFailed')))
+    if (error instanceof ApiError && error.payload && typeof error.payload === 'object'
+      && 'message' in error.payload && error.payload.message === 'user_roles_changed') {
+      editorVisible.value = false
+      await load()
+    } else {
+      Message.error(errorMessage(error, t('common.requestFailed')))
+    }
   } finally {
     editorSaving.value = false
   }
@@ -246,12 +263,6 @@ function isNeverLogin(value: string) {
   return new Date(value).getTime() <= 0
 }
 
-function roleLabel(role: string) {
-  if (role === 'admin') return t('admin.users.adminRole')
-  if (role === 'moderator') return t('admin.users.moderatorRole')
-  return t('admin.users.userRole')
-}
-
 function privacySummary(user: AdminUser) {
   return [
     t(`privacy.avatarOptions.${user.avatarVisibility}`),
@@ -289,9 +300,10 @@ onMounted(load)
           <a-col :xs="12" :md="5">
             <a-form-item :label="t('admin.users.role')">
               <a-select v-model="filters.role" allow-clear>
-                <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
-                <a-option value="moderator">{{ t('admin.users.moderatorRole') }}</a-option>
-                <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
+                <a-option value="user">{{ t('admin.users.userOnly') }}</a-option>
+                <a-option v-for="role in editableRoles" :key="role" :value="role">
+                  {{ t(`roles.${role}`) }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -350,9 +362,11 @@ onMounted(load)
         </template>
         <template #access="{ record }">
           <div class="access-cell">
-            <a-tag :color="record.role === 'admin' ? 'arcoblue' : record.role === 'moderator' ? 'purple' : 'gray'">
-              {{ roleLabel(record.role) }}
-            </a-tag>
+            <a-space wrap size="mini">
+              <a-tag v-for="role in (record.roles as UserRole[])" :key="role" :color="roleColors[role]">
+                {{ t(`roles.${role}`) }}
+              </a-tag>
+            </a-space>
             <span>{{ privacySummary(record) }}</span>
             <a-tooltip v-if="record.bannedAt" :content="[record.bannedReason, record.unbanAt && t('common.suspensionEndsAt', { time: formatDate(record.unbanAt) })].filter(Boolean).join(' · ')">
               <a-tag color="red" size="small">{{ t('admin.common.banned') }}</a-tag>
@@ -452,12 +466,12 @@ onMounted(load)
               <a-input v-model="editorForm.avatarUrl" />
             </a-form-item>
           </a-col>
-          <a-col :xs="12">
-            <a-form-item :label="t('admin.users.role')">
-              <a-select v-model="editorForm.role">
-                <a-option value="user">{{ t('admin.users.userRole') }}</a-option>
-                <a-option value="moderator">{{ t('admin.users.moderatorRole') }}</a-option>
-                <a-option value="admin">{{ t('admin.users.adminRole') }}</a-option>
+          <a-col :xs="24">
+            <a-form-item :label="t('admin.users.additionalRoles')">
+              <a-select v-model="editorForm.roles" multiple allow-clear>
+                <a-option v-for="role in editableRoles" :key="role" :value="role">
+                  {{ t(`roles.${role}`) }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>

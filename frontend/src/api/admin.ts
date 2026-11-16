@@ -59,6 +59,7 @@ import type {
   GithubSyncTargetRunResult,
   GithubSyncUpdateSettings,
   LicenseSettings,
+  SupporterSettings,
   MailIngestionStatus,
   MailSettings,
   MailSettingsUpdate,
@@ -504,6 +505,13 @@ export const adminApi = {
     }),
   memberPlatformSettings: () =>
     request<MemberPlatformSettings>('/api/admin/memberships'),
+  supporterSettings: () =>
+    request<SupporterSettings>('/api/admin/memberships/supporter'),
+  updateSupporterSettings: (body: SupporterSettings) =>
+    request<SupporterSettings>('/api/admin/memberships/supporter', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   membershipLicenseSettings: () =>
     request<LicenseSettings>('/api/admin/memberships/license'),
   updateMembershipLicenseSettings: (body: {
