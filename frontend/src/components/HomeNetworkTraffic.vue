@@ -27,12 +27,12 @@ const records = ref<DailyTraffic[]>([])
 const loading = ref(true)
 const failed = ref(false)
 const metrics = {
-  upload: 'career.upload',
-  download: 'career.download',
-  uploadAck: 'career.uploadAck',
-  downloadAck: 'career.downloadAck',
-  seeding: 'career.seeding',
-  downloading: 'career.downloading',
+  upload: 'home.networkTrafficReportedUpload',
+  download: 'home.networkTrafficReportedDownload',
+  uploadAck: 'home.networkTrafficConfirmedUpload',
+  downloadAck: 'home.networkTrafficConfirmedDownload',
+  seeding: 'home.networkTrafficSeeding',
+  downloading: 'home.networkTrafficDownloading',
   averageLoss: 'home.networkTrafficAverageLoss',
   lossRatio: 'home.networkTrafficAverageLossRatio',
   totalLoss: 'home.networkTrafficTotalLoss',
@@ -90,9 +90,9 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
 
 const charts = computed(() => {
   return [
-    { visible: props.showReported, title: 'traffic.chartReported', keys: ['upload', 'download'], unit: 'bytes' },
-    { visible: props.showConfirmed, title: 'traffic.chartConfirmed', keys: ['uploadAck', 'downloadAck'], unit: 'bytes' },
-    { visible: props.showActivity, title: 'traffic.chartActivity', keys: ['seeding', 'downloading'], unit: 'hours' },
+    { visible: props.showReported, title: 'home.networkTrafficReportedChart', keys: ['upload', 'download'], unit: 'bytes' },
+    { visible: props.showConfirmed, title: 'home.networkTrafficConfirmedChart', keys: ['uploadAck', 'downloadAck'], unit: 'bytes' },
+    { visible: props.showActivity, title: 'home.networkTrafficActivityChart', keys: ['seeding', 'downloading'], unit: 'hours' },
     { visible: props.showAverageLoss, title: 'home.networkTrafficLossChart', keys: ['averageLoss', 'lossRatio'], unit: 'loss' },
     { visible: props.showTotalLoss, title: 'home.networkTrafficTotalLoss', keys: ['totalLoss'], unit: 'bytes' },
   ] satisfies { visible: boolean; title: string; keys: Metric[]; unit: Parameters<typeof chartOption>[1] }[]
