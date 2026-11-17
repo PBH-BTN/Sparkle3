@@ -16,6 +16,8 @@ import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.ai.OpenAiModerationClient.Verdict;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.ghostchu.btn.sparkle.service.moderation.ContentModerationService;
+import com.ghostchu.btn.sparkle.service.moderation.UserProfileChangedEvent;
+import com.ghostchu.btn.sparkle.service.moderation.UserProfileModerationListener;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -73,6 +76,24 @@ class AiModerationServiceTest {
         TableInfoHelper.initTableInfo(assistant, IpQueryComment.class);
         TableInfoHelper.initTableInfo(assistant, IpQueryCommentRevision.class);
         TableInfoHelper.initTableInfo(assistant, User.class);
+    }
+
+    @Test
+    void avatarIsQueuedEvenWhenNicknameEnqueueFails() {
+        when(settingsService.get()).thenReturn(settings(true));
+        when(jobMapper.insert(argThat((AiModerationJob job) -> "USERNAME".equals(job.getContentType()))))
+                .thenThrow(new IllegalStateException("Nickname enqueue failed"));
+        var listener = new UserProfileModerationListener(service);
+        String avatar = "https://avatars.githubusercontent.com/u/42?v=4";
+
+        listener.reviewChangedProfile(new UserProfileChangedEvent(7L, 2L, 4L, true, true, "Example", avatar));
+
+        verify(jobMapper).insert(argThat((AiModerationJob job) ->
+                "AVATAR".equals(job.getContentType())
+                        && Long.valueOf(7L).equals(job.getSubjectUserId())
+                        && Long.valueOf(4L).equals(job.getContentVersion())
+                        && avatar.equals(job.getImageUrl())
+                        && "PENDING".equals(job.getStatus())));
     }
 
     @Test

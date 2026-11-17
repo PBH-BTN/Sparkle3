@@ -31,10 +31,12 @@ public class UserTrafficStatisticsController {
     }
 
     @GetMapping("/network")
-    public List<DailyTraffic> network(@AuthenticationPrincipal SparkleUserDetails principal) {
+    public List<DailyTraffic> network(@RequestParam(required = false) Integer days,
+                                      @AuthenticationPrincipal SparkleUserDetails principal) {
         if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         var access = config.homepageTrafficAccess(users.getById(principal.getUserId()));
         if (!access.traffic() && !access.totalLoss()) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        return service.network(access);
+        // Older clients accumulate the daily values themselves.
+        return days == null ? service.network(access) : service.network(access, days);
     }
 }

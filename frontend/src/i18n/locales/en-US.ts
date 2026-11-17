@@ -453,7 +453,7 @@ export default {
     networkTrafficLossChart: 'Daily Average Blocking Losses',
     networkTrafficAverageLoss: 'Average Traffic Lost Before Bans',
     networkTrafficAverageLossRatio: 'Average Blocking Loss Percentage',
-    networkTrafficTotalLoss: 'Total Traffic Lost Before Bans',
+    networkTrafficTotalLoss: 'Daily Total Traffic Lost Before Bans',
     statistics: {
       overviewTitle: 'Platform overview',
       overviewDescription: 'A quick view of BTN network and application activity.',

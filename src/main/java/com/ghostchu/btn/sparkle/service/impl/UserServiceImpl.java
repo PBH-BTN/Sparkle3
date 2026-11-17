@@ -117,9 +117,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .setLastLoginAt(OffsetDateTime.now())
                 .setNicknameModerationStatus(nicknameRejected ? "REJECTED" : "APPROVED")
                 .setNicknameModerationReason(nicknameRejected ? ContentModerationService.CONTENT_REJECTED : null)
-                .setAvatarModerationStatus("APPROVED")
+                .setAvatarModerationStatus("PENDING")
                 .setNicknameReviewGeneration(0L)
-                .setAvatarReviewGeneration(0L)
+                .setAvatarReviewGeneration(1L)
                 .setPrivacyLevel(UserPrivacyLevel.MEDIUM);
         boolean success = baseMapper.insert(newUser) != 0;
         if (!success) {
@@ -137,6 +137,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (!success) {
             throw new IllegalStateException("Failed to create new user relation, the changed records count is 0.");
         }
+        eventPublisher.publishEvent(new UserProfileChangedEvent(
+                newUser.getId(),
+                newUser.getNicknameReviewGeneration(),
+                newUser.getAvatarReviewGeneration(),
+                false,
+                true,
+                githubName,
+                githubAvatarUrl
+        ));
         return newUser;
     }
 
