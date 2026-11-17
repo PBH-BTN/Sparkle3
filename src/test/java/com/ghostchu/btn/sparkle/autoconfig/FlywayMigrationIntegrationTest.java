@@ -985,14 +985,32 @@ class FlywayMigrationIntegrationTest {
             }
             statement.execute("INSERT INTO dashboard_traffic_counts VALUES ('ban', NOW(), 'peer', 'fixture', 1)");
             statement.execute("INSERT INTO dashboard_traffic_swarm_changes VALUES (1, NOW())");
+            statement.execute("""
+                    INSERT INTO user_career_events (user_id, kind, fingerprint, observed_at, reporter_id)
+                    VALUES (11, 'observation', '00000000-0000-0000-0000-000000000001', '2026-01-01T00:00:00Z', 22);
+                    INSERT INTO user_career_daily (user_id, day, kind, amount)
+                    VALUES (11, '2026-01-01', 'observation', 1);
+                    """);
         }
         Flyway latest = Flyway.configure().dataSource(url, username, password)
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("83", latest.info().current().getVersion().getVersion());
+        assertEquals("84", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("""
+                    SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'public' AND table_name = 'user_career_events' AND column_name = 'reporter_id')
+                      AND to_regclass('public.user_career_latest_observation') IS NULL
+                      AND EXISTS (SELECT 1 FROM user_career_events WHERE user_id = 11 AND kind = 'observation'
+                        AND fingerprint = '00000000-0000-0000-0000-000000000001')
+                      AND EXISTS (SELECT 1 FROM user_career_daily WHERE user_id = 11 AND kind = 'observation'
+                        AND day = '2026-01-01' AND amount = 1)
+                    """)) {
+                assertTrue(result.next());
+                assertTrue(result.getBoolean(1));
+            }
             try (var result = statement.executeQuery("""
                     SELECT NOT EXISTS (SELECT 1 FROM pg_class WHERE relnamespace = 'public'::regnamespace
                         AND relname LIKE 'dashboard_traffic_%')

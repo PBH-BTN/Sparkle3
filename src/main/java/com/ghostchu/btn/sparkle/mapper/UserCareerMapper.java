@@ -22,15 +22,6 @@ public interface UserCareerMapper {
             """)
     Map<String, String> durations(@Param("uid") long uid);
 
-    @Select("""
-            SELECT reporter_id, observed_at FROM user_career_events e JOIN "user" u ON u.id = e.reporter_id
-            WHERE user_id = #{uid} AND kind = 'observation'
-            ORDER BY observed_at DESC, reporter_id LIMIT 1
-            """)
-    Observation latest(@Param("uid") long uid);
-
-    record Observation(Long reporterId, java.time.OffsetDateTime observedAt) { }
-
     @Delete("DELETE FROM user_career_events WHERE user_id = #{uid}")
     void deleteEvents(@Param("uid") long uid);
     @Delete("DELETE FROM user_traffic_daily WHERE user_id = #{uid}")
