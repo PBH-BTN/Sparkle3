@@ -34,7 +34,7 @@ public class ExportDownloadService {
 
     public void download(DataExportJob job, HttpServletRequest request, HttpServletResponse response)
             throws BusinessException {
-        response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store");
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store, no-transform");
         response.setHeader("Referrer-Policy", "no-referrer");
         Path file = files.ready(job.id());
         if (!Files.isRegularFile(file)) {
@@ -73,11 +73,12 @@ public class ExportDownloadService {
         }
         AsyncContext context;
         try {
-            context = request.startAsync();
+            context = request.startAsync(request, response);
         } catch (RuntimeException exception) {
             release(job.userId(), lease);
             throw exception;
         }
+        writeHeaders(job, response, segment, length);
         long remainingMillis = Duration.between(DataExportService.now(), job.expiresAt()).toMillis();
         context.setTimeout(Math.max(1L, remainingMillis));
         Thread.startVirtualThread(() -> stream(context, response, job, file, segment, lease, mbps));
@@ -86,7 +87,6 @@ public class ExportDownloadService {
     private void stream(AsyncContext context, HttpServletResponse response, DataExportJob job, Path file,
                         Segment segment, String lease, int mbps) {
         try (var channel = FileChannel.open(file, StandardOpenOption.READ)) {
-            writeHeaders(job, response, segment, job.fileBytes());
             channel.position(segment.start());
             var out = response.getOutputStream();
             Semaphore writable = new Semaphore(0);
@@ -163,6 +163,9 @@ public class ExportDownloadService {
 
     private static void writeHeaders(DataExportJob job, HttpServletResponse response, Segment segment, long length) {
         response.setContentType("application/x-xz");
+        // Ranges refer to the stored XZ bytes. Dynamic compression would change those offsets.
+        response.setHeader(HttpHeaders.CONTENT_ENCODING, "identity");
+        response.setHeader("X-Accel-Buffering", "no");
         response.setContentLengthLong(segment.size());
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"sparkle-" + job.category().name()
                 .toLowerCase(java.util.Locale.ROOT) + "-" + job.id() + ".csv.xz\"");

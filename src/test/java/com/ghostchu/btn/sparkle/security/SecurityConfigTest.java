@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.security;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -31,5 +32,15 @@ class SecurityConfigTest {
         );
         assertEquals("no-cache", response.getHeader("Pragma"));
         assertEquals("0", response.getHeader("Expires"));
+    }
+    @Test
+    void preservesExplicitDownloadCachePolicy() {
+        var request = new MockHttpServletRequest("GET", "/api/ui/exports/id/download");
+        var response = new MockHttpServletResponse();
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store, no-transform");
+
+        SecurityConfig.writeDefaultCacheHeaders(request, response);
+
+        assertEquals("private, no-store, no-transform", response.getHeader(HttpHeaders.CACHE_CONTROL));
     }
 }

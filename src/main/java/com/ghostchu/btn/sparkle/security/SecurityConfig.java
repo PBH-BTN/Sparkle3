@@ -131,10 +131,9 @@ public class SecurityConfig {
         if (request.getRequestURI().startsWith("/assets/")) {
             return;
         }
-        response.setHeader(
-                HttpHeaders.CACHE_CONTROL,
-                "no-cache, no-store, max-age=0, must-revalidate"
-        );
+        if (!response.containsHeader(HttpHeaders.CACHE_CONTROL)) {
+            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, max-age=0, must-revalidate");
+        }
         response.setHeader(HttpHeaders.PRAGMA, "no-cache");
         response.setHeader(HttpHeaders.EXPIRES, "0");
     }

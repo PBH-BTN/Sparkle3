@@ -77,7 +77,7 @@ class ExportDownloadIntegrationTest {
             var tomcat = new Tomcat();
             tomcat.setBaseDir(directory.resolve("tomcat").toString());
             tomcat.setPort(0);
-            tomcat.getConnector();
+            tomcat.getConnector().setProperty("compression", "force");
             var context = tomcat.addContext("", directory.toString());
             var servlet = Tomcat.addServlet(context, "download", new HttpServlet() {
                 @Override
@@ -99,6 +99,28 @@ class ExportDownloadIntegrationTest {
                 tomcat.start();
                 String url = "http://127.0.0.1:" + tomcat.getConnector().getLocalPort();
                 try (var client = HttpClient.newHttpClient()) {
+                    URI file = URI.create(url + "/a");
+                    var full = client.send(HttpRequest.newBuilder(file).header("Accept-Encoding", "gzip").build(),
+                            HttpResponse.BodyHandlers.ofInputStream());
+                    assertEquals(200, full.statusCode());
+                    assertEquals("524288", full.headers().firstValue("Content-Length").orElseThrow());
+                    assertEquals("bytes", full.headers().firstValue("Accept-Ranges").orElseThrow());
+                    assertTrue(full.headers().firstValue("Cache-Control").orElseThrow().contains("no-transform"));
+                    try (var body = full.body()) {
+                        assertArrayEquals(java.util.Arrays.copyOf(content, 262_144), body.readNBytes(262_144));
+                    }
+                    var head = client.send(HttpRequest.newBuilder(file).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                            HttpResponse.BodyHandlers.discarding());
+                    assertEquals("524288", head.headers().firstValue("Content-Length").orElseThrow());
+                    String tag = full.headers().firstValue("ETag").orElseThrow();
+                    var resumed = client.send(HttpRequest.newBuilder(file)
+                                    .header("Accept-Encoding", "gzip").header("Range", "bytes=262144-")
+                                    .header("If-Range", tag).build(), HttpResponse.BodyHandlers.ofByteArray());
+                    assertEquals(206, resumed.statusCode());
+                    assertEquals("262144", resumed.headers().firstValue("Content-Length").orElseThrow());
+                    assertEquals("bytes 262144-524287/524288", resumed.headers().firstValue("Content-Range").orElseThrow());
+                    assertArrayEquals(java.util.Arrays.copyOfRange(content, 262_144, content.length), resumed.body());
+
                     List<CompletableFuture<HttpResponse<byte[]>>> pending = new ArrayList<>();
                     long started = System.nanoTime();
                     for (int i = 0; i < 4; i++) {
