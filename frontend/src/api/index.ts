@@ -79,7 +79,9 @@ export const uiApi = {
   features: () => request<FeatureAvailability>('/api/ui/features'),
   home: () => request<HomeStats>('/api/ui/home'),
   homeIpFlags: (from: string, to: string) =>
-    request<DailyIpFlags[]>(`/api/ui/home/ip-flags?${new URLSearchParams({ from, to })}`),
+    request<DailyIpFlags[]>(`/api/ui/home/ip-flags?${new URLSearchParams({ from, to })}`, {
+      signal: AbortSignal.timeout(15_000),
+    }),
   homeNetworkStatistics: (days: number, source: StatisticsSource) =>
     request<HomeNetworkStatisticsResponse>(
       `/api/ui/statistics/home?days=${days}&source=${encodeURIComponent(source)}`,

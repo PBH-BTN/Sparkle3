@@ -17,10 +17,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -73,19 +75,30 @@ public class PointsService {
 
     @Transactional
     public void commit(PointAwardBucket bucket) {
-        commitInternal(bucket);
+        LedgerEntry entry = applyAwards(bucket);
+        if (entry != null) {
+            insertLedger(entry);
+        }
     }
 
     @Transactional
     public void commitAll(List<PointAwardBucket> buckets) {
-        for (PointAwardBucket bucket : buckets) {
-            commitInternal(bucket);
-        }
+        // Creating a ledger chunk can block other writers. Acquire all point row
+        // locks before any ledger insert, so those writers can release their locks.
+        var entries = buckets.stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingLong(PointAwardBucket::getUserId))
+                .map(this::applyAwards)
+                .filter(Objects::nonNull)
+                .toList();
+        entries.stream()
+                .sorted(Comparator.comparing(entry -> entry.bucket().getOccurredAt().toInstant()))
+                .forEachOrdered(this::insertLedger);
     }
 
-    private void commitInternal(PointAwardBucket bucket) {
+    private LedgerEntry applyAwards(PointAwardBucket bucket) {
         if (bucket == null || !bucket.hasWork()) {
-            return;
+            return null;
         }
 
         OffsetDateTime occurredAt = bucket.getOccurredAt();
@@ -93,7 +106,7 @@ public class PointsService {
                 ZoneId.of(btnConfigService.text("points", "timeZone"))
         ).toLocalDate();
 
-        for (Long userappId : bucket.getAppActivities().keySet()) {
+        for (Long userappId : bucket.getAppActivities().keySet().stream().sorted().toList()) {
             long onlineHours = pointsMapper.touchAppActivity(
                     userappId,
                     bucket.getUserId(),
@@ -123,7 +136,7 @@ public class PointsService {
         }
 
         if (bucket.getContributions().isEmpty()) {
-            return;
+            return null;
         }
 
         Map<PointCategory, Long> awarded = applyDailyCategories(
@@ -159,7 +172,7 @@ public class PointsService {
 
         long total = safeAdd(fixedPoints, dynamicPoints);
         if (total <= 0) {
-            return;
+            return null;
         }
 
         Map<String, Object> details = new LinkedHashMap<>();
@@ -173,16 +186,21 @@ public class PointsService {
             throw new IllegalStateException("Unable to update user point balance");
         }
 
+        return new LedgerEntry(bucket, total, fixedPoints, dynamicPoints, toJson(details));
+    }
+
+    private void insertLedger(LedgerEntry entry) {
+        var bucket = entry.bucket();
         pointsMapper.insertLedger(
                 bucket.getUserId(),
                 bucket.getEventId(),
-                occurredAt,
+                bucket.getOccurredAt(),
                 bucket.getEventType(),
-                total,
-                fixedPoints,
-                dynamicPoints,
+                entry.points(),
+                entry.fixedPoints(),
+                entry.dynamicPoints(),
                 0,
-                toJson(details)
+                entry.details()
         );
     }
 
@@ -256,7 +274,10 @@ public class PointsService {
             long userId,
             List<PointAwardBucket.Claim> claims
     ) {
-        List<Map<String, Object>> payload = claims.stream().map(claim -> {
+        var orderedClaims = claims.stream()
+                .sorted(Comparator.comparing(PointAwardBucket.Claim::claimType)
+                        .thenComparing(PointAwardBucket.Claim::reference));
+        List<Map<String, Object>> payload = orderedClaims.map(claim -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("claimType", claim.claimType());
             item.put("reference", claim.reference());
@@ -337,5 +358,14 @@ public class PointsService {
     }
 
     private record ClaimResult(String category, long points) {
+    }
+
+    private record LedgerEntry(
+            PointAwardBucket bucket,
+            long points,
+            long fixedPoints,
+            long dynamicPoints,
+            String details
+    ) {
     }
 }
