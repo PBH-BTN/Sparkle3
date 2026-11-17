@@ -22,7 +22,7 @@ class UserCareerServiceTest {
         when(profiles.privacySettings(target)).thenReturn(UserPrivacySettings.defaults(2));
         when(cache.snapshotKey(2)).thenReturn("snapshot");
         when(cache.get("snapshot",UserCareerService.Snapshot.class)).thenReturn(
-                new UserCareerService.Snapshot(Map.of("ban","42"),null,null));
+                new UserCareerService.Snapshot(Map.of("ban","42"),null));
         var service = new UserCareerService(profiles,mapper,traffic);
         org.springframework.test.util.ReflectionTestUtils.setField(service,"cache",cache);
         assertEquals("42",service.read(2,2).metrics().get("ban"));
@@ -50,13 +50,15 @@ class UserCareerServiceTest {
         var traffic = mock(UserLifetimeTrafficMapper.class);
         when(profiles.requireUser(2)).thenReturn(new User().setId(2L)
                 .setRegisterAt(OffsetDateTime.now().minusDays(10)));
-        when(mapper.counts(2)).thenReturn(List.of(Map.of("kind", "ban", "total", "9007199254740993", "recent", "3")));
+        when(mapper.counts(2)).thenReturn(List.of(
+                Map.of("kind", "ban", "total", "9007199254740993", "recent", "3"),
+                Map.of("kind", "observation", "total", "12", "recent", "2")));
         when(mapper.durations(2)).thenReturn(Map.of("seeding", "3600", "downloading", "1800"));
         var view = new UserCareerService(profiles, mapper, traffic).read(2, 2);
         assertEquals("9007199254740993", view.metrics().get("ban"));
         assertEquals("3", view.metrics().get("banRecent"));
         assertEquals("10", view.metrics().get("days"));
         assertEquals("3600", view.metrics().get("seeding"));
-        assertNull(view.observerName());
+        assertEquals("12", view.metrics().get("observation"));
     }
 }

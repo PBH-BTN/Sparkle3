@@ -31,15 +31,7 @@ public class UserCareerService {
         var metrics = new LinkedHashMap<>(snapshot.metrics());
         metrics.put("days", Long.toString(Math.max(0, ChronoUnit.DAYS.between(
                 target.getRegisterAt().toInstant(), OffsetDateTime.now(ZoneOffset.UTC).toInstant()))));
-        var last = snapshot.last();
-        String name = null;
-        if (last != null) {
-            try { name = profiles.profile(viewer,last.reporterId()).nickname(); }
-            catch (BusinessException failure) {
-                if (failure.getStatusCode().value() != 404) throw failure;
-            }
-        }
-        return new CareerView(metrics,snapshot.traffic(),last == null ? null : last.observedAt().toString(),name);
+        return new CareerView(metrics, snapshot.traffic());
     }
 
     private Snapshot snapshot(long uid) {
@@ -65,13 +57,12 @@ public class UserCareerService {
         var durations = mapper.durations(uid);
         metrics.put("seeding", durations.get("seeding"));
         metrics.put("downloading", durations.get("downloading"));
-        var snapshot = new Snapshot(metrics,traffic.selectByUserId(uid),mapper.latest(uid));
+        var snapshot = new Snapshot(metrics, traffic.selectByUserId(uid));
         if (cache != null) cache.put(key,snapshot,java.time.Duration.ofMinutes(5));
         return snapshot;
     }
 
-    public record Snapshot(Map<String,String> metrics, LifetimeTraffic traffic, UserCareerMapper.Observation last) { }
+    public record Snapshot(Map<String, String> metrics, LifetimeTraffic traffic) { }
 
-    public record CareerView(Map<String, String> metrics, LifetimeTraffic traffic,
-                             String lastObservedAt, String observerName) { }
+    public record CareerView(Map<String, String> metrics, LifetimeTraffic traffic) { }
 }

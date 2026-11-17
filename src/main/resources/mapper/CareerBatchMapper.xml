@@ -51,10 +51,10 @@
                 received_self=t.received_self+EXCLUDED.received_self,sent_ack=t.sent_ack+EXCLUDED.sent_ack,
                 received_ack=t.received_ack+EXCLUDED.received_ack,updated_at=EXCLUDED.updated_at
         ), events AS (
-            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,reporter_id)
-            SELECT user_id,'swarm',session_key,at,NULL::bigint FROM input
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
+            SELECT user_id,'swarm',session_key,at FROM input
             UNION ALL
-            SELECT owner,'observation',observation_key,at,#{uid}::bigint FROM peers WHERE owner &lt;> #{uid}
+            SELECT owner,'observation',observation_key,at FROM peers WHERE owner &lt;> #{uid}
             ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
         ), daily AS (
             INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
@@ -111,14 +111,14 @@
         WITH input(user_id,fingerprint,at,ip,upload,download) AS MATERIALIZED (
             VALUES <foreach collection="rows" item="r" separator=",">(#{uid}::bigint,#{r.key}::uuid,#{r.moment}::timestamptz,#{r.ip}::inet,#{r.upload}::bigint,#{r.download}::bigint)</foreach>
         ), observed AS (
-            SELECT DISTINCT ua.owner,i.fingerprint,i.at,i.user_id AS reporter
+            SELECT DISTINCT ua.owner,i.fingerprint,i.at
             FROM input i JOIN userapps_heartbeat hb ON hb.ip=i.ip AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-(#{heartbeatWindowMillis}::bigint * interval '1 millisecond')
             JOIN userapp ua ON ua.id=hb.userapp_id WHERE ua.owner &lt;> i.user_id
               AND NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
         ), added AS (
-            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,reporter_id)
-            SELECT user_id,'ban',fingerprint,at,NULL::bigint FROM input
-            UNION ALL SELECT owner,'observation',fingerprint,at,reporter FROM observed
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
+            SELECT user_id,'ban',fingerprint,at FROM input
+            UNION ALL SELECT owner,'observation',fingerprint,at FROM observed
             ON CONFLICT DO NOTHING RETURNING user_id,kind,fingerprint,observed_at
         ), daily AS (
             INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
