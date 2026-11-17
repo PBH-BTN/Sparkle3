@@ -30,7 +30,7 @@ export interface ChartDatum {
 
 export interface StackedChartSeries {
   name: string
-  values: number[]
+  values: (number | null)[]
 }
 
 export function distributionPieOption(

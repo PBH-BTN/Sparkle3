@@ -8,6 +8,7 @@ import type { DailyTraffic } from '@/api/types'
 import EChart from '@/components/EChart.vue'
 import HomeStatisticsFilters from '@/components/HomeStatisticsFilters.vue'
 import { stackedAreaChartOption } from '@/utils/charts'
+import { utcChartDays } from '@/utils/chartDates'
 import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
 
@@ -24,6 +25,11 @@ const sectionTitle = computed(() => t(showTraffic.value ? 'home.networkTrafficTi
 const { formatBytes, formatHours } = useFormatters()
 const days = ref(30)
 const records = ref<DailyTraffic[]>([])
+const chartDays = ref<string[]>([])
+const chartRows = computed<DailyTraffic[]>(() => {
+  const byDay = new Map(records.value.map(row => [row.day, row]))
+  return chartDays.value.map(day => byDay.get(day) ?? { day, metrics: {} })
+})
 const loading = ref(true)
 const failed = ref(false)
 const metrics = {
@@ -40,11 +46,15 @@ const metrics = {
 type Metric = keyof typeof metrics
 
 function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
-  const rows = records.value
+  const rows = chartRows.value
   const names = keys.map(key => t(metrics[key]))
   const option = stackedAreaChartOption(rows.map(row => row.day), keys.map((key, index) => ({
     name: names[index]!,
-    values: rows.map(row => Number(row.metrics[key] ?? 0) / (unit === 'hours' ? 3600 : 1)),
+    values: rows.map(row => {
+      const value = row.metrics[key]
+      if (unit === 'loss' && value == null) return null
+      return Number(value ?? 0) / (unit === 'hours' ? 3600 : 1)
+    }),
   })))
   const axes: YAXisComponentOption[] = [{
     type: 'value',
@@ -68,7 +78,8 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
     stack: undefined,
     areaStyle: undefined,
     smooth: false,
-    symbol: rows.length === 1 ? 'circle' : 'none',
+    symbol: unit === 'loss' ? 'circle' : 'none',
+    symbolSize: 4,
     yAxisIndex: series.name === t(metrics.lossRatio) ? 1 : 0,
   }))
   option.tooltip = {
@@ -107,11 +118,19 @@ let latestRequest = 0
 
 async function load() {
   const requestId = ++latestRequest
+  const requestedDays = days.value
+  const end = new Date()
   loading.value = true
   failed.value = false
   try {
-    const rows = await uiApi.networkTraffic(days.value)
-    if (requestId === latestRequest) records.value = rows
+    const rows = await uiApi.networkTraffic(requestedDays)
+    if (requestId !== latestRequest) return
+    const lastDay = rows.at(-1)?.day
+    if (lastDay && lastDay > end.toISOString().slice(0, 10)) end.setTime(Date.parse(lastDay))
+    const through = end.toISOString().slice(0, 10)
+    end.setUTCDate(end.getUTCDate() - requestedDays + 1)
+    chartDays.value = utcChartDays(end.toISOString().slice(0, 10), through)
+    records.value = rows
   } catch {
     if (requestId === latestRequest) failed.value = true
   } finally {

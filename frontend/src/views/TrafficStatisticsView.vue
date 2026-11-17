@@ -13,6 +13,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import TablePager from '@/components/TablePager.vue'
 import EChart from '@/components/EChart.vue'
 import { stackedAreaChartOption } from '@/utils/charts'
+import { utcChartDays } from '@/utils/chartDates'
 import { formatAxisTooltip, sortedTooltipItems } from '@/utils/chartTooltip'
 import { useFormatters } from '@/utils/format'
 
@@ -48,7 +49,13 @@ function formatMetric(row: DailyTraffic, key: string) {
   }
   return key === 'lossRatio' ? value + '%' : formatBytes(value)
 }
-const chartRows = computed(() => [...records.value].sort((a, b) => a.day.localeCompare(b.day)))
+const chartRows = computed<DailyTraffic[]>(() => {
+  const newest = records.value[0]
+  const oldest = records.value.at(-1)
+  if (!newest || !oldest) return []
+  const byDay = new Map(records.value.map(row => [row.day, row]))
+  return utcChartDays(oldest.day, newest.day).map(day => byDay.get(day) ?? { day, metrics: {} })
+})
 const chartRange = computed(() => {
   const rows = chartRows.value
   return rows.length ? rows[0]!.day.replaceAll('-', '/') + ' — ' + rows[rows.length - 1]!.day.replaceAll('-', '/') : ''
@@ -72,7 +79,7 @@ function chartOption(keys: MetricKey[], unit: ChartUnit): EChartsCoreOption {
     name: t(metrics.find(metric => metric[0] === key)![1]),
     values: rows.map(row => {
       const value = row.metrics[key] || '0'
-      if (key === 'lossRatio') return Number(value)
+      if (key === 'lossRatio') return row.metrics[key] == null ? null : Number(value)
       if (unit === 'hours') return Number(value) / 3600
       const bytes = BigInt(value)
       return Number(bytes / divisor) + Number(bytes % divisor) / Number(divisor)
@@ -99,8 +106,9 @@ function chartOption(keys: MetricKey[], unit: ChartUnit): EChartsCoreOption {
     stack: unit === 'loss' ? undefined : 'total',
     yAxisIndex: keys[index] === 'lossRatio' ? 1 : 0,
     smooth: false,
-    showSymbol: rows.length === 1,
-    symbol: rows.length === 1 ? 'circle' : 'none',
+    showSymbol: rows.length === 1 || keys[index] === 'lossRatio',
+    symbol: rows.length === 1 || keys[index] === 'lossRatio' ? 'circle' : 'none',
+    symbolSize: 4,
     areaStyle: keys[index] === 'lossRatio' ? undefined : { opacity: 0.2 },
   }))
   option.tooltip = {
