@@ -130,7 +130,7 @@ export default {
     categories: {
       DATA_EXPORT: {
         name: '数据导出',
-        description: '接收本人申请的数据导出结果和下载链接。',
+        description: '数据导出结果会发到站内信。你可以选择是否同时接收邮件提醒。',
       },
       LEGAL_COMPLIANCE: {
         name: '法律与合规与管理员消息',

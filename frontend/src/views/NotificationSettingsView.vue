@@ -35,7 +35,7 @@ async function save() {
       await uiApi.updateNotifications(
         preferences.value.map((item) => ({
           category: item.category,
-          inboxEnabled: item.locked ? true : item.inboxEnabled,
+          inboxEnabled: item.inboxEnabled,
           emailEnabled: item.emailEnabled,
         })),
       )
@@ -88,7 +88,7 @@ onMounted(load)
           </div>
           <a-switch
             v-model="preference.inboxEnabled"
-            :disabled="preference.locked"
+            :disabled="preference.locked || preference.category === 'DATA_EXPORT'"
             :checked-value="true"
             :unchecked-value="false"
           />

@@ -131,7 +131,7 @@ export default {
     categories: {
       DATA_EXPORT: {
         name: 'Data export',
-        description: 'Receive the results and download links for your data export requests.',
+        description: 'Export results are delivered to your inbox. Email reminders are optional.',
       },
       LEGAL_COMPLIANCE: {
         name: 'Legal, compliance & administration',
