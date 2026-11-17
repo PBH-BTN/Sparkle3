@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -19,8 +18,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserTrafficStatisticsService {
     private static final int NETWORK_WINDOW_DAYS = 30;
-    private static final List<String> CUMULATIVE_METRICS =
-            List.of("upload", "download", "uploadAck", "downloadAck", "seeding", "downloading");
     private final UserTrafficStatisticsMapper mapper;
 
     public TrafficPage daily(long uid, long page, int size) {
@@ -33,30 +30,16 @@ public class UserTrafficStatisticsService {
     }
 
     public List<DailyTraffic> network(NetworkTrafficAccess access) {
-        return networkDaily(access, NETWORK_WINDOW_DAYS).stream()
-                .map(UserTrafficStatisticsService::toDailyTraffic).toList();
+        return network(access, NETWORK_WINDOW_DAYS);
     }
 
     public List<DailyTraffic> network(NetworkTrafficAccess access, int days) {
         if (days != 7 && days != 14 && days != NETWORK_WINDOW_DAYS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        var totals = new LinkedHashMap<String, BigDecimal>();
-        return networkDaily(access, days).stream().map(row -> {
-            var point = toDailyTraffic(row);
-            for (String key : CUMULATIVE_METRICS) {
-                String value = point.metrics().get(key);
-                if (value != null) {
-                    point.metrics().put(key, totals.merge(key, new BigDecimal(value), BigDecimal::add).toPlainString());
-                }
-            }
-            return point;
-        }).toList();
-    }
-
-    private List<Map<String, String>> networkDaily(NetworkTrafficAccess access, int days) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        return mapper.network(today.minusDays(days - 1), today, access);
+        return mapper.network(today.minusDays(days - 1), today, access).stream()
+                .map(UserTrafficStatisticsService::toDailyTraffic).toList();
     }
 
     private static DailyTraffic toDailyTraffic(Map<String, String> row) {

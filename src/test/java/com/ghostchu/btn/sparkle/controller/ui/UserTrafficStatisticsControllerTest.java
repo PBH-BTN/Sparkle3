@@ -75,7 +75,7 @@ class UserTrafficStatisticsControllerTest {
     }
 
     @Test
-    void networkReturnsPlotValuesForTheRequestedRange() throws Exception {
+    void networkReturnsIndependentDailyValuesForTheRequestedRange() throws Exception {
         var mapper = mock(UserTrafficStatisticsMapper.class);
         var config = mock(AdminConfigService.class);
         var users = mock(IUserService.class);
@@ -83,7 +83,7 @@ class UserTrafficStatisticsControllerTest {
                         new UserTrafficStatisticsService(mapper), config, users))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver()).build();
         var user = new User().setId(7L).setRole("user");
-        var access = new NetworkTrafficAccess(true, false, true, false, true);
+        var access = new NetworkTrafficAccess(true, true, true, false, true);
         when(users.getById(7L)).thenReturn(user);
         when(config.homepageTrafficAccess(user)).thenReturn(access);
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
@@ -93,17 +93,24 @@ class UserTrafficStatisticsControllerTest {
             LocalDate through = invocation.getArgument(1);
             assertEquals(through.minusDays(6), from);
             return List.of(
-                    Map.of("day", from.toString(), "upload", "9007199254740993", "seeding", "12.5", "totalLoss", "10"),
-                    Map.of("day", through.toString(), "upload", "2", "seeding", "0.25", "totalLoss", "20"));
+                    Map.of("day", from.toString(), "upload", "9007199254740993", "download", "9",
+                            "uploadAck", "8", "downloadAck", "7", "seeding", "12.5", "downloading", "6", "totalLoss", "10"),
+                    Map.of("day", through.toString(), "upload", "2", "download", "3",
+                            "uploadAck", "4", "downloadAck", "5", "seeding", "0.25", "downloading", "0", "totalLoss", "20"));
         });
         mvc.perform(get("/api/ui/user/traffic/network?days=8")).andExpect(status().isBadRequest());
         verifyNoInteractions(mapper);
         mvc.perform(get("/api/ui/user/traffic/network?days=7"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[1].metrics.upload").value("9007199254740995"))
-                .andExpect(jsonPath("$[1].metrics.seeding").value("12.75"))
+                .andExpect(jsonPath("$[0].metrics.upload").value("9007199254740993"))
+                .andExpect(jsonPath("$[1].metrics.upload").value("2"))
+                .andExpect(jsonPath("$[1].metrics.download").value("3"))
+                .andExpect(jsonPath("$[1].metrics.uploadAck").value("4"))
+                .andExpect(jsonPath("$[1].metrics.downloadAck").value("5"))
+                .andExpect(jsonPath("$[1].metrics.seeding").value("0.25"))
+                .andExpect(jsonPath("$[1].metrics.downloading").value("0"))
                 .andExpect(jsonPath("$[0].metrics.totalLoss").value("10"))
                 .andExpect(jsonPath("$[1].metrics.totalLoss").value("20"))
-                .andExpect(jsonPath("$[1].metrics.uploadAck").doesNotExist());
+                .andExpect(jsonPath("$[1].metrics.averageLoss").doesNotExist());
     }
 }
