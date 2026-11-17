@@ -289,6 +289,8 @@ public class UserappsHeartbeatServiceImpl
                     .setLastSeenAt(heartbeat.lastSeenAt));
         }
         List<PointAwardBucket> pointBuckets = aggregatePoints(events);
+        rows.sort(java.util.Comparator.comparingLong(UserappsHeartbeat::getUserappId)
+                .thenComparing(row -> row.getIp().getHostAddress()));
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             if (!rows.isEmpty()) {
@@ -358,34 +360,17 @@ public class UserappsHeartbeatServiceImpl
             descriptionKey = "admin.tasks.items.heartbeat-cleanup.description",
             expression = "${sparkle.ping.heartbeat.cleanup-cron}"
     )
-    @org.springframework.transaction.annotation.Transactional
     public void deleteOldData() {
         long deleted = 0;
         int lastDelete;
         long deleteBefore = btnConfigService.longValue("heartbeat", "cleanupBefore");
         OffsetDateTime cutoffTime = OffsetDateTime.now()
                 .minus(deleteBefore, ChronoUnit.MILLIS);
-        do {
-            List<Long> idsToDelete = this.baseMapper.selectList(
-                            new LambdaQueryWrapper<UserappsHeartbeat>()
-                                    .select(UserappsHeartbeat::getId)
-                                    .le(UserappsHeartbeat::getLastSeenAt, cutoffTime)
-                                    .last("LIMIT 1000")
-                    )
-                    .stream()
-                    .map(UserappsHeartbeat::getId)
-                    .toList();
-
-            if (idsToDelete.isEmpty()) {
-                lastDelete = 0;
-            } else {
-                lastDelete = this.baseMapper.deleteByIds(idsToDelete);
-                deleted += lastDelete;
-                if (deleted % 10000 == 0) {
-                    log.info("Deleted {} old heartbeat records so far...", deleted);
-                }
-            }
-        } while (lastDelete > 0);
+        for (int batch = 0; batch < 20; batch++) {
+            lastDelete = baseMapper.deleteExpiredBatch(cutoffTime, 1000);
+            deleted += lastDelete;
+            if (lastDelete < 1000) break;
+        }
         log.info("Deleted {} old heartbeat records", deleted);
     }
 

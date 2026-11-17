@@ -57,21 +57,18 @@ public interface PointsMapper {
             @Param("points") long points
     );
 
-    @Select("""
-            SELECT score_bytes FROM public."user"
+    @Select(value = """
+            UPDATE public."user"
+            SET score_bytes = (score_bytes::numeric + #{delta})::bigint
             WHERE id = #{userId}
-            FOR UPDATE
-            """)
-    Long lockUserBalance(@Param("userId") long userId);
+              AND score_bytes::numeric + #{delta} BETWEEN 0 AND 9223372036854775807
+            RETURNING score_bytes
+            """, affectData = true)
+    @org.apache.ibatis.annotations.Options(flushCache = org.apache.ibatis.annotations.Options.FlushCachePolicy.TRUE, useCache = false)
+    Long adjustBalance(@Param("userId") long userId, @Param("delta") long delta);
 
-    @Update("""
-            UPDATE public."user" SET score_bytes = #{balance}
-            WHERE id = #{userId}
-            """)
-    int setBalance(
-            @Param("userId") long userId,
-            @Param("balance") long balance
-    );
+    @Select("SELECT score_bytes FROM public.\"user\" WHERE id = #{userId}")
+    Long balance(@Param("userId") long userId);
 
     @Insert("""
             INSERT INTO public.points_ledger (

@@ -37,6 +37,7 @@ public class ExchangeRateService {
     private static final Duration CACHE_TTL = Duration.ofHours(6);
 
     private final CurrencyExchangeRateMapper exchangeRateMapper;
+    private final ExchangeRateCacheWriter cacheWriter;
     private final ObjectMapper objectMapper;
     private final DatabaseConfigService databaseConfigService;
     private final Environment environment;
@@ -173,14 +174,14 @@ public class ExchangeRateService {
                     RoundingMode.HALF_UP
             );
             String quote = normalizeCurrency(entry.getKey());
-            exchangeRateMapper.upsert(new CurrencyExchangeRate()
+            cacheWriter.upsert(new CurrencyExchangeRate()
                     .setBaseCurrency(base)
                     .setQuoteCurrency(quote)
                     .setRateToBase(quoteToBase)
                     .setFetchedAt(OffsetDateTime.now())
                     .setSource(url));
         }
-        exchangeRateMapper.upsert(new CurrencyExchangeRate()
+        cacheWriter.upsert(new CurrencyExchangeRate()
                 .setBaseCurrency(base)
                 .setQuoteCurrency(base)
                 .setRateToBase(BigDecimal.ONE)

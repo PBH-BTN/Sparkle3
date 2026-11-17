@@ -160,6 +160,7 @@ class UserLifetimeTrafficIntegrationTest {
 
                 }
                 assertConcurrentReportsWithOppositeBatchOrder(factory);
+                assertCrossUserTotalsAreOrderedAcrossBatches(factory);
             } finally {
                 statement.execute("DROP DATABASE " + database + " WITH (FORCE)");
             }
@@ -167,6 +168,10 @@ class UserLifetimeTrafficIntegrationTest {
     }
 
     private void assertConcurrentReportsWithOppositeBatchOrder(SqlSessionFactory factory) throws Exception {
+        try (var session = factory.openSession(); var sql = session.getConnection().createStatement()) {
+            sql.execute("INSERT INTO userapps_heartbeat (userapp_id, ip, first_seen_at, last_seen_at) VALUES (2, '192.0.2.2', '2026-01-01Z', '2026-12-01Z')");
+            session.commit();
+        }
         var firstDay = OffsetDateTime.parse("2026-03-05T12:00:00Z");
         var secondDay = firstDay.plusDays(1);
         var ip = InetAddress.ofLiteral("192.0.2.2");
@@ -206,6 +211,42 @@ class UserLifetimeTrafficIntegrationTest {
             assertTrue(result.next());
             assertEquals(501, result.getInt("upload"));
             assertEquals(1, result.getInt("loss"));
+            assertFalse(result.next());
+        }
+    }
+
+    private void assertCrossUserTotalsAreOrderedAcrossBatches(SqlSessionFactory factory) throws Exception {
+        try (var session = factory.openSession(); var sql = session.getConnection().createStatement()) {
+            sql.execute("""
+                    INSERT INTO userapps_heartbeat (userapp_id, ip, first_seen_at, last_seen_at)
+                    VALUES (1, '192.0.2.11', '2026-01-01Z', '2026-12-01Z'),
+                           (2, '192.0.2.12', '2026-01-01Z', '2026-12-01Z')
+                    """);
+            session.commit();
+        }
+        var barrier = new CyclicBarrier(2);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = IntStream.rangeClosed(1, 2).mapToObj(uid -> executor.submit(() -> {
+                var at = OffsetDateTime.parse("2026-04-01T12:00:00Z");
+                var rows = IntStream.rangeClosed(1, 501).mapToObj(port -> new SwarmTracker()
+                        .setUserappsId((long) uid).setUserDownloader("cross-user").setTorrentId(port <= 500 ? 1L : 2L)
+                        .setPeerIp(InetAddress.ofLiteral(port <= 500
+                                ? "192.0.2." + (10 + uid) : "192.0.2." + (13 - uid)))
+                        .setPeerPort(port).setFirstTimeSeen(at).setLastTimeSeen(at)
+                        .setToPeerTraffic(1L).setFromPeerTraffic(0L)
+                        .setToPeerTrafficOffset(1L).setFromPeerTrafficOffset(0L).setUserProgress(1)).toList();
+                writeConcurrentReport(factory, barrier, "swarm", service -> service.swarmBatch(uid, rows));
+                return null;
+            })).toList();
+            for (var future : futures) future.get(20, TimeUnit.SECONDS);
+        }
+        try (var session = factory.openSession(); var sql = session.getConnection().createStatement();
+             var result = sql.executeQuery("SELECT upload,download_ack FROM user_traffic_daily WHERE day='2026-04-01' ORDER BY user_id")) {
+            for (int user = 1; user <= 2; user++) {
+                assertTrue(result.next());
+                assertEquals(501, result.getInt("upload"));
+                assertEquals(501, result.getInt("download_ack"));
+            }
             assertFalse(result.next());
         }
     }

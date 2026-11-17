@@ -75,16 +75,16 @@ class DailyTrafficPostgresIntegrationTest {
                 row.put("initialUpload",100L); row.put("initialDownload",40L);
                 row.put("at",OffsetDateTime.parse("2026-01-01T23:59:30Z"));
                 row.put("ip","192.0.2.1"); row.put("torrentId",1L); row.put("seeding",true);
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
                 row.put("upload",160L); row.put("download",60L);
                 row.put("at",OffsetDateTime.parse("2026-01-02T00:00:30Z"));
                 row.put("observationKey",UUID.randomUUID().toString());
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
                 var ban=new HashMap<String,Object>();
                 ban.put("key",UUID.randomUUID().toString()); ban.put("moment",row.get("at"));
                 ban.put("ip","192.0.2.1"); ban.put("upload",20L); ban.put("download",10L);
-                mapper.upsertDailyTraffic(mapper.bans(1,List.of(ban),600000));
+                persist(mapper, mapper.bans(1,List.of(ban),600000));
                 assertTrue(mapper.bans(1,List.of(ban),600000).isEmpty());
                 try (var statement = connection.createStatement();
                      var result = statement.executeQuery("""
@@ -120,12 +120,12 @@ class DailyTrafficPostgresIntegrationTest {
                 row.put("key",UUID.randomUUID().toString()); row.put("torrentId",2L); row.put("seeding",false);
                 row.put("upload",0L); row.put("download",0L); row.put("initialUpload",0L); row.put("initialDownload",0L);
                 row.put("at",OffsetDateTime.parse("2026-01-02T12:00:00Z"));
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
                 row.put("at",OffsetDateTime.parse("2026-01-02T12:10:00Z"));
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
                 // Out-of-order reports cannot extend or repeat activity time.
                 row.put("at",OffsetDateTime.parse("2026-01-02T12:05:00Z"));
-                mapper.upsertDailyTraffic(mapper.swarm(1,List.of(row),120000,600000));
+                persist(mapper, mapper.swarm(1,List.of(row),120000,600000));
                 try (var statement=connection.createStatement();var result=statement.executeQuery("SELECT downloading,seeding FROM user_traffic_daily WHERE user_id=1 AND day='2026-01-02'")) {
                     assertTrue(result.next());
                     assertEquals(120,result.getBigDecimal(1).intValueExact());
@@ -177,4 +177,10 @@ class DailyTrafficPostgresIntegrationTest {
             }
         }
     }
+    private void persist(CareerBatchMapper mapper, List<CareerBatchMapper.DailyTrafficDelta> deltas) {
+        new CareerIngestionService(mapper,
+                org.mockito.Mockito.mock(com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService.class))
+                .writeDailyTraffic(deltas);
+    }
+
 }

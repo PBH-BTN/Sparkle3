@@ -58,6 +58,9 @@ public class AfdianMessageLicenseWriter {
     @Transactional(rollbackFor = Exception.class)
     public String register(String userId, String messageId, PbhLicenseDecoder.Decoded decoded,
                            Long operatorId, AfdianMessageReceipt receipt) throws Exception {
+        String orderId = decoded.payload().path("paymentOrderId").asText("");
+        BigDecimal receiptAmount = receipt != null && (orderId.isBlank() || orderId.equals(receipt.orderId()))
+                ? exchangeRates.convert(receipt.amountCny(), "CNY") : null;
         mapper.lock();
         PbhLicense existing = mapper.existing(decoded.key());
         if (existing != null && (!"AFDIAN".equals(existing.getProvider())
@@ -66,7 +69,6 @@ public class AfdianMessageLicenseWriter {
             String status = mapper.matchStatus(existing.getId());
             if (!"UNMATCHED".equals(status) && !(receipt != null && "HEURISTIC".equals(status))) return "DUPLICATE";
         }
-        String orderId = decoded.payload().path("paymentOrderId").asText("");
         MemberTransaction order = orderId.isBlank() ? null : mapper.exact(userId, orderId);
         String match = "EXACT";
         if (receipt != null && (orderId.isBlank() || orderId.equals(receipt.orderId()))) {
@@ -74,7 +76,7 @@ public class AfdianMessageLicenseWriter {
             MemberTransaction local = mapper.exact(userId, receipt.orderId());
             order = local == null ? new MemberTransaction().setExternalTransactionId(receipt.orderId())
                     .setTransactionType(receipt.sourceType()).setSku(receipt.sku())
-                    .setAmountBase(exchangeRates.convert(receipt.amountCny(), "CNY")) : local;
+                    .setAmountBase(receiptAmount) : local;
             match = "MESSAGE_CARD";
         } else if (orderId.isBlank()) {
             var candidates = mapper.candidates(userId, decoded.createdAt());

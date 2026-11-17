@@ -40,8 +40,17 @@ public class CareerIngestionService {
         return p;
     }
 
+    private String swarmSessionKey(SwarmTracker row) {
+        return key("swarm:" + row.getUserappsId() + ":" + row.getUserDownloader() + ":" + row.getTorrentId()
+                + ":" + row.getPeerIp().getHostAddress() + ":" + row.getPeerPort() + ":" + row.getFirstTimeSeen().toInstant());
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void swarmBatch(long uid, java.util.List<SwarmTracker> rows) {
+        // Torrent-time rows are shared by all applications of a user. Keep their
+        // order stable across the entire report, not just inside each SQL batch.
+        rows = rows.stream().sorted(Comparator.comparingLong(SwarmTracker::getTorrentId)
+                .thenComparing(this::swarmSessionKey)).toList();
         long activityWindow = runtimeConfig.reportingWindowMillis("syncSwarm");
         long heartbeatWindow = runtimeConfig.reportingWindowMillis("heartbeat");
         var dailyTraffic = new ArrayList<DailyTrafficDelta>();
@@ -65,6 +74,10 @@ public class CareerIngestionService {
             if (cache != null && cache.alreadyCommitted(delivery)) continue;
             dailyTraffic.addAll(batchMapper.swarm(uid,values,activityWindow,heartbeatWindow));
             if (cache != null) cache.markAfterCommit(delivery);
+        }
+        dailyTraffic.sort(Comparator.comparingLong(DailyTrafficDelta::userId));
+        for (int offset = 0; offset < dailyTraffic.size(); offset += BATCH_SIZE) {
+            batchMapper.upsertLifetimeTraffic(dailyTraffic.subList(offset, Math.min(offset + BATCH_SIZE, dailyTraffic.size())));
         }
         writeDailyTraffic(dailyTraffic);
     }
@@ -101,28 +114,48 @@ public class CareerIngestionService {
     }
 
     private void submit(long uid,java.util.List<Map<String,Object>> rows,boolean feature) {
+        rows = rows.stream().sorted(Comparator.comparing(row -> row.get("key").toString())).toList();
         long heartbeatWindow = runtimeConfig.reportingWindowMillis("heartbeat");
         var dailyTraffic = new ArrayList<DailyTrafficDelta>();
+        var featureDaily = new ArrayList<CareerBatchMapper.CareerDailyDelta>();
         for (int offset=0;offset<rows.size();offset+=BATCH_SIZE) {
             var chunk=rows.subList(offset,Math.min(offset+BATCH_SIZE,rows.size()));
             var keys=chunk.stream().map(p -> p.get("key").toString()).sorted().toList();
             String delivery=key(uid+":"+feature+":"+heartbeatWindow+":"+String.join(";",keys));
             if (cache != null && cache.alreadyCommitted(delivery)) continue;
             if (feature) {
-                batchMapper.features(uid,chunk);
+                featureDaily.addAll(batchMapper.features(uid,chunk));
             } else {
                 dailyTraffic.addAll(batchMapper.bans(uid,chunk,heartbeatWindow));
             }
             if (cache != null) cache.markAfterCommit(delivery);
         }
+        writeCareerDaily(featureDaily);
         writeDailyTraffic(dailyTraffic);
     }
 
-    private void writeDailyTraffic(List<DailyTrafficDelta> rows) {
+    void writeDailyTraffic(List<DailyTrafficDelta> rows) {
+        var career = new ArrayList<CareerBatchMapper.CareerDailyDelta>();
+        for (var row : rows) {
+            if (row.swarmEvents() > 0) career.add(new CareerBatchMapper.CareerDailyDelta(row.userId(), row.day(), "swarm", row.swarmEvents()));
+            if (row.banEvents() > 0) career.add(new CareerBatchMapper.CareerDailyDelta(row.userId(), row.day(), "ban", row.banEvents()));
+            if (row.observationEvents() > 0) career.add(new CareerBatchMapper.CareerDailyDelta(row.userId(), row.day(), "observation", row.observationEvents()));
+        }
+        writeCareerDaily(career);
         // Row locks survive each batch. Sort the entire report before splitting the upserts.
         rows.sort(Comparator.comparingLong(DailyTrafficDelta::userId).thenComparing(DailyTrafficDelta::day));
         for (int offset = 0; offset < rows.size(); offset += BATCH_SIZE) {
             batchMapper.upsertDailyTraffic(rows.subList(offset, Math.min(offset + BATCH_SIZE, rows.size())));
         }
     }
+
+    private void writeCareerDaily(List<CareerBatchMapper.CareerDailyDelta> career) {
+        career.sort(Comparator.comparingLong(CareerBatchMapper.CareerDailyDelta::userId)
+                .thenComparing(CareerBatchMapper.CareerDailyDelta::kind)
+                .thenComparing(CareerBatchMapper.CareerDailyDelta::day));
+        for (int offset = 0; offset < career.size(); offset += BATCH_SIZE) {
+            batchMapper.upsertCareerDaily(career.subList(offset, Math.min(offset + BATCH_SIZE, career.size())));
+        }
+    }
+
 }

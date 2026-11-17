@@ -22,6 +22,16 @@ class NotificationPreferenceServiceTest {
             NotificationCategory.DAILY_ANNOUNCEMENT, NotificationCategory.DATA_EXPORT);
 
     @Test
+    void unsubscribeUsesTheSameCategoryOrderAsSettingsUpdates() {
+        var categories = List.of(NotificationCategory.GENERAL_NOTICE, NotificationCategory.CHANGELOG);
+        var reversed = new java.util.ArrayList<>(categories);
+        reversed.sort(java.util.Comparator.reverseOrder());
+        service.disableEmail(1, reversed);
+        var order = inOrder(mapper);
+        categories.stream().sorted().forEach(category -> order.verify(mapper).disableEmail(1, category.name()));
+    }
+
+    @Test
     void unsetPreferencesUseSameDefaultsForDisplayAndDelivery() {
         when(mapper.selectList(any())).thenReturn(List.of());
         for (NotificationPreference preference : service.list(1L)) {

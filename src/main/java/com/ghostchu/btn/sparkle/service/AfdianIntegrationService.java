@@ -64,6 +64,7 @@ public class AfdianIntegrationService {
     private final MemberTransactionLedgerService ledgerService;
     private final ApplicationEventPublisher events;
     private final AfdianEmailBindingService emailBinding;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public SettingsView settings() {
@@ -106,7 +107,6 @@ public class AfdianIntegrationService {
         );
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public BindingView bind(long btnUserId, String orderNumber)
             throws BusinessException {
         String normalizedOrder = orderNumber == null ? "" : orderNumber.trim();
@@ -143,36 +143,36 @@ public class AfdianIntegrationService {
             throw new BusinessException(HttpStatus.BAD_GATEWAY,
                     "Afdian order did not include a sponsor account");
         }
+        // Order retrieval, normalization and exchange-rate I/O finish before binding locks.
+        upsertDonation(order, null);
+        var verifiedOrder = order;
         try {
-            bindingMapper.insert(new AfdianBinding()
-                    .setBtnUserId(btnUserId)
-                    .setAfdianUserId(order.afdianUserId())
-                    .setAfdianName(blankToNull(order.afdianName()))
-                    .setAfdianAvatar(blankToNull(order.afdianAvatar()))
-                    .setBoundOrderNo(normalizedOrder));
-            memberBindingMapper.insert(new MemberPlatformBinding()
-                    .setProvider("AFDIAN")
-                    .setBtnUserId(btnUserId)
-                    .setExternalUserId(order.afdianUserId())
-                    .setExternalUserName(blankToNull(order.afdianName()))
-                    .setExternalUserAvatar(blankToNull(order.afdianAvatar()))
-                    .setProof(normalizedOrder)
-                    .setLastSyncedAt(OffsetDateTime.now()));
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                bindingMapper.insert(new AfdianBinding()
+                        .setBtnUserId(btnUserId)
+                        .setAfdianUserId(verifiedOrder.afdianUserId())
+                        .setAfdianName(blankToNull(verifiedOrder.afdianName()))
+                        .setAfdianAvatar(blankToNull(verifiedOrder.afdianAvatar()))
+                        .setBoundOrderNo(normalizedOrder)
+                        .setLastSyncedAt(OffsetDateTime.now()));
+                memberBindingMapper.insert(new MemberPlatformBinding()
+                        .setProvider("AFDIAN")
+                        .setBtnUserId(btnUserId)
+                        .setExternalUserId(verifiedOrder.afdianUserId())
+                        .setExternalUserName(blankToNull(verifiedOrder.afdianName()))
+                        .setExternalUserAvatar(blankToNull(verifiedOrder.afdianAvatar()))
+                        .setProof(normalizedOrder)
+                        .setLastSyncedAt(OffsetDateTime.now()));
+                events.publishEvent(SupporterEligibilityChanged.binding(btnUserId));
+            });
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(HttpStatus.CONFLICT,
                     "This Afdian account is already linked to another Sparkle user");
         }
-        upsertDonation(order, null);
-        BindingRow binding = binding(btnUserId);
-        if (binding == null) {
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Unable to link Afdian account");
-        }
-        updateBindingSuccess(btnUserId, order.afdianName(), order.afdianAvatar());
-        events.publishEvent(SupporterEligibilityChanged.binding(btnUserId));
         return publicBinding(btnUserId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void unbind(long btnUserId) throws BusinessException {
         if (bindingMapper.delete(
                 new QueryWrapper<AfdianBinding>().eq("btn_user_id", btnUserId)

@@ -12,6 +12,9 @@
             <arg column="loss" javaType="java.math.BigDecimal"/>
             <arg column="seeding" javaType="java.math.BigDecimal"/>
             <arg column="downloading" javaType="java.math.BigDecimal"/>
+            <arg column="swarm_events" javaType="_long"/>
+            <arg column="ban_events" javaType="_long"/>
+            <arg column="observation_events" javaType="_long"/>
         </constructor>
     </resultMap>
     <select id="swarm" resultMap="dailyTrafficDelta" affectData="true" flushCache="true" useCache="false">
@@ -25,7 +28,7 @@
         ), checkpoint AS (
             INSERT INTO user_lifetime_traffic_checkpoint AS c
                 (user_id,session_key,uploaded,downloaded,upload_delta,download_delta)
-            SELECT user_id,session_key,upload,download,initial_upload,initial_download FROM input ORDER BY session_key
+            SELECT user_id,session_key,upload,download,initial_upload,initial_download FROM input ORDER BY torrent_id,session_key
             ON CONFLICT(user_id,session_key) DO UPDATE SET
                 upload_delta=GREATEST(EXCLUDED.uploaded-c.uploaded,0),
                 download_delta=GREATEST(EXCLUDED.downloaded-c.downloaded,0),
@@ -38,34 +41,23 @@
                 AND hb.first_seen_at &lt;= i.at AND hb.last_seen_at >= i.at-(#{heartbeatWindowMillis}::bigint * interval '1 millisecond')
             JOIN userapp ua ON ua.id=hb.userapp_id
             WHERE NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
-        ), contributions AS (
-            SELECT user_id,upload_delta::numeric AS sent,download_delta::numeric AS received,0::numeric AS sent_ack,0::numeric AS received_ack FROM checkpoint
-            UNION ALL
-            SELECT p.owner,0::numeric,0::numeric,c.download_delta::numeric,c.upload_delta::numeric
-            FROM peers p JOIN checkpoint c USING(session_key)
-        ), totals AS (
-            INSERT INTO user_lifetime_traffic AS t(user_id,sent_self,received_self,sent_ack,received_ack,tracked_since,history_partial,updated_at)
-            SELECT user_id,SUM(sent),SUM(received),SUM(sent_ack),SUM(received_ack),now(),TRUE,now()
-            FROM contributions GROUP BY user_id HAVING SUM(sent+received+sent_ack+received_ack)>0 ORDER BY user_id
-            ON CONFLICT(user_id) DO UPDATE SET sent_self=t.sent_self+EXCLUDED.sent_self,
-                received_self=t.received_self+EXCLUDED.received_self,sent_ack=t.sent_ack+EXCLUDED.sent_ack,
-                received_ack=t.received_ack+EXCLUDED.received_ack,updated_at=EXCLUDED.updated_at
         ), events AS (
             INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
-            SELECT user_id,'swarm',session_key,at FROM input
+            SELECT user_id,'swarm' AS kind,session_key,at FROM input
+            WHERE (SELECT count(*) FROM checkpoint) >= 0
             UNION ALL
             SELECT owner,'observation',observation_key,at FROM peers WHERE owner &lt;> #{uid}
+                AND (SELECT count(*) FROM checkpoint) >= 0
+            ORDER BY 1,2,3
             ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
-        ), daily AS (
-            INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
-            SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM events GROUP BY 1,2,3 ORDER BY 1,3,2
-            ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
         ), latest AS (
             SELECT DISTINCT ON (user_id,torrent_id) user_id,torrent_id,at,seeding FROM input
             ORDER BY user_id,torrent_id,at DESC,session_key
         ), time_update AS (
         INSERT INTO user_career_torrent_time AS a(user_id,torrent_id,last_seen,was_seeding)
-        SELECT user_id,torrent_id,at,seeding FROM latest ORDER BY user_id,torrent_id
+        SELECT user_id,torrent_id,at,seeding FROM latest
+        WHERE (SELECT count(*) FROM events) >= 0
+        ORDER BY user_id,torrent_id
         ON CONFLICT(user_id,torrent_id) DO UPDATE SET
             seeding=a.seeding+CASE WHEN a.was_seeding AND EXCLUDED.last_seen>a.last_seen
                 THEN tstzmultirange(tstzrange(a.last_seen,LEAST(EXCLUDED.last_seen,a.last_seen+(#{activityWindowMillis}::bigint * interval '1 millisecond')),'[)')) ELSE '{}'::tstzmultirange END,
@@ -84,15 +76,16 @@
         ), daily_values AS (
             SELECT c.user_id,(i.at AT TIME ZONE 'UTC')::date AS day,c.upload_delta::numeric AS upload,
                 c.download_delta::numeric AS download,0::numeric AS upload_ack,0::numeric AS download_ack,
-                0::numeric AS loss,0::numeric AS seeding,0::numeric AS downloading
+                0::numeric AS loss,0::numeric AS seeding,0::numeric AS downloading,
+                0::bigint AS swarm_events,0::bigint AS ban_events,0::bigint AS observation_events
             FROM checkpoint c JOIN input i USING(user_id,session_key)
             UNION ALL
-            SELECT p.owner,(p.at AT TIME ZONE 'UTC')::date,0,0,c.download_delta,c.upload_delta,0,0,0
+            SELECT p.owner,(p.at AT TIME ZONE 'UTC')::date,0,0,c.download_delta,c.upload_delta,0,0,0,0,0,0
             FROM peers p JOIN checkpoint c USING(session_key)
             UNION ALL
             SELECT t.user_id,days.day,0,0,0,0,0,
                 CASE WHEN t.seed THEN t.sign*extract(epoch FROM upper(clipped.period)-lower(clipped.period)) ELSE 0 END,
-                CASE WHEN NOT t.seed THEN t.sign*extract(epoch FROM upper(clipped.period)-lower(clipped.period)) ELSE 0 END
+                CASE WHEN NOT t.seed THEN t.sign*extract(epoch FROM upper(clipped.period)-lower(clipped.period)) ELSE 0 END,0,0,0
             FROM time_delta t
             CROSS JOIN LATERAL (
                 SELECT (lower(t.period) AT TIME ZONE 'UTC')::date+n AS day
@@ -101,10 +94,16 @@
             CROSS JOIN LATERAL (SELECT t.period * tstzrange(days.day::timestamp AT TIME ZONE 'UTC',
                 (days.day+1)::timestamp AT TIME ZONE 'UTC','[)') AS period) clipped
             WHERE NOT isempty(clipped.period)
+            UNION ALL
+            SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,0,0,0,0,0,0,0,
+                CASE WHEN kind='swarm' THEN 1 ELSE 0 END,0,
+                CASE WHEN kind='observation' THEN 1 ELSE 0 END FROM events
         )
         SELECT user_id,day,SUM(upload) AS upload,SUM(download) AS download,
             SUM(upload_ack) AS upload_ack,SUM(download_ack) AS download_ack,SUM(loss) AS loss,
-            SUM(seeding) AS seeding,SUM(downloading) AS downloading
+            SUM(seeding) AS seeding,SUM(downloading) AS downloading,
+            SUM(swarm_events)::bigint AS swarm_events,SUM(ban_events)::bigint AS ban_events,
+            SUM(observation_events)::bigint AS observation_events
         FROM daily_values GROUP BY user_id,day
     </select>
     <select id="bans" resultMap="dailyTrafficDelta" affectData="true" flushCache="true" useCache="false">
@@ -119,11 +118,8 @@
             INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
             SELECT user_id,'ban',fingerprint,at FROM input
             UNION ALL SELECT owner,'observation',fingerprint,at FROM observed
+            ORDER BY 1,2,3
             ON CONFLICT DO NOTHING RETURNING user_id,kind,fingerprint,observed_at
-        ), daily AS (
-            INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
-            SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
-            ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
         )
         SELECT a.user_id,(a.observed_at AT TIME ZONE 'UTC')::date AS day,
             SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END) AS upload,
@@ -131,7 +127,9 @@
             SUM(CASE WHEN a.kind='observation' THEN i.download ELSE 0 END) AS upload_ack,
             SUM(CASE WHEN a.kind='observation' THEN i.upload ELSE 0 END) AS download_ack,
             SUM(CASE WHEN a.kind='ban' THEN i.upload ELSE 0 END) AS loss,
-            0::numeric AS seeding,0::numeric AS downloading
+            0::numeric AS seeding,0::numeric AS downloading,0::bigint AS swarm_events,
+            COUNT(*) FILTER (WHERE a.kind='ban') AS ban_events,
+            COUNT(*) FILTER (WHERE a.kind='observation') AS observation_events
         FROM added a JOIN (SELECT DISTINCT ON (fingerprint) * FROM input ORDER BY fingerprint) i USING(fingerprint)
         GROUP BY 1,2
     </select>
@@ -151,14 +149,33 @@
             upload_ack=d.upload_ack+EXCLUDED.upload_ack,download_ack=d.download_ack+EXCLUDED.download_ack,
             loss=d.loss+EXCLUDED.loss,seeding=d.seeding+EXCLUDED.seeding,downloading=d.downloading+EXCLUDED.downloading
     </insert>
-    <insert id="features">
-        WITH input(fingerprint,at) AS (VALUES <foreach collection="rows" item="r" separator=",">(#{r.key}::uuid,#{r.moment}::timestamptz)</foreach>), added AS (
-            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
-            SELECT a.owner,'feature',i.fingerprint,i.at FROM userapp a CROSS JOIN input i WHERE a.id=#{uid}
-            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
-        )
+    <!-- Aggregate across the whole report before batching these shared rows. -->
+    <insert id="upsertLifetimeTraffic">
+        INSERT INTO user_lifetime_traffic AS t(user_id,sent_self,received_self,sent_ack,received_ack,tracked_since,history_partial,updated_at)
+        SELECT user_id,SUM(upload),SUM(download),SUM(upload_ack),SUM(download_ack),now(),TRUE,now()
+        FROM (VALUES <foreach collection="rows" item="r" separator=",">
+            (#{r.userId}::bigint,#{r.upload}::numeric,#{r.download}::numeric,#{r.uploadAck}::numeric,#{r.downloadAck}::numeric)
+        </foreach>) AS v(user_id,upload,download,upload_ack,download_ack)
+        GROUP BY user_id HAVING SUM(upload+download+upload_ack+download_ack)>0 ORDER BY user_id
+        ON CONFLICT(user_id) DO UPDATE SET sent_self=t.sent_self+EXCLUDED.sent_self,
+            received_self=t.received_self+EXCLUDED.received_self,sent_ack=t.sent_ack+EXCLUDED.sent_ack,
+            received_ack=t.received_ack+EXCLUDED.received_ack,updated_at=EXCLUDED.updated_at
+    </insert>
+    <insert id="upsertCareerDaily">
         INSERT INTO user_career_daily AS d(user_id,day,kind,amount)
-        SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,kind,COUNT(*) FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
+        SELECT user_id,day,kind,SUM(amount) FROM (VALUES
+        <foreach collection="rows" item="r" separator=",">
+            (#{r.userId}::bigint,#{r.day}::date,#{r.kind}::text,#{r.amount}::bigint)
+        </foreach>) AS v(user_id,day,kind,amount)
+        GROUP BY user_id,kind,day ORDER BY user_id,kind,day
         ON CONFLICT(user_id,kind,day) DO UPDATE SET amount=d.amount+EXCLUDED.amount
     </insert>
+    <select id="features" resultType="com.ghostchu.btn.sparkle.mapper.CareerBatchMapper$CareerDailyDelta" affectData="true" flushCache="true" useCache="false">
+        WITH input(fingerprint,at) AS (VALUES <foreach collection="rows" item="r" separator=",">(#{r.key}::uuid,#{r.moment}::timestamptz)</foreach>), added AS (
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
+            SELECT a.owner,'feature',i.fingerprint,i.at FROM userapp a CROSS JOIN input i WHERE a.id=#{uid} ORDER BY i.fingerprint
+            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+        )
+        SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date AS day,kind,COUNT(*) AS amount FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
+    </select>
 </mapper>

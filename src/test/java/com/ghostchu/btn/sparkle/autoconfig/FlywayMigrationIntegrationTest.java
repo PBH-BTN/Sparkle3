@@ -124,6 +124,98 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void cleanupSkipsActiveWritersAndKeepsRefreshedRows() throws Exception {
+        try (var connection = connect(url, username, password); var sql = connection.createStatement()) {
+            for (String table : List.of("userapps_heartbeat", "swarm_tracker")) {
+                String time = table.equals("swarm_tracker") ? "last_time_seen" : "last_seen_at";
+                sql.execute("CREATE TABLE " + table + " (id bigint PRIMARY KEY, " + time + " timestamptz)");
+                sql.execute("INSERT INTO " + table + " VALUES (1, now()-interval '10 days'), (2, now()-interval '10 days'), (3, now())");
+            }
+        }
+        var configuration = new MybatisConfiguration(new Environment("cleanup", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        new MyBatisPlusConfig().configurationCustomizer().customize(configuration);
+        configuration.addMapper(com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper.class);
+        configuration.addMapper(com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper.class);
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var writer = connect(url, username, password); var sql = writer.createStatement();
+             var cleaner = factory.openSession(true)) {
+            writer.setAutoCommit(false);
+            sql.execute("UPDATE userapps_heartbeat SET last_seen_at=now() WHERE id=1");
+            sql.execute("UPDATE swarm_tracker SET last_time_seen=now() WHERE id=1");
+            cleaner.getConnection().createStatement().execute("SET statement_timeout = '2s'");
+            var cutoff = OffsetDateTime.now().minusDays(7);
+            var heartbeats = cleaner.getMapper(com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper.class);
+            var swarm = cleaner.getMapper(com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper.class);
+            assertEquals(1, heartbeats.deleteExpiredBatch(cutoff, 1000));
+            assertEquals(1, swarm.deleteExpiredBatch(cutoff, 1000));
+            writer.commit();
+            assertEquals(0, heartbeats.deleteExpiredBatch(cutoff, 1000));
+            assertEquals(0, swarm.deleteExpiredBatch(cutoff, 1000));
+        }
+    }
+
+    @Test
+    void profileUpdateLockDoesNotBlockForeignKeyChecks() throws Exception {
+        try (var connection = connect(url, username, password); var sql = connection.createStatement()) {
+            sql.execute("CREATE TABLE public.\"user\" (id bigint PRIMARY KEY, roles text[])");
+            sql.execute("INSERT INTO public.\"user\" VALUES (1, ARRAY['user'])");
+            sql.execute("CREATE TABLE test_child (user_id bigint REFERENCES public.\"user\"(id))");
+        }
+        var configuration = new MybatisConfiguration(new Environment("profile-lock", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.addMapper(UserMapper.class);
+        try (var session = new SqlSessionFactoryBuilder().build(configuration).openSession();
+             var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            assertEquals(1L, session.getMapper(UserMapper.class).selectForUpdate(1).getId());
+            executor.submit(() -> {
+                try (var connection = connect(url, username, password); var sql = connection.createStatement()) {
+                    sql.execute("SET statement_timeout = '2s'");
+                    sql.execute("INSERT INTO test_child VALUES (1)");
+                }
+                return null;
+            }).get(5, TimeUnit.SECONDS);
+            session.rollback();
+        }
+    }
+
+    @Test
+    void atomicPointAdjustmentsSerializeAndRejectOutOfRangeBalances() throws Exception {
+        try (var connection = connect(url, username, password); var sql = connection.createStatement()) {
+            sql.execute("CREATE TABLE public.\"user\" (id bigint PRIMARY KEY, score_bytes bigint NOT NULL)");
+            sql.execute("INSERT INTO public.\"user\" VALUES (1, 100), (2, 9223372036854775807)");
+        }
+        var configuration = new Configuration(new Environment("point-adjustments", new JdbcTransactionFactory(),
+                new UnpooledDataSource("org.postgresql.Driver", url, username, password)));
+        configuration.addMapper(com.ghostchu.btn.sparkle.mapper.PointsMapper.class);
+        var factory = new SqlSessionFactoryBuilder().build(configuration);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var start = new java.util.concurrent.CyclicBarrier(2);
+            var futures = IntStream.range(0, 2).mapToObj(ignored -> executor.submit(() -> {
+                try (var session = factory.openSession()) {
+                    start.await(5, TimeUnit.SECONDS);
+                    var result = session.getMapper(com.ghostchu.btn.sparkle.mapper.PointsMapper.class).adjustBalance(1, -80);
+                    session.commit();
+                    return result;
+                }
+            })).toList();
+            int successful = 0;
+            for (var future : futures) if (future.get(10, TimeUnit.SECONDS) != null) successful++;
+            assertEquals(1, successful);
+        }
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(com.ghostchu.btn.sparkle.mapper.PointsMapper.class);
+            assertEquals(20L, mapper.balance(1));
+            assertEquals(21L, mapper.adjustBalance(1, 1));
+            assertEquals(22L, mapper.adjustBalance(1, 1));
+            assertNull(mapper.adjustBalance(2, 1));
+            assertNull(mapper.adjustBalance(1, Long.MIN_VALUE));
+            assertNull(mapper.adjustBalance(999, 1));
+            assertEquals(Long.MAX_VALUE, mapper.balance(2));
+        }
+    }
+
+    @Test
     void timedSuspensionsPersistAndExpireInAdminRequests() throws Exception {
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {

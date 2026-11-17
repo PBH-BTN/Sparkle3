@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
@@ -36,9 +35,7 @@ public interface IUserappService extends IService<Userapp> {
 
     boolean deleteUserAppById(long id);
 
-    @Transactional
     @NotNull Userapp createUserAppForUser(Long userId, String comment, InetAddress creatorIp);
 
-    @Transactional
     void updateUserAppLastSeen(long id, String userAgent);
 }

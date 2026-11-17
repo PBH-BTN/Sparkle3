@@ -20,4 +20,13 @@ public interface UserAppsHeartbeatMapper extends BaseMapper<UserappsHeartbeat> {
     int upsert(UserappsHeartbeat userappsHeartbeat);
 
     int batchUpsert(@Param("list") List<UserappsHeartbeat> heartbeats);
+
+    @org.apache.ibatis.annotations.Delete("""
+            WITH expired AS (
+                SELECT id FROM userapps_heartbeat WHERE last_seen_at <= #{cutoff}
+                ORDER BY id LIMIT #{limit} FOR UPDATE SKIP LOCKED
+            )
+            DELETE FROM userapps_heartbeat h USING expired e WHERE h.id = e.id
+            """)
+    int deleteExpiredBatch(@Param("cutoff") java.time.OffsetDateTime cutoff, @Param("limit") int limit);
 }

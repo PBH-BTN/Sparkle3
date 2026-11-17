@@ -100,7 +100,7 @@ public class AccountDeletionFinalizer {
         String anonymousNickname = userId + "-userdeleted";
         String anonymousEmail = userId + "@userdeleted.pbh-btn.com";
         userappMapper.selectList(
-                new QueryWrapper<Userapp>().eq("owner", userId)
+                new QueryWrapper<Userapp>().eq("owner", userId).orderByAsc("id")
         ).forEach(application -> {
             if (application.getBannedAt() == null) application.setBannedAt(now);
             application.setBannedReason(UserAccountDeletionService.DELETED_APP_REASON)
@@ -115,6 +115,7 @@ public class AccountDeletionFinalizer {
                 new QueryWrapper<UserRel>()
                         .eq("bind_user_id", userId)
                         .eq("platform", "github")
+                        .orderByAsc("id")
         ).forEach(relation -> {
             relation.setPlatformUserId("0")
                     .setPlatformUserLogin(anonymousNickname)
@@ -125,6 +126,7 @@ public class AccountDeletionFinalizer {
                 new QueryWrapper<UserContactEmailDelivery>()
                         .and(query -> query.eq("sender_user_id", userId)
                                 .or().eq("recipient_user_id", userId))
+                        .orderByAsc("id")
         ).forEach(delivery -> {
             if (delivery.getSenderUserId() == userId) {
                 delivery.setSenderNickname(anonymousNickname)
@@ -180,12 +182,12 @@ public class AccountDeletionFinalizer {
                 .set(User::getBannedReason, userEntity.getBannedReason())
                 .set(User::getUnbanAt, null));
         userMapper.clearRolesForDeletedUser(userId);
+        lifetimeTrafficMapper.deleteCheckpoints(userId);
         careerMapper.deleteEvents(userId);
+        careerMapper.deleteTime(userId);
+        lifetimeTrafficMapper.deleteTotals(userId);
         careerMapper.deleteDaily(userId);
         careerMapper.deleteTrafficDaily(userId);
-        careerMapper.deleteTime(userId);
-        lifetimeTrafficMapper.deleteCheckpoints(userId);
-        lifetimeTrafficMapper.deleteTotals(userId);
         UserPrivacySettingsEntity privacy = privacyMapper.selectById(userId);
         if (privacy == null) {
             privacyMapper.insert(new UserPrivacySettingsEntity()

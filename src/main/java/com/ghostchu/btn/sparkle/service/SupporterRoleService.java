@@ -133,7 +133,11 @@ public class SupporterRoleService {
         do {
             batch = mapper.findCandidates(after, BATCH_SIZE);
             if (batch.isEmpty()) break;
-            granted += mapper.grantEligible(batch, required);
+            // Each conditional update commits immediately: do not hold several user rows
+            // while points settlement or account maintenance updates the same users.
+            for (Long userId : batch) {
+                granted += mapper.grantEligible(List.of(userId), required);
+            }
             after = batch.getLast();
         } while (batch.size() == BATCH_SIZE && !Thread.currentThread().isInterrupted());
 

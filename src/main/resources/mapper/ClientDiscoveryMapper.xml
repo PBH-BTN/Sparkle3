@@ -12,7 +12,7 @@
         ON CONFLICT (hash) DO NOTHING
     </insert>
 
-    <select id="batchInsertReturning" resultType="long">
+    <select id="batchInsertReturning" affectData="true" flushCache="true" useCache="false" resultType="long">
         INSERT INTO client_discovery (hash, peer_id, peer_client_name, found_at, found_userapps_id, client_type,
         client_semver)
         VALUES

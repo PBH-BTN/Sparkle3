@@ -52,7 +52,8 @@ class AfdianIntegrationServiceTest {
                     exchangeRateService,
                     ledgerService,
                     mock(org.springframework.context.ApplicationEventPublisher.class),
-                    emailBinding
+                    emailBinding,
+                    mock(org.springframework.transaction.PlatformTransactionManager.class)
             );
 
     @Test

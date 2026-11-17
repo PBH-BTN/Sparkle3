@@ -456,26 +456,29 @@ public class MemberPlatformService {
         syncAll();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public int recalculateTransactionBaseAmounts() throws BusinessException {
-        List<MemberTransaction> transactions = transactionMapper.selectList(null);
         String baseCurrency = exchangeRateService.baseCurrency();
-        for (MemberTransaction transaction : transactions) {
-            String currency = transaction.getCurrency() == null
-                    ? baseCurrency
-                    : transaction.getCurrency();
-            transaction.setAmountCny(exchangeRateService.convert(
-                    transaction.getAmount(),
-                    "CNY"
-            ));
-            transaction.setAmountBase(exchangeRateService.convert(
-                    transaction.getAmount(),
-                    currency
-            ));
-            transaction.setBaseCurrency(baseCurrency);
-            transactionMapper.updateById(transaction);
+        Long after = null;
+        int changed = 0;
+        while (true) {
+            var transactions = transactionMapper.selectList(new QueryWrapper<MemberTransaction>()
+                    .gt(after != null, "id", after).orderByAsc("id").last("LIMIT 200"));
+            if (transactions.isEmpty()) return changed;
+            for (MemberTransaction transaction : transactions) {
+                String currency = transaction.getCurrency() == null ? baseCurrency : transaction.getCurrency();
+                var values = new MemberTransaction()
+                        .setAmountCny(exchangeRateService.convert(transaction.getAmount(), "CNY"))
+                        .setAmountBase(exchangeRateService.convert(transaction.getAmount(), currency))
+                        .setBaseCurrency(baseCurrency);
+                // Conversion can fetch rates. Only the final conditional update holds row locks.
+                changed += transactionMapper.update(values, new QueryWrapper<MemberTransaction>()
+                        .eq("id", transaction.getId())
+                        .eq("amount", transaction.getAmount())
+                        .eq(transaction.getCurrency() != null, "currency", transaction.getCurrency())
+                        .isNull(transaction.getCurrency() == null, "currency"));
+            }
+            after = transactions.getLast().getId();
         }
-        return transactions.size();
     }
 
     public int syncAll() {

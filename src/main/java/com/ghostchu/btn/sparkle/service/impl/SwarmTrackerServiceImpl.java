@@ -98,25 +98,11 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
         OffsetDateTime threshold = OffsetDateTime.now().minus(dataRetentionTime, ChronoUnit.MILLIS);
         long deleted = 0;
         int lastDeleted;
-        do {
-            // Select IDs first, then delete by IDs
-            List<Long> idsToDelete = baseMapper.selectList(new LambdaQueryWrapper<SwarmTracker>()
-                    .select(SwarmTracker::getId)
-                    .le(SwarmTracker::getLastTimeSeen, threshold)
-                    .last("LIMIT 1000"))
-                    .stream()
-                    .map(SwarmTracker::getId)
-                    .toList();
-            if (idsToDelete.isEmpty()) {
-                lastDeleted = 0;
-            } else {
-                lastDeleted = baseMapper.deleteByIds(idsToDelete);
-                deleted += lastDeleted;
-                if (deleted % 10000 == 0) {
-                    log.info("Deleted {} expired swarm tracker data so far...", deleted);
-                }
-            }
-        } while (lastDeleted > 0);
+        for (int batch = 0; batch < 20; batch++) {
+            lastDeleted = baseMapper.deleteExpiredBatch(threshold, 1000);
+            deleted += lastDeleted;
+            if (lastDeleted < 1000) break;
+        }
         log.info("Completed scheduled cleanup. Total expired swarm tracker records deleted: {}", deleted);
     }
 //
@@ -179,7 +165,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     }
 
 
-    @Transactional
     @Override
     public void syncSwarm(long userAppId, long userId, @NotNull List<BtnSwarm> swarms) {
         var nowTime = OffsetDateTime.now();
@@ -251,51 +236,59 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             );
         }
 
-        if (!swarmMap.isEmpty()) {
-            this.baseMapper.batchUpsert(new ArrayList<>(swarmMap.values()));
-            careerIngestionService.swarmBatch(userId, new ArrayList<>(swarmMap.values()));
-            pointAwardContext.recordConfigured(
-                    userId,
-                    PointCategory.SWARM_TRACKER,
-                    swarmMap.size(),
-                    0
-            );
-        }
+        new org.springframework.transaction.support.TransactionTemplate(platformTransactionManager).executeWithoutResult(status -> {
+            if (!swarmMap.isEmpty()) {
+                var orderedRows = new ArrayList<>(swarmMap.values());
+                orderedRows.sort(java.util.Comparator.comparingLong(SwarmTracker::getUserappsId)
+                        .thenComparing(SwarmTracker::getUserDownloader)
+                        .thenComparingLong(SwarmTracker::getTorrentId)
+                        .thenComparing(row -> row.getPeerIp().getHostAddress())
+                        .thenComparingInt(SwarmTracker::getPeerPort));
+                this.baseMapper.batchUpsert(orderedRows);
+                careerIngestionService.swarmBatch(userId, orderedRows);
+                pointAwardContext.recordConfigured(
+                        userId,
+                        PointCategory.SWARM_TRACKER,
+                        swarmMap.size(),
+                        0
+                );
+            }
 
-        Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
-        for (SwarmTracker tracker : swarmMap.values()) {
-            TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
-                    tracker.getTorrentId(),
-                    ignored -> new TrafficDeltaAccumulator(
-                            torrents.getOrDefault(
-                                    tracker.getTorrentId(),
-                                    new TorrentRegistration(tracker.getTorrentId(), 0)
-                            ).size()
-                    )
-            );
-            accumulator.add(
-                    Math.max(0, tracker.getToPeerTrafficOffset()),
-                    Math.max(0, tracker.getFromPeerTrafficOffset())
-            );
-        }
-        List<SwarmTrafficDelta> deltas = trafficByTorrent.entrySet().stream()
-                .filter(entry -> entry.getValue().uploadBytes > 0
-                        || entry.getValue().downloadBytes > 0)
-                .map(entry -> new SwarmTrafficDelta()
-                        .setOccurredAt(nowTime)
-                        .setUserId(userId)
-                        .setUserappId(userAppId)
-                        .setTorrentId(entry.getKey())
-                        .setTorrentSize(entry.getValue().torrentSize)
-                        .setUploadBytes(entry.getValue().uploadBytes)
-                        .setDownloadBytes(entry.getValue().downloadBytes))
-                .toList();
-        if (!deltas.isEmpty()) {
-            swarmTrafficDeltaMapper.batchInsert(deltas);
-        }
-        if (observations != null) {
-            ipFlagService.observe(observations);
-        }
+            Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
+            for (SwarmTracker tracker : swarmMap.values()) {
+                TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
+                        tracker.getTorrentId(),
+                        ignored -> new TrafficDeltaAccumulator(
+                                torrents.getOrDefault(
+                                        tracker.getTorrentId(),
+                                        new TorrentRegistration(tracker.getTorrentId(), 0)
+                                ).size()
+                        )
+                );
+                accumulator.add(
+                        Math.max(0, tracker.getToPeerTrafficOffset()),
+                        Math.max(0, tracker.getFromPeerTrafficOffset())
+                );
+            }
+            List<SwarmTrafficDelta> deltas = trafficByTorrent.entrySet().stream()
+                    .filter(entry -> entry.getValue().uploadBytes > 0
+                            || entry.getValue().downloadBytes > 0)
+                    .map(entry -> new SwarmTrafficDelta()
+                            .setOccurredAt(nowTime)
+                            .setUserId(userId)
+                            .setUserappId(userAppId)
+                            .setTorrentId(entry.getKey())
+                            .setTorrentSize(entry.getValue().torrentSize)
+                            .setUploadBytes(entry.getValue().uploadBytes)
+                            .setDownloadBytes(entry.getValue().downloadBytes))
+                    .toList();
+            if (!deltas.isEmpty()) {
+                swarmTrafficDeltaMapper.batchInsert(deltas);
+            }
+            if (observations != null) {
+                ipFlagService.observe(observations);
+            }
+        });
     }
 
     /**

@@ -24,7 +24,6 @@ public class AdminBtnConfigService {
     private final BtnRuntimeConfigService runtimeConfigService;
     private final BtnDynamicScheduler dynamicScheduler;
 
-    @Transactional
     public BtnConfigView get() {
         ensureEntries();
         Map<String, ConfigEntry> entries = loadEntries();
@@ -68,7 +67,7 @@ public class AdminBtnConfigService {
                 requestedValues,
                 currentValues
         );
-        for (Map.Entry<String, String> entry : normalized.entrySet()) {
+        for (Map.Entry<String, String> entry : new java.util.TreeMap<>(normalized).entrySet()) {
             BtnConfigCatalog.Definition definition = BtnConfigCatalog.definition(entry.getKey());
             if (definition != null && definition.sensitive()) {
                 databaseConfigService.updateSensitive(

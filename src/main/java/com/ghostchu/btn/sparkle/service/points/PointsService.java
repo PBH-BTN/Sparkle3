@@ -225,29 +225,17 @@ public class PointsService {
             );
         }
 
-        Long lockedBalance = pointsMapper.lockUserBalance(userId);
-        if (lockedBalance == null) {
-            throw new BusinessException(HttpStatus.NOT_FOUND, "User not found");
+        Long adjustedBalance = pointsMapper.adjustBalance(userId, delta);
+        if (adjustedBalance == null) {
+            if (pointsMapper.balance(userId) == null) {
+                throw new BusinessException(HttpStatus.NOT_FOUND, "User not found");
+            }
+            throw new BusinessException(HttpStatus.BAD_REQUEST, delta < 0
+                    ? "The deduction exceeds the current point balance"
+                    : "Point balance would exceed the supported long range");
         }
-
-        long balanceBefore = lockedBalance;
-        long balanceAfter;
-        try {
-            balanceAfter = Math.addExact(balanceBefore, delta);
-        } catch (ArithmeticException exception) {
-            throw new BusinessException(
-                    HttpStatus.BAD_REQUEST,
-                    "Point balance would exceed the supported long range"
-            );
-        }
-        if (balanceAfter < 0) {
-            throw new BusinessException(
-                    HttpStatus.BAD_REQUEST,
-                    "The deduction exceeds the current point balance"
-            );
-        }
-
-        pointsMapper.setBalance(userId, balanceAfter);
+        long balanceAfter = adjustedBalance;
+        long balanceBefore = Math.subtractExact(balanceAfter, delta);
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("reason", normalizedReason);

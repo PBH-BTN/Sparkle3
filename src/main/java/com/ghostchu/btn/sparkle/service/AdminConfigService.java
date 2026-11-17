@@ -156,7 +156,7 @@ public class AdminConfigService {
         values.put(USER_CONTACT_EMAIL_SUBJECT_TEMPLATE,
                 normalized.userContactEmailSubjectTemplate());
         values.put(USER_CONTACT_EMAIL_BODY_TEMPLATE, normalized.userContactEmailBodyTemplate());
-        for (Map.Entry<String, String> entry : values.entrySet()) {
+        for (Map.Entry<String, String> entry : new java.util.TreeMap<>(values).entrySet()) {
             databaseConfigService.update(entry.getKey(), entry.getValue(), operatorId);
         }
         cached = normalized;

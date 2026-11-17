@@ -24,7 +24,8 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface UserMapper extends BaseMapper<User> {
-    @Select("SELECT * FROM \"user\" WHERE id = #{id} FOR UPDATE")
+    // Profile/role changes do not modify the primary key. Keep foreign-key checks compatible.
+    @Select("SELECT * FROM \"user\" WHERE id = #{id} FOR NO KEY UPDATE")
     @Results(id = "userWithRoles", value = @Result(column = "roles", property = "roles",
             javaType = String[].class, jdbcType = JdbcType.ARRAY, typeHandler = ArrayTypeHandler.class))
     User selectForUpdate(@Param("id") long id);

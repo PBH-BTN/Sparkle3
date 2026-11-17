@@ -166,7 +166,8 @@ public class HomepageStatisticsRefreshService {
             ));
         }
 
-        for (ModuleConfig config : update.modules()) {
+        for (ModuleConfig config : update.modules().stream()
+                .sorted(java.util.Comparator.comparing(ModuleConfig::module)).toList()) {
             updateConfigValue(config, operatorId);
         }
 

@@ -77,8 +77,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     private PointRulesService pointRulesService;
     @Autowired
     private BanSubmissionGuard banSubmissionGuard;
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
-    @Transactional
     @Override
     public void syncBanHistory(
             @NotNull String submitterIp,
@@ -101,7 +102,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             }
             return new BanSubmissionGuard.Candidate(ban, InetAddress.ofLiteral(ban.getPeerIp()), banAt);
         }).filter(Objects::nonNull).toList();
-        var list = banSubmissionGuard.filter(userAppId, candidates, nowTime).stream().map(candidate -> {
+        var prepared = new java.util.HashMap<BanSubmissionGuard.Candidate, BanHistory>();
+        for (var candidate : candidates) {
             var btnBan = candidate.ban();
             Map<String, Object> structuredDataMap = btnBan.getParsedStructuredData();
             if (structuredDataMap == null) {
@@ -115,7 +117,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     null,
                     null
             );
-            return new BanHistory()
+            prepared.put(candidate, new BanHistory()
                     .setInsertTime(nowTime)
                     .setPopulateTime(candidate.banAt())
                     .setUserappsId(userAppId)
@@ -133,57 +135,60 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setRule(btnBan.getRule())
                     .setDescription(btnBan.getDescription())
                     .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get())
-                    .setStructuredData(structuredDataMap);
-        }).toList();
-        if (list.isEmpty()) return;
-        this.baseMapper.insert(list, 1000);
-        careerIngestionService.bans(userId,list);
-        pointAwardContext.recordConfigured(
-                userId,
-                PointCategory.BAN_HISTORY,
-                list.size(),
-                0
-        );
-        long ruleHitCount = list.stream()
-                .filter(ban -> ban.getRule() != null && !ban.getRule().isBlank())
-                .count();
-        if (ruleHitCount > 0) {
+                    .setStructuredData(structuredDataMap));
+        }
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            var list = banSubmissionGuard.filter(userAppId, candidates, nowTime).stream().map(prepared::get).toList();
+            if (list.isEmpty()) return;
+            this.baseMapper.insert(list, 1000);
+            careerIngestionService.bans(userId,list);
             pointAwardContext.recordConfigured(
                     userId,
-                    PointCategory.RULE_HIT_IP,
-                    ruleHitCount,
+                    PointCategory.BAN_HISTORY,
+                    list.size(),
                     0
             );
-        }
-
-        long wastedUploadBytes = 0;
-        for (BanHistory ban : list) {
-            long traffic = ban.getToPeerTraffic();
-            if (traffic > 0) {
-                wastedUploadBytes = wastedUploadBytes > Long.MAX_VALUE - traffic
-                        ? Long.MAX_VALUE
-                        : wastedUploadBytes + traffic;
+            long ruleHitCount = list.stream()
+                    .filter(ban -> ban.getRule() != null && !ban.getRule().isBlank())
+                    .count();
+            if (ruleHitCount > 0) {
+                pointAwardContext.recordConfigured(
+                        userId,
+                        PointCategory.RULE_HIT_IP,
+                        ruleHitCount,
+                        0
+                );
             }
-        }
-        long wastedPoints = BigInteger.valueOf(wastedUploadBytes)
-                .multiply(BigInteger.valueOf(
-                        pointRulesService.points(PointCategory.WASTED_UPLOAD)
-                ))
-                .divide(BigInteger.valueOf(1_048_576L)
-                        .multiply(BigInteger.valueOf(
-                                pointRulesService.wastedUploadMib()
-                        )))
-                .min(BigInteger.valueOf(Long.MAX_VALUE))
-                .longValue();
-        if (wastedPoints > 0) {
-            pointAwardContext.record(
-                    userId,
-                    PointCategory.WASTED_UPLOAD,
-                    wastedPoints,
-                    list.size(),
-                    wastedUploadBytes
-            );
-        }
+
+            long wastedUploadBytes = 0;
+            for (BanHistory ban : list) {
+                long traffic = ban.getToPeerTraffic();
+                if (traffic > 0) {
+                    wastedUploadBytes = wastedUploadBytes > Long.MAX_VALUE - traffic
+                            ? Long.MAX_VALUE
+                            : wastedUploadBytes + traffic;
+                }
+            }
+            long wastedPoints = BigInteger.valueOf(wastedUploadBytes)
+                    .multiply(BigInteger.valueOf(
+                            pointRulesService.points(PointCategory.WASTED_UPLOAD)
+                    ))
+                    .divide(BigInteger.valueOf(1_048_576L)
+                            .multiply(BigInteger.valueOf(
+                                    pointRulesService.wastedUploadMib()
+                            )))
+                    .min(BigInteger.valueOf(Long.MAX_VALUE))
+                    .longValue();
+            if (wastedPoints > 0) {
+                pointAwardContext.record(
+                        userId,
+                        PointCategory.WASTED_UPLOAD,
+                        wastedPoints,
+                        list.size(),
+                        wastedUploadBytes
+                );
+            }
+        });
     }
 
     @Override

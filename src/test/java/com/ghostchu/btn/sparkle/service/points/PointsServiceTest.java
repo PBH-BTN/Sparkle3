@@ -18,6 +18,38 @@ import static org.mockito.Mockito.when;
 
 class PointsServiceTest {
     @Test
+    void adjustmentUsesReturnedBalanceForAuditWithoutAReadLock() throws Exception {
+        var mapper = mock(PointsMapper.class);
+        var service = new PointsService(mapper, new ObjectMapper(), mock(PointAwardContext.class),
+                mock(PointToggleService.class), mock(PointRulesService.class), mock(BtnRuntimeConfigService.class));
+        when(mapper.adjustBalance(7, -20)).thenReturn(80L);
+
+        org.junit.jupiter.api.Assertions.assertEquals(80, service.adjustByAdmin(7, 1, -20, "Correction"));
+
+        var payload = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(mapper).insertLedger(eq(7L), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), eq("ADMIN_ADJUSTMENT"), eq(-20L), eq(0L), eq(0L), eq(-20L), payload.capture());
+        var audit = new ObjectMapper().readTree(payload.getValue());
+        org.junit.jupiter.api.Assertions.assertEquals(100, audit.get("balanceBefore").asLong());
+        org.junit.jupiter.api.Assertions.assertEquals(80, audit.get("balanceAfter").asLong());
+        org.mockito.Mockito.verify(mapper, org.mockito.Mockito.never()).balance(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void refusedAdjustmentDoesNotWriteALedgerEntry() {
+        var mapper = mock(PointsMapper.class);
+        var service = new PointsService(mapper, new ObjectMapper(), mock(PointAwardContext.class),
+                mock(PointToggleService.class), mock(PointRulesService.class), mock(BtnRuntimeConfigService.class));
+        when(mapper.balance(7)).thenReturn(10L);
+        when(mapper.adjustBalance(7, -20)).thenReturn(null);
+        org.junit.jupiter.api.Assertions.assertThrows(com.ghostchu.btn.sparkle.exception.BusinessException.class,
+                () -> service.adjustByAdmin(7, 1, -20, "Correction"));
+        org.mockito.Mockito.verify(mapper).adjustBalance(7, -20);
+        org.mockito.Mockito.verify(mapper).balance(7);
+        org.mockito.Mockito.verifyNoMoreInteractions(mapper);
+    }
+
+    @Test
     void acquiresPointLocksInOrderBeforeWritingTheLedger() {
         var mapper = mock(PointsMapper.class);
         var config = mock(BtnRuntimeConfigService.class);

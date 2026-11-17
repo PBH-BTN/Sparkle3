@@ -61,8 +61,14 @@ class AiModerationServiceTest {
             settingsService,
             moderationClient,
             messageService,
-            dictionary
+            dictionary,
+            mock(org.springframework.transaction.PlatformTransactionManager.class)
     );
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowConditionalCommentUpdates() {
+        when(commentMapper.update(any(), any())).thenReturn(1);
+    }
 
     @BeforeAll
     static void initializeEntityMetadata() {
@@ -76,6 +82,17 @@ class AiModerationServiceTest {
         TableInfoHelper.initTableInfo(assistant, IpQueryComment.class);
         TableInfoHelper.initTableInfo(assistant, IpQueryCommentRevision.class);
         TableInfoHelper.initTableInfo(assistant, User.class);
+    }
+
+    @Test
+    void terminalFailureUsesTheSameContentBeforeJobOrderAsCompletion() {
+        var job = job(7L, 9L, 1L, "RUNNING").setAttemptCount(5).setMaxAttempts(5);
+
+        service.fail(job, new IllegalStateException("unavailable"));
+
+        var order = org.mockito.Mockito.inOrder(commentMapper, jobMapper);
+        order.verify(commentMapper).update(any(), any());
+        order.verify(jobMapper).update(any(), any());
     }
 
     @Test

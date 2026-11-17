@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.mapper;
 
+import org.apache.ibatis.annotations.Param;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
@@ -21,6 +23,14 @@ import java.util.List;
  * @since 2025-11-29
  */
 public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
+    @org.apache.ibatis.annotations.Delete("""
+            WITH expired AS (
+                SELECT id FROM swarm_tracker WHERE last_time_seen <= #{cutoff}
+                ORDER BY id LIMIT #{limit} FOR UPDATE SKIP LOCKED
+            )
+            DELETE FROM swarm_tracker s USING expired e WHERE s.id = e.id
+            """)
+    int deleteExpiredBatch(@Param("cutoff") java.time.OffsetDateTime cutoff, @Param("limit") int limit);
 
     void upsert(SwarmTracker swarm);
 

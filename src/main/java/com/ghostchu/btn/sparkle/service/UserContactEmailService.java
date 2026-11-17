@@ -13,7 +13,6 @@ import com.ghostchu.btn.sparkle.service.mail.SmtpMailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -31,22 +30,24 @@ public class UserContactEmailService {
     private final AdminConfigService adminConfigService;
     private final SmtpMailService smtpMailService;
     private final MailSettingsService mailSettingsService;
+    private final UserContactEmailReservationService reservations;
 
     public UserContactEmailService(
             UserContactEmailDeliveryMapper deliveryMapper,
             UserPublicProfileService publicProfileService,
             AdminConfigService adminConfigService,
             SmtpMailService smtpMailService,
-            MailSettingsService mailSettingsService
+            MailSettingsService mailSettingsService,
+            UserContactEmailReservationService reservations
     ) {
         this.deliveryMapper = deliveryMapper;
         this.publicProfileService = publicProfileService;
         this.adminConfigService = adminConfigService;
         this.smtpMailService = smtpMailService;
         this.mailSettingsService = mailSettingsService;
+        this.reservations = reservations;
     }
 
-    @Transactional
     public ContactEmailResult send(
             long senderUserId,
             long recipientUserId,
@@ -80,13 +81,6 @@ public class UserContactEmailService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Email content is required");
         }
 
-        lockSenderQuota(senderUserId);
-        int sentToday = sentToday(senderUserId);
-        if (sentToday >= DAILY_LIMIT) {
-            throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Daily contact email limit reached");
-        }
-
         RuntimeConfigView config = adminConfigService.get();
         String renderedSubject = renderTemplate(
                 config.userContactEmailSubjectTemplate(),
@@ -110,13 +104,12 @@ public class UserContactEmailService {
                 )
         );
 
-        sendPlainTextEmail(recipient.getEmail(), renderedSubject, renderedBody);
         String safeIp = truncate(senderIp, 64);
         if (safeIp != null && safeIp.isBlank()) {
             safeIp = null;
         }
         String safeUserAgent = truncate(sanitizeHeader(senderUserAgent), 500);
-        deliveryMapper.insert(new UserContactEmailDelivery()
+        var delivery = new UserContactEmailDelivery()
                 .setSenderUserId(sender.getId())
                 .setSenderNickname(sender.getNickname())
                 .setSenderEmail(sender.getEmail())
@@ -126,18 +119,17 @@ public class UserContactEmailService {
                 .setSubject(truncate(renderedSubject, 255))
                 .setSenderIp(safeIp)
                 .setSenderUserAgent(safeUserAgent)
-                .setSentAt(java.time.OffsetDateTime.now()));
+                .setSentAt(java.time.OffsetDateTime.now());
+        int remaining = reservations.reserve(delivery, DAILY_LIMIT);
+        try {
+            sendPlainTextEmail(recipient.getEmail(), renderedSubject, renderedBody);
+        } catch (BusinessException failure) {
+            deliveryMapper.deleteById(delivery.getId());
+            throw failure;
+        }
         log.info("User {} sent a contact email to user {} from {}",
                 sender.getId(), recipient.getId(), safeIp);
-        return new ContactEmailResult(true, DAILY_LIMIT - sentToday - 1);
-    }
-
-    private void lockSenderQuota(long senderUserId) {
-        deliveryMapper.lockKey("sparkle:user-contact-email:" + senderUserId);
-    }
-
-    private int sentToday(long senderUserId) {
-        return deliveryMapper.countToday(senderUserId);
+        return new ContactEmailResult(true, remaining);
     }
 
     private void sendPlainTextEmail(String recipient, String subject, String content)

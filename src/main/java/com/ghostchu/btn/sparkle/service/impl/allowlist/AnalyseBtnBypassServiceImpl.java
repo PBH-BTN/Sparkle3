@@ -43,7 +43,6 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
     @Autowired
     private AnalyseModuleConfigService moduleConfigService;
 
-    @Transactional
     public void analyseBtnBypass() {
         if (!moduleConfigService.isEnabled("btnbypass-userapps")) {
             return;

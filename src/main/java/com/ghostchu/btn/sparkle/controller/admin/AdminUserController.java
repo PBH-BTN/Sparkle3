@@ -276,10 +276,10 @@ public class AdminUserController {
                     "Delete this user's applications before deleting the account"
             );
         }
-        userRelMapper.delete(new QueryWrapper<UserRel>().eq("bind_user_id", id));
         if (!userService.removeById(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Unable to delete this user");
         }
+        userRelMapper.delete(new QueryWrapper<UserRel>().eq("bind_user_id", id));
     }
 
     private Map<Long, String> loadGitHubRelations(List<User> users) {

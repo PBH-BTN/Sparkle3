@@ -24,9 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,6 +40,7 @@ public class AiModerationService {
     private final OpenAiModerationClient moderationClient;
     private final UserMessageService messageService;
     private final ContentModerationService contentModeration;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     public boolean enabled() {
         return settingsService.get().enabled();
@@ -226,6 +225,10 @@ public class AiModerationService {
         String error = failure == null || failure.getMessage() == null
                 ? "Unknown AI moderation error"
                 : limit(failure.getMessage(), 2_000);
+        // Editors, completion and account deletion all write content before jobs.
+        if (finalFailure) {
+            applyFailure(job, error, now);
+        }
         jobMapper.update(null, new LambdaUpdateWrapper<AiModerationJob>()
                 .set(AiModerationJob::getStatus,
                         finalFailure ? "FAILED" : "PENDING")
@@ -241,14 +244,10 @@ public class AiModerationService {
                 .set(AiModerationJob::getUpdatedAt, now)
                 .eq(AiModerationJob::getId, job.getId())
                 .eq(AiModerationJob::getStatus, "RUNNING"));
-        if (finalFailure) {
-            applyFailure(job, error, now);
-        }
         log.warn("AI moderation job {} failed on attempt {}: {}",
                 job.getId(), attempt, error);
     }
 
-    @Transactional
     public int requeueAllComments() throws BusinessException {
         if (!enabled()) {
             throw new BusinessException(
@@ -256,10 +255,22 @@ public class AiModerationService {
                     "Enable AI moderation before starting a full review"
             );
         }
-        return jobMapper.requeueAllComments(maxAttempts());
+        int attempts = maxAttempts();
+        int queued = 0;
+        Long after = null;
+        while (true) {
+            var page = commentMapper.selectList(new QueryWrapper<IpQueryComment>()
+                    .select("id").isNull("deleted_at")
+                    .gt(after != null, "id", after).orderByAsc("id").last("LIMIT 200"));
+            if (page.isEmpty()) return queued;
+            for (var comment : page) {
+                // One atomic statement per comment; do not retain locks for a full-site review.
+                queued += jobMapper.requeueComment(comment.getId(), attempts);
+            }
+            after = page.getLast().getId();
+        }
     }
 
-    @Transactional
     public int retryFailed(String contentType) {
         return jobMapper.retryFailedJobs(
                 contentType == null || contentType.isBlank()
@@ -274,7 +285,6 @@ public class AiModerationService {
      * model was unreachable. Comments that already have an active job for the
      * current revision are left alone.
      */
-    @Transactional
     public int reauditOutstandingComments(int requestedLimit) {
         if (!enabled()) {
             return 0;
@@ -291,60 +301,33 @@ public class AiModerationService {
         if (candidates.isEmpty()) {
             return 0;
         }
-        List<Long> commentIds = candidates.stream()
-                .map(IpQueryComment::getId)
-                .toList();
-        Map<Long, AiModerationJob> latestJobs = new HashMap<>();
-        jobMapper.selectList(new QueryWrapper<AiModerationJob>()
-                        .eq("content_type", "COMMENT")
-                        .in("content_ref_id", commentIds)
-                        .orderByDesc("id"))
-                .forEach(job -> latestJobs.putIfAbsent(
-                        job.getContentRefId(),
-                        job
-                ));
-
-        OffsetDateTime now = OffsetDateTime.now();
         int queued = 0;
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
         for (IpQueryComment comment : candidates) {
-            if (queued >= limit) {
-                break;
-            }
-            long generation = comment.getReviewGeneration() == null
-                    ? 0
-                    : comment.getReviewGeneration();
-            AiModerationJob job = latestJobs.get(comment.getId());
-            boolean currentVersion = job != null
-                    && job.getContentVersion() != null
-                    && job.getContentVersion() == generation;
-            if (currentVersion) {
-                if ("PENDING".equals(job.getStatus())
-                        || "RUNNING".equals(job.getStatus())) {
-                    continue;
-                }
-                if ("FAILED".equals(job.getStatus())) {
-                    if (jobMapper.requeueFailedJob(
-                            job.getId(),
-                            settings.maxAttempts()
-                    ) == 0) {
-                        continue;
+            if (queued >= limit) break;
+            Boolean added = transaction.execute(status -> {
+                // Conditional content update is also the serialization point shared with editors.
+                if (!markCommentPending(comment, OffsetDateTime.now())) return false;
+                var latest = jobMapper.selectList(new QueryWrapper<AiModerationJob>()
+                        .eq("content_type", "COMMENT").eq("content_ref_id", comment.getId())
+                        .orderByDesc("id").last("LIMIT 1"));
+                var job = latest.isEmpty() ? null : latest.getFirst();
+                long generation = comment.getReviewGeneration() == null ? 0 : comment.getReviewGeneration();
+                if (job != null && job.getContentVersion() != null && job.getContentVersion() == generation) {
+                    if ("PENDING".equals(job.getStatus()) || "RUNNING".equals(job.getStatus())) return false;
+                    if ("FAILED".equals(job.getStatus())) {
+                        if (jobMapper.requeueFailedJob(job.getId(), settings.maxAttempts()) == 0) {
+                            status.setRollbackOnly();
+                            return false;
+                        }
+                        return true;
                     }
-                    markCommentPending(comment, now);
-                    queued++;
-                    continue;
                 }
-            }
-            insertJob(
-                    "COMMENT",
-                    comment.getId(),
-                    generation,
-                    comment.getAuthorUserId(),
-                    comment.getContent(),
-                    null,
-                    settings
-            );
-            markCommentPending(comment, now);
-            queued++;
+                insertJob("COMMENT", comment.getId(), generation, comment.getAuthorUserId(),
+                        comment.getContent(), null, settings);
+                return true;
+            });
+            if (Boolean.TRUE.equals(added)) queued++;
         }
         return queued;
     }
@@ -551,13 +534,16 @@ public class AiModerationService {
         return job.getId() == null ? 0 : job.getId();
     }
 
-    private void markCommentPending(IpQueryComment comment, OffsetDateTime now) {
-        commentMapper.update(null, new LambdaUpdateWrapper<IpQueryComment>()
+    private boolean markCommentPending(IpQueryComment comment, OffsetDateTime now) {
+        int updated = commentMapper.update(null, new LambdaUpdateWrapper<IpQueryComment>()
                 .set(IpQueryComment::getModerationStatus, "PENDING")
                 .set(IpQueryComment::getModerationReason, null)
                 .set(IpQueryComment::getUpdatedAt, now)
                 .eq(IpQueryComment::getId, comment.getId())
+                .eq(IpQueryComment::getReviewGeneration, comment.getReviewGeneration())
+                .isNull(IpQueryComment::getDeletedAt)
                 .in(IpQueryComment::getModerationStatus, "PENDING", "FAILED"));
+        if (updated == 0) return false;
         revisionMapper.update(null,
                 new LambdaUpdateWrapper<IpQueryCommentRevision>()
                         .set(IpQueryCommentRevision::getModerationStatus, "PENDING")
@@ -566,6 +552,7 @@ public class AiModerationService {
                         .eq(IpQueryCommentRevision::getRevision, comment.getRevision())
                         .in(IpQueryCommentRevision::getModerationStatus,
                                 "PENDING", "FAILED"));
+        return true;
     }
 
     private void notifyReplyIfNeeded(IpQueryComment comment) {

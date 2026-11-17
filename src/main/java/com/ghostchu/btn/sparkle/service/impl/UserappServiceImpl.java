@@ -16,7 +16,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
@@ -54,7 +53,6 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     }
 
     @Nullable
-    @Transactional
     public Userapp loginViaCredential(@NotNull String appId, @NotNull String appSecret, @Nullable String installationId, @NotNull InetAddress loginIp, @Nullable String userAgent) {
         boolean autoAccountAllowRegister = btnConfigService.booleanValue(
                 "userappAutoAccount",
@@ -144,7 +142,6 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     }
 
     @Override
-    @Transactional
     public @NotNull Userapp resetUserApplicationSecret(long id) {
         Userapp userapp = baseMapper.selectById(id);
         if (userapp == null)
@@ -156,13 +153,11 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
     }
 
     @Override
-    @Transactional
     public boolean deleteUserAppById(long id) {
         return baseMapper.deleteById(id) > 0;
     }
 
 
-    @Transactional
     @Override
     public @NotNull Userapp createUserAppForUser(Long userId, String comment, InetAddress creatorIp) {
         Userapp userapp = new Userapp();
@@ -177,7 +172,6 @@ public class UserappServiceImpl extends ServiceImpl<UserappMapper, Userapp> impl
         return userapp;
     }
 
-    @Transactional
     @Override
     public void updateUserAppLastSeen(long id, String userAgent) {
         baseMapper.updateUserAppLastThing(id, userAgent);

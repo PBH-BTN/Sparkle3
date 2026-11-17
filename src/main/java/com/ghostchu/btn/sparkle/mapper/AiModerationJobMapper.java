@@ -40,7 +40,7 @@ public interface AiModerationJobMapper extends BaseMapper<AiModerationJob> {
                     moderation_reason = NULL,
                     review_generation = review_generation + 1,
                     updated_at = now()
-                WHERE deleted_at IS NULL
+                WHERE id = #{commentId} AND deleted_at IS NULL
                 RETURNING id, review_generation, author_user_id, content
             )
             INSERT INTO ai_moderation_jobs (
@@ -52,7 +52,7 @@ public interface AiModerationJobMapper extends BaseMapper<AiModerationJob> {
                 content, 'PENDING', #{maxAttempts}, now()
             FROM updated
             """)
-    int requeueAllComments(@Param("maxAttempts") int maxAttempts);
+    int requeueComment(@Param("commentId") long commentId, @Param("maxAttempts") int maxAttempts);
 
     @Update("""
             UPDATE ai_moderation_jobs
