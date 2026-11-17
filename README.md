@@ -167,7 +167,7 @@ CSV 以分段压缩的 `.csv.xz` 文件交付。压缩大小达到阈值时保�
 V83 新增导出任务与审计表 `data_export_jobs`，记录操作时间、申请人、数据类别、行数、最终大小、
 IP、User-Agent 和结果。到期清理文件后仍保留审计记录。导出文件默认位于 `data/exports`，容器
 部署可挂载 `/app/data`，也可通过 `sparkle.exports.directory` 指定保存目录。多实例须使用同一数据库、
-Redis 和共享目录，目录需要支持原子重命名。反向代理应关闭该下载路径的响应缓冲和缓存，
+Redis 和共享目录，目录需要支持原子重命名。反向代理应关闭该下载路径的响应缓冲、缓存和二次压缩，并保留 Range、If-Range 及长度相关响应头，
 并从该路径的访问日志中省略查询串，避免记录下载鉴权参数。
 
 浏览器接口为 `GET /api/ui/exports/options`、`POST /api/ui/exports` 和
