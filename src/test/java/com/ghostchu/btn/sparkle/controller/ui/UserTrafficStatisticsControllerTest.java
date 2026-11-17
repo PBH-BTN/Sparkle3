@@ -13,8 +13,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -70,5 +72,38 @@ class UserTrafficStatisticsControllerTest {
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].metrics.averageLoss").value("10"))
                 .andExpect(jsonPath("$[0].metrics.totalLoss").doesNotExist());
+    }
+
+    @Test
+    void networkReturnsPlotValuesForTheRequestedRange() throws Exception {
+        var mapper = mock(UserTrafficStatisticsMapper.class);
+        var config = mock(AdminConfigService.class);
+        var users = mock(IUserService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new UserTrafficStatisticsController(
+                        new UserTrafficStatisticsService(mapper), config, users))
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver()).build();
+        var user = new User().setId(7L).setRole("user");
+        var access = new NetworkTrafficAccess(true, false, true, false, true);
+        when(users.getById(7L)).thenReturn(user);
+        when(config.homepageTrafficAccess(user)).thenReturn(access);
+        SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                new SparkleUserDetails(user, null), null, List.of()));
+        when(mapper.network(any(), any(), eq(access))).thenAnswer(invocation -> {
+            LocalDate from = invocation.getArgument(0);
+            LocalDate through = invocation.getArgument(1);
+            assertEquals(through.minusDays(6), from);
+            return List.of(
+                    Map.of("day", from.toString(), "upload", "9007199254740993", "seeding", "12.5", "totalLoss", "10"),
+                    Map.of("day", through.toString(), "upload", "2", "seeding", "0.25", "totalLoss", "20"));
+        });
+        mvc.perform(get("/api/ui/user/traffic/network?days=8")).andExpect(status().isBadRequest());
+        verifyNoInteractions(mapper);
+        mvc.perform(get("/api/ui/user/traffic/network?days=7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[1].metrics.upload").value("9007199254740995"))
+                .andExpect(jsonPath("$[1].metrics.seeding").value("12.75"))
+                .andExpect(jsonPath("$[0].metrics.totalLoss").value("10"))
+                .andExpect(jsonPath("$[1].metrics.totalLoss").value("20"))
+                .andExpect(jsonPath("$[1].metrics.uploadAck").doesNotExist());
     }
 }

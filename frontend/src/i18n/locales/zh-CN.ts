@@ -439,7 +439,7 @@ export default {
     networkTrafficLossChart: '日均拦截损失',
     networkTrafficAverageLoss: '平均拦截损失流量',
     networkTrafficAverageLossRatio: '平均拦截损失比例',
-    networkTrafficTotalLoss: '总计拦截损失流量',
+    networkTrafficTotalLoss: '每日拦截损失流量总计',
     statistics: {
       overviewTitle: '平台概览',
       overviewDescription: '快速查看 BTN 网络和用户应用的规模变化。',
