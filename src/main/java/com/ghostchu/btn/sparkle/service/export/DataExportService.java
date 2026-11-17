@@ -93,7 +93,7 @@ public class DataExportService {
                 : "导出文件已就绪，共 " + result.rows() + " 条记录。有效期至 " + expires + "。";
         if (result.truncated()) body += en ? " The export reached a limit." : " 导出已达到单次上限。";
         messages.publishSystemToUser(job.userId(), NotificationCategory.DATA_EXPORT,
-                en ? "Data export ready" : "数据导出已完成", body + "\n" + link, false);
+                en ? "Data export ready" : "数据导出已完成", body + "\n" + link, true);
         return true;
     }
 
@@ -104,7 +104,7 @@ public class DataExportService {
             messages.publishSystemToUser(job.userId(), NotificationCategory.DATA_EXPORT,
                     en ? "Data export failed" : "数据导出失败",
                     en ? "Your export could not be prepared. The export credit has been returned."
-                            : "未能准备导出文件，已返还本次导出次数。", false);
+                            : "未能准备导出文件，已返还本次导出次数。", true);
         }
     }
 

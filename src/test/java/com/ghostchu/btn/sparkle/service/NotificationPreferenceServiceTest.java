@@ -39,11 +39,21 @@ class NotificationPreferenceServiceTest {
             when(mapper.selectList(any())).thenReturn(List.of(row));
             when(mapper.selectOne(any())).thenReturn(row);
             NotificationPreference preference = service.preference(1L, category);
-            assertEquals(category != NotificationCategory.DATA_EXPORT, preference.emailEnabled());
-            assertEquals(category.isMandatory(), preference.inboxEnabled());
+            assertTrue(preference.emailEnabled());
+            assertEquals(category.isInboxRequired(), preference.inboxEnabled());
             assertEquals(preference, service.list(1L).stream()
                     .filter(item -> item.category() == category).findFirst().orElseThrow());
         }
+    }
+
+    @Test
+    void exportEmailCanBeDisabledWhileInboxStaysEnabled() {
+        when(mapper.selectOne(any())).thenReturn(new UserNotificationPreference()
+                .setCategory(NotificationCategory.DATA_EXPORT.name()).setInboxEnabled(false).setEmailEnabled(false));
+        var preference = service.preference(1L, NotificationCategory.DATA_EXPORT);
+        assertTrue(preference.inboxEnabled());
+        assertFalse(preference.emailEnabled());
+        assertFalse(preference.locked());
     }
 
     @Test

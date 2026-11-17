@@ -6,7 +6,7 @@ import java.util.Optional;
 public enum NotificationCategory {
     LEGAL_COMPLIANCE(true),
     ACCOUNT_SECURITY(true),
-    DATA_EXPORT(true),
+    DATA_EXPORT(false),
     CLIENT_SECURITY(false),
     MAJOR_ANNOUNCEMENT(false),
     DAILY_ANNOUNCEMENT(false),
@@ -19,6 +19,10 @@ public enum NotificationCategory {
 
     NotificationCategory(boolean mandatory) {
         this.mandatory = mandatory;
+    }
+
+    public boolean isInboxRequired() {
+        return mandatory || this == DATA_EXPORT;
     }
 
     public boolean isMandatory() {

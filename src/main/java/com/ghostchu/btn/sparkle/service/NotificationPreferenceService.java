@@ -36,7 +36,7 @@ public class NotificationPreferenceService {
             if (category.isMandatory() || value == null) {
                 preferences.add(NotificationPreference.defaults(category));
             } else {
-                preferences.add(new NotificationPreference(category, value.inboxEnabled(), value.emailEnabled(), false));
+                preferences.add(new NotificationPreference(category, category.isInboxRequired() || value.inboxEnabled(), value.emailEnabled(), false));
             }
         }
         return preferences;
@@ -64,7 +64,7 @@ public class NotificationPreferenceService {
         }
         return new NotificationPreference(
                 category,
-                Boolean.TRUE.equals(row.getInboxEnabled()),
+                category.isInboxRequired() || Boolean.TRUE.equals(row.getInboxEnabled()),
                 Boolean.TRUE.equals(row.getEmailEnabled()),
                 false
         );
@@ -77,7 +77,7 @@ public class NotificationPreferenceService {
     ) {
         for (NotificationCategory category : NotificationCategory.values()) {
             Boolean[] requested = updates.get(category);
-            boolean inbox = category.isMandatory()
+            boolean inbox = category.isInboxRequired()
                     || requested == null
                     || requested[0] == null
                     || requested[0];

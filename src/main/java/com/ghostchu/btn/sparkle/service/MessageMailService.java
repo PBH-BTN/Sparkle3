@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserMessage;
 import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.mail.MailDeliveryException;
 import com.ghostchu.btn.sparkle.service.mail.MailRuntimeSettings;
 import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
@@ -31,6 +32,7 @@ public class MessageMailService {
     private final IUserService userService;
     private final SmtpMailService smtpMailService;
     private final MailSettingsService mailSettingsService;
+    private final BtnRuntimeConfigService config;
 
     @MonitoredScheduledTask(id = "message-mail-dispatch", group = TaskGroup.MAINTENANCE,
             nameKey = "admin.tasks.items.message-mail-dispatch.name",
@@ -132,11 +134,21 @@ public class MessageMailService {
                 """.formatted(
                 recipient,
                 row.senderDisplayName(),
-                row.content(),
+                emailContent(row),
                 row.subject(),
                 replyHelp,
                 inboxHelp
         );
+    }
+
+    private String emailContent(MailRow row) {
+        if (!NotificationCategory.DATA_EXPORT.name().equals(row.category())) {
+            return row.content();
+        }
+        String content = row.content().replaceAll(
+                "(?m)^/api/ui/exports/[0-9a-f-]{36}/download[?]token=[A-Za-z0-9_-]+$", "").stripTrailing();
+        String root = config.text("rootUrls", "rootUrl");
+        return root == null || root.isBlank() ? content : content + "\n\n" + root.replaceAll("/+$", "") + "/user/inbox";
     }
 
     private void mark(long id, String status, String error, boolean sentAt) {

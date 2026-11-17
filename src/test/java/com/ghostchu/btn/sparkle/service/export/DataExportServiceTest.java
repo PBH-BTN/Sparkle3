@@ -44,7 +44,7 @@ class DataExportServiceTest {
         service.fail(job, expiredLease);
 
         verify(messages).publishSystemToUser(uid, NotificationCategory.DATA_EXPORT,
-                "数据导出失败", "未能准备导出文件，已返还本次导出次数。", false);
+                "数据导出失败", "未能准备导出文件，已返还本次导出次数。", true);
         verifyNoMoreInteractions(messages);
     }
 
