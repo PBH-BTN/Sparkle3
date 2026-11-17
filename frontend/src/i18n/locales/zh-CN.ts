@@ -435,6 +435,7 @@ export default {
     last24Hours: '24 小时',
     trafficWindow: '最近 {days} 天流量',
     networkTrafficTitle: 'BitTorrent 流量承载',
+    networkTrafficComparison: '汇报与确认流量',
     networkTrafficDescription: '按 UTC 日期累计 BTN 网络所有用户的流量和活动时长，拦截损失按日取平均。',
     networkTrafficLossChart: '日均拦截损失',
     networkTrafficAverageLoss: '平均拦截损失流量',
