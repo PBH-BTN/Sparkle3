@@ -449,6 +449,7 @@ export default {
     last24Hours: '24 hours',
     trafficWindow: 'Last {days} days',
     networkTrafficTitle: 'BitTorrent Network Traffic',
+    networkTrafficComparison: 'Reported and Confirmed Traffic',
     networkTrafficDescription: 'Cumulative traffic and activity time across all BTN users, with daily average blocking losses. Dates use UTC.',
     networkTrafficLossChart: 'Daily Average Blocking Losses',
     networkTrafficAverageLoss: 'Average Traffic Lost Before Bans',
