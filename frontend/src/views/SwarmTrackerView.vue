@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import type { LineSeriesOption } from 'echarts/charts'
 import type { EChartsCoreOption } from 'echarts/core'
 import type { TableColumnData } from '@arco-design/web-vue'
 import { IconRefresh, IconSearch } from '@arco-design/web-vue/es/icon'
@@ -165,16 +166,30 @@ const peerPieOption = computed<EChartsCoreOption>(() =>
 )
 
 const peerDistributionOption = computed<EChartsCoreOption>(() => {
-  const categories = (insights.value?.categories ?? []).map((value) =>
-    formatDate(value),
-  )
-  return stackedAreaChartOption(
-    categories,
-    (insights.value?.series ?? []).map((item) => ({
+  const data = insights.value
+  if (!data?.categories.length) return stackedAreaChartOption([], [])
+  const timestamps = data.categories.map(value => Date.parse(value))
+  const first = timestamps[0]!
+  const last = timestamps.at(-1)!
+  const bucketHours = data.days === 1 ? 1 : data.days === 3 ? 3 : 6
+  const bucketMillis = bucketHours * 3_600_000
+  const buckets = Array.from({ length: (last - first) / bucketMillis + 1 }, (_, index) => first + index * bucketMillis)
+  const sourceIndexes = new Map(timestamps.map((timestamp, index) => [timestamp, index]))
+  const option = stackedAreaChartOption(
+    buckets.map(bucket => formatDate(new Date(bucket).toISOString())),
+    data.series.map(item => ({
       name: item.torrentId,
-      values: item.values,
+      values: buckets.map(bucket => item.values[sourceIndexes.get(bucket) ?? -1] ?? null),
     })),
   )
+  if (buckets.length !== timestamps.length || buckets.length === 1) {
+    option.series = (option.series as LineSeriesOption[]).map(series => ({
+      ...series,
+      symbol: 'circle',
+      symbolSize: 4,
+    }))
+  }
+  return option
 })
 
 function reset() {
