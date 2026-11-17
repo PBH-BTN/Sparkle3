@@ -49,7 +49,7 @@ class DailyTrafficPostgresIntegrationTest {
                 statement.execute("CREATE TEMP TABLE userapp(id bigint,owner bigint)");
                 statement.execute("CREATE TEMP TABLE userapps_heartbeat(userapp_id bigint,ip inet,first_seen_at timestamptz,last_seen_at timestamptz)");
                 statement.execute("CREATE TEMP TABLE user_account_deletion_request(user_id bigint,status text)");
-                statement.execute("CREATE TEMP TABLE user_career_events(user_id bigint,kind text,fingerprint uuid,observed_at timestamptz,reporter_id bigint,PRIMARY KEY(user_id,kind,fingerprint))");
+                statement.execute("CREATE TEMP TABLE user_career_events(user_id bigint,kind text,fingerprint uuid,observed_at timestamptz,PRIMARY KEY(user_id,kind,fingerprint))");
                 statement.execute("CREATE TEMP TABLE user_career_daily(user_id bigint,day date,kind text,amount bigint,PRIMARY KEY(user_id,kind,day))");
                 statement.execute("CREATE TEMP TABLE user_career_torrent_time(user_id bigint,torrent_id bigint,last_seen timestamptz,was_seeding boolean,seeding tstzmultirange DEFAULT '{}',downloading tstzmultirange DEFAULT '{}',PRIMARY KEY(user_id,torrent_id))");
                 statement.execute("CREATE TEMP TABLE user_lifetime_traffic_checkpoint(user_id bigint,session_key uuid,uploaded bigint,downloaded bigint,upload_delta bigint,download_delta bigint,PRIMARY KEY(user_id,session_key))");
@@ -86,6 +86,20 @@ class DailyTrafficPostgresIntegrationTest {
                 ban.put("ip","192.0.2.1"); ban.put("upload",20L); ban.put("download",10L);
                 mapper.upsertDailyTraffic(mapper.bans(1,List.of(ban),600000));
                 assertTrue(mapper.bans(1,List.of(ban),600000).isEmpty());
+                try (var statement = connection.createStatement();
+                     var result = statement.executeQuery("""
+                             SELECT user_id, day, amount FROM user_career_daily WHERE kind = 'observation' ORDER BY day
+                             """)) {
+                    assertTrue(result.next());
+                    assertEquals(2L, result.getLong("user_id"));
+                    assertEquals("2026-01-01", result.getString("day"));
+                    assertEquals(1L, result.getLong("amount"));
+                    assertTrue(result.next());
+                    assertEquals(2L, result.getLong("user_id"));
+                    assertEquals("2026-01-02", result.getString("day"));
+                    assertEquals(2L, result.getLong("amount"));
+                    assertFalse(result.next());
+                }
                 try (var statement=connection.createStatement();var result=statement.executeQuery("SELECT * FROM user_traffic_daily WHERE user_id=1 ORDER BY day")) {
                     assertTrue(result.next());
                     assertEquals("100",result.getString("upload"));

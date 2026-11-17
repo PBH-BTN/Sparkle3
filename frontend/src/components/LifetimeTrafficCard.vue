@@ -73,7 +73,6 @@ const shareRatio = computed(() => {
       <CareerMetricCard v-for="metric in trafficCards" :key="metric.field" :label="t(metric.label)" :description="t('careerHelp.' + metric.hint)" :value="metric.value" :unit="metric.unit" inline-unit :color="metric.color" />
       <CareerMetricCard v-if="traffic" :label="t('career.shareRatio')" :description="t('careerHelp.shareRatio')" :value="shareRatio" :unit="t('career.shareRatioHint')" color="purple" />
     </div>
-    <p v-if="career?.lastObservedAt" class="traffic-note">{{ t('career.latest', { time: formatDate(career.lastObservedAt), name: career.observerName || t('common.anonymous') }) }}</p>
     <template v-if="traffic">
       <p v-if="empty" class="traffic-note">{{ t('lifetimeTraffic.empty') }}</p>
       <p class="traffic-note">

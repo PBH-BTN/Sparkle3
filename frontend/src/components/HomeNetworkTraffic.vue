@@ -89,9 +89,14 @@ function chartOption(keys: Metric[], unit: 'bytes' | 'hours' | 'loss') {
 }
 
 const charts = computed(() => {
+  const trafficKeys: Metric[] = []
+  if (props.showReported) trafficKeys.push('upload', 'download')
+  if (props.showConfirmed) trafficKeys.push('uploadAck', 'downloadAck')
+  const trafficTitle = props.showReported && props.showConfirmed
+    ? 'home.networkTrafficComparison'
+    : props.showReported ? 'home.networkTrafficReportedChart' : 'home.networkTrafficConfirmedChart'
   return [
-    { visible: props.showReported, title: 'home.networkTrafficReportedChart', keys: ['upload', 'download'], unit: 'bytes' },
-    { visible: props.showConfirmed, title: 'home.networkTrafficConfirmedChart', keys: ['uploadAck', 'downloadAck'], unit: 'bytes' },
+    { visible: trafficKeys.length > 0, title: trafficTitle, keys: trafficKeys, unit: 'bytes' },
     { visible: props.showActivity, title: 'home.networkTrafficActivityChart', keys: ['seeding', 'downloading'], unit: 'hours' },
     { visible: props.showAverageLoss, title: 'home.networkTrafficLossChart', keys: ['averageLoss', 'lossRatio'], unit: 'loss' },
     { visible: props.showTotalLoss, title: 'home.networkTrafficTotalLoss', keys: ['totalLoss'], unit: 'bytes' },
