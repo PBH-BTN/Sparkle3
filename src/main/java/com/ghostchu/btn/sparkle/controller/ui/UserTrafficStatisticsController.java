@@ -36,7 +36,6 @@ public class UserTrafficStatisticsController {
         if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         var access = config.homepageTrafficAccess(users.getById(principal.getUserId()));
         if (!access.traffic() && !access.totalLoss()) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        // Older clients accumulate the daily values themselves.
         return days == null ? service.network(access) : service.network(access, days);
     }
 }
