@@ -7,7 +7,7 @@ public final class MonitoredTaskOutcome implements AutoCloseable {
     private String failure;
     private String skipped;
 
-    MonitoredTaskOutcome() {
+    public MonitoredTaskOutcome() {
         previous = CURRENT.get();
         CURRENT.set(this);
     }
@@ -26,7 +26,7 @@ public final class MonitoredTaskOutcome implements AutoCloseable {
         }
     }
 
-    void finish(TaskStatusService.TaskExecution execution) {
+    public void finish(TaskStatusService.TaskExecution execution) {
         if (failure != null) {
             execution.failure(new IllegalStateException(failure));
         } else if (skipped != null) {

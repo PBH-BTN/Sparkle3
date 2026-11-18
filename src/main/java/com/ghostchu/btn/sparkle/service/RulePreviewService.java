@@ -64,24 +64,33 @@ public class RulePreviewService {
     }
 
     List<RulePreviewSection> ipSections(boolean separateManualRules) {
+        return List.of(
+                new RulePreviewSection("ip_denylist", ipDenyEntries(separateManualRules, false)),
+                new RulePreviewSection("ip_allowlist", providerEntries(allowListProviders))
+        );
+    }
+
+    List<RulePreviewEntry> ipDenyEntries(boolean separateManualRules, boolean requireComplete) {
         List<RulePreviewEntry> denyEntries = new ArrayList<>(providerEntries(
                 separateManualRules
                         ? denyListProviders.stream()
                                 .filter(provider -> !"manual".equals(providerSource(provider)))
                                 .toList()
-                        : denyListProviders
+                        : denyListProviders,
+                requireComplete
         ));
         if (separateManualRules) {
             ruleService.getRulesByType("ip_denylist").forEach(rule ->
                     denyEntries.add(new RulePreviewEntry("manual", rule.getCategory(), rule.getContent())));
         }
-        return List.of(
-                new RulePreviewSection("ip_denylist", List.copyOf(denyEntries)),
-                new RulePreviewSection("ip_allowlist", providerEntries(allowListProviders))
-        );
+        return List.copyOf(denyEntries);
     }
 
     List<RulePreviewEntry> providerEntries(List<? extends Object> providers) {
+        return providerEntries(providers, false);
+    }
+
+    private List<RulePreviewEntry> providerEntries(List<?> providers, boolean requireComplete) {
         return providers.stream()
                 .sorted(Comparator.comparing(this::providerSource))
                 .map(provider -> {
@@ -98,6 +107,10 @@ public class RulePreviewService {
                                 content == null ? "" : content
                         );
                     } catch (Exception exception) {
+                        if (requireComplete) {
+                            throw new IllegalStateException("Unable to load IP deny rules from "
+                                    + providerSource(provider));
+                        }
                         log.warn("Unable to load rule preview provider {}: {}",
                                 providerSource(provider),
                                 exception.getMessage());

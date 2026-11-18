@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service.impl.allowlist;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.Userapp;
@@ -21,11 +22,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -42,6 +46,8 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
     private IUserService iUserService;
     @Autowired
     private AnalyseModuleConfigService moduleConfigService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public void analyseBtnBypass() {
         if (!moduleConfigService.isEnabled("btnbypass-userapps")) {
@@ -51,6 +57,7 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
         OffsetDateTime start = OffsetDateTime.now().minusHours(1);
         OffsetDateTime end = OffsetDateTime.now();
         StringBuilder stringBuilder = new StringBuilder();
+        Map<String, Set<Long>> applicationsByIp = new LinkedHashMap<>();
         List<Userapp> bypassedUserAppsId = userappService.list(new LambdaQueryWrapper<Userapp>()
                         .eq(Userapp::getBtnBypass, true)
                         .apply(SuspensionStatus.NOT_SUSPENDED_SQL))
@@ -61,13 +68,25 @@ public class AnalyseBtnBypassServiceImpl extends AbstractAnalyseRuleServiceImpl 
             if(user == null) continue;
             var heartBeats = iUserappsHeartbeatService.fetchHeartBeatsByUserAppIdInTimeRange(uapp.getId(), start, end);
             for (UserappsHeartbeat heartBeat : heartBeats) {
+                String address = IPAddressUtil.getIPAddress(heartBeat.getIp().getHostAddress()).toCompressedString();
                 stringBuilder.append("#[BTN-允许列表] 用户名称: ").append(user.getNickname()).append(" (UID=").append(user.getId()).append("), 应用程序名称: ").append(uapp.getComment()).append(", 同步时间: ").append(heartBeat.getLastSeenAt().toString()).append("; 如需更多信息，请参见：https://bbs.pbh-btn.com/d/58").append("\n");
-                stringBuilder.append(IPAddressUtil.getIPAddress(heartBeat.getIp().getHostAddress()).toCompressedString()).append("\n");
+                stringBuilder.append(address).append("\n");
+                applicationsByIp.computeIfAbsent(address, ignored -> new LinkedHashSet<>()).add(uapp.getId());
                 totalIpsAdded++;
             }
         }
-        redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VALUE.getKey(), stringBuilder.toString());
-        redisTemplate.opsForValue().set(RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VERSION.getKey(), Hashing.crc32c().hashString(stringBuilder.toString(), StandardCharsets.UTF_8).toString());
+        String content = stringBuilder.toString();
+        try {
+            redisTemplate.opsForValue().multiSet(Map.of(
+                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VALUE.getKey(), content,
+                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VERSION.getKey(),
+                    Hashing.crc32c().hashString(content, StandardCharsets.UTF_8).toString(),
+                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_OWNERS.getKey(),
+                    objectMapper.writeValueAsString(applicationsByIp)
+            ));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to encode BTN Bypass application associations");
+        }
         log.info("Finished analysis of BTN-Bypassing user applications, total {} ips added.", totalIpsAdded);
     }
 

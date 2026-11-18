@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
+import com.ghostchu.btn.sparkle.service.tasks.MonitoredTaskOutcome;
+
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.points.PointToggleService;
 import com.ghostchu.btn.sparkle.service.points.PointsDynamicService;
@@ -182,12 +184,13 @@ public class AnalyseModuleScheduler {
         );
         long startedNanos = System.nanoTime();
         log.info("Starting analysis module {} ({})", moduleId, trigger);
-        boolean executed = false;
-        try {
+        try (var outcome = new MonitoredTaskOutcome()) {
             if (configService.isEnabled(moduleId)) {
                 runner.run();
-                executed = true;
+            } else {
+                MonitoredTaskOutcome.skipped("Analysis module is disabled");
             }
+            outcome.finish(execution);
         } catch (Exception exception) {
             execution.failure(exception);
             log.error("Analysis module {} failed", moduleId, exception);
@@ -199,11 +202,6 @@ public class AnalyseModuleScheduler {
                     trigger,
                     java.time.Duration.ofNanos(System.nanoTime() - startedNanos).toMillis()
             );
-        }
-        if (executed) {
-            execution.success();
-        } else {
-            execution.skipped("Analysis module is disabled");
         }
     }
 

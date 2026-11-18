@@ -1,6 +1,10 @@
 package com.ghostchu.btn.sparkle.autoconfig;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ghostchu.btn.sparkle.constants.NotificationCategory;
+import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
@@ -13,6 +17,7 @@ import com.ghostchu.btn.sparkle.controller.ping.dto.BtnBan;
 import com.ghostchu.btn.sparkle.controller.ui.HomepageIpFlagController;
 import com.ghostchu.btn.sparkle.converter.InetAddressTypeHandler;
 import com.ghostchu.btn.sparkle.entity.User;
+import com.ghostchu.btn.sparkle.entity.Rule;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
@@ -20,8 +25,16 @@ import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
 import com.ghostchu.btn.sparkle.mapper.SupporterRoleMapper;
 import com.ghostchu.btn.sparkle.mapper.UserMapper;
+import com.ghostchu.btn.sparkle.mapper.UserMessageMapper;
 import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
+import com.ghostchu.btn.sparkle.service.BtnBypassConflictAlertService;
+import com.ghostchu.btn.sparkle.service.IRuleService;
+import com.ghostchu.btn.sparkle.service.NotificationPreference;
+import com.ghostchu.btn.sparkle.service.NotificationPreferenceService;
+import com.ghostchu.btn.sparkle.service.RulePreviewService;
+import com.ghostchu.btn.sparkle.service.UserMessageService;
 import com.ghostchu.btn.sparkle.service.IUserService;
 import com.ghostchu.btn.sparkle.service.IUserappService;
 import com.ghostchu.btn.sparkle.service.UserPrivacyService;
@@ -41,16 +54,24 @@ import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -121,6 +142,74 @@ class FlywayMigrationIntegrationTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP DATABASE " + database);
         }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void btnBypassConflictsRetryAtomicallyAndNotifyAgainAfterResolution() {
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        var dataSource = new DriverManagerDataSource(url, username, password);
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("""
+                INSERT INTO "user" (id, email, nickname, roles, avatar, register_at, last_login_at)
+                VALUES (10, 'admin@example.invalid', 'Admin', ARRAY['user','admin'], '/avatar', now(), now()),
+                       (11, 'mod@example.invalid', 'Moderator', ARRAY['user','moderator'], '/avatar', now(), now()),
+                       (12, 'owner@example.invalid', 'Owner', ARRAY['user'], '/avatar', now(), now())
+                """);
+        var users = mock(IUserService.class);
+        var owner = new User().setId(12L).setEmail("owner@example.invalid").setNickname("Owner");
+        when(users.listByIds(List.of(10L, 11L, 12L))).thenReturn(List.of(
+                new User().setId(10L).setRoles(new String[]{"user", "admin"}),
+                new User().setId(11L).setRoles(new String[]{"user", "moderator"}),
+                owner));
+        when(users.listByIds(List.of(12L))).thenReturn(List.of(owner));
+        var apps = mock(IUserappService.class);
+        when(apps.listByIds(java.util.Set.of(21L))).thenReturn(List.of(
+                new Userapp().setId(21L).setAppId("test-app").setOwner(12L).setBtnBypass(true)));
+        var moduleConfig = mock(AnalyseModuleConfigService.class);
+        when(moduleConfig.textValue("btnbypass-conflict-alert", "recipient-uids", "")).thenReturn("10,11,12");
+        when(moduleConfig.isEnabled("btnbypass-userapps")).thenReturn(true);
+        RedisTemplate<String, String> redis = mock(RedisTemplate.class);
+        ValueOperations<String, String> redisValues = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(redisValues);
+        when(redisValues.get(RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_OWNERS.getKey()))
+                .thenReturn("{\"192.0.2.10\":[21]}");
+        var manualRules = mock(IRuleService.class);
+        var denyRule = new Rule().setCategory("test deny").setContent("192.0.2.0/24");
+        when(manualRules.getRulesByType("ip_denylist")).thenReturn(List.of(denyRule));
+        var preferences = mock(NotificationPreferenceService.class);
+        var enabled = new NotificationPreference(NotificationCategory.ACCOUNT_SECURITY, true, true, true);
+        when(preferences.preference(10L, NotificationCategory.ACCOUNT_SECURITY)).thenReturn(enabled);
+        when(preferences.preference(11L, NotificationCategory.ACCOUNT_SECURITY))
+                .thenThrow(new IllegalStateException("Simulated temporary delivery failure")).thenReturn(enabled);
+        var mybatis = new MybatisConfiguration(new Environment("bypass", new SpringManagedTransactionFactory(), dataSource));
+        new MyBatisPlusConfig().configurationCustomizer().customize(mybatis);
+        mybatis.addMapper(UserMessageMapper.class);
+        var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(mybatis));
+        var messaging = new UserMessageService(session.getMapper(UserMessageMapper.class), users, null, preferences, null);
+        var alerts = new BtnBypassConflictAlertService(moduleConfig, redis, new ObjectMapper(),
+                new RulePreviewService(List.of(), List.of(), manualRules), apps, users, messaging, jdbc);
+        var transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        Runnable scan = () -> transaction.executeWithoutResult(status -> alerts.scan());
+
+        assertThrows(IllegalStateException.class, scan::run);
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM btn_bypass_conflict_alerts", Integer.class));
+        scan.run();
+        scan.run();
+        assertEquals(List.of(10L, 11L), jdbc.queryForList("""
+                SELECT recipient_user_id FROM user_messages WHERE inbox_visible AND NOT email_requested
+                ORDER BY recipient_user_id
+                """, Long.class));
+        String body = jdbc.queryForObject("SELECT content FROM user_messages WHERE recipient_user_id = 10", String.class);
+        assertTrue(body.contains("test-app") && body.contains("ID：21") && body.contains("UID：12"));
+        assertTrue(body.contains("Owner") && body.contains("owner@example.invalid") && body.contains("test deny"));
+        when(manualRules.getRulesByType("ip_denylist")).thenReturn(List.of());
+        scan.run();
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM btn_bypass_conflict_alerts", Integer.class));
+        when(manualRules.getRulesByType("ip_denylist")).thenReturn(List.of(denyRule));
+        scan.run();
+        assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
     }
 
     @Test
@@ -1088,7 +1177,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("84", latest.info().current().getVersion().getVersion());
+        assertEquals("85", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

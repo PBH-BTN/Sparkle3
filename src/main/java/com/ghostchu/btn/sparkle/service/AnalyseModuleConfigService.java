@@ -81,6 +81,11 @@ public class AnalyseModuleConfigService {
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 */20 * * * *")
             ),
+            module("btnbypass-conflict-alert", "btnbypass-conflict-alert",
+                    bool("enabled", "enabled", true),
+                    cron("schedule", "schedule", "0 */5 * * * *"),
+                    field("recipient-uids", "recipient-uids", "uid-list", "")
+            ),
             module("points-dynamic", "points-dynamic",
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 5 * * * *")
@@ -178,7 +183,8 @@ public class AnalyseModuleConfigService {
             ),
             "btnbypass-userapps", List.of(
                     RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VALUE,
-                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VERSION
+                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_VERSION,
+                    RedisKeyConstant.ANALYSE_BTN_BYPASS_USERAPPS_OWNERS
             )
     );
 
@@ -447,12 +453,29 @@ public class AnalyseModuleConfigService {
                     if (value.isBlank()) throw new IllegalArgumentException();
                     yield value;
                 }
+                case "uid-list" -> recipientUids(value).stream()
+                        .map(String::valueOf)
+                        .collect(java.util.stream.Collectors.joining(","));
                 default -> throw new IllegalArgumentException();
             };
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(HttpStatus.BAD_REQUEST,
                     "Invalid value for module field " + field.field());
         }
+    }
+
+    static List<Long> recipientUids(String value) {
+        return java.util.Arrays.stream(value.split("[\\s,，]+"))
+                .filter(token -> !token.isEmpty())
+                .map(token -> {
+                    long uid = Long.parseLong(token);
+                    if (uid <= 0) {
+                        throw new IllegalArgumentException("UID must be positive");
+                    }
+                    return uid;
+                })
+                .distinct()
+                .toList();
     }
 
     private void clearOutput(String moduleId) {

@@ -32,6 +32,7 @@ public enum RedisKeyConstant {
     ANALYSE_GEOIP_CITY_BLACKLIST_VALUE("sparkle:analyse:geoip_city_blacklist:value"),
     ANALYSE_BTN_BYPASS_USERAPPS_VERSION("sparkle:analyse:btn_bypass_userapps:version"),
     ANALYSE_BTN_BYPASS_USERAPPS_VALUE("sparkle:analyse:btn_bypass_userapps:value"),
+    ANALYSE_BTN_BYPASS_USERAPPS_OWNERS("sparkle:analyse:btn_bypass_userapps:owners"),
     STATS_BANHISTORY_ALLTIME("sparkle:stats:banhistory:alltime"),
     STATS_BANHISTORY_30DAYS("sparkle:stats:banhistory:30days"),
     STATS_BANHISTORY_14DAYS("sparkle:stats:banhistory:14days"),

@@ -2,7 +2,6 @@ package com.ghostchu.btn.sparkle.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import inet.ipaddr.IPAddress;
-import inet.ipaddr.IPAddressString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -48,47 +47,8 @@ public class IpQueryLabelService {
     }
 
     private static boolean matches(IPAddress network, String rawLine) {
-        int comment = rawLine.indexOf('#');
-        String line = (comment < 0 ? rawLine : rawLine.substring(0, comment)).strip();
-        if (line.isEmpty()) {
-            return false;
-        }
-        int comma = line.indexOf(',');
-        if (comma >= 0) {
-            String[] fields = line.split(",", 3);
-            try {
-                if (fields.length < 2 || Integer.parseInt(fields[1].strip()) >= 128) {
-                    return false;
-                }
-            } catch (NumberFormatException exception) {
-                return false;
-            }
-            line = fields[0].strip();
-        }
-
-        IPAddress first = parseAddress(line);
-        if (first != null) {
-            return overlaps(network, first, first);
-        }
-        int dash = line.indexOf('-');
-        return dash >= 0 && overlaps(network,
-                parseAddress(line.substring(0, dash)), parseAddress(line.substring(dash + 1)));
-    }
-
-    private static IPAddress parseAddress(String value) {
-        IPAddress address = new IPAddressString(value.strip()).getAddress();
-        if (address != null && address.isIPv4Convertible()) {
-            address = address.toIPv4();
-        }
-        return address != null && address.getPrefixLength() != null ? address.toPrefixBlock() : address;
-    }
-
-    private static boolean overlaps(IPAddress network, IPAddress first, IPAddress last) {
-        return first != null && last != null
-                && network.getIPVersion() == first.getIPVersion()
-                && network.getIPVersion() == last.getIPVersion()
-                && network.getLower().getValue().compareTo(last.getUpper().getValue()) <= 0
-                && network.getUpper().getValue().compareTo(first.getLower().getValue()) >= 0;
+        IpRuleRange range = IpRuleRange.parse(rawLine);
+        return range != null && range.overlaps(network);
     }
 
     public record Label(String type, String source, String name) {
@@ -103,7 +63,7 @@ public class IpQueryLabelService {
             };
         }
 
-        private static String ruleName(String source) {
+        static String ruleName(String source) {
             return switch (source) {
                 case "manual" -> "手动规则";
                 case "overdownload" -> "过量下载分析";
