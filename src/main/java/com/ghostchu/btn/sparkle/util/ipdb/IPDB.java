@@ -263,6 +263,9 @@ public final class IPDB implements AutoCloseable {
 //            Location location = cityResponse.location();
             cityData.setName(city.getName());
             cityData.setIso(city.getGeoNameId());
+            if (!cityResponse.getSubdivisions().isEmpty()) {
+                cityData.setSubdivisionIso(cityResponse.getSubdivisions().getFirst().getIsoCode());
+            }
 //            locationData.setTimeZone(location.timeZone());
 //            locationData.setLongitude(location.longitude());
 //            locationData.setLatitude(location.latitude());

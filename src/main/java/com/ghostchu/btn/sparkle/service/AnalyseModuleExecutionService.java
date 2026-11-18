@@ -36,6 +36,7 @@ public class AnalyseModuleExecutionService {
             GeoIpCityBlacklistService geoIpCityBlacklist,
             AnalyseBtnBypassServiceImpl btnBypass,
             BtnBypassConflictAlertService btnBypassConflictAlert,
+            BtnAppGeoIpRiskService appGeoIpRisk,
             PointsDynamicService pointsDynamic,
             PeerInsightsService peerInsights
     ) {
@@ -50,6 +51,7 @@ public class AnalyseModuleExecutionService {
         runners.put("geoip-city-blacklist", geoIpCityBlacklist::generateScheduled);
         runners.put("btnbypass-userapps", btnBypass::analyseBtnBypass);
         runners.put("btnbypass-conflict-alert", btnBypassConflictAlert::scan);
+        runners.put(BtnAppGeoIpRiskService.MODULE_ID, appGeoIpRisk::scan);
         runners.put("points-dynamic", pointsDynamic::refresh);
         runners.put("swarm-peer-distribution", peerInsights::refreshSwarm);
         runners.put("ban-peer-distribution", peerInsights::refreshBan);

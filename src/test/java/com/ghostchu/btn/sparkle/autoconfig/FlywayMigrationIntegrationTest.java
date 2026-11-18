@@ -30,6 +30,7 @@ import com.ghostchu.btn.sparkle.mapper.UserappMapper;
 import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.BtnBypassConflictAlertService;
+import com.ghostchu.btn.sparkle.service.BtnAppGeoIpRiskService;
 import com.ghostchu.btn.sparkle.service.IRuleService;
 import com.ghostchu.btn.sparkle.service.NotificationPreference;
 import com.ghostchu.btn.sparkle.service.NotificationPreferenceService;
@@ -182,11 +183,7 @@ class FlywayMigrationIntegrationTest {
         when(preferences.preference(10L, NotificationCategory.ACCOUNT_SECURITY)).thenReturn(enabled);
         when(preferences.preference(11L, NotificationCategory.ACCOUNT_SECURITY))
                 .thenThrow(new IllegalStateException("Simulated temporary delivery failure")).thenReturn(enabled);
-        var mybatis = new MybatisConfiguration(new Environment("bypass", new SpringManagedTransactionFactory(), dataSource));
-        new MyBatisPlusConfig().configurationCustomizer().customize(mybatis);
-        mybatis.addMapper(UserMessageMapper.class);
-        var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(mybatis));
-        var messaging = new UserMessageService(session.getMapper(UserMessageMapper.class), users, null, preferences, null);
+        var messaging = messageService(dataSource, users, preferences);
         var alerts = new BtnBypassConflictAlertService(moduleConfig, redis, new ObjectMapper(),
                 new RulePreviewService(List.of(), List.of(), manualRules), apps, users, messaging, jdbc);
         var transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
@@ -210,6 +207,84 @@ class FlywayMigrationIntegrationTest {
         when(manualRules.getRulesByType("ip_denylist")).thenReturn(List.of(denyRule));
         scan.run();
         assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+    }
+
+    @Test
+    void btnGeoIpRiskUsesLateReceiptsAndRetriesDeliveryWithIndependentFamilyCooldowns() {
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        var dataSource = new DriverManagerDataSource(url, username, password);
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("""
+                INSERT INTO "user" (id, email, nickname, roles, avatar, register_at, last_login_at)
+                VALUES (10, 'admin@example.invalid', 'Admin', ARRAY['user','admin'], '/avatar', now(), now()),
+                       (11, 'mod@example.invalid', 'Moderator', ARRAY['user','moderator'], '/avatar', now(), now()),
+                       (12, 'owner@example.invalid', 'Owner', ARRAY['user'], '/avatar', now(), now())
+                """);
+        var users = mock(IUserService.class);
+        var owner = new User().setId(12L).setEmail("owner@example.invalid").setNickname("Owner");
+        when(users.listByIds(List.of(10L, 11L, 12L))).thenReturn(List.of(
+                new User().setId(10L).setRoles(new String[]{"user", "admin"}),
+                new User().setId(11L).setRoles(new String[]{"user", "moderator"}), owner));
+        when(users.listByIds(List.of(12L))).thenReturn(List.of(owner));
+        var apps = mock(IUserappService.class);
+        when(apps.listByIds(java.util.Set.of(21L))).thenReturn(List.of(
+                new Userapp().setId(21L).setAppId("test-geo-app").setOwner(12L)));
+        var config = mock(AnalyseModuleConfigService.class);
+        when(config.textValue("btn-app-geoip-risk", "recipient-uids", "")).thenReturn("10,11,12");
+        when(config.booleanValue("btn-app-geoip-risk", "geoip-split-ip-families", true)).thenReturn(true);
+        when(config.integerValue("btn-app-geoip-risk", "geoip-alert-cooldown-minutes", 60)).thenReturn(60);
+        var btn = mock(BtnRuntimeConfigService.class);
+        when(btn.reportingWindowMillis("heartbeat")).thenReturn(100L);
+        var preferences = mock(NotificationPreferenceService.class);
+        var enabled = new NotificationPreference(NotificationCategory.ACCOUNT_SECURITY, true, true, true);
+        when(preferences.preference(10L, NotificationCategory.ACCOUNT_SECURITY)).thenReturn(enabled);
+        when(preferences.preference(11L, NotificationCategory.ACCOUNT_SECURITY))
+                .thenThrow(new IllegalStateException("Simulated delivery failure")).thenReturn(enabled);
+        var risk = new BtnAppGeoIpRiskService(config, btn, apps, users, messageService(dataSource, users, preferences),
+                jdbc, new DataSourceTransactionManager(dataSource));
+
+        OffsetDateTime time = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(1);
+        var us = new BtnAppGeoIpRiskService.Region(4, "US", "WA");
+        var cn = new BtnAppGeoIpRiskService.Region(4, "CN", "浙江省");
+        var de = new BtnAppGeoIpRiskService.Region(6, "DE", "BE");
+        var ca = new BtnAppGeoIpRiskService.Region(6, "CA", "ON");
+        risk.record(List.of(new BtnAppGeoIpRiskService.Receipt(21, time.plusNanos(110_000_000), us),
+                new BtnAppGeoIpRiskService.Receipt(21, time.plusNanos(70_000_000), de)));
+        risk.scan();
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+        risk.record(List.of(new BtnAppGeoIpRiskService.Receipt(21, time.plusNanos(10_000_000), cn)));
+        assertThrows(IllegalStateException.class, risk::scan);
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM btn_app_geoip_deliveries", Integer.class));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM btn_app_geoip_observations WHERE NOT processed", Integer.class));
+
+        risk.scan();
+        assertEquals(List.of(10L, 11L), jdbc.queryForList("""
+                SELECT recipient_user_id FROM user_messages WHERE inbox_visible AND NOT email_requested
+                ORDER BY recipient_user_id
+                """, Long.class));
+        risk.record(List.of(new BtnAppGeoIpRiskService.Receipt(21, time.plusNanos(120_000_000), ca),
+                new BtnAppGeoIpRiskService.Receipt(21, time.plusNanos(105_000_000), cn)));
+        risk.scan();
+        risk.scan();
+        var bodies = jdbc.queryForList("SELECT content FROM user_messages WHERE recipient_user_id=10 ORDER BY id", String.class);
+        assertEquals(2, bodies.size());
+        assertTrue(bodies.get(0).contains("IPv4") && bodies.get(0).contains("CN/浙江省"));
+        assertTrue(bodies.get(1).contains("IPv6") && bodies.get(1).contains("CA/ON"));
+        assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM btn_app_geoip_deliveries", Integer.class));
+
+        risk.record(List.of(new BtnAppGeoIpRiskService.Receipt(21, time.minusDays(4), us)));
+        risk.cleanup();
+        assertEquals(5, jdbc.queryForObject("SELECT count(*) FROM btn_app_geoip_observations", Integer.class));
+    }
+
+    private UserMessageService messageService(DriverManagerDataSource dataSource, IUserService users,
+                                              NotificationPreferenceService preferences) {
+        var mybatis = new MybatisConfiguration(new Environment("alerts", new SpringManagedTransactionFactory(), dataSource));
+        new MyBatisPlusConfig().configurationCustomizer().customize(mybatis);
+        mybatis.addMapper(UserMessageMapper.class);
+        var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(mybatis));
+        return new UserMessageService(session.getMapper(UserMessageMapper.class), users, null, preferences, null);
     }
 
     @Test
@@ -1177,7 +1252,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("85", latest.info().current().getVersion().getVersion());
+        assertEquals("86", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

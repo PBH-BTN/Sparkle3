@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
+import com.ghostchu.btn.sparkle.service.BtnAppGeoIpRiskService;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.points.PointAwardBucket;
@@ -34,6 +35,7 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +93,8 @@ public class UserappsHeartbeatServiceImpl
     private PlatformTransactionManager transactionManager;
     @Autowired
     private BtnRuntimeConfigService btnConfigService;
+    @Autowired
+    private BtnAppGeoIpRiskService geoIpRisk;
 
     private final AtomicLong seq = new AtomicLong();
     private final ReentrantLock flushLock = new ReentrantLock();
@@ -272,8 +276,18 @@ public class UserappsHeartbeatServiceImpl
             ).merge(event);
         }
         List<UserappsHeartbeat> rows = new ArrayList<>(deduplicated.size());
+        boolean collectLocations = geoIpRisk.isCollecting();
+        Map<HeartbeatKey, BtnAppGeoIpRiskService.Region> regions = new HashMap<>();
         for (HeartbeatAccumulator heartbeat : deduplicated.values()) {
             InetAddress address = InetAddress.ofLiteral(heartbeat.ip);
+            var geo = geoIPManager.queryIPDB(address).geoData();
+            var geoData = geo == null ? null : geo.get();
+            if (collectLocations) {
+                var region = BtnAppGeoIpRiskService.Region.from(address, geoData);
+                if (region != null) {
+                    regions.put(new HeartbeatKey(heartbeat.userappId, heartbeat.ip), region);
+                }
+            }
             rows.add(new UserappsHeartbeat()
                     .setId(Hashing.sha256().hashString(
                             heartbeat.userappId
@@ -284,9 +298,18 @@ public class UserappsHeartbeatServiceImpl
                     ).asLong())
                     .setUserappId(heartbeat.userappId)
                     .setIp(address)
-                    .setGeoip(geoIPManager.queryIPDB(address).geoData().get())
+                    .setGeoip(geoData)
                     .setFirstSeenAt(heartbeat.firstSeenAt)
                     .setLastSeenAt(heartbeat.lastSeenAt));
+        }
+        List<BtnAppGeoIpRiskService.Receipt> receipts = new ArrayList<>();
+        if (!regions.isEmpty()) {
+            for (HeartbeatEvent event : events) {
+                var region = regions.get(new HeartbeatKey(event.userappId(), event.ip()));
+                if (region != null) {
+                    receipts.add(new BtnAppGeoIpRiskService.Receipt(event.userappId(), event.observedAt(), region));
+                }
+            }
         }
         List<PointAwardBucket> pointBuckets = aggregatePoints(events);
         rows.sort(java.util.Comparator.comparingLong(UserappsHeartbeat::getUserappId)
@@ -299,6 +322,7 @@ public class UserappsHeartbeatServiceImpl
             if (!pointBuckets.isEmpty()) {
                 pointsService.commitAll(pointBuckets);
             }
+            geoIpRisk.record(receipts);
         });
     }
 

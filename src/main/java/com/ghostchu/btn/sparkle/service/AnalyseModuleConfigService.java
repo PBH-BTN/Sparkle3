@@ -86,6 +86,14 @@ public class AnalyseModuleConfigService {
                     cron("schedule", "schedule", "0 */5 * * * *"),
                     field("recipient-uids", "recipient-uids", "uid-list", "")
             ),
+            module("btn-app-geoip-risk", "btn-app-geoip-risk",
+                    bool("enabled", "enabled", false),
+                    cron("schedule", "schedule", "0 * * * * *"),
+                    integer("geoip-region-threshold", "geoip-region-threshold", 2),
+                    bool("geoip-split-ip-families", "geoip-split-ip-families", true),
+                    integer("geoip-alert-cooldown-minutes", "geoip-alert-cooldown-minutes", 60),
+                    field("recipient-uids", "recipient-uids", "uid-list", "")
+            ),
             module("points-dynamic", "points-dynamic",
                     bool("enabled", "enabled", true),
                     cron("schedule", "schedule", "0 5 * * * *")
@@ -408,7 +416,9 @@ public class AnalyseModuleConfigService {
                 }
                 case "integer" -> {
                     int parsed = Integer.parseInt(value);
-                    if (parsed < 0) throw new IllegalArgumentException();
+                    int minimum = "geoip-region-threshold".equals(field.field()) ? 2 : 0;
+                    int maximum = "geoip-alert-cooldown-minutes".equals(field.field()) ? 10_080 : Integer.MAX_VALUE;
+                    if (parsed < minimum || parsed > maximum) throw new IllegalArgumentException();
                     yield Integer.toString(parsed);
                 }
                 case "long" -> {

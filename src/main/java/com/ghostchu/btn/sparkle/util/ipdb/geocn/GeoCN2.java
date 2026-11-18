@@ -62,7 +62,8 @@ public class GeoCN2 implements AutoCloseable {
                 divisionCodeNum,
                 province,
                 city,
-                county == null ? null : (town == null ? county : (county + " " + town))
+                county == null ? null : (town == null ? county : (county + " " + town)),
+                null
         );
         geoData.setCity(cityData);
         var networkData = new IPGeoData.NetworkData(

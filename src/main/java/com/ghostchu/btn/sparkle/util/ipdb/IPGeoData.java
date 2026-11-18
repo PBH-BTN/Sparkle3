@@ -40,6 +40,10 @@ public final class IPGeoData {
         @Nullable
         private String cnDistricts;
 
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        @Nullable
+        private String subdivisionIso;
+
         public CityData merge(CityData other, boolean overwrite) {
             if (other.name != null) {
                 this.name = this.name == null ? other.name : (overwrite ? other.name : this.name);
