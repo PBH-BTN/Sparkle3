@@ -350,15 +350,28 @@ class FlywayMigrationIntegrationTest {
             risk.deliver();
             risk.record(Module.BAN_HISTORY, 21, 4);
             risk.deliver();
+            when(btn.booleanValue("syncSwarm", "volumeRiskEnabled")).thenReturn(true);
+            when(btn.text("syncSwarm", "volumeRiskRecipientUids")).thenReturn("11");
+            when(users.listByIds(List.of(11L))).thenReturn(List.of(
+                    new User().setId(11L).setRoles(new String[]{"user", "moderator"})));
+            when(btn.longValue("syncSwarm", "volumeRiskThreshold")).thenReturn(20L);
+            when(btn.reportingWindowMillis("syncSwarm")).thenReturn(120_000L);
+            risk.record(Module.SWARM, 21, 9);
+            risk.record(Module.SWARM, 21, 12);
             risk.deliver();
-            assertEquals(List.of(10L, 10L, 11L), jdbc.queryForList("""
+            risk.deliver();
+            assertEquals(List.of(10L, 10L, 11L, 11L), jdbc.queryForList("""
                     SELECT recipient_user_id FROM user_messages WHERE inbox_visible AND NOT email_requested
                     ORDER BY recipient_user_id
                     """, Long.class));
             var bodies = jdbc.queryForList("SELECT content FROM user_messages WHERE recipient_user_id=10 ORDER BY id", String.class);
             assertTrue(bodies.get(0).contains("Heartbeat") && bodies.get(0).contains("PT1M"));
             assertTrue(bodies.get(1).contains("Ban History") && bodies.get(1).contains("PT1M30S"));
-            assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM btn_report_volume_cursors", Integer.class));
+            String swarmBody = jdbc.queryForObject("""
+                    SELECT content FROM user_messages WHERE recipient_user_id=11 ORDER BY id DESC LIMIT 1
+                    """, String.class);
+            assertTrue(swarmBody.contains("Swarm") && swarmBody.contains("PT2M"));
+            assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM btn_report_volume_cursors", Integer.class));
         } finally {
             redisFactory.destroy();
         }
