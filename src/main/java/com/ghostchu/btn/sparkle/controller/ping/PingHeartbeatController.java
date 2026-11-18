@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
+import com.ghostchu.btn.sparkle.service.BtnReportVolumeService;
 import com.ghostchu.btn.sparkle.service.IUserappsHeartbeatService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
@@ -30,6 +31,8 @@ public class PingHeartbeatController extends BasePingController {
     private IUserappsHeartbeatService heartbeatService;
     @Autowired
     private BtnRuntimeConfigService configService;
+    @Autowired
+    private BtnReportVolumeService reportVolume;
 
     @PostMapping("/ping/heartbeat")
     public ResponseEntity<@NotNull ServerResponse> onBansSync(@RequestBody IfAddrDto dto) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException, PowCaptchaFailureException {
@@ -38,6 +41,7 @@ public class PingHeartbeatController extends BasePingController {
             throw new PowCaptchaFailureException();
         }
         Userapp userapp = verifyUserApplicationForBatchedPoints();
+        reportVolume.record(BtnReportVolumeService.Module.HEARTBEAT, userapp.getId(), 1);
         heartbeatService.onHeartBeat(
                 userapp.getId(),
                 userapp.getOwner(),

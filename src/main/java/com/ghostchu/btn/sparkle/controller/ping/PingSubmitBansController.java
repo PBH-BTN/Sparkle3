@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
+import com.ghostchu.btn.sparkle.service.BtnReportVolumeService;
 import com.ghostchu.btn.sparkle.service.IBanHistoryService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
@@ -37,6 +38,8 @@ public class PingSubmitBansController extends BasePingController {
     private ContentModerationService contentModeration;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private BtnReportVolumeService reportVolume;
 
     @PostMapping("/ping/syncBanHistory")
     public ResponseEntity<@NotNull String> onBansSync(@RequestBody BtnBanPing ping) throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException, PowCaptchaFailureException {
@@ -46,6 +49,7 @@ public class PingSubmitBansController extends BasePingController {
         }
         Userapp userapp = verifyUserApplication();
         var bans = ping.getBans();
+        reportVolume.record(BtnReportVolumeService.Module.BAN_HISTORY, userapp.getId(), bans.size());
         var dictionary = contentModeration.snapshot();
         bans.removeIf(ban -> {
             if (!isAcceptablePublicIp(ban.getPeerIp())) {

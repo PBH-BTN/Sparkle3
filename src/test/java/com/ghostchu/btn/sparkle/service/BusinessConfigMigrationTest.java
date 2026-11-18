@@ -67,6 +67,9 @@ class BusinessConfigMigrationTest {
         ).getContentAsString(StandardCharsets.UTF_8)
                 + new ClassPathResource(
                 "db/migration/V78__btn_ip_query_config_defaults.sql"
+        ).getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource(
+                "db/migration/V87__btn_report_volume_alerts.sql"
         ).getContentAsString(StandardCharsets.UTF_8);
         Matcher matcher = SQL_DEFAULT_KEY.matcher(sql);
         Set<String> sqlKeys = new HashSet<>();

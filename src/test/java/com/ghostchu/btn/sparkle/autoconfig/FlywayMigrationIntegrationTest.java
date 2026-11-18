@@ -31,6 +31,8 @@ import com.ghostchu.btn.sparkle.service.AdminSuspensionService;
 import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.service.BtnBypassConflictAlertService;
 import com.ghostchu.btn.sparkle.service.BtnAppGeoIpRiskService;
+import com.ghostchu.btn.sparkle.service.BtnReportVolumeService;
+import com.ghostchu.btn.sparkle.service.BtnReportVolumeService.Module;
 import com.ghostchu.btn.sparkle.service.IRuleService;
 import com.ghostchu.btn.sparkle.service.NotificationPreference;
 import com.ghostchu.btn.sparkle.service.NotificationPreferenceService;
@@ -64,6 +66,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -285,6 +289,79 @@ class FlywayMigrationIntegrationTest {
         mybatis.addMapper(UserMessageMapper.class);
         var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(mybatis));
         return new UserMessageService(session.getMapper(UserMessageMapper.class), users, null, preferences, null);
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "SPARKLE_BTN_VOLUME_TEST_REDIS_PORT", matches = "[0-9]+")
+    void btnReportVolumeCountsByModuleAndCheckpointsInboxDelivery() {
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+        var redisConfig = new RedisStandaloneConfiguration("127.0.0.1",
+                Integer.parseInt(System.getenv("SPARKLE_BTN_VOLUME_TEST_REDIS_PORT")));
+        redisConfig.setDatabase(9);
+        var redisFactory = new LettuceConnectionFactory(redisConfig);
+        redisFactory.afterPropertiesSet();
+        var redis = new RedisConfig().stringStringRedisTemplate(redisFactory);
+        redis.afterPropertiesSet();
+        try {
+            var dataSource = new DriverManagerDataSource(url, username, password);
+            var jdbc = new JdbcTemplate(dataSource);
+            jdbc.update("""
+                    INSERT INTO "user" (id, email, nickname, roles, avatar, register_at, last_login_at)
+                    VALUES (10, 'admin@example.invalid', 'Admin', ARRAY['user','admin'], '/avatar', now(), now()),
+                           (11, 'mod@example.invalid', 'Moderator', ARRAY['user','moderator'], '/avatar', now(), now()),
+                           (12, 'owner@example.invalid', 'Owner', ARRAY['user'], '/avatar', now(), now())
+                    """);
+            var users = mock(IUserService.class);
+            when(users.listByIds(List.of(10L, 11L, 12L))).thenReturn(List.of(
+                    new User().setId(10L).setRoles(new String[]{"user", "admin"}),
+                    new User().setId(11L).setRoles(new String[]{"user", "moderator"}), new User().setId(12L)));
+            var apps = mock(IUserappService.class);
+            when(apps.listByIds(List.of(21L))).thenReturn(List.of(
+                    new Userapp().setId(21L).setAppId("counted-app").setOwner(12L)));
+            var btn = mock(BtnRuntimeConfigService.class);
+            when(btn.booleanValue("heartbeat", "volumeRiskEnabled")).thenReturn(true);
+            when(btn.booleanValue("syncBanHistory", "volumeRiskEnabled")).thenReturn(true);
+            when(btn.text("heartbeat", "volumeRiskRecipientUids")).thenReturn("10,11,12");
+            when(btn.text("syncBanHistory", "volumeRiskRecipientUids")).thenReturn("10");
+            when(users.listByIds(List.of(10L))).thenReturn(List.of(
+                    new User().setId(10L).setRoles(new String[]{"user", "admin"})));
+            when(btn.longValue("heartbeat", "volumeRiskThreshold")).thenReturn(2L);
+            when(btn.longValue("syncBanHistory", "volumeRiskThreshold")).thenReturn(7L);
+            when(btn.reportingWindowMillis("heartbeat")).thenReturn(60_000L);
+            when(btn.reportingWindowMillis("syncBanHistory")).thenReturn(90_000L);
+            var preferences = mock(NotificationPreferenceService.class);
+            var enabled = new NotificationPreference(NotificationCategory.ACCOUNT_SECURITY, true, true, true);
+            when(preferences.preference(10L, NotificationCategory.ACCOUNT_SECURITY)).thenReturn(enabled);
+            when(preferences.preference(11L, NotificationCategory.ACCOUNT_SECURITY))
+                    .thenThrow(new IllegalStateException("Simulated delivery failure")).thenReturn(enabled);
+            var risk = new BtnReportVolumeService(btn, redis, apps, users, messageService(dataSource, users, preferences),
+                    jdbc, new DataSourceTransactionManager(dataSource));
+
+            risk.record(Module.HEARTBEAT, 21, 2);
+            risk.record(Module.BAN_HISTORY, 21, 4);
+            risk.record(Module.SWARM, 21, 100);
+            risk.deliver();
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+            risk.record(Module.HEARTBEAT, 21, 1);
+            risk.record(Module.HEARTBEAT, 21, 1);
+            risk.deliver();
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM user_messages", Integer.class));
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM btn_report_volume_cursors", Integer.class));
+            risk.deliver();
+            risk.record(Module.BAN_HISTORY, 21, 4);
+            risk.deliver();
+            risk.deliver();
+            assertEquals(List.of(10L, 10L, 11L), jdbc.queryForList("""
+                    SELECT recipient_user_id FROM user_messages WHERE inbox_visible AND NOT email_requested
+                    ORDER BY recipient_user_id
+                    """, Long.class));
+            var bodies = jdbc.queryForList("SELECT content FROM user_messages WHERE recipient_user_id=10 ORDER BY id", String.class);
+            assertTrue(bodies.get(0).contains("Heartbeat") && bodies.get(0).contains("PT1M"));
+            assertTrue(bodies.get(1).contains("Ban History") && bodies.get(1).contains("PT1M30S"));
+            assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM btn_report_volume_cursors", Integer.class));
+        } finally {
+            redisFactory.destroy();
+        }
     }
 
     @Test
@@ -1252,7 +1329,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("86", latest.info().current().getVersion().getVersion());
+        assertEquals("87", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

@@ -256,6 +256,9 @@ public final class BtnConfigCatalog {
             Definition.bool("syncBanHistory", "powCaptcha", false),
             Definition.bool("syncBanHistory", "repeatBanSuppression", false),
             Definition.integer("syncBanHistory", "repeatBanWindows", 5, 3, 100),
+            Definition.bool("syncBanHistory", "volumeRiskEnabled", false),
+            Definition.integer("syncBanHistory", "volumeRiskThreshold", 10_000, 1, 10_000_000),
+            Definition.list("syncBanHistory", "volumeRiskRecipientUids", ""),
 
             Definition.text("syncSwarm", "endpoint", "{rooturl}/ping/syncSwarm"),
             Definition.integer("syncSwarm", "interval", 900_000, 100, 86_400_000),
@@ -269,6 +272,9 @@ public final class BtnConfigCatalog {
                     31_536_000_000L
             ),
             Definition.cron("syncSwarm", "dataRetentionCron", "0 0 */2 * * *"),
+            Definition.bool("syncSwarm", "volumeRiskEnabled", false),
+            Definition.integer("syncSwarm", "volumeRiskThreshold", 100_000, 1, 10_000_000),
+            Definition.list("syncSwarm", "volumeRiskRecipientUids", ""),
 
             Definition.text(
                     "ruleIpDenylist",
@@ -310,6 +316,9 @@ public final class BtnConfigCatalog {
                     31_536_000_000L
             ),
             Definition.cron("heartbeat", "cleanupCron", "0 0 0 * * *"),
+            Definition.bool("heartbeat", "volumeRiskEnabled", false),
+            Definition.integer("heartbeat", "volumeRiskThreshold", 10, 1, 10_000_000),
+            Definition.list("heartbeat", "volumeRiskRecipientUids", ""),
 
             Definition.integer("heartbeatQueue", "flushIntervalMs", 1_000, 100, 60_000),
             Definition.integer("heartbeatQueue", "initialDelayMs", 1_000, 0, 600_000),

@@ -1,5 +1,6 @@
 package com.ghostchu.btn.sparkle.service.btn;
 
+import com.ghostchu.btn.sparkle.service.AnalyseModuleConfigService;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.support.CronExpression;
@@ -56,6 +57,14 @@ public final class BtnConfigValidator {
             throw invalid(definition, "value is required");
         }
         String value = rawValue.trim();
+        if ("volumeRiskRecipientUids".equals(definition.field())) {
+            try {
+                return AnalyseModuleConfigService.recipientUids(value).stream().map(String::valueOf)
+                        .collect(java.util.stream.Collectors.joining(","));
+            } catch (IllegalArgumentException exception) {
+                throw invalid(definition, "enter positive user IDs separated by commas");
+            }
+        }
         if (definition.type() == BtnConfigCatalog.ValueType.SECRET) {
             if (value.length() > 4_096) {
                 throw invalid(definition, "value is too long");

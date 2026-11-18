@@ -20,7 +20,7 @@ class BtnConfigCatalogTest {
                 .filter(key -> key.startsWith("sparkle.ping."))
                 .collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(48, keys.size());
+        assertEquals(57, keys.size());
         assertTrue(keys.contains("sparkle.ping.reconfigure.random-initial-delay"));
         assertTrue(keys.contains("sparkle.ping.heartbeat.queue.max-size"));
         assertTrue(keys.contains("sparkle.ping.rule-ip-allowlist.pow-captcha"));

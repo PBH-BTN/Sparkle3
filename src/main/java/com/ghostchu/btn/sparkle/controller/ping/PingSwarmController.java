@@ -7,6 +7,7 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
+import com.ghostchu.btn.sparkle.service.BtnReportVolumeService;
 import com.ghostchu.btn.sparkle.service.IClientDiscoveryService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
@@ -33,6 +34,8 @@ public class PingSwarmController extends BasePingController {
     private BtnRuntimeConfigService configService;
     @Autowired
     private ContentModerationService contentModeration;
+    @Autowired
+    private BtnReportVolumeService reportVolume;
 
 
     @PostMapping("/ping/syncSwarm")
@@ -43,6 +46,7 @@ public class PingSwarmController extends BasePingController {
         }
         Userapp userapp = verifyUserApplication();
         var swarms = ping.getSwarms();
+        reportVolume.record(BtnReportVolumeService.Module.SWARM, userapp.getId(), swarms.size());
         var dictionary = contentModeration.snapshot();
         swarms.removeIf(swarm -> {
             if (!isAcceptablePublicIp(swarm.getPeerIp())) {
