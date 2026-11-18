@@ -886,12 +886,20 @@ export interface IpComment {
 
 export interface IpCommentPage {
   records: IpComment[]
+  replyQuotes?: Record<number, IpCommentQuote>
   current: number
   size: number
   total: number
   pages: number
   scope: string
   access: IpCommentAccess
+}
+
+export interface IpCommentQuote {
+  authorNickname: string | null
+  authorModerationHidden: boolean
+  excerpt: string
+  createdAt: string
 }
 
 export type SubmissionType = 'bans' | 'clients' | 'swarm'

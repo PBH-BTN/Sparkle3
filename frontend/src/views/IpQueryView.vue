@@ -24,6 +24,7 @@ import TablePager from '@/components/TablePager.vue'
 import { uiApi } from '@/api'
 import type {
   IpComment,
+  IpCommentQuote,
   IpQueryLookupResponse,
   ModerationStatus,
 } from '@/api/types'
@@ -50,6 +51,7 @@ const loading = ref(false)
 const loadError = ref('')
 const selectedScope = ref('')
 const comments = ref<IpComment[]>([])
+const replyQuotes = ref<Record<number, IpCommentQuote>>({})
 const commentsLoading = ref(false)
 const commentsError = ref('')
 const commentPage = ref(1)
@@ -91,6 +93,7 @@ const swarmColumns = computed<TableColumnData[]>(() => [
 
 const scopeOptions = computed(() => lookup.value?.commentScopes ?? [])
 const commentAccess = computed(() => lookup.value?.commentAccess)
+const visibleCommentIds = computed(() => new Set(comments.value.map((comment) => comment.id)))
 const activity = computed(() => lookup.value?.activity)
 const banPreview = computed(() => activity.value?.bans?.records.slice(0, 20) ?? [])
 const swarmPreview = computed(() => activity.value?.swarms?.records.slice(0, 20) ?? [])
@@ -137,6 +140,18 @@ function shortModuleName(name: string | null | undefined) {
 function resetCommentForm() {
   draft.value = ''
   replyTo.value = null
+}
+
+function commentAuthor(comment: Pick<IpComment, 'authorNickname' | 'authorModerationHidden'>) {
+  return comment.authorNickname || t(comment.authorModerationHidden
+    ? 'ipQueryPage.comments.authorHidden'
+    : 'ipQueryPage.comments.anonymous')
+}
+
+function goToComment(id: number) {
+  const target = document.getElementById(`ip-comment-${id}`)
+  target?.focus({ preventScroll: true })
+  target?.scrollIntoView({ block: 'center' })
 }
 
 function startReply(comment: IpComment) {
@@ -219,6 +234,7 @@ async function loadLookup(query: string) {
 
 async function loadComments() {
   const requestId = ++commentsRequestId
+  replyQuotes.value = {}
   if (!selectedScope.value || !lookup.value?.commentAccess.visible) {
     comments.value = []
     commentTotal.value = 0
@@ -236,6 +252,7 @@ async function loadComments() {
     )
     if (requestId !== commentsRequestId) return
     comments.value = result.records
+    replyQuotes.value = result.replyQuotes ?? {}
     commentTotal.value = result.total
     commentPage.value = result.current
     commentPageSize.value = result.size
@@ -726,9 +743,10 @@ onMounted(() => {
 
               <div v-if="commentAccess?.publishingEnabled" id="ip-comment-editor" class="comment-editor">
                 <div v-if="replyTo" class="reply-context">
-                  <span>
-                    {{ t('ipQueryPage.comments.replyingTo', { id: replyTo.id }) }}
-                  </span>
+                  <div class="reply-quote">
+                    <strong>{{ t('ipQueryPage.comments.replyingTo', { author: commentAuthor(replyTo) }) }}</strong>
+                    <span class="reply-quote-excerpt">{{ collapse(replyTo.content.trim().replace(/\s+/g, ' '), 160) }}</span>
+                  </div>
                   <a-button type="text" size="mini" @click="replyTo = null">
                     {{ t('ipQueryPage.comments.cancelReply') }}
                   </a-button>
@@ -778,6 +796,8 @@ onMounted(() => {
                   <article
                     v-for="comment in comments"
                     :key="comment.id"
+                    :id="`ip-comment-${comment.id}`"
+                    tabindex="-1"
                     class="comment-item"
                     :class="{ 'comment-item--self': comment.self }"
                   >
@@ -806,13 +826,6 @@ onMounted(() => {
                           </strong>
                           <a-tag v-if="comment.self" size="small" color="arcoblue">
                             {{ t('ipQueryPage.comments.you') }}
-                          </a-tag>
-                          <a-tag v-if="comment.parentId" size="small" color="gray">
-                            {{
-                              t('ipQueryPage.comments.replyTo', {
-                                id: comment.parentId,
-                              })
-                            }}
                           </a-tag>
                           <a-tag
                             v-if="comment.self"
@@ -845,6 +858,26 @@ onMounted(() => {
                           <strong>UA</strong>
                           {{ collapse(comment.authorUserAgent, 56) }}
                         </span>
+                      </div>
+
+                      <div v-if="comment.parentId !== null" class="reply-quote">
+                        <template v-if="replyQuotes[comment.parentId]">
+                          <button
+                            v-if="visibleCommentIds.has(comment.parentId)"
+                            type="button"
+                            class="reply-quote-link"
+                            @click="goToComment(comment.parentId)"
+                          >
+                            {{ t('ipQueryPage.comments.replyTo', { author: commentAuthor(replyQuotes[comment.parentId]!) }) }}
+                            <span class="reply-quote-jump">{{ t('ipQueryPage.comments.jumpToOriginal') }}</span>
+                          </button>
+                          <strong v-else>
+                            {{ t('ipQueryPage.comments.replyTo', { author: commentAuthor(replyQuotes[comment.parentId]!) }) }}
+                          </strong>
+                          <time>{{ formatDate(replyQuotes[comment.parentId]!.createdAt) }}</time>
+                          <span class="reply-quote-excerpt">{{ replyQuotes[comment.parentId]!.excerpt }}</span>
+                        </template>
+                        <span v-else>{{ t('ipQueryPage.comments.originalUnavailable') }}</span>
                       </div>
 
                       <template v-if="editingId === comment.id">
@@ -1378,6 +1411,55 @@ button.metric-card {
   margin-bottom: 10px;
   color: var(--color-text-2);
   font-size: 12px;
+}
+
+.reply-context > .reply-quote {
+  flex: 1;
+}
+
+.reply-quote {
+  min-width: 0;
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--color-border-3);
+  border-radius: 4px;
+  background: var(--color-fill-1);
+  color: var(--color-text-2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.reply-quote-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--primary-6));
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.reply-quote-jump {
+  margin-inline-start: 8px;
+  text-decoration: underline;
+}
+
+.reply-quote time {
+  display: inline-block;
+  margin-inline-start: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.reply-quote-excerpt {
+  display: block;
+  margin-top: 4px;
+}
+
+.comment-item:focus {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
 }
 
 .editor-footer {
