@@ -61,4 +61,19 @@ public interface IpQueryCommentMapper extends BaseMapper<IpQueryComment> {
             @Param("scope") String scope,
             @Param("viewerUserId") long viewerUserId
     );
+
+    @Select("""
+            <script>
+            SELECT *
+            FROM ip_query_comments
+            WHERE deleted_at IS NULL
+              AND moderation_status = 'APPROVED'
+              AND network &lt;&lt;= #{scope}::cidr
+              AND id IN
+              <foreach collection="ids" item="id" open="(" separator="," close=")">
+                #{id}
+              </foreach>
+            </script>
+            """)
+    List<IpQueryComment> selectApprovedParents(@Param("scope") String scope, @Param("ids") List<Long> ids);
 }

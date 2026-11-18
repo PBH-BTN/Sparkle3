@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentAccess;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentPage;
+import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentQuote;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentRevisionView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CreateCommentRequest;
@@ -34,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +43,7 @@ import java.util.Objects;
 public class IpQueryCommentService {
     private static final int MAX_USER_AGENT_LENGTH = 1_000;
     private static final int MAX_HISTORY_ITEMS = 100;
+    private static final int MAX_QUOTE_LENGTH = 160;
 
     private final IpQueryCommentMapper commentMapper;
     private final IpQueryCommentRevisionMapper revisionMapper;
@@ -65,7 +68,7 @@ public class IpQueryCommentService {
             String requestedScope,
             int requestedPage,
             int requestedSize,
-            boolean includeModeratorMetadata
+            boolean browserView
     ) throws BusinessException {
         CommentAccess access = lookupService.access();
         String scope = commentScope(requestedScope);
@@ -91,10 +94,14 @@ public class IpQueryCommentService {
                         size,
                         (long) (page - 1) * size
                 );
+        List<IpQueryComment> parents = browserView ? findApprovedParents(scope, comments) : List.of();
+        Map<Long, CommentQuote> quotes = new HashMap<>();
         List<CommentView> records = mapComments(
                 comments,
+                parents,
+                quotes,
                 viewerUserId,
-                includeModeratorMetadata && canViewCommentMetadata(viewerUserId)
+                browserView && canViewCommentMetadata(viewerUserId)
         );
         long pages = total == 0 ? 0 : (total + size - 1) / size;
         return new CommentPage(
@@ -104,8 +111,18 @@ public class IpQueryCommentService {
                 total,
                 pages,
                 scope,
-                access
+                access,
+                quotes
         );
+    }
+
+    private List<IpQueryComment> findApprovedParents(String scope, List<IpQueryComment> comments) {
+        List<Long> ids = comments.stream()
+                .map(IpQueryComment::getParentCommentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        return ids.isEmpty() ? List.of() : commentMapper.selectApprovedParents(scope, ids);
     }
 
     @Transactional
@@ -301,13 +318,15 @@ public class IpQueryCommentService {
 
     private List<CommentView> mapComments(
             List<IpQueryComment> comments,
+            List<IpQueryComment> parents,
+            Map<Long, CommentQuote> quotes,
             long viewerUserId,
             boolean canViewMetadata
     ) {
         if (comments.isEmpty()) {
             return List.of();
         }
-        List<Long> userIds = comments.stream()
+        List<Long> userIds = Stream.concat(comments.stream(), parents.stream())
                 .map(IpQueryComment::getAuthorUserId)
                 .filter(Objects::nonNull)
                 .distinct()
@@ -321,6 +340,14 @@ public class IpQueryCommentService {
                     user.getId(),
                     UserPrivacySettings.defaults(user.getId())
             ));
+        }
+        for (IpQueryComment parent : parents) {
+            CommentView view = mapComment(parent, viewerUserId, users.get(parent.getAuthorUserId()),
+                    privacy.get(parent.getAuthorUserId()), List.of(), false);
+            String content = view.content().replaceAll("(?U)\\s+", " ").strip();
+            int end = content.offsetByCodePoints(0, Math.min(MAX_QUOTE_LENGTH, content.codePointCount(0, content.length())));
+            quotes.put(parent.getId(), new CommentQuote(view.authorNickname(), view.authorModerationHidden(),
+                    end < content.length() ? content.substring(0, end) + "…" : content, view.createdAt()));
         }
         Map<Long, List<IpQueryCommentRevision>> histories = new LinkedHashMap<>();
         List<Long> commentIds = comments.stream().map(IpQueryComment::getId).toList();

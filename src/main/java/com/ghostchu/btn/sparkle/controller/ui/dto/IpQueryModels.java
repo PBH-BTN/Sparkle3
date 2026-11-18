@@ -1,9 +1,11 @@
 package com.ghostchu.btn.sparkle.controller.ui.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ghostchu.btn.sparkle.service.impl.QueryIpServiceImpl.IpQueryResult;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class IpQueryModels {
     private IpQueryModels() {
@@ -73,7 +75,20 @@ public final class IpQueryModels {
             long total,
             long pages,
             String scope,
-            CommentAccess access
+            CommentAccess access,
+            @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<Long, CommentQuote> replyQuotes
+    ) {
+        public CommentPage(List<CommentView> records, long current, long size, long total, long pages,
+                           String scope, CommentAccess access) {
+            this(records, current, size, total, pages, scope, access, Map.of());
+        }
+    }
+
+    public record CommentQuote(
+            String authorNickname,
+            boolean authorModerationHidden,
+            String excerpt,
+            OffsetDateTime createdAt
     ) {
     }
 

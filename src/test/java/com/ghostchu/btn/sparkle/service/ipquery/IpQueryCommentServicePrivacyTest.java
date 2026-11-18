@@ -102,12 +102,41 @@ class IpQueryCommentServicePrivacyTest {
     }
 
     private CommentPage loadAs(User viewer) throws Exception {
+        return loadAs(viewer, null);
+    }
+
+    @Test
+    void replyQuotesIncludeOffPageApprovedParentsWithoutExposingHiddenNicknames() throws Exception {
+        var parent = new IpQueryComment().setId(12L).setAuthorUserId(6L)
+                .setContent("Original\ncomment " + "🙂".repeat(200)).setRevision(1)
+                .setModerationStatus("APPROVED").setCreatedAt(OffsetDateTime.now());
+        when(commentMapper.selectApprovedParents("192.0.2.0/24", List.of(12L))).thenReturn(List.of(parent));
+        when(userService.listByIds(List.of(5L, 6L))).thenReturn(List.of(
+                new User().setId(5L).setNickname("author"),
+                new User().setId(6L).setNickname("hidden").setNicknameModerationStatus("REJECTED")));
+
+        var page = loadAs(new User().setId(7L), 12L);
+        assertEquals(1, page.records().size());
+        var quote = page.replyQuotes().get(12L);
+        assertNull(quote.authorNickname());
+        assertTrue(quote.authorModerationHidden());
+        assertEquals("Original comment " + "🙂".repeat(143) + "…", quote.excerpt());
+        assertEquals(parent.getCreatedAt(), quote.createdAt());
+    }
+
+    @Test
+    void replyQuotesOmitUnavailableParents() throws Exception {
+        assertTrue(loadAs(new User().setId(7L), 12L).replyQuotes().isEmpty());
+    }
+
+    private CommentPage loadAs(User viewer, Long parentId) throws Exception {
         User author = new User()
                 .setId(5L)
                 .setNickname("author")
                 .setRole("user");
         IpQueryComment comment = new IpQueryComment()
                 .setId(9L)
+                .setParentCommentId(parentId)
                 .setNetwork("192.0.2.0/24")
                 .setAuthorUserId(5L)
                 .setContent("sample comment")
@@ -136,7 +165,7 @@ class IpQueryCommentServicePrivacyTest {
                 anyInt(),
                 anyLong()
         )).thenReturn(List.of(comment));
-        when(userService.listByIds(anyList())).thenReturn(List.of(author));
+        when(userService.listByIds(List.of(5L))).thenReturn(List.of(author));
         when(privacyService.getAll(anyList())).thenReturn(Map.of());
         when(revisionMapper.selectList(any())).thenReturn(List.of(revision));
         when(userService.getById(viewer.getId())).thenReturn(viewer);
