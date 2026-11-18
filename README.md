@@ -42,6 +42,8 @@
   资料的可见性和审核结果，CIDR 仅显示通用 BTN 用户标签。
 - `GET /ping/queryIp/comments?scope=...` 分页获取评论。`POST /ping/queryIp/comments` 发表评论或回复，
   `PUT/DELETE /ping/queryIp/comments/{id}` 编辑或删除本人评论。
+  列表、发布和编辑响应中的可见头像使用绝对 URL，根地址按请求来源 IP 和 BTN 自动路由配置选择；
+  不可见头像仍返回 `null`。
 - `POST /ping/queryIp/commentCounts` 接收包含 1 至 50 个单 IP 的 JSON 数组，返回以输入地址为键的计数。
   计数包括覆盖该 IP 的网段中已审核通过且未删除的评论。评论区关闭展示时返回零。
 
