@@ -41,15 +41,17 @@ public class IpQueryCommentCountService {
         this.redis = redis;
     }
 
-    public Map<String, Long> count(long applicationId, List<String> ips) throws BusinessException {
+    public Map<String, Long> count(Long applicationId, List<String> ips) throws BusinessException {
         if (ips == null || ips.isEmpty() || ips.size() > MAX_BATCH_SIZE) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Supply between 1 and 50 IP addresses");
         }
-        Long requests = redis.execute(LIMIT_REQUESTS, List.of("sparkle:ip-comment-count:limit:" + applicationId));
-        if (requests == null || requests > config.longValue("queryIp", "commentCountRequestsPerMinute")) {
-            throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "Comment count request limit reached");
-        }
+        if (applicationId != null) {
+            Long requests = redis.execute(LIMIT_REQUESTS, List.of("sparkle:ip-comment-count:limit:" + applicationId));
+            if (requests == null || requests > config.longValue("queryIp", "commentCountRequestsPerMinute")) {
+                throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "Comment count request limit reached");
+            }
 
+        }
         Map<String, String> addresses = new LinkedHashMap<>();
         for (String ip : ips) {
             IpScope scope = IpScope.parse(ip);

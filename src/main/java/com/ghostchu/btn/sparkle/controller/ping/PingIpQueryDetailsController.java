@@ -47,10 +47,10 @@ public class PingIpQueryDetailsController extends BasePingController {
 
     @GetMapping("/lookup")
     public Lookup lookup(@RequestParam String query)
-            throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+            throws
+            BusinessException {
         Userapp app = authenticate("powCaptcha");
-        LookupResponse lookup = lookupService.lookup(query);
+        LookupResponse lookup = lookupService.lookup(query, app.getId());
         return new Lookup(lookup, lookup.commentAccess().publishingEnabled() && eligible(app));
     }
 
@@ -59,8 +59,8 @@ public class PingIpQueryDetailsController extends BasePingController {
             @RequestParam String scope,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
-    ) throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+    ) throws
+            BusinessException {
         Userapp app = authenticate("powCaptcha");
         boolean canPublish = eligible(app);
         var result = comments.list(canPublish ? app.getOwner() : -1, scope, page, size, false);
@@ -72,16 +72,16 @@ public class PingIpQueryDetailsController extends BasePingController {
 
     @PostMapping("/comments")
     public CommentView create(@RequestBody CreateCommentRequest body)
-            throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+            throws
+            BusinessException {
         long owner = requireEligible(authenticate("powCaptcha"));
         return withAbsoluteAvatar(comments.create(owner, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
 
     @PutMapping("/comments/{id}")
     public CommentView update(@PathVariable long id, @RequestBody UpdateCommentRequest body)
-            throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+            throws
+            BusinessException {
         long owner = requireEligible(authenticate("powCaptcha"));
         return withAbsoluteAvatar(comments.update(owner, id, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
@@ -89,15 +89,15 @@ public class PingIpQueryDetailsController extends BasePingController {
     @DeleteMapping("/comments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable long id)
-            throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+            throws
+            BusinessException {
         comments.delete(requireEligible(authenticate("powCaptcha")), id);
     }
 
     @PostMapping("/commentCounts")
     public Map<String, Long> count(@RequestBody List<String> ips)
-            throws AccessDeniedException, UserApplicationBannedException,
-            UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
+            throws
+            BusinessException {
         return commentCounts.count(authenticate("commentCountPowCaptcha").getId(), ips);
     }
 

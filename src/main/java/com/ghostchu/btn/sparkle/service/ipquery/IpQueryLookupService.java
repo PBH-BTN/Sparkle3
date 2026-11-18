@@ -24,8 +24,9 @@ public class IpQueryLookupService {
     private final IPDBManager geoIpManager;
     private final IpQuerySettingsService settingsService;
     private final AiModerationService moderationService;
+    private final IpQueryCommentCountService ipQueryCommentCountService;
 
-    public LookupResponse lookup(String value) throws BusinessException {
+    public LookupResponse lookup(String value, Long appId) throws BusinessException {
         IpScope scope = IpScope.parse(value);
         int commentPrefix = scope.defaultCommentPrefix();
         IpScope commentScope = scope.withCommentPrefix(commentPrefix);
@@ -40,6 +41,9 @@ public class IpQueryLookupService {
                     prefix == commentPrefix
             ));
         }
+        String commentsCountQueryFor = commentScope.canonicalCidr();
+        var commentsCountResult = ipQueryCommentCountService.count(appId, List.of(commentsCountQueryFor));
+        long commentsCount = commentsCountResult.getOrDefault(commentsCountQueryFor, 0L);
         return new LookupResponse(
                 scope.input(),
                 scope.normalizedAddress(),
@@ -58,6 +62,7 @@ public class IpQueryLookupService {
                 scope.globallyRoutable(),
                 commentScope.canonicalCidr(),
                 commentPrefix,
+                commentsCount,
                 List.copyOf(commentScopes),
                 geoStart,
                 geoEnd,

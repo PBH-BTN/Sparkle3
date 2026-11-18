@@ -29,6 +29,7 @@ public final class IpQueryModels {
             boolean globallyRoutable,
             String defaultCommentScope,
             int defaultCommentPrefix,
+            long commentsCount,
             List<CommentScopeOption> commentScopes,
             GeoView geoStart,
             GeoView geoEnd,
