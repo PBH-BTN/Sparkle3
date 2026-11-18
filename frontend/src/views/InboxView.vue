@@ -410,6 +410,7 @@ onMounted(load)
   border-radius: var(--app-radius);
 }
 .conversation-message {
+  position: relative;
   align-self: flex-start;
   flex-shrink: 0;
   min-width: 0;
@@ -420,11 +421,30 @@ onMounted(load)
   border: 1px solid var(--color-border-1);
   border-radius: 14px 14px 14px 4px;
 }
+.conversation-message::before {
+  position: absolute;
+  bottom: 7px;
+  left: -7px;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border: inherit;
+  border-width: 0 0 1px 1px;
+  content: '';
+  pointer-events: none;
+  transform: rotate(45deg);
+}
 .conversation-message--outgoing {
   align-self: flex-end;
   background: var(--color-primary-light-1);
   border-color: var(--color-primary-light-2);
   border-radius: 14px 14px 4px 14px;
+}
+.conversation-message--outgoing::before {
+  right: -7px;
+  left: auto;
+  transform: scaleX(-1) rotate(45deg);
 }
 .conversation-subject {
   display: block;
