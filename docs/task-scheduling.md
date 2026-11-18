@@ -6,9 +6,9 @@
 
 `@MonitoredScheduledTask` 支持 `EVENT`、`STARTUP`，按实际类型记录触发方式，不提供计划任务的手动入口。
 固定间隔可用 `intervalExpression`、`initialDelayExpression` 读取与 `@Scheduled` 相同的毫秒属性。
-已处理的异常可用 `MonitoredTaskOutcome.failure("不含个人数据的概述")` 上报；正常无需处理用
-`MonitoredTaskOutcome.skipped(...)`。失败优先于跳过，嵌套调用分别记录。该状态只在当前线程的注解
-执行范围内生效，不能跨线程传递；显式任务使用其 `TaskExecution`。
+注解任务和动态分析模块可用 `MonitoredTaskOutcome.failure("不含个人数据的概述")` 上报已处理的异常，
+正常无需处理时用 `MonitoredTaskOutcome.skipped(...)`。失败优先于跳过，嵌套调用分别记录。
+状态在当前线程的任务执行范围内生效。自行记录执行结果的任务使用其 `TaskExecution`。
 
 本次审计补齐 AI 审核轮询、头像动态清理及计划检查、邮件回复检查和实际扫描、通知邮件发送、资料审核
 入队、注销通知与清理，以及配置迁移、注销标记恢复、调度器初始化、GeoIP 数据库加载和城市封禁输出
