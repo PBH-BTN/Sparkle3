@@ -1989,6 +1989,7 @@ export default {
       runStarted: 'The module update started in the background.',
       restartRequired: 'Restart required',
       includeModulesHint: 'Separate full module class names with commas.',
+      recipientUidsHint: 'Separate UIDs with commas. Alerts go to admins and moderators. Leave blank to disable delivery.',
       cronDisabledHint: 'Use - to pause this scheduled job while keeping the module enabled.',
       configMoved: 'Managed outside the generic config table',
       units: {
@@ -2001,6 +2002,7 @@ export default {
         schedule: 'Schedule (Cron)',
         duration: 'Analysis window',
         'include-modules': 'Included modules',
+        'recipient-uids': 'Inbox recipient UIDs',
         'ipv4-enable': 'Enable IPv4',
         'ipv4-min-userapps-vote': 'IPv4 minimum voting apps',
         'ipv4-min-ban-count': 'IPv4 minimum bans',
@@ -2101,6 +2103,10 @@ export default {
           name: 'BTN Bypass allowlist',
           description:
             'Builds the IP allowlist for BTN Bypass applications and rule synchronization.',
+        },
+        'btnbypass-conflict-alert': {
+          name: 'BTN Bypass conflict alerts',
+          description: 'Sends an inbox message to the configured recipients when a BTN Bypass app IP matches a deny rule.',
         },
         'points-dynamic': {
           name: 'Dynamic point settlement',

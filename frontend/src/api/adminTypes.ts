@@ -511,6 +511,7 @@ export interface AnalyseModuleField {
     | 'bytes-gb'
     | 'cron'
     | 'text'
+    | 'uid-list'
   value: string
   restartRequired: boolean
 }

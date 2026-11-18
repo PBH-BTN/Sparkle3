@@ -1952,6 +1952,7 @@ export default {
       runStarted: '模块更新任务已在后台启动。',
       restartRequired: '重启后生效',
       includeModulesHint: '多个完整模块类名使用英文逗号分隔。',
+      recipientUidsHint: '用逗号分隔多个 UID。仅发送给管理员和协管，留空时不发送。',
       cronDisabledHint: '输入 - 可暂停此模块的计划任务，同时保持模块开关为启用状态。',
       configMoved: '已从通用配置表独立管理',
       units: {
@@ -1964,6 +1965,7 @@ export default {
         schedule: '执行计划（Cron）',
         duration: '统计窗口',
         'include-modules': '参与分析模块',
+        'recipient-uids': '站内信收件人 UID',
         'ipv4-enable': '启用 IPv4',
         'ipv4-min-userapps-vote': 'IPv4 最低投票用户数',
         'ipv4-min-ban-count': 'IPv4 最低封禁次数',
@@ -2059,6 +2061,10 @@ export default {
         'btnbypass-userapps': {
           name: 'BTN Bypass 允许列表',
           description: '生成 BTN Bypass 用户应用的 IP 允许列表，用于客户端规则同步。',
+        },
+        'btnbypass-conflict-alert': {
+          name: 'BTN Bypass 冲突预警',
+          description: '当 BTN Bypass 应用的 IP 命中封禁规则时，向指定收件人发送站内信。',
         },
         'points-dynamic': {
           name: '动态积分结算',

@@ -182,7 +182,7 @@ onMounted(load)
               <a-form-item
                 v-for="field in module.fields"
                 :key="field.field"
-                :class="{ 'module-field-wide': field.type === 'cron' || field.type === 'text' }"
+                :class="{ 'module-field-wide': ['cron', 'text', 'uid-list'].includes(field.type) }"
                 :label="fieldLabel(field)"
               >
                 <a-switch
@@ -214,6 +214,9 @@ onMounted(load)
                 </template>
                 <template v-else-if="field.type === 'text'" #extra>
                   {{ t('admin.modules.includeModulesHint') }}
+                </template>
+                <template v-else-if="field.type === 'uid-list'" #extra>
+                  {{ t('admin.modules.recipientUidsHint') }}
                 </template>
               </a-form-item>
             </div>
