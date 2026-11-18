@@ -100,6 +100,11 @@ public final class IpQueryModels {
             boolean canDelete,
             List<CommentRevisionView> history
     ) {
+        public CommentView withAuthorAvatarUrl(String avatarUrl) {
+            return new CommentView(id, parentId, network, authorId, authorNickname, avatarUrl, authorAnonymous,
+                    authorModerationHidden, content, revision, edited, moderationStatus, moderationReason, authorIp,
+                    authorUserAgent, createdAt, updatedAt, self, canEdit, canDelete, history);
+        }
     }
 
     public record CommentRevisionView(

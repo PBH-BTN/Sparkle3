@@ -13,6 +13,7 @@ import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRouteResolver;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.ipquery.IpQueryCommentCountService;
 import com.ghostchu.btn.sparkle.service.ipquery.IpQueryCommentService;
@@ -42,6 +43,7 @@ public class PingIpQueryDetailsController extends BasePingController {
     private final IpQueryLookupService lookupService;
     private final IpQueryCommentService comments;
     private final IpQueryCommentCountService commentCounts;
+    private final BtnRouteResolver routeResolver;
 
     @GetMapping("/lookup")
     public Lookup lookup(@RequestParam String query)
@@ -63,7 +65,7 @@ public class PingIpQueryDetailsController extends BasePingController {
         boolean canPublish = eligible(app);
         var result = comments.list(canPublish ? app.getOwner() : -1, scope, page, size, false);
         var access = result.access();
-        return new CommentPage(result.records(), result.current(), result.size(), result.total(), result.pages(),
+        return new CommentPage(withAbsoluteAvatars(result.records()), result.current(), result.size(), result.total(), result.pages(),
                 result.scope(), new CommentAccess(access.visible(), access.publishingEnabled() && canPublish,
                 access.moderationEnabled(), access.maxLength(), access.hourlyLimit()));
     }
@@ -73,7 +75,7 @@ public class PingIpQueryDetailsController extends BasePingController {
             throws AccessDeniedException, UserApplicationBannedException,
             UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
         long owner = requireEligible(authenticate("powCaptcha"));
-        return comments.create(owner, body, request.getRemoteAddr(), request.getHeader("User-Agent"));
+        return withAbsoluteAvatar(comments.create(owner, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
 
     @PutMapping("/comments/{id}")
@@ -81,7 +83,7 @@ public class PingIpQueryDetailsController extends BasePingController {
             throws AccessDeniedException, UserApplicationBannedException,
             UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
         long owner = requireEligible(authenticate("powCaptcha"));
-        return comments.update(owner, id, body, request.getRemoteAddr(), request.getHeader("User-Agent"));
+        return withAbsoluteAvatar(comments.update(owner, id, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
 
     @DeleteMapping("/comments/{id}")
@@ -97,6 +99,26 @@ public class PingIpQueryDetailsController extends BasePingController {
             throws AccessDeniedException, UserApplicationBannedException,
             UserApplicationNotFoundException, PowCaptchaFailureException, BusinessException {
         return commentCounts.count(authenticate("commentCountPowCaptcha").getId(), ips);
+    }
+
+    private List<CommentView> withAbsoluteAvatars(List<CommentView> records) {
+        if (records.stream().noneMatch(comment -> comment.authorAvatarUrl() != null)) {
+            return records;
+        }
+        String rootUrl = avatarRootUrl();
+        return records.stream()
+                .map(comment -> comment.authorAvatarUrl() == null ? comment
+                        : comment.withAuthorAvatarUrl(rootUrl + comment.authorAvatarUrl()))
+                .toList();
+    }
+
+    private CommentView withAbsoluteAvatar(CommentView comment) {
+        return comment.authorAvatarUrl() == null ? comment
+                : comment.withAuthorAvatarUrl(avatarRootUrl() + comment.authorAvatarUrl());
+    }
+
+    private String avatarRootUrl() {
+        return routeResolver.resolve(request.getRemoteAddr()).replaceAll("/+$", "");
     }
 
     private Userapp authenticate(String powSetting)

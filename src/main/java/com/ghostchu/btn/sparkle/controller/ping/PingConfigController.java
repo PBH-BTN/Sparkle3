@@ -7,9 +7,9 @@ import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRouteResolver;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
-import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.ObjectMapper;
 
-import java.net.InetAddress;
 import java.util.UUID;
 
 @Slf4j
@@ -31,7 +30,7 @@ public class PingConfigController extends BasePingController {
     @Autowired
     private IUserappConfigService userappConfigService;
     @Autowired
-    private IPDBManager ipdb;
+    private BtnRouteResolver routeResolver;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -55,23 +54,12 @@ public class PingConfigController extends BasePingController {
         String routeUrl = switch (forceRoute) {
             case "chinamainland" -> configService.text("rootUrls", "chnRootUrl");
             case "global" -> configService.text("rootUrls", "rootUrl");
-            default -> detectRoute(InetAddress.ofLiteral(request.getRemoteAddr()));
+            default -> routeResolver.resolve(request.getRemoteAddr());
         };
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noCache())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(objectMapper.writeValueAsString(config).replace("{rooturl}", routeUrl));
-    }
-
-    private String detectRoute(InetAddress inetAddress) {
-        if (!configService.booleanValue("rootUrls", "autoRouteEnabled")) {
-            return configService.text("rootUrls", "rootUrl");
-        }
-        var geoData = ipdb.queryIPDB(inetAddress).geoData().get();
-        return configService.routeUrl(
-                geoData == null || geoData.getNetwork() == null ? null : geoData.getNetwork().getIsp(),
-                geoData == null || geoData.getCity() == null ? null : geoData.getCity().getCnProvince()
-        );
     }
 
     @Component
