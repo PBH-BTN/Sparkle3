@@ -1456,6 +1456,10 @@ export default {
           name: 'Application heartbeat cleanup',
           description: 'Deletes expired user application heartbeat records in batches.',
         },
+        'btn-app-geoip-risk-cleanup': {
+          name: 'Clean up BTN app location records',
+          description: 'Removes expired heartbeat location and alert records.',
+        },
         'heartbeat-queue-flush': {
           name: 'Keepalive queue flush',
           description: 'Drains queued Keepalive requests from Redis and batch-writes deduplicated heartbeat and point data.',
@@ -1990,6 +1994,7 @@ export default {
       restartRequired: 'Restart required',
       includeModulesHint: 'Separate full module class names with commas.',
       recipientUidsHint: 'Separate UIDs with commas. Alerts go to admins and moderators. Leave blank to disable delivery.',
+      geoipAlertCooldownHint: 'Each app, recipient, and IP family gets one alert per cooldown. Set 0 to disable it. Maximum 10080 minutes.',
       cronDisabledHint: 'Use - to pause this scheduled job while keeping the module enabled.',
       configMoved: 'Managed outside the generic config table',
       units: {
@@ -2003,6 +2008,9 @@ export default {
         duration: 'Analysis window',
         'include-modules': 'Included modules',
         'recipient-uids': 'Inbox recipient UIDs',
+        'geoip-region-threshold': 'Minimum distinct locations',
+        'geoip-split-ip-families': 'Count IPv4 and IPv6 separately',
+        'geoip-alert-cooldown-minutes': 'Alert cooldown (minutes)',
         'ipv4-enable': 'Enable IPv4',
         'ipv4-min-userapps-vote': 'IPv4 minimum voting apps',
         'ipv4-min-ban-count': 'IPv4 minimum bans',
@@ -2107,6 +2115,10 @@ export default {
         'btnbypass-conflict-alert': {
           name: 'BTN Bypass conflict alerts',
           description: 'Sends an inbox message to the configured recipients when a BTN Bypass app IP matches a deny rule.',
+        },
+        'btn-app-geoip-risk': {
+          name: 'BTN app location alerts',
+          description: 'Sends an inbox alert when an app reports heartbeats from multiple countries, regions, or provinces within the BTN reporting window.',
         },
         'points-dynamic': {
           name: 'Dynamic point settlement',

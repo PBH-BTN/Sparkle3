@@ -194,7 +194,8 @@ onMounted(load)
                   v-else-if="isNumeric(field)"
                   :model-value="numericValue(module.id, field)"
                   :precision="field.type === 'integer' || field.type === 'long' ? 0 : 2"
-                  :min="0"
+                  :min="field.field === 'geoip-region-threshold' ? 2 : 0"
+                  :max="field.field === 'geoip-alert-cooldown-minutes' ? 10080 : undefined"
                   @change="(value) => setFieldValue(module.id, field, value)"
                 >
                   <template v-if="fieldUnit(field)" #suffix>
@@ -217,6 +218,9 @@ onMounted(load)
                 </template>
                 <template v-else-if="field.type === 'uid-list'" #extra>
                   {{ t('admin.modules.recipientUidsHint') }}
+                </template>
+                <template v-else-if="field.field === 'geoip-alert-cooldown-minutes'" #extra>
+                  {{ t('admin.modules.geoipAlertCooldownHint') }}
                 </template>
               </a-form-item>
             </div>

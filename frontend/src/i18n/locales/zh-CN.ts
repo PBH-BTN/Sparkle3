@@ -1432,6 +1432,10 @@ export default {
           name: '用户应用心跳清理',
           description: '分批删除超过保留期限的用户应用心跳记录。',
         },
+        'btn-app-geoip-risk-cleanup': {
+          name: '清理 BTN 应用归属地记录',
+          description: '清理过期的心跳归属地和预警记录。',
+        },
         'heartbeat-queue-flush': {
           name: 'Keepalive 队列写入',
           description: '从 Redis 队列批量取出 Keepalive 请求，去重后写入心跳和积分数据。',
@@ -1953,6 +1957,7 @@ export default {
       restartRequired: '重启后生效',
       includeModulesHint: '多个完整模块类名使用英文逗号分隔。',
       recipientUidsHint: '用逗号分隔多个 UID。仅发送给管理员和协管，留空时不发送。',
+      geoipAlertCooldownHint: '同一应用、收件人和地址族在冷却期内只收到一次预警。最大 10080 分钟，填 0 关闭冷却。',
       cronDisabledHint: '输入 - 可暂停此模块的计划任务，同时保持模块开关为启用状态。',
       configMoved: '已从通用配置表独立管理',
       units: {
@@ -1966,6 +1971,9 @@ export default {
         duration: '统计窗口',
         'include-modules': '参与分析模块',
         'recipient-uids': '站内信收件人 UID',
+        'geoip-region-threshold': '最低归属地数量',
+        'geoip-split-ip-families': '分开统计 IPv4 和 IPv6',
+        'geoip-alert-cooldown-minutes': '预警冷却时间（分钟）',
         'ipv4-enable': '启用 IPv4',
         'ipv4-min-userapps-vote': 'IPv4 最低投票用户数',
         'ipv4-min-ban-count': 'IPv4 最低封禁次数',
@@ -2065,6 +2073,10 @@ export default {
         'btnbypass-conflict-alert': {
           name: 'BTN Bypass 冲突预警',
           description: '当 BTN Bypass 应用的 IP 命中封禁规则时，向指定收件人发送站内信。',
+        },
+        'btn-app-geoip-risk': {
+          name: 'BTN 应用归属地风控',
+          description: '在 BTN 心跳上报窗口内检测同一应用是否从多个国家、地区或省份上报，并向指定收件人发送站内信。',
         },
         'points-dynamic': {
           name: '动态积分结算',
