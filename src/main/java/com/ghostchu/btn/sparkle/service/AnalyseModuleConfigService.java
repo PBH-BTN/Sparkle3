@@ -92,6 +92,7 @@ public class AnalyseModuleConfigService {
                     integer("geoip-region-threshold", "geoip-region-threshold", 2),
                     bool("geoip-split-ip-families", "geoip-split-ip-families", true),
                     integer("geoip-alert-cooldown-minutes", "geoip-alert-cooldown-minutes", 60),
+                    integer("geoip-scan-limit", "geoip-scan-limit", 10_000),
                     field("recipient-uids", "recipient-uids", "uid-list", "")
             ),
             module("points-dynamic", "points-dynamic",
@@ -416,8 +417,16 @@ public class AnalyseModuleConfigService {
                 }
                 case "integer" -> {
                     int parsed = Integer.parseInt(value);
-                    int minimum = "geoip-region-threshold".equals(field.field()) ? 2 : 0;
-                    int maximum = "geoip-alert-cooldown-minutes".equals(field.field()) ? 10_080 : Integer.MAX_VALUE;
+                    int minimum = switch (field.field()) {
+                        case "geoip-region-threshold" -> 2;
+                        case "geoip-scan-limit" -> 500;
+                        default -> 0;
+                    };
+                    int maximum = switch (field.field()) {
+                        case "geoip-alert-cooldown-minutes" -> 10_080;
+                        case "geoip-scan-limit" -> 50_000;
+                        default -> Integer.MAX_VALUE;
+                    };
                     if (parsed < minimum || parsed > maximum) throw new IllegalArgumentException();
                     yield Integer.toString(parsed);
                 }
@@ -474,7 +483,7 @@ public class AnalyseModuleConfigService {
         }
     }
 
-    static List<Long> recipientUids(String value) {
+    public static List<Long> recipientUids(String value) {
         return java.util.Arrays.stream(value.split("[\\s,，]+"))
                 .filter(token -> !token.isEmpty())
                 .map(token -> {

@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Service
 public class BtnAppGeoIpRiskService {
     static final String MODULE_ID = "btn-app-geoip-risk";
-    private static final int SCAN_BATCH_SIZE = 200;
+    private static final int SCAN_BATCH_SIZE = 500;
     private static final long CLEANUP_MILLIS = 3_600_000;
     private static final String SUBJECT = "BTN 应用归属地异常预警 / BTN app location alert";
 
@@ -92,12 +92,14 @@ public class BtnAppGeoIpRiskService {
         int threshold = Math.max(2, config.integerValue(MODULE_ID, "geoip-region-threshold", 2));
         boolean splitFamilies = config.booleanValue(MODULE_ID, "geoip-split-ip-families", true);
         int cooldown = config.integerValue(MODULE_ID, "geoip-alert-cooldown-minutes", 60);
+        int limit = Math.clamp(config.integerValue(MODULE_ID, "geoip-scan-limit", 10_000), 500, 50_000);
         int processed = 0;
-        for (int batch = 0; batch < 10; batch++) {
+        while (processed < limit) {
+            int batchSize = Math.min(SCAN_BATCH_SIZE, limit - processed);
             int size = Objects.requireNonNull(transactions.execute(status ->
-                    scanBatch(window, threshold, splitFamilies, cooldown, recipients)));
+                    scanBatch(window, threshold, splitFamilies, cooldown, recipients, batchSize)));
             processed += size;
-            if (size < SCAN_BATCH_SIZE) {
+            if (size < batchSize) {
                 break;
             }
         }
@@ -106,32 +108,47 @@ public class BtnAppGeoIpRiskService {
         }
     }
 
-    private int scanBatch(Duration window, int threshold, boolean splitFamilies, int cooldown, List<Long> recipients) {
+    private int scanBatch(Duration window, int threshold, boolean splitFamilies, int cooldown,
+                          List<Long> recipients, int batchSize) {
         if (!Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT pg_try_advisory_xact_lock(hashtextextended('sparkle:btn-app-geoip-risk', 0))", Boolean.class))) {
             return 0;
         }
+        // A qualifying window contains a pending receipt. Outside the pending time span, only the nearest
+        // receipt for each region on each side can affect such a window.
         List<BtnGeoIpWindow.Observation> rows = jdbc.query("""
                 WITH pending AS MATERIALIZED (
                     SELECT id, application_id, observed_at FROM btn_app_geoip_observations
                     WHERE NOT processed ORDER BY id LIMIT ?
                 ), bounds AS (
-                    SELECT application_id,
-                           MIN(observed_at) - ? * INTERVAL '1 millisecond' AS start_at,
-                           MAX(observed_at) + ? * INTERVAL '1 millisecond' AS end_at
+                    SELECT application_id, MIN(observed_at) AS first_pending, MAX(observed_at) AS last_pending
                     FROM pending GROUP BY application_id
+                ), edges AS (
+                    SELECT h.application_id, h.address_family, h.country, h.province,
+                           CASE WHEN h.observed_at < b.first_pending
+                                THEN MAX(h.observed_at) ELSE MIN(h.observed_at) END AS observed_at
+                    FROM bounds b
+                    JOIN btn_app_geoip_observations h ON h.application_id = b.application_id
+                    WHERE (h.observed_at >= b.first_pending - ? * INTERVAL '1 millisecond'
+                           AND h.observed_at < b.first_pending)
+                       OR (h.observed_at > b.last_pending
+                           AND h.observed_at <= b.last_pending + ? * INTERVAL '1 millisecond')
+                    GROUP BY h.application_id, h.address_family, h.country, h.province,
+                             h.observed_at < b.first_pending
                 )
                 SELECT h.id, h.application_id, h.observed_at, h.address_family, h.country, h.province,
                        p.id IS NOT NULL AS pending
                 FROM bounds b
                 JOIN btn_app_geoip_observations h ON h.application_id = b.application_id
-                     AND h.observed_at BETWEEN b.start_at AND b.end_at
+                     AND h.observed_at BETWEEN b.first_pending AND b.last_pending
                 LEFT JOIN pending p ON p.id = h.id
-                ORDER BY h.application_id, h.observed_at, h.id
+                UNION ALL
+                SELECT 0, application_id, observed_at, address_family, country, province, false FROM edges
+                ORDER BY application_id, observed_at, id
                 """, (result, index) -> new BtnGeoIpWindow.Observation(
                 result.getLong(1), result.getLong(2), result.getObject(3, OffsetDateTime.class),
                 result.getInt(4), result.getString(5), result.getString(6), result.getBoolean(7)),
-                SCAN_BATCH_SIZE, window.toMillis(), window.toMillis());
+                batchSize, window.toMillis(), window.toMillis());
         if (rows.isEmpty()) {
             return 0;
         }
@@ -145,8 +162,9 @@ public class BtnAppGeoIpRiskService {
         }
         notifyRecipients(hits, window, cooldown, recipients);
         var pending = rows.stream().filter(BtnGeoIpWindow.Observation::pending).map(BtnGeoIpWindow.Observation::id).toList();
-        jdbc.batchUpdate("UPDATE btn_app_geoip_observations SET processed = true WHERE id = ?",
-                pending, SCAN_BATCH_SIZE, (statement, id) -> statement.setLong(1, id));
+        jdbc.update("UPDATE btn_app_geoip_observations SET processed = true WHERE id = ANY (?)",
+                statement -> statement.setArray(1, statement.getConnection().createArrayOf("bigint",
+                        pending.toArray(Long[]::new))));
         return pending.size();
     }
 
