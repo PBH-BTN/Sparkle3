@@ -38,7 +38,7 @@ class IpQueryCommentCountServiceTest {
 
     @Test
     void enforcesHardBatchLimitBeforeRedis() {
-        assertThrows(BusinessException.class, () -> service.count(1, Collections.nCopies(51, "192.0.2.1")));
+        assertThrows(BusinessException.class, () -> service.count(1L, Collections.nCopies(51, "192.0.2.1")));
         verifyNoInteractions(redis, mapper);
     }
 
@@ -47,7 +47,7 @@ class IpQueryCommentCountServiceTest {
         when(redis.execute(any(RedisScript.class), anyList())).thenReturn(13L);
         when(config.longValue("queryIp", "commentCountRequestsPerMinute")).thenReturn(12L);
 
-        assertThrows(BusinessException.class, () -> service.count(1, List.of("192.0.2.1")));
+        assertThrows(BusinessException.class, () -> service.count(1L, List.of("192.0.2.1")));
         verifyNoInteractions(values, mapper);
     }
 
@@ -65,7 +65,7 @@ class IpQueryCommentCountServiceTest {
                 .thenReturn(List.of(new AddressCommentCount("192.0.2.2", 0)));
 
         assertEquals(Map.of("192.0.2.1", 3L, "192.0.2.2", 0L),
-                service.count(1, List.of("192.0.2.1", "192.0.2.2", "192.0.2.2")));
+                service.count(1L, List.of("192.0.2.1", "192.0.2.2", "192.0.2.2")));
         verify(mapper).countApprovedByAddress(List.of("192.0.2.2"));
         verify(values).set("sparkle:ip-comment-count:v1:40:192.0.2.2", "0", Duration.ofSeconds(40));
     }
