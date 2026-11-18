@@ -1460,6 +1460,10 @@ export default {
           name: 'Clean up BTN app location records',
           description: 'Removes expired heartbeat location and alert records.',
         },
+        'btn-report-volume-alerts': {
+          name: 'Send BTN reporting volume alerts',
+          description: 'Delivers threshold alerts to the recipients configured for each reporting module.',
+        },
         'heartbeat-queue-flush': {
           name: 'Keepalive queue flush',
           description: 'Drains queued Keepalive requests from Redis and batch-writes deduplicated heartbeat and point data.',
@@ -2011,6 +2015,7 @@ export default {
         'geoip-region-threshold': 'Minimum distinct locations',
         'geoip-split-ip-families': 'Count IPv4 and IPv6 separately',
         'geoip-alert-cooldown-minutes': 'Alert cooldown (minutes)',
+        'geoip-scan-limit': 'Maximum heartbeats per scan',
         'ipv4-enable': 'Enable IPv4',
         'ipv4-min-userapps-vote': 'IPv4 minimum voting apps',
         'ipv4-min-ban-count': 'IPv4 minimum bans',
@@ -2631,6 +2636,9 @@ export default {
         maxProtocolVersion: 'Maximum protocol version',
         interval: 'Submission / fetch interval',
         randomInitialDelay: 'Randomized initial delay',
+        volumeRiskEnabled: 'Enable reporting volume alerts',
+        volumeRiskThreshold: 'Entry threshold per reporting window',
+        volumeRiskRecipientUids: 'Volume alert recipient UIDs',
         repeatBanSuppression: 'Block repeated bans',
         repeatBanWindows: 'Repeated-ban window threshold',
         endpoint: 'Endpoint',
@@ -2689,6 +2697,8 @@ export default {
         cacheDuration: 'Cache lifetime',
       },
       help: {
+        volumeRiskThreshold: 'The reporting interval plus the randomized initial delay defines the window. An alert is sent when the count exceeds this threshold.',
+        volumeRiskRecipientUids: 'Separate admin or moderator UIDs with commas. Leave blank to disable delivery.',
         queryIpPowCaptcha: 'Applies to IP and CIDR queries, reading comments, and publishing, editing, and deleting comments.',
         repeatBanSuppression: 'Block new logs for targets that reach the repeated-ban threshold. With this off, BTN still records detected events and filters exact replays.',
         repeatBanWindows: 'Number of qualifying submission windows for the same target before BTN records a repeated-ban event.',

@@ -63,6 +63,18 @@ function isNumeric(field: AnalyseModuleField) {
   )
 }
 
+function numericMin(field: AnalyseModuleField) {
+  if (field.field === 'geoip-region-threshold') return 2
+  if (field.field === 'geoip-scan-limit') return 500
+  return 0
+}
+
+function numericMax(field: AnalyseModuleField) {
+  if (field.field === 'geoip-alert-cooldown-minutes') return 10080
+  if (field.field === 'geoip-scan-limit') return 50000
+  return undefined
+}
+
 function numericValue(moduleId: string, field: AnalyseModuleField) {
   const value = Number(drafts[moduleId][field.field])
   return Number.isFinite(value) ? value : undefined
@@ -194,8 +206,8 @@ onMounted(load)
                   v-else-if="isNumeric(field)"
                   :model-value="numericValue(module.id, field)"
                   :precision="field.type === 'integer' || field.type === 'long' ? 0 : 2"
-                  :min="field.field === 'geoip-region-threshold' ? 2 : 0"
-                  :max="field.field === 'geoip-alert-cooldown-minutes' ? 10080 : undefined"
+                  :min="numericMin(field)"
+                  :max="numericMax(field)"
                   @change="(value) => setFieldValue(module.id, field, value)"
                 >
                   <template v-if="fieldUnit(field)" #suffix>
