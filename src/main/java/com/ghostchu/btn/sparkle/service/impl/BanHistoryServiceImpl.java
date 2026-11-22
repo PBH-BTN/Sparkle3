@@ -215,8 +215,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     }
 
     @Override
-    public List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
-        return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
+    public long countPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
+        return this.baseMapper.countPeerTorrents(afterTimestamp, peerIp);
     }
 
     @Override

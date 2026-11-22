@@ -28,8 +28,6 @@ public class QueryIpServiceImpl {
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
-    private ITorrentService torrentService;
-    @Autowired
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IpQueryLabelService labelService;
@@ -126,11 +124,9 @@ public class QueryIpServiceImpl {
                 totalToPeerTraffic == 0 ? 999999999.0 :
                 (double) totalFromPeerTraffic / totalToPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
-        Set<Long> distinctTorrentIds = new HashSet<>();
         OffsetDateTime torrentsCountingSince = OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
-        distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
-        distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
-        result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
+        long torrentCount = banHistoryService.countPeerTorrents(torrentsCountingSince, peerIp);
+        result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, torrentCount));
 
         var labels = labelService.labels(scope.network(),
                 OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));

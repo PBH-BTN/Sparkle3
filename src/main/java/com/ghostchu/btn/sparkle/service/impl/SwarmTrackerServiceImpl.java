@@ -361,11 +361,6 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     }
 
     @Override
-    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
-        return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
-    }
-
-    @Override
     public long calcPeerConcurrentSeeds(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
         QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
                 .ge("last_time_seen", afterTime)

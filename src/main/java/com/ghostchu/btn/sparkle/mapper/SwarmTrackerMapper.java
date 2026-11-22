@@ -41,8 +41,6 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
     @NotNull
     PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
-
     long countAll();
 
     @NotNull UserSwarmStatisticTrafficResult fetchSwarmTrackerByIpInTimeRange(@NotNull String peerIp, @NotNull OffsetDateTime startAt, @NotNull OffsetDateTime endAt);

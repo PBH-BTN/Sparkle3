@@ -23,7 +23,7 @@ class BanHistoryMapperXmlTest {
                 "com.ghostchu.btn.sparkle.mapper.BanHistoryMapper.sumPeerIpTraffic"
         ));
         assertNotNull(configuration.getMappedStatement(
-                "com.ghostchu.btn.sparkle.mapper.BanHistoryMapper.selectPeerTorrents"
+                "com.ghostchu.btn.sparkle.mapper.BanHistoryMapper.countPeerTorrents"
         ));
     }
 

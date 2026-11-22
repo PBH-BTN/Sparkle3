@@ -35,7 +35,6 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
 
     @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
     long calcPeerConcurrentSeeds(@NotNull OffsetDateTime offsetDateTime, @NotNull String peerIp);
 

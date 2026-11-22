@@ -84,13 +84,6 @@
           AND last_time_seen >= #{afterTimestamp}
     </select>
 
-    <select id="selectPeerTorrents" resultType="long">
-        SELECT DISTINCT torrent_id AS torrent_count
-        FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
-          AND last_time_seen >= #{afterTimestamp};
-    </select>
-
     <select id="countAll" resultType="long">
         SELECT COUNT(*) FROM swarm_tracker
     </select>

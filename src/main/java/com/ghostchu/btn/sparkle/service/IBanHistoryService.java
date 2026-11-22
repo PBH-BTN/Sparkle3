@@ -36,7 +36,7 @@ public interface IBanHistoryService extends IService<BanHistory> {
 
     @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
+    long countPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
     
     /**
      * Query ban history with advanced filters and pagination

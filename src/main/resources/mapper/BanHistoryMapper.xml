@@ -13,11 +13,19 @@
         WHERE populate_time > #{afterTimestamp}
           AND peer_ip &lt;&lt;= #{peerIp}::inet
     </select>
-    <select id="selectPeerTorrents" resultType="long">
-        SELECT DISTINCT torrent_id AS torrent_count
-        FROM ban_history
-        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
-          AND populate_time >= #{afterTimestamp};
+    <select id="countPeerTorrents" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT DISTINCT torrent_id
+            FROM ban_history
+            WHERE peer_ip &lt;&lt;= #{peerIp}::inet
+              AND populate_time >= #{afterTimestamp}
+            UNION
+            SELECT DISTINCT torrent_id
+            FROM swarm_tracker
+            WHERE peer_ip &lt;&lt;= #{peerIp}::inet
+              AND last_time_seen >= #{afterTimestamp}
+        ) AS torrents
     </select>
 <!--    <select id="estimateCountAll" resultType="long">-->
 <!--        SELECT reltuples::bigint AS estimate_count-->
