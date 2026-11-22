@@ -25,6 +25,11 @@ public interface UserappMapper extends BaseMapper<Userapp> {
 
     int updateUserAppLastThing(long id, String lastUserAgent);
 
+    ApplicationCounts countApplications(@Param("now") OffsetDateTime now);
+
+    record ApplicationCounts(long allTime, long days30, long days14, long days7, long days1) {
+    }
+
     @NotNull
     Cursor<Userapp> fetchAllUserApps();
 }

@@ -5,7 +5,6 @@ import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import com.ghostchu.btn.sparkle.entity.BanHistory;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.Torrent;
-import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanHistoryMapper;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.TorrentMapper;
@@ -19,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 @Service
 @Slf4j
@@ -56,20 +57,12 @@ public class StatisticsRefreshServiceImpl {
     }
 
     public void onUserAppUpdate() {
-        Timestamp thirtyDaysAgo = ago(Duration.ofDays(30));
-        Timestamp fourteenDaysAgo = ago(Duration.ofDays(14));
-        Timestamp sevenDaysAgo = ago(Duration.ofDays(7));
-        Timestamp last24HoursAgo = ago(Duration.ofDays(1));
-        long allTime = userappMapper.selectCount(null);
-        long last30Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", thirtyDaysAgo));
-        long last14Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", fourteenDaysAgo));
-        long last7Days = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", sevenDaysAgo));
-        long last24Hours = userappMapper.selectCount(new QueryWrapper<Userapp>().ge("last_seen_at", last24HoursAgo));
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_ALLTIME.getKey(), allTime);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_30DAYS.getKey(), last30Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_14DAYS.getKey(), last14Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_7DAYS.getKey(), last7Days);
-        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_24HOURS.getKey(), last24Hours);
+        var count = userappMapper.countApplications(Instant.ofEpochMilli(System.currentTimeMillis()).atOffset(ZoneOffset.UTC));
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_ALLTIME.getKey(), count.allTime());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_30DAYS.getKey(), count.days30());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_14DAYS.getKey(), count.days14());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_7DAYS.getKey(), count.days7());
+        stringLongRedisTemplate.opsForValue().set(RedisKeyConstant.STATS_USERAPP_24HOURS.getKey(), count.days1());
     }
 
     public void onTorrentUpdate() {
