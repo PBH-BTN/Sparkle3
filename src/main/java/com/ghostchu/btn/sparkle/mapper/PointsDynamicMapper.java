@@ -56,7 +56,7 @@ public interface PointsDynamicMapper {
     @Select("""
             WITH active AS (
                 SELECT time_bucket(INTERVAL '1 hour', s.last_time_seen) AS bucket,
-                       s.torrent_id, s.userapps_id, s.peer_ip, s.peer_port,
+                       s.torrent_id, s.peer_ip, s.peer_port,
                        s.peer_id, u.owner AS user_id
                 FROM public.swarm_tracker s
                 INNER JOIN public.userapp u ON u.id = s.userapps_id
@@ -68,7 +68,7 @@ public interface PointsDynamicMapper {
                 GROUP BY bucket, torrent_id
             ),
             top_torrents AS (
-                SELECT bucket, torrent_id, unique_peers
+                SELECT bucket, torrent_id
                 FROM (
                     SELECT bucket, torrent_id, unique_peers,
                            ROW_NUMBER() OVER (
@@ -80,20 +80,18 @@ public interface PointsDynamicMapper {
                 WHERE rank <= #{hotPeerTop}
             ),
             user_peers AS (
-                SELECT bucket, user_id, torrent_id,
+                SELECT a.bucket, a.user_id, a.torrent_id,
                        COUNT(DISTINCT COALESCE(
-                           NULLIF(peer_id, ''),
-                           host(peer_ip) || ':' || peer_port
+                           NULLIF(a.peer_id, ''),
+                           host(a.peer_ip) || ':' || a.peer_port
                        )) AS peer_count
-                FROM active
-                GROUP BY bucket, user_id, torrent_id
+                FROM active a
+                INNER JOIN top_torrents t USING (bucket, torrent_id)
+                GROUP BY a.bucket, a.user_id, a.torrent_id
             )
             SELECT user_peers.bucket, user_peers.user_id,
                    SUM(user_peers.peer_count * #{hotPeerPoints}::bigint)::bigint AS points
             FROM user_peers
-            INNER JOIN top_torrents
-                ON top_torrents.bucket = user_peers.bucket
-               AND top_torrents.torrent_id = user_peers.torrent_id
             GROUP BY user_peers.bucket, user_peers.user_id
             HAVING SUM(user_peers.peer_count * #{hotPeerPoints}::bigint) > 0
             """)
