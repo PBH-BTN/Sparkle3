@@ -73,6 +73,22 @@
         FROM user_swarm_statistic
     </select>
 
+    <sql id="weightedTraffic">
+        ((sent_traffic_other_ack * #{sentTrafficOtherAckWeight}) +
+         (sent_traffic_self_report * #{sentTrafficSelfReportWeight}) +
+         (received_traffic_other_ack * #{receivedTrafficOtherAckWeight}) +
+         (received_traffic_self_report * #{receivedTrafficSelfReportWeight}))
+    </sql>
+
+    <sql id="excludeIgnoredUsers">
+        <if test="ignoreUserIds != null and ignoreUserIds.size() > 0">
+            AND user_id NOT IN
+            <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
+                #{ignoreUid}
+            </foreach>
+        </if>
+    </sql>
+
     <select id="calcUsersRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
         SELECT
             user_id,
@@ -80,49 +96,29 @@
             sent_traffic_other_ack,
             received_traffic_other_ack,
             received_traffic_self_report,
-            RANK() OVER (
-                ORDER BY (
-                    (sent_traffic_other_ack * #{sentTrafficOtherAckWeight}) +
-                    (sent_traffic_self_report * #{sentTrafficSelfReportWeight}) +
-                    (received_traffic_other_ack * #{receivedTrafficOtherAckWeight}) +
-                    (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
-                    ) DESC
-                ) AS rank
+            RANK() OVER (ORDER BY <include refid="weightedTraffic"/> DESC) AS rank
         FROM user_swarm_statistic
-        <if test="ignoreUserIds != null and ignoreUserIds.size() > 0">
-            WHERE user_id NOT IN
-            <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
-                #{ignoreUid}
-            </foreach>
-        </if>
+        <where><include refid="excludeIgnoredUsers"/></where>
     </select>
 
     <select id="calcUserRanking" resultMap="userSwarmStatisticTrackRankingDtoResultMap">
-        WITH UserRanks AS (
-            SELECT
-                user_id,
-                sent_traffic_self_report,
-                sent_traffic_other_ack,
-                received_traffic_other_ack,
-                received_traffic_self_report,
-                RANK() OVER (
-                    ORDER BY (
-                        (sent_traffic_other_ack * #{sentTrafficOtherAckWeight}) +
-                        (sent_traffic_self_report * #{sentTrafficSelfReportWeight}) +
-                        (received_traffic_other_ack * #{receivedTrafficOtherAckWeight}) +
-                        (received_traffic_self_report * #{receivedTrafficSelfReportWeight})
-                        ) DESC
-                    ) AS rank
+        WITH target AS MATERIALIZED (
+            SELECT user_id, sent_traffic_self_report, sent_traffic_other_ack,
+                   received_traffic_other_ack, received_traffic_self_report,
+                   <include refid="weightedTraffic"/> AS score
             FROM user_swarm_statistic
-            <if test="ignoreUserIds != null and ignoreUserIds.size() > 0">
-                WHERE user_id NOT IN
-                <foreach item="ignoreUid" collection="ignoreUserIds" open="(" separator="," close=")">
-                    #{ignoreUid}
-                </foreach>
-            </if>
+            WHERE user_id = #{userId}
+            <include refid="excludeIgnoredUsers"/>
         )
-        SELECT * FROM UserRanks
-        WHERE user_id = #{userId}
-        LIMIT 1;
+        <!-- RANK() for one user is one plus the number with a strictly higher score. -->
+        SELECT user_id, sent_traffic_self_report, sent_traffic_other_ack,
+               received_traffic_other_ack, received_traffic_self_report,
+               1 + (
+                   SELECT COUNT(*)
+                   FROM user_swarm_statistic
+                   WHERE <include refid="weightedTraffic"/> > target.score
+                   <include refid="excludeIgnoredUsers"/>
+               ) AS rank
+        FROM target
     </select>
 </mapper>
