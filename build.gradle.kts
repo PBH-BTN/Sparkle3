@@ -107,7 +107,7 @@ dependencies {
     implementation("org.kohsuke:github-api:1.330")
     implementation("com.baomidou:mybatis-plus-jsqlparser")
     implementation("com.github.haifengl:smile-core:7.2.0")
-    implementation("com.clickhouse:clickhouse-jdbc:0.7.2")
+    implementation("com.clickhouse:clickhouse-jdbc:0.11.2")
     implementation("org.springframework.boot:spring-boot-starter-mail") // mailing
 
 }
