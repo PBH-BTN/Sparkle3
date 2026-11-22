@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.TorrentMapper">
+    <select id="countTimeStatistics" resultType="com.ghostchu.btn.sparkle.service.dto.UniversalCountDto">
+        SELECT COUNT(*) AS days30,
+               COUNT(*) FILTER (WHERE last_seen_at >= #{now}::timestamptz - INTERVAL '336 hours') AS days14,
+               COUNT(*) FILTER (WHERE last_seen_at >= #{now}::timestamptz - INTERVAL '168 hours') AS days7,
+               COUNT(*) FILTER (WHERE last_seen_at >= #{now}::timestamptz - INTERVAL '24 hours') AS days1
+        FROM torrent
+        WHERE last_seen_at >= #{now}::timestamptz - INTERVAL '720 hours'
+    </select>
+
     <select id="findTorrentByIdentifier" resultType="com.ghostchu.btn.sparkle.entity.Torrent">
         SELECT *
         FROM torrent
