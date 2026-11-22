@@ -89,11 +89,7 @@ public class QueryIpServiceImpl {
                 null,
                 Page.of(1, 1000)
         );
-        var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
-                OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
-                peerIp
-        );
-        var concurrentSeeds = swarmTrackerService.calcPeerConcurrentSeeds(
+        var concurrency = swarmTrackerService.countPeerConcurrency(
                 OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
                 peerIp
         );
@@ -101,8 +97,8 @@ public class QueryIpServiceImpl {
                 syncSwarmInterval,
                 swarms.getTotal(),
                 swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(),
-                concurrentDownloads,
-                concurrentSeeds
+                concurrency.downloads(),
+                concurrency.seeds()
         ));
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
