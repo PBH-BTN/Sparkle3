@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.CommentScopeOpti
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.GeoView;
 import com.ghostchu.btn.sparkle.controller.ui.dto.IpQueryModels.LookupResponse;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
+import com.ghostchu.btn.sparkle.mapper.IpQueryCommentMapper;
 import com.ghostchu.btn.sparkle.service.ai.AiModerationService;
 import com.ghostchu.btn.sparkle.service.impl.QueryIpServiceImpl;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
@@ -24,9 +25,9 @@ public class IpQueryLookupService {
     private final IPDBManager geoIpManager;
     private final IpQuerySettingsService settingsService;
     private final AiModerationService moderationService;
-    private final IpQueryCommentCountService ipQueryCommentCountService;
+    private final IpQueryCommentMapper commentMapper;
 
-    public LookupResponse lookup(String value, Long appId) throws BusinessException {
+    public LookupResponse lookup(String value) throws BusinessException {
         IpScope scope = IpScope.parse(value);
         int commentPrefix = scope.defaultCommentPrefix();
         IpScope commentScope = scope.withCommentPrefix(commentPrefix);
@@ -41,9 +42,7 @@ public class IpQueryLookupService {
                     prefix == commentPrefix
             ));
         }
-        String commentsCountQueryFor = commentScope.canonicalCidr();
-        var commentsCountResult = ipQueryCommentCountService.count(appId, List.of(commentsCountQueryFor));
-        long commentsCount = commentsCountResult.getOrDefault(commentsCountQueryFor, 0L);
+        long commentsCount = access.visible() ? commentMapper.countApprovedInScope(commentScope.postgresValue()) : 0L;
         return new LookupResponse(
                 scope.input(),
                 scope.normalizedAddress(),

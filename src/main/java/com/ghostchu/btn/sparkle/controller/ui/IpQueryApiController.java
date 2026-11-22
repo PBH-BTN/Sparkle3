@@ -32,7 +32,7 @@ public class IpQueryApiController {
     @GetMapping("/lookup")
     public LookupResponse lookup(@RequestParam("query") String query)
             throws BusinessException {
-        return lookupService.lookup(query, null);
+        return lookupService.lookup(query);
     }
 
     @GetMapping("/comments")

@@ -50,7 +50,7 @@ public class PingIpQueryDetailsController extends BasePingController {
             throws
             BusinessException {
         Userapp app = authenticate("powCaptcha");
-        LookupResponse lookup = lookupService.lookup(query, app.getId());
+        LookupResponse lookup = lookupService.lookup(query);
         return new Lookup(lookup, lookup.commentAccess().publishingEnabled() && eligible(app));
     }
 

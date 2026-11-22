@@ -29,6 +29,15 @@ public interface IpQueryCommentMapper extends BaseMapper<IpQueryComment> {
     }
 
     @Select("""
+            SELECT COUNT(*)
+            FROM ip_query_comments
+            WHERE deleted_at IS NULL
+              AND moderation_status = 'APPROVED'
+              AND network <<= #{scope}::cidr
+            """)
+    long countApprovedInScope(@Param("scope") String scope);
+
+    @Select("""
             SELECT *
             FROM ip_query_comments
             WHERE deleted_at IS NULL
