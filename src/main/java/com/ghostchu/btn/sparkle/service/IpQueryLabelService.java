@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import inet.ipaddr.IPAddress;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class IpQueryLabelService {
     private final RulePreviewService rulePreview;
-    private final IUserappsHeartbeatService heartbeats;
-    private final IUserappService apps;
-    private final IUserService users;
+    private final UserAppsHeartbeatMapper heartbeats;
     private final UserPublicProfileService profiles;
 
     public List<Label> labels(IPAddress network, OffsetDateTime heartbeatSince) {
@@ -34,14 +33,10 @@ public class IpQueryLabelService {
             }
         }
 
-        for (var heartbeat : heartbeats.fetchIpHeartbeatRecords(network.toCanonicalString(), heartbeatSince)) {
-            var app = apps.getById(heartbeat.getUserappId());
-            var user = app == null ? null : users.getById(app.getOwner());
-            if (user != null) {
-                String nickname = network.isMultiple() ? null : profiles.publicNickname(user);
-                labels.add(new Label("btn_user", null, nickname));
-                break;
-            }
+        var user = heartbeats.selectLatestUserInScope(network.toCanonicalString(), heartbeatSince);
+        if (user != null) {
+            String nickname = network.isMultiple() ? null : profiles.publicNickname(user);
+            labels.add(new Label("btn_user", null, nickname));
         }
         return List.copyOf(labels);
     }

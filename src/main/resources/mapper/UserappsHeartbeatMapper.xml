@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper">
+    <select id="selectLatestUserInScope" resultType="com.ghostchu.btn.sparkle.entity.User">
+        SELECT u.id, u.nickname, u.nickname_moderation_status AS "nicknameModerationStatus"
+        FROM userapps_heartbeat h
+        JOIN userapp a ON a.id = h.userapp_id
+        JOIN "user" u ON u.id = a.owner
+        WHERE h.ip &lt;&lt;= #{peerIp}::inet
+          AND h.last_seen_at > #{after}
+        ORDER BY h.last_seen_at DESC
+        LIMIT 1
+    </select>
+
     <insert id="upsert" parameterType="com.ghostchu.btn.sparkle.entity.UserappsHeartbeat">
         INSERT INTO userapps_heartbeat (id, userapp_id, ip, first_seen_at, last_seen_at, geoip)
         VALUES (#{id}, #{userappId}, #{ip}, #{firstSeenAt}, #{lastSeenAt},

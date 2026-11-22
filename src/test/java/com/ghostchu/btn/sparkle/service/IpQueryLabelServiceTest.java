@@ -4,8 +4,7 @@ import com.ghostchu.btn.sparkle.constants.UsernameVisibility;
 import com.ghostchu.btn.sparkle.controller.ui.dto.RulePreviewModels.RulePreviewEntry;
 import com.ghostchu.btn.sparkle.controller.ui.dto.RulePreviewModels.RulePreviewSection;
 import com.ghostchu.btn.sparkle.entity.User;
-import com.ghostchu.btn.sparkle.entity.Userapp;
-import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
+import com.ghostchu.btn.sparkle.mapper.UserAppsHeartbeatMapper;
 import inet.ipaddr.IPAddressString;
 import org.junit.jupiter.api.Test;
 
@@ -18,12 +17,10 @@ import static org.mockito.Mockito.when;
 
 class IpQueryLabelServiceTest {
     private final RulePreviewService rules = mock(RulePreviewService.class);
-    private final IUserappsHeartbeatService heartbeats = mock(IUserappsHeartbeatService.class);
-    private final IUserappService apps = mock(IUserappService.class);
-    private final IUserService users = mock(IUserService.class);
+    private final UserAppsHeartbeatMapper heartbeats = mock(UserAppsHeartbeatMapper.class);
     private final UserPrivacyService privacy = mock(UserPrivacyService.class);
-    private final UserPublicProfileService profiles = new UserPublicProfileService(users, null, privacy);
-    private final IpQueryLabelService service = new IpQueryLabelService(rules, heartbeats, apps, users, profiles);
+    private final UserPublicProfileService profiles = new UserPublicProfileService(null, null, privacy);
+    private final IpQueryLabelService service = new IpQueryLabelService(rules, heartbeats, profiles);
     private final OffsetDateTime since = OffsetDateTime.now();
 
     @Test
@@ -50,10 +47,7 @@ class IpQueryLabelServiceTest {
     void onlyUsesThePublicNickname() {
         var network = new IPAddressString("203.0.113.7/32").getAddress();
         var user = new User().setId(2L).setNickname("PrivateName");
-        when(heartbeats.fetchIpHeartbeatRecords(network.toCanonicalString(), since))
-                .thenReturn(List.of(new UserappsHeartbeat().setUserappId(1L)));
-        when(apps.getById(1L)).thenReturn(new Userapp().setOwner(2L));
-        when(users.getById(2L)).thenReturn(user);
+        when(heartbeats.selectLatestUserInScope(network.toCanonicalString(), since)).thenReturn(user);
         var defaults = UserPrivacySettings.defaults(2L);
         when(privacy.get(2L)).thenReturn(defaults);
         assertEquals("BTN用户->Pri*******e", service.labels(network, since).getFirst().text());
@@ -63,8 +57,7 @@ class IpQueryLabelServiceTest {
         assertEquals("BTN用户->PrivateName", service.labels(network, since).getFirst().text());
 
         var subnet = new IPAddressString("203.0.113.0/24").getAddress();
-        when(heartbeats.fetchIpHeartbeatRecords(subnet.toCanonicalString(), since))
-                .thenReturn(List.of(new UserappsHeartbeat().setUserappId(1L)));
+        when(heartbeats.selectLatestUserInScope(subnet.toCanonicalString(), since)).thenReturn(user);
         assertEquals("BTN用户", service.labels(subnet, since).getFirst().text());
 
         user.setNicknameModerationStatus("PENDING");
