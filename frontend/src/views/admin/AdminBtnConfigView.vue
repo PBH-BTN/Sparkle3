@@ -45,8 +45,6 @@ const durationFields = new Set([
   'sparkle.ping.heartbeat.interval',
   'sparkle.ping.heartbeat.random-initial-delay',
   'sparkle.ping.heartbeat.cleanup-before',
-  'sparkle.ping.heartbeat.queue.flush-interval-ms',
-  'sparkle.ping.heartbeat.queue.initial-delay-ms',
   'sparkle.query.query-ip.bans-counting-duration',
   'sparkle.query.query-ip.swarms-counting-duration',
   'sparkle.query.query-ip.heartbeat-query-duration',

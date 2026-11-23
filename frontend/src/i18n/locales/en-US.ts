@@ -1428,7 +1428,7 @@ export default {
         },
         'btn-schedule-poll': {
           name: 'BTN schedule reconciliation',
-          description: 'Checks BTN hot-reload settings and rebuilds heartbeat queue and cleanup schedules.',
+          description: 'Checks BTN hot-reload settings and rebuilds cleanup schedules.',
         },
         'homepage-statistics-dispatch': {
           name: 'Homepage statistics dispatcher',
@@ -1471,10 +1471,6 @@ export default {
         'btn-report-volume-alerts': {
           name: 'Send BTN reporting volume alerts',
           description: 'Delivers threshold alerts to the recipients configured for each reporting module.',
-        },
-        'heartbeat-queue-flush': {
-          name: 'Keepalive queue flush',
-          description: 'Drains queued Keepalive requests from Redis and batch-writes deduplicated heartbeat and point data.',
         },
         'user-ip-warning': {
           name: 'User IP risk warnings',
@@ -2563,10 +2559,10 @@ export default {
       missingIpQueryControls: 'This Sparkle3 server did not return all IP query and comment controls. Check that it is running an updated version.',
       title: 'BTN management',
       description:
-        'Manage BTN protocols, client abilities, heartbeat queues, PoW, and retention policies without editing application.yaml.',
+        'Manage BTN protocols, client abilities, PoW, and retention policies without editing application.yaml.',
       hotReloadTitle: 'All BTN settings support hot reload',
       hotReloadText:
-        'Endpoint, PoW, protocol, and client ability changes apply immediately. Heartbeat queue and cleanup schedules are re-evaluated within 15 seconds. Cron uses the Spring six-field format; use “-” to disable a scheduled task.',
+        'Endpoint, PoW, protocol, and client ability changes apply immediately. Cleanup schedules are re-evaluated within 15 seconds. Cron uses the Spring six-field format; use “-” to disable a scheduled task.',
       environmentOverrideNotice:
         'Some values are overridden by environment variables, system properties, or command-line arguments. Database values are still saved, but the external override remains effective at runtime.',
       environmentOverride: 'External override',
@@ -2601,7 +2597,6 @@ export default {
         ruleIpAllowlist: 'IP allowlist delivery',
         rulePeerIdentity: 'Peer identity rules',
         heartbeat: 'Heartbeat',
-        heartbeatQueue: 'Heartbeat queue & cleanup',
         queryIp: 'IP query',
         rootUrls: 'Service root URLs',
         captchaPow: 'Proof of work',
@@ -2634,8 +2629,6 @@ export default {
           'Controls delivery of Peer ID, client name, port, and script rules.',
         heartbeat:
           'Controls client heartbeats, endpoint behavior, and stale heartbeat cleanup.',
-        heartbeatQueue:
-          'Controls throughput, capacity, and refresh cadence of the server-side Redis heartbeat queue.',
         queryIp: 'Controls the client IP query endpoint and embedded query widget URL.',
         rootUrls: 'Controls root URL replacement and mainland China routing in delivered BTN configuration.',
         captchaPow: 'Controls the PoW endpoint, difficulty, and digest algorithm. Changes affect new challenges only.',
@@ -2676,10 +2669,6 @@ export default {
         multiIf: 'Submit multiple interfaces',
         cleanupBefore: 'Heartbeat retention',
         cleanupCron: 'Heartbeat cleanup schedule',
-        flushIntervalMs: 'Queue flush interval',
-        initialDelayMs: 'Initial flush delay',
-        batchSize: 'Batch size',
-        maxSize: 'Maximum queue length',
         iframeEndpoint: 'Embedded query URL',
         lookupEndpoint: 'Detailed query URL',
         commentsEndpoint: 'Comments URL',
@@ -2752,13 +2741,6 @@ export default {
           'Heartbeat records older than this duration are deleted. Milliseconds.',
         cleanupCron:
           'Spring six-field cron expression; “-” pauses automatic cleanup.',
-        flushIntervalMs:
-          'Fixed cadence for writing the Redis heartbeat queue to PostgreSQL. Milliseconds.',
-        initialDelayMs:
-          'How long to wait before the first queue flush after startup. Milliseconds.',
-        batchSize:
-          'Maximum number of queued records drained and written per batch.',
-        maxSize: 'Maximum number of pending heartbeat records kept in Redis.',
         iframeEndpoint: 'Page URL used by the embedded IP query widget.',
         lookupEndpoint: 'BTN endpoint for IP and CIDR details.',
         commentsEndpoint: 'BTN endpoint for reading and managing IP comments.',

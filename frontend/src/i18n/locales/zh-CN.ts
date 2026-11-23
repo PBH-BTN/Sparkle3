@@ -1405,7 +1405,7 @@ export default {
         },
         'btn-schedule-poll': {
           name: 'BTN 计划配置巡检',
-          description: '检查 BTN 热更新配置，并重建 Heartbeat 队列与数据清理计划。',
+          description: '检查 BTN 热更新配置，并重建 数据清理计划。',
         },
         'homepage-statistics-dispatch': {
           name: '首页统计调度器',
@@ -1447,10 +1447,6 @@ export default {
         'btn-report-volume-alerts': {
           name: '发送 BTN 上报量预警',
           description: '向各上报模块配置的收件人发送超阈值预警。',
-        },
-        'heartbeat-queue-flush': {
-          name: 'Keepalive 队列写入',
-          description: '从 Redis 队列批量取出 Keepalive 请求，去重后写入心跳和积分数据。',
         },
         'user-ip-warning': {
           name: '用户 IP 风险提示',
@@ -2500,10 +2496,10 @@ export default {
       missingIpQueryControls: '当前 Sparkle3 后端未返回完整的 IP 查询与评论控制项。请确认服务已更新。',
       title: 'BTN 管理',
       description:
-        '集中管理 BTN 协议、客户端下发模块、心跳队列、PoW 与数据清理策略，无需修改 application.yaml。',
+        '集中管理 BTN 协议、客户端下发模块、PoW 与数据清理策略，无需修改 application.yaml。',
       hotReloadTitle: '所有 BTN 配置均支持热更新',
       hotReloadText:
-        '保存后接口、PoW 和客户端下发参数会立即生效；Heartbeat 队列与清理计划最迟在 15 秒内重新调度。Cron 使用 Spring 六段格式，填写 “-” 可停用对应计划任务。',
+        '保存后接口、PoW 和客户端下发参数会立即生效；数据清理计划最迟在 15 秒内重新调度。Cron 使用 Spring 六段格式，填写 “-” 可停用对应计划任务。',
       environmentOverrideNotice:
         '部分配置正被环境变量、系统属性或命令行参数覆盖。数据库中的值仍会保存，但实际运行值以外部覆盖为准。',
       environmentOverride: '外部覆盖',
@@ -2538,7 +2534,6 @@ export default {
         ruleIpAllowlist: 'IP 白名单规则',
         rulePeerIdentity: 'Peer 身份规则',
         heartbeat: 'Heartbeat 心跳',
-        heartbeatQueue: 'Heartbeat 队列与清理',
         queryIp: 'IP 查询',
         rootUrls: '服务根地址',
         captchaPow: 'Proof of Work 验证',
@@ -2566,7 +2561,6 @@ export default {
         ruleIpAllowlist: '控制下发给客户端的 IP 白名单拉取方式。',
         rulePeerIdentity: '控制 Peer ID、客户端名称、端口与脚本规则的拉取方式。',
         heartbeat: '控制客户端心跳上报、接口参数以及旧心跳数据的清理策略。',
-        heartbeatQueue: '控制服务端 Redis 心跳缓冲队列的吞吐、容量和刷新频率。',
         queryIp: '控制客户端 IP 查询接口和嵌入式查询页地址。',
         rootUrls: '控制 BTN 客户端下发接口中的 root URL 替换与国内路由。',
         captchaPow: '控制 PoW 挑战接口、计算难度和摘要算法；切换只影响新挑战。',
@@ -2607,10 +2601,6 @@ export default {
         multiIf: '上报多个网卡地址',
         cleanupBefore: '心跳数据保留时长',
         cleanupCron: '心跳数据清理计划',
-        flushIntervalMs: '队列刷新间隔',
-        initialDelayMs: '队列首次刷新延迟',
-        batchSize: '单次写入批量',
-        maxSize: '队列最大长度',
         iframeEndpoint: '嵌入式查询地址',
         lookupEndpoint: '详细查询地址',
         commentsEndpoint: '评论接口地址',
@@ -2674,10 +2664,6 @@ export default {
         multiIf: '允许客户端在一次心跳中上报多个网卡地址。',
         cleanupBefore: '超过此时长的心跳记录会被删除，单位：毫秒。',
         cleanupCron: 'Spring 六段 Cron；“-” 表示暂停自动清理。',
-        flushIntervalMs: 'Redis 心跳队列写入 PostgreSQL 的固定周期，单位：毫秒。',
-        initialDelayMs: '应用启动后等待多久开始第一次队列刷新，单位：毫秒。',
-        batchSize: '每次从 Redis 队列取出并批量写入的最大记录数。',
-        maxSize: 'Redis 队列最多保留的待写入心跳记录数。',
         iframeEndpoint: '供 IP 查询组件嵌入使用的页面地址。',
         lookupEndpoint: 'BTN 查询单个 IP 和 CIDR 网段详情的接口地址。',
         commentsEndpoint: 'BTN 查询和管理 IP 评论的接口地址。',
