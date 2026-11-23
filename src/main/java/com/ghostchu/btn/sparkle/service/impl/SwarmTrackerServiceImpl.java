@@ -24,6 +24,7 @@ import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.IUserappsArchivedStatisticService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
+import com.ghostchu.btn.sparkle.service.dto.PeerConcurrency;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -342,41 +343,13 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
     }
 
     @Override
-    public long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
-        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
-                .ge("last_time_seen", afterTime)
-                .le("peer_progress", 1.0);
-
-        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
-        if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
-        }
-
-        return this.baseMapper.selectCount(wrapper);
+    public PeerConcurrency countPeerConcurrency(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
+        return this.baseMapper.countPeerConcurrency(afterTime, peerIp);
     }
 
     @Override
     public @NotNull PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
         return this.baseMapper.sumPeerIpTraffic(afterTimestamp, peerIp);
-    }
-
-    @Override
-    public List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp) {
-        return this.baseMapper.selectPeerTorrents(afterTimestamp, peerIp);
-    }
-
-    @Override
-    public long calcPeerConcurrentSeeds(@NotNull OffsetDateTime afterTime, @NotNull String peerIp) {
-        QueryWrapper<SwarmTracker> wrapper = new QueryWrapper<SwarmTracker>()
-                .ge("last_time_seen", afterTime)
-                .ge("peer_progress", 1.0);
-
-        // Peer IP filter - supports both single IP and CIDR notation using <<= operator
-        if (peerIp != null && !peerIp.isBlank()) {
-            wrapper.apply("peer_ip <<= {0}::inet", peerIp.trim());
-        }
-
-        return this.baseMapper.selectCount(wrapper);
     }
 
 //    @Scheduled(cron = "${sparkle.ping.sync-swarm.cleanup-cron}")

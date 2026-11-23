@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
+import com.ghostchu.btn.sparkle.service.dto.PeerConcurrency;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,13 +32,11 @@ public interface ISwarmTrackerService extends IService<SwarmTracker> {
 
     @NotNull IPage<SwarmTracker> fetchSwarmTrackersAfter(@NotNull OffsetDateTime afterTime, @Nullable String peerIp, @Nullable Long torrentId, @NotNull Page<SwarmTracker> page);
 
-    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTime, @NotNull String peerIp);
+    PeerConcurrency countPeerConcurrency(@NotNull OffsetDateTime afterTime, @NotNull String peerIp);
 
     @Nullable PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    List<Long> selectPeerIpTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
-    long calcPeerConcurrentSeeds(@NotNull OffsetDateTime offsetDateTime, @NotNull String peerIp);
 
     @NotNull IPage<SwarmTracker> querySwarmTracker(
             @Nullable Long torrentId,

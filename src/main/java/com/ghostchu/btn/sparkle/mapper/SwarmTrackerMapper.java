@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.UserSwarmStatistic;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
+import com.ghostchu.btn.sparkle.service.dto.PeerConcurrency;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import org.apache.ibatis.cursor.Cursor;
@@ -36,12 +37,11 @@ public interface SwarmTrackerMapper extends BaseMapper<SwarmTracker> {
 
     void batchUpsert(List<SwarmTracker> swarms);
 
-    long calcPeerConcurrentDownloads(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
+    PeerConcurrency countPeerConcurrency(@Param("afterTimestamp") OffsetDateTime afterTimestamp,
+                                         @Param("peerIp") String peerIp);
 
     @NotNull
     PeerTrafficSummaryResultDto sumPeerIpTraffic(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
-
-    List<Long> selectPeerTorrents(@NotNull OffsetDateTime afterTimestamp, @NotNull String peerIp);
 
     long countAll();
 

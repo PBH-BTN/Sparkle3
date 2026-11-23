@@ -5,6 +5,7 @@ import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.entity.UserappsHeartbeat;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -20,6 +21,8 @@ public interface UserAppsHeartbeatMapper extends BaseMapper<UserappsHeartbeat> {
     int upsert(UserappsHeartbeat userappsHeartbeat);
 
     int batchUpsert(@Param("list") List<UserappsHeartbeat> heartbeats);
+
+    User selectLatestUserInScope(@Param("peerIp") String peerIp, @Param("after") OffsetDateTime after);
 
     @org.apache.ibatis.annotations.Delete("""
             WITH expired AS (

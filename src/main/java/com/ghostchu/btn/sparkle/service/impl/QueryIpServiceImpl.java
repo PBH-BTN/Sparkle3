@@ -28,8 +28,6 @@ public class QueryIpServiceImpl {
     @Autowired
     private IBanHistoryService banHistoryService;
     @Autowired
-    private ITorrentService torrentService;
-    @Autowired
     private ISwarmTrackerService swarmTrackerService;
     @Autowired
     private IpQueryLabelService labelService;
@@ -91,11 +89,7 @@ public class QueryIpServiceImpl {
                 null,
                 Page.of(1, 1000)
         );
-        var concurrentDownloads = swarmTrackerService.calcPeerConcurrentDownloads(
-                OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
-                peerIp
-        );
-        var concurrentSeeds = swarmTrackerService.calcPeerConcurrentSeeds(
+        var concurrency = swarmTrackerService.countPeerConcurrency(
                 OffsetDateTime.now().minus(concurrentDownloadWindow, ChronoUnit.MILLIS),
                 peerIp
         );
@@ -103,8 +97,8 @@ public class QueryIpServiceImpl {
                 syncSwarmInterval,
                 swarms.getTotal(),
                 swarms.getRecords().stream().map(SwarmTrackerDto::new).toList(),
-                concurrentDownloads,
-                concurrentSeeds
+                concurrency.downloads(),
+                concurrency.seeds()
         ));
         long totalToPeerTraffic = 0;
         long totalFromPeerTraffic = 0;
@@ -126,11 +120,9 @@ public class QueryIpServiceImpl {
                 totalToPeerTraffic == 0 ? 999999999.0 :
                 (double) totalFromPeerTraffic / totalToPeerTraffic;
         result.setTraffic(new IpQueryResult.IpQueryTraffic(trafficMeasureDuration, totalToPeerTraffic, totalFromPeerTraffic, shareRatio));
-        Set<Long> distinctTorrentIds = new HashSet<>();
         OffsetDateTime torrentsCountingSince = OffsetDateTime.now().minus(torrentsCountingDuration, ChronoUnit.MILLIS);
-        distinctTorrentIds.addAll(banHistoryService.selectPeerTorrents(torrentsCountingSince, peerIp));
-        distinctTorrentIds.addAll(swarmTrackerService.selectPeerIpTorrents(torrentsCountingSince, peerIp));
-        result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, distinctTorrentIds.size()));
+        long torrentCount = banHistoryService.countPeerTorrents(torrentsCountingSince, peerIp);
+        result.setTorrents(new IpQueryResult.IpQueryTorrents(torrentsCountingDuration, torrentCount));
 
         var labels = labelService.labels(scope.network(),
                 OffsetDateTime.now().minus(heartbeatDuration, ChronoUnit.MILLIS));

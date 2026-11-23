@@ -62,12 +62,13 @@
                 peer_geoip = EXCLUDED.peer_geoip
     </insert>
 
-    <select id="calcPeerConcurrentDownloads" resultType="long">
-        SELECT COUNT(DISTINCT torrent_id) AS concurrent_downloads
+    <select id="countPeerConcurrency" resultType="com.ghostchu.btn.sparkle.service.dto.PeerConcurrency">
+        <!-- A progress of 1.0 belongs to both counts under the existing IP lookup contract. -->
+        SELECT COUNT(*) FILTER (WHERE peer_progress &lt;= 1.0) AS downloads,
+               COUNT(*) FILTER (WHERE peer_progress >= 1.0) AS seeds
         FROM swarm_tracker
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp}
-          AND 1.0 > peer_progress;
     </select>
 
     <resultMap id="sumPeerIpTrafficResultDto" type="com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto">
@@ -82,13 +83,6 @@
         FROM swarm_tracker
         WHERE peer_ip &lt;&lt;= #{peerIp}::inet
           AND last_time_seen >= #{afterTimestamp}
-    </select>
-
-    <select id="selectPeerTorrents" resultType="long">
-        SELECT DISTINCT torrent_id AS torrent_count
-        FROM swarm_tracker
-        WHERE peer_ip &lt;&lt;= #{peerIp}::inet
-          AND last_time_seen >= #{afterTimestamp};
     </select>
 
     <select id="countAll" resultType="long">
@@ -139,10 +133,11 @@
     </resultMap>
     <select id="countTimeStatistics" resultMap="countTimeStatistics">
         SELECT
-            COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '30 days') AS days30,
+            COUNT(*) AS days30,
             COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '14 days') AS days14,
             COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '7 days') AS days7,
             COUNT(*) FILTER (WHERE last_time_seen > NOW() - INTERVAL '1 days') AS days1
-        FROM swarm_tracker;
+        FROM swarm_tracker
+        WHERE last_time_seen > NOW() - INTERVAL '30 days';
     </select>
 </mapper>

@@ -2,8 +2,12 @@ package com.ghostchu.btn.sparkle.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ghostchu.btn.sparkle.entity.Torrent;
+import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
+import org.apache.ibatis.annotations.Param;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.time.OffsetDateTime;
 
 /**
  * <p>
@@ -19,4 +23,6 @@ public interface TorrentMapper extends BaseMapper<Torrent> {
 
     @NotNull
     Torrent upsert(@NotNull Torrent torrent);
+
+    UniversalCountDto countTimeStatistics(@Param("now") OffsetDateTime now);
 }
