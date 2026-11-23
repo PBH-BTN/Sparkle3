@@ -2660,7 +2660,7 @@ export default {
         repeatBanSuppression: '目标达到重复封禁阈值后拦截新日志。关闭后仍会记录检测到的事件并过滤相同日志的重传。',
         repeatBanWindows: '同一目标达到此上报窗口数时，BTN 记录持续重复封禁事件。',
         batchLimit: '一次上报包含任意条重传日志，即计为一次。',
-        logLimit: '同一上报中的每条重传日志分别计数。',
+        logLimit: '逐条统计同一应用反复上报的封禁目标，封禁时间可以不同。',
         minProtocolVersion: '客户端支持的 BTN 协议版本下限。',
         maxProtocolVersion: '必须大于或等于最低协议版本。',
         interval: '单位：毫秒。修改后会更新下发给客户端的能力配置。',

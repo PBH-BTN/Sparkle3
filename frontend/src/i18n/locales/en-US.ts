@@ -2731,7 +2731,7 @@ export default {
         repeatBanSuppression: 'Block new logs for targets that reach the repeated-ban threshold. With this off, BTN still records detected events and filters exact replays.',
         repeatBanWindows: 'Number of qualifying submission windows for the same target before BTN records a repeated-ban event.',
         batchLimit: 'A submission with one or more replayed logs counts once.',
-        logLimit: 'Each replayed log in a submission counts separately.',
+        logLimit: 'Counts each log for a target the same application reports again, even when the ban time changes.',
         minProtocolVersion: 'Minimum BTN protocol version accepted from clients.',
         maxProtocolVersion: 'Must be greater than or equal to the minimum version.',
         interval:
