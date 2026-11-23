@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -368,26 +369,33 @@ public class AnalyseModuleConfigService {
 
     private Map<String, String> rawValues() {
         long now = System.currentTimeMillis();
-        if (cachedValues != null && now < cacheExpiresAt) {
-            return cachedValues;
+        Map<String, String> current = cachedValues;
+        if (current != null && now < cacheExpiresAt) {
+            return current;
+        }
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            return loadValues();
         }
         synchronized (this) {
             if (cachedValues != null && now < cacheExpiresAt) {
                 return cachedValues;
             }
-            List<String> keys = MODULES.stream()
-                    .flatMap(module -> module.fields().stream())
-                    .map(ModuleFieldDefinition::key)
-                    .toList();
-            try {
-                cachedValues = databaseConfigService.getRawValues(keys);
-            } catch (Exception exception) {
-                log.warn("Unable to load analysis module configuration, using YAML defaults",
-                        exception);
-                cachedValues = Map.of();
-            }
+            cachedValues = loadValues();
             cacheExpiresAt = now + CACHE_TTL.toMillis();
             return cachedValues;
+        }
+    }
+
+    private Map<String, String> loadValues() {
+        List<String> keys = MODULES.stream()
+                .flatMap(module -> module.fields().stream())
+                .map(ModuleFieldDefinition::key)
+                .toList();
+        try {
+            return databaseConfigService.getRawValues(keys);
+        } catch (Exception exception) {
+            log.warn("Unable to load analysis module configuration, using YAML defaults", exception);
+            return Map.of();
         }
     }
 

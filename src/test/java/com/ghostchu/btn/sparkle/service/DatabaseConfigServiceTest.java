@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class DatabaseConfigServiceTest {
@@ -91,6 +92,19 @@ class DatabaseConfigServiceTest {
                 RedisKeyConstant.APP_CONFIG_VALUES.getKey(),
                 Duration.ofMinutes(5)
         );
+    }
+
+    @Test
+    void transactionReadsItsDatabaseValuesWithoutConsultingOrPopulatingRedis() {
+        when(configMapper.selectBatchIds(List.of(ROOT_URL)))
+                .thenReturn(List.of(entry(ROOT_URL, "transaction-root")));
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            assertEquals(Map.of(ROOT_URL, "transaction-root"), service.getRawValues(List.of(ROOT_URL)));
+            verifyNoInteractions(redisTemplate);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
     }
 
     @Test

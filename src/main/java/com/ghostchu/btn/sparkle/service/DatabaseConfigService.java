@@ -181,12 +181,16 @@ public class DatabaseConfigService {
                 .toList();
         if (requestedKeys.isEmpty()) return Map.of();
 
-        Map<String, String> cachedValues = readCachedValues(requestedKeys);
+        // Read with the bound connection so the transaction sees its own changes.
+        boolean useCache = !TransactionSynchronizationManager.isActualTransactionActive();
+        Map<String, String> cachedValues = useCache ? readCachedValues(requestedKeys) : Map.of();
         List<String> missingKeys = requestedKeys.stream()
                 .filter(key -> !cachedValues.containsKey(key))
                 .toList();
         Map<String, String> databaseValues = loadDatabaseValues(missingKeys);
-        cacheValues(databaseValues);
+        if (useCache) {
+            cacheValues(databaseValues);
+        }
 
         Map<String, String> values = new LinkedHashMap<>();
         for (String key : requestedKeys) {

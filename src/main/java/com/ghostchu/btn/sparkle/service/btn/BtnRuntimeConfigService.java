@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @Slf4j
@@ -20,8 +22,9 @@ public class BtnRuntimeConfigService {
     private final Environment environment;
     private final Map<String, String> defaults;
 
-    private volatile Map<String, String> cachedValues;
-    private volatile long cacheExpiresAt;
+    private record Cache(Map<String, String> values, long expiresAt) {}
+
+    private final AtomicReference<Cache> cache = new AtomicReference<>(new Cache(Map.of(), 0));
 
     public BtnRuntimeConfigService(
             DatabaseConfigService databaseConfigService,
@@ -41,32 +44,41 @@ public class BtnRuntimeConfigService {
 
     public @NotNull Map<String, String> values() {
         long now = System.currentTimeMillis();
-        Map<String, String> current = cachedValues;
-        if (current != null && now < cacheExpiresAt) {
-            return current;
+        Cache current = cache.get();
+        if (now < current.expiresAt()) {
+            return current.values();
+        }
+        // The cache loader may be waiting for a JDBC connection. Reuse the caller's transaction.
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            return loadValues();
         }
         synchronized (this) {
-            if (cachedValues != null && now < cacheExpiresAt) {
-                return cachedValues;
+            current = cache.get();
+            if (now < current.expiresAt()) {
+                return current.values();
             }
-            Map<String, String> loaded = new LinkedHashMap<>(defaults);
-            try {
-                Map<String, String> databaseValues = databaseConfigService
-                        .getRawValues(BtnConfigCatalog.keys());
-                loaded.putAll(databaseValues);
-                for (String key : BtnConfigCatalog.keys()) {
-                    String databaseValue = loaded.get(key);
-                    if (databaseConfigService.hasExternalOverride(key, databaseValue)) {
-                        loaded.put(key, environment.getProperty(key, databaseValue));
-                    }
-                }
-            } catch (Exception exception) {
-                log.warn("Unable to load BTN runtime configuration: {}", exception.getMessage());
-            }
-            cachedValues = Map.copyOf(loaded);
-            cacheExpiresAt = now + CACHE_TTL.toMillis();
-            return cachedValues;
+            Map<String, String> loaded = loadValues();
+            cache.compareAndSet(current, new Cache(loaded, now + CACHE_TTL.toMillis()));
+            return loaded;
         }
+    }
+
+    private Map<String, String> loadValues() {
+        Map<String, String> loaded = new LinkedHashMap<>(defaults);
+        try {
+            Map<String, String> databaseValues = databaseConfigService
+                    .getRawValues(BtnConfigCatalog.keys());
+            loaded.putAll(databaseValues);
+            for (String key : BtnConfigCatalog.keys()) {
+                String databaseValue = loaded.get(key);
+                if (databaseConfigService.hasExternalOverride(key, databaseValue)) {
+                    loaded.put(key, environment.getProperty(key, databaseValue));
+                }
+            }
+        } catch (Exception exception) {
+            log.warn("Unable to load BTN runtime configuration: {}", exception.getMessage());
+        }
+        return Map.copyOf(loaded);
     }
 
     public String text(String section, String field) {
@@ -142,10 +154,7 @@ public class BtnRuntimeConfigService {
     }
 
     public void invalidate() {
-        synchronized (this) {
-            cachedValues = null;
-            cacheExpiresAt = 0;
-        }
+        cache.set(new Cache(Map.of(), 0));
     }
 
     private String raw(String key) {
