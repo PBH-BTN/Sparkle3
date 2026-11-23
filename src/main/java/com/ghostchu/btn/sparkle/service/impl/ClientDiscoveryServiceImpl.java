@@ -16,9 +16,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -46,7 +46,9 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
 
     @Autowired
     private AdminConfigService adminConfigService;
-    @Transactional
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     @Override
     public void handleClientDiscovery(long userAppId, List<Pair<String, String>> data) {
         if (!adminConfigService.get().clientDiscoveryEnabled()) return;
@@ -87,9 +89,11 @@ public class ClientDiscoveryServiceImpl extends ServiceImpl<ClientDiscoveryMappe
         }
         if (!clientDiscoveryList.isEmpty()) {
             clientDiscoveryList.sort(java.util.Comparator.comparingLong(ClientDiscovery::getHash));
-            var inserted = new java.util.HashSet<>(this.baseMapper.batchInsertReturning(clientDiscoveryList));
-            var discovered = clientDiscoveryList.stream().filter(row -> inserted.remove(row.getHash())).toList();
-            careerIngestionService.featuresByApp(userAppId,discovered);
+            new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                var inserted = new java.util.HashSet<>(baseMapper.batchInsertReturning(clientDiscoveryList));
+                var discovered = clientDiscoveryList.stream().filter(row -> inserted.remove(row.getHash())).toList();
+                careerIngestionService.featuresByApp(userAppId, discovered);
+            });
         }
     }
 

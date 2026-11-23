@@ -725,15 +725,15 @@ class FlywayMigrationIntegrationTest {
             var mapper = session.getMapper(BanSubmissionGuardMapper.class);
             var guard = new BanSubmissionGuard(mapper, config);
             var first = banCandidate(start, "2001:4860::8888");
-            assertEquals(1, guard.filter(10, List.of(first, banCandidate(start, "2001:4860:0:0:0:0:0:8888")), start).size());
+            assertEquals(1, filterBans(guard, 10, List.of(first, banCandidate(start, "2001:4860:0:0:0:0:0:8888")), start).size());
             session.rollback();
-            assertEquals(1, guard.filter(10, List.of(first), start).size());
+            assertEquals(1, filterBans(guard, 10, List.of(first), start).size());
             session.commit();
-            assertTrue(guard.filter(10, List.of(first), start.plusSeconds(10)).isEmpty());
-            assertEquals(1, guard.filter(20, List.of(first), start.plusSeconds(10)).size());
-            assertEquals(2, guard.filter(10, List.of(banCandidate(start.plusSeconds(10), "2001:4860::8888"),
+            assertTrue(filterBans(guard, 10, List.of(first), start.plusSeconds(10)).isEmpty());
+            assertEquals(1, filterBans(guard, 20, List.of(first), start.plusSeconds(10)).size());
+            assertEquals(2, filterBans(guard, 10, List.of(banCandidate(start.plusSeconds(10), "2001:4860::8888"),
                     banCandidate(start.plusSeconds(20), "2001:4860::8888")), start.plusSeconds(20)).size());
-            assertEquals(1, guard.filter(10, List.of(banCandidate(start.plusSeconds(30), "2001:4860::8888")),
+            assertEquals(1, filterBans(guard, 10, List.of(banCandidate(start.plusSeconds(30), "2001:4860::8888")),
                     start.plusSeconds(30)).size());
             var observed = guard.events(1, 20, 10L, "repeated", "observing", start, null).records().getFirst();
             assertEquals(3, observed.peakWindows());
@@ -742,7 +742,7 @@ class FlywayMigrationIntegrationTest {
             assertEquals(0, observed.suppressed());
 
             when(config.booleanValue("syncBanHistory", "repeatBanSuppression")).thenReturn(true);
-            assertTrue(guard.filter(10, List.of(banCandidate(start.plusSeconds(40), "2001:4860::8888")),
+            assertTrue(filterBans(guard, 10, List.of(banCandidate(start.plusSeconds(40), "2001:4860::8888")),
                     start.plusSeconds(40)).isEmpty());
             var blocked = guard.events(1, 20, 10L, null, "blocking", null, null).records().getFirst();
             assertEquals(1, blocked.suppressed());
@@ -750,12 +750,12 @@ class FlywayMigrationIntegrationTest {
             assertEquals("10", rank.appId());
             assertEquals(1, rank.replayBatches());
             assertEquals(1, rank.replays());
-            assertTrue(guard.filter(20, List.of(first, first, first), start.plusSeconds(40)).isEmpty());
+            assertTrue(filterBans(guard, 20, List.of(first, first, first), start.plusSeconds(40)).isEmpty());
             var ranks = guard.rankApplications();
             assertEquals(List.of("20", "10"), ranks.stream().map(row -> row.appId()).toList());
             assertEquals(1, ranks.getFirst().replayBatches());
             assertEquals(3, ranks.getFirst().replays());
-            assertTrue(guard.filter(10, List.of(first), start.plusSeconds(41)).isEmpty());
+            assertTrue(filterBans(guard, 10, List.of(first), start.plusSeconds(41)).isEmpty());
             MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard)).build()
                     .perform(get("/api/admin/ban-submissions/ranking"))
                     .andExpect(status().isOk())
@@ -763,7 +763,7 @@ class FlywayMigrationIntegrationTest {
                     .andExpect(jsonPath("$[0].replayBatches").value(2))
                     .andExpect(jsonPath("$[0].replays").value(2));
             var afterQuiet = start.plusHours(2);
-            assertEquals(1, guard.filter(10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
+            assertEquals(1, filterBans(guard, 10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
             assertEquals(1, guard.events(1, 20, 10L, null, "quiet", null, null).total());
             assertTrue(mapper.dropExpiredFingerprints(start.minusDays(8)).isEmpty());
             assertEquals(0, mapper.deleteExpiredTargets(start.minusDays(4), start.minusDays(30), 5000));
@@ -777,7 +777,7 @@ class FlywayMigrationIntegrationTest {
         Callable<Integer> submit = () -> {
             try (var session = factory.openSession()) {
                 var guard = new BanSubmissionGuard(session.getMapper(BanSubmissionGuardMapper.class), config);
-                int accepted = guard.filter(30, batch, start).size();
+                int accepted = filterBans(guard, 30, batch, start).size();
                 session.commit();
                 return accepted;
             }
@@ -820,9 +820,14 @@ class FlywayMigrationIntegrationTest {
             assertEquals(0, guard.events(1, 20, null, null, null, null, null).total());
             assertTrue(guard.rankApplications().isEmpty());
             assertEquals(0, guard.clearEvents());
-            assertTrue(guard.filter(30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
+            assertTrue(filterBans(guard, 30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
             assertEquals(1, guard.events(1, 20, 30L, "replay", null, null, null).total());
         }
+    }
+
+    private List<Candidate> filterBans(BanSubmissionGuard guard, long appId, List<Candidate> candidates,
+                                       OffsetDateTime time) {
+        return guard.filter(appId, candidates, time, guard.settings());
     }
 
     private static Candidate banCandidate(OffsetDateTime time, String ip) {

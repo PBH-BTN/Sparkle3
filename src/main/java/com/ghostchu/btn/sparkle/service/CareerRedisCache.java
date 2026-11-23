@@ -5,7 +5,6 @@ import com.ghostchu.btn.sparkle.constants.RedisKeyConstant;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.time.Duration;
 
@@ -41,15 +40,13 @@ public class CareerRedisCache {
     }
 
     public boolean alreadyCommitted(String fingerprint) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) return false;
         return get(RedisKeyConstant.CAREER_REPORTED.getKey() + ":" + fingerprint, Boolean.class) == Boolean.TRUE;
     }
 
-    public void markAfterCommit(String fingerprint) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() {
-                put(RedisKeyConstant.CAREER_REPORTED.getKey() + ":" + fingerprint, true, Duration.ofMinutes(5));
-            }
-        });
+    public void markCommitted(String fingerprint) {
+        // A caller may have joined an outer transaction. Use database deduplication in that case.
+        if (TransactionSynchronizationManager.isActualTransactionActive()) return;
+        put(RedisKeyConstant.CAREER_REPORTED.getKey() + ":" + fingerprint, true, Duration.ofMinutes(5));
     }
 }

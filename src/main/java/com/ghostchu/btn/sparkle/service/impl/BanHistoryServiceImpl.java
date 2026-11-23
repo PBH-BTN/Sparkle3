@@ -19,6 +19,7 @@ import com.ghostchu.btn.sparkle.service.tasks.TaskGroup;
 import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.service.points.PointAwardContext;
 import com.ghostchu.btn.sparkle.service.points.PointRulesService;
+import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.dto.PeerTrafficSummaryResultDto;
 import com.ghostchu.btn.sparkle.service.dto.UniversalCountDto;
 import com.ghostchu.btn.sparkle.util.ipdb.IPDBManager;
@@ -78,6 +79,8 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
     @Autowired
     private BanSubmissionGuard banSubmissionGuard;
     @Autowired
+    private BtnRuntimeConfigService btnConfigService;
+    @Autowired
     private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Override
@@ -102,6 +105,9 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
             }
             return new BanSubmissionGuard.Candidate(ban, InetAddress.ofLiteral(ban.getPeerIp()), banAt);
         }).filter(Objects::nonNull).toList();
+        if (candidates.isEmpty()) {
+            return;
+        }
         var prepared = new java.util.HashMap<BanSubmissionGuard.Candidate, BanHistory>();
         for (var candidate : candidates) {
             var btnBan = candidate.ban();
@@ -137,17 +143,19 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                     .setPeerGeoip(geoIPManager.queryIPDB(inet).geoData().get())
                     .setStructuredData(structuredDataMap));
         }
-        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            var list = banSubmissionGuard.filter(userAppId, candidates, nowTime).stream().map(prepared::get).toList();
-            if (list.isEmpty()) return;
-            this.baseMapper.insert(list, 1000);
-            careerIngestionService.bans(userId,list);
-            pointAwardContext.recordConfigured(
-                    userId,
-                    PointCategory.BAN_HISTORY,
-                    list.size(),
-                    0
-            );
+        var settings = banSubmissionGuard.settings();
+        long heartbeatWindow = btnConfigService.reportingWindowMillis("heartbeat");
+        var list = new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(status -> {
+            var accepted = banSubmissionGuard.filter(userAppId, candidates, nowTime, settings)
+                    .stream().map(prepared::get).toList();
+            if (!accepted.isEmpty()) {
+                baseMapper.insert(accepted, 1000);
+                careerIngestionService.bans(userId, accepted, heartbeatWindow);
+            }
+            return accepted;
+        });
+        if (!list.isEmpty()) {
+            pointAwardContext.recordConfigured(userId, PointCategory.BAN_HISTORY, list.size(), 0);
             long ruleHitCount = list.stream()
                     .filter(ban -> ban.getRule() != null && !ban.getRule().isBlank())
                     .count();
@@ -188,7 +196,7 @@ public class BanHistoryServiceImpl extends ServiceImpl<BanHistoryMapper, BanHist
                         wastedUploadBytes
                 );
             }
-        });
+        }
     }
 
     @Override

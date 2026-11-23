@@ -56,7 +56,7 @@ public class BanSubmissionGuard {
     private final BanSubmissionGuardMapper mapper;
     private final BtnRuntimeConfigService config;
 
-    private record Settings(long windowMillis, int threshold, boolean suppression) {
+    public record Settings(long windowMillis, int threshold, boolean suppression) {
         OffsetDateTime quietCutoff(OffsetDateTime now) {
             return now.minus(Math.max(3 * windowMillis, 3_600_000L), ChronoUnit.MILLIS);
         }
@@ -87,7 +87,7 @@ public class BanSubmissionGuard {
     private record Entry(Candidate candidate, String target) {}
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public List<Candidate> filter(long appId, List<Candidate> candidates, OffsetDateTime now) {
+    public List<Candidate> filter(long appId, List<Candidate> candidates, OffsetDateTime now, Settings settings) {
         if (candidates.isEmpty()) {
             return List.of();
         }
@@ -123,7 +123,6 @@ public class BanSubmissionGuard {
             }
         });
 
-        var settings = settings();
         var cutoff = settings.quietCutoff(now);
         var previousWindow = now.minus(settings.windowMillis(), ChronoUnit.MILLIS);
         var targets = observations.entrySet().stream()
@@ -211,7 +210,7 @@ public class BanSubmissionGuard {
         }
     }
 
-    private Settings settings() {
+    public Settings settings() {
         return new Settings(config.longValue(SECTION, "interval"),
                 (int) config.longValue(SECTION, "repeatBanWindows"),
                 config.booleanValue(SECTION, "repeatBanSuppression"));

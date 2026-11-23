@@ -9,21 +9,21 @@ import static org.mockito.Mockito.*;
 
 class CareerRedisCacheTest {
     @Test
-    void duplicateMarkersArePublishedOnlyAfterCommit() {
+    void duplicateMarkersDoNotPerformRedisIoInsideAnOuterTransaction() {
         RedisTemplate<String,String> redis = mock(RedisTemplate.class);
         ValueOperations<String,String> values = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
         var cache = new CareerRedisCache(redis);
-        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
         try {
-            cache.markAfterCommit("test");
-            verifyNoInteractions(values);
-            var callback = TransactionSynchronizationManager.getSynchronizations().getFirst();
-            callback.afterCompletion(org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
-            verifyNoInteractions(values);
-            callback.afterCommit();
-            verify(values).set(anyString(),eq("true"),eq(java.time.Duration.ofMinutes(5)));
-        } finally { TransactionSynchronizationManager.clearSynchronization(); }
+            assertFalse(cache.alreadyCommitted("test"));
+            cache.markCommitted("test");
+            verifyNoInteractions(redis);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+        cache.markCommitted("test");
+        verify(values).set(anyString(), eq("true"), eq(java.time.Duration.ofMinutes(5)));
     }
 
     @Test

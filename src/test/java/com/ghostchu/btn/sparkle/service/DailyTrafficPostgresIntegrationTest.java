@@ -179,7 +179,8 @@ class DailyTrafficPostgresIntegrationTest {
     }
     private void persist(CareerBatchMapper mapper, List<CareerBatchMapper.DailyTrafficDelta> deltas) {
         new CareerIngestionService(mapper,
-                org.mockito.Mockito.mock(com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService.class))
+                org.mockito.Mockito.mock(com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService.class),
+                org.mockito.Mockito.mock(CareerRedisCache.class))
                 .writeDailyTraffic(deltas);
     }
 

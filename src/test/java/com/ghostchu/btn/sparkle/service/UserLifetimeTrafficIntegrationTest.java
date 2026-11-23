@@ -1,6 +1,7 @@
 package com.ghostchu.btn.sparkle.service;
 
 import com.ghostchu.btn.sparkle.entity.BanHistory;
+import com.ghostchu.btn.sparkle.entity.ClientDiscovery;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.mapper.CareerBatchMapper;
 import com.ghostchu.btn.sparkle.mapper.UserLifetimeTrafficMapper;
@@ -18,6 +19,7 @@ import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.mock;
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "SPARKLE_FLYWAY_TEST_ALLOW_DESTRUCTIVE", matches = "true")
 class UserLifetimeTrafficIntegrationTest {
+    private static final long REPORTING_WINDOW_MILLIS = 915_000L;
     @Test
     void skipsHistoricalRowsAndAccumulatesTransactionallyWithoutDatabaseFunctions() throws Exception {
         String source = System.getenv("SPARKLE_FLYWAY_TEST_URL");
@@ -83,7 +86,7 @@ class UserLifetimeTrafficIntegrationTest {
                     var connection=session.getConnection();
                     var totals=session.getMapper(UserLifetimeTrafficMapper.class);
                     var career=session.getMapper(com.ghostchu.btn.sparkle.mapper.UserCareerMapper.class);
-                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig());
+                    var ingestion=new CareerIngestionService(session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig(), mock(CareerRedisCache.class));
 
                     assertTotals(connection,1,"0","0","0","0");
                     assertTrue(career.counts(1).isEmpty());
@@ -98,24 +101,24 @@ class UserLifetimeTrafficIntegrationTest {
                             .setFirstTimeSeen(at.minusDays(1)).setLastTimeSeen(at)
                             .setToPeerTraffic(1000L).setFromPeerTraffic(500L)
                             .setToPeerTrafficOffset(10L).setFromPeerTrafficOffset(5L).setUserProgress(1);
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     assertTotals(connection,1,"10","5","0","0");
                     assertTotals(connection,2,"0","0","5","10");
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     assertTotals(connection,1,"10","5","0","0");
                     row.setToPeerTraffic(1020L).setLastTimeSeen(at.plusSeconds(60));
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     assertTotals(connection,1,"30","5","0","0");
                     assertEquals("60.000000",career.durations(1).get("seeding"));
                     row.setToPeerTraffic(800L);
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     assertTotals(connection,1,"30","5","0","0");
-                    ingestion.featureByApp(1,991,at);
-                    ingestion.featureByApp(1,991,at);
+                    ingestion.featuresByApp(1, List.of(new ClientDiscovery().setHash(991L).setFoundAt(at)));
+                    ingestion.featuresByApp(1, List.of(new ClientDiscovery().setHash(991L).setFoundAt(at)));
                     assertEquals("1",career.counts(1).stream().filter(r -> "feature".equals(r.get("kind"))).findFirst().orElseThrow().get("total"));
                     session.commit();
                     row.setToPeerTraffic(2000L);
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     session.rollback();
                     assertTotals(connection,1,"30","5","0","0");
                     assertEquals("30",totals.selectByUserId(1).sentTrafficSelfReport());
@@ -123,9 +126,9 @@ class UserLifetimeTrafficIntegrationTest {
                     try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
                         var futures = java.util.stream.IntStream.range(0,3).mapToObj(i -> executor.submit(() -> {
                             try (var concurrent = factory.openSession()) {
-                                var worker=new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig());
+                                var worker=new CareerIngestionService(concurrent.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class),runtimeConfig(), mock(CareerRedisCache.class));
 
-                                worker.swarm(1,row);
+                                writeSwarm(worker, 1, List.of(row));
                                 concurrent.commit();
                             }
                             return true;
@@ -137,21 +140,21 @@ class UserLifetimeTrafficIntegrationTest {
                         sql.execute("DELETE FROM swarm_tracker");
                         sql.execute("UPDATE user_lifetime_traffic SET sent_self=9223372036854775808 WHERE user_id=1");
                     }
-                    ingestion.swarm(1,row);
+                    writeSwarm(ingestion, 1, List.of(row));
                     session.clearCache();
                     assertEquals("9223372036854775808",totals.selectByUserId(1).sentTrafficSelfReport());
                     var ban = new com.ghostchu.btn.sparkle.entity.BanHistory().setUserappsId(1L).setTorrentId(1L)
                             .setPeerIp(java.net.InetAddress.ofLiteral("192.0.2.1")).setPeerPort(6881)
                             .setPopulateTime(at).setModuleName("test").setRule("test");
-                    ingestion.ban(1,ban);
-                    ingestion.ban(1,ban);
+                    ingestion.bans(1, List.of(ban), REPORTING_WINDOW_MILLIS);
+                    ingestion.bans(1, List.of(ban), REPORTING_WINDOW_MILLIS);
                     assertEquals("1",career.counts(1).stream().filter(r -> "ban".equals(r.get("kind"))).findFirst().orElseThrow().get("total"));
                     var second = new com.ghostchu.btn.sparkle.entity.SwarmTracker();
                     var third = new com.ghostchu.btn.sparkle.entity.SwarmTracker();
                     org.springframework.beans.BeanUtils.copyProperties(row,second);
                     org.springframework.beans.BeanUtils.copyProperties(row,third);
                     second.setPeerPort(6882); third.setPeerPort(6883);
-                    ingestion.swarmBatch(1,java.util.List.of(second,third));
+                    writeSwarm(ingestion, 1, List.of(second, third));
                     session.clearCache();
                     assertEquals("9223372036854775828",totals.selectByUserId(1).sentTrafficSelfReport());
                     try(var sql=connection.createStatement(); var result=sql.executeQuery("SELECT COUNT(*) FROM pg_constraint WHERE contype IN ('f','c') AND conrelid IN ('user_lifetime_traffic'::regclass,'user_lifetime_traffic_checkpoint'::regclass,'user_career_events'::regclass,'user_career_daily'::regclass,'user_career_torrent_time'::regclass)")) {
@@ -188,11 +191,11 @@ class UserLifetimeTrafficIntegrationTest {
         var firstChunksWritten = new CyclicBarrier(2);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var swarmResult = executor.submit(() -> {
-                writeConcurrentReport(factory, firstChunksWritten, "swarm", service -> service.swarmBatch(1, swarm));
+                writeConcurrentReport(factory, firstChunksWritten, "swarm", service -> writeSwarm(service, 1, swarm));
                 return null;
             });
             var banResult = executor.submit(() -> {
-                writeConcurrentReport(factory, firstChunksWritten, "bans", service -> service.bans(1, bans));
+                writeConcurrentReport(factory, firstChunksWritten, "bans", service -> service.bans(1, bans, REPORTING_WINDOW_MILLIS));
                 return null;
             });
             swarmResult.get(20, TimeUnit.SECONDS);
@@ -235,7 +238,7 @@ class UserLifetimeTrafficIntegrationTest {
                         .setPeerPort(port).setFirstTimeSeen(at).setLastTimeSeen(at)
                         .setToPeerTraffic(1L).setFromPeerTraffic(0L)
                         .setToPeerTrafficOffset(1L).setFromPeerTrafficOffset(0L).setUserProgress(1)).toList();
-                writeConcurrentReport(factory, barrier, "swarm", service -> service.swarmBatch(uid, rows));
+                writeConcurrentReport(factory, barrier, "swarm", service -> writeSwarm(service, uid, rows));
                 return null;
             })).toList();
             for (var future : futures) future.get(20, TimeUnit.SECONDS);
@@ -264,14 +267,18 @@ class UserLifetimeTrafficIntegrationTest {
                 }
                 return result;
             });
-            report.accept(new CareerIngestionService(mapper, runtimeConfig()));
+            report.accept(new CareerIngestionService(mapper, runtimeConfig(), mock(CareerRedisCache.class)));
             session.commit();
         }
     }
 
+    private void writeSwarm(CareerIngestionService service, long userId, List<SwarmTracker> rows) {
+        service.swarmBatch(service.prepareSwarm(userId, rows));
+    }
+
     private com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService runtimeConfig() {
         var config = org.mockito.Mockito.mock(com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService.class);
-        org.mockito.Mockito.when(config.reportingWindowMillis(org.mockito.ArgumentMatchers.anyString())).thenReturn(915000L);
+        org.mockito.Mockito.when(config.reportingWindowMillis(org.mockito.ArgumentMatchers.anyString())).thenReturn(REPORTING_WINDOW_MILLIS);
         return config;
     }
 

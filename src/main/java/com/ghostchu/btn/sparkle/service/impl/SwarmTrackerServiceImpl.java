@@ -12,6 +12,7 @@ import com.ghostchu.btn.sparkle.constants.PointCategory;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrackerMapper;
 import com.ghostchu.btn.sparkle.mapper.SwarmTrafficDeltaMapper;
 import com.ghostchu.btn.sparkle.mapper.customresult.UserSwarmStatisticTrafficResult;
+import com.ghostchu.btn.sparkle.service.CareerIngestionService;
 import com.ghostchu.btn.sparkle.service.HomepageIpFlagService;
 import com.ghostchu.btn.sparkle.service.HomepageStatisticsRefreshService;
 import com.ghostchu.btn.sparkle.service.ISwarmTrackerService;
@@ -33,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.net.InetAddress;
 import java.time.OffsetDateTime;
@@ -56,7 +58,7 @@ import java.util.Set;
 @Slf4j
 public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, SwarmTracker> implements ISwarmTrackerService {
     @Autowired
-    private com.ghostchu.btn.sparkle.service.CareerIngestionService careerIngestionService;
+    private CareerIngestionService careerIngestionService;
     @Autowired
     private HomepageIpFlagService ipFlagService;
     @Autowired
@@ -237,52 +239,49 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
             );
         }
 
-        new org.springframework.transaction.support.TransactionTemplate(platformTransactionManager).executeWithoutResult(status -> {
-            if (!swarmMap.isEmpty()) {
-                var orderedRows = new ArrayList<>(swarmMap.values());
-                orderedRows.sort(java.util.Comparator.comparingLong(SwarmTracker::getUserappsId)
-                        .thenComparing(SwarmTracker::getUserDownloader)
-                        .thenComparingLong(SwarmTracker::getTorrentId)
-                        .thenComparing(row -> row.getPeerIp().getHostAddress())
-                        .thenComparingInt(SwarmTracker::getPeerPort));
-                this.baseMapper.batchUpsert(orderedRows);
-                careerIngestionService.swarmBatch(userId, orderedRows);
-                pointAwardContext.recordConfigured(
-                        userId,
-                        PointCategory.SWARM_TRACKER,
-                        swarmMap.size(),
-                        0
-                );
-            }
+        if (swarmMap.isEmpty()) {
+            return;
+        }
 
-            Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
-            for (SwarmTracker tracker : swarmMap.values()) {
-                TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
-                        tracker.getTorrentId(),
-                        ignored -> new TrafficDeltaAccumulator(
-                                torrents.getOrDefault(
-                                        tracker.getTorrentId(),
-                                        new TorrentRegistration(tracker.getTorrentId(), 0)
-                                ).size()
-                        )
-                );
-                accumulator.add(
-                        Math.max(0, tracker.getToPeerTrafficOffset()),
-                        Math.max(0, tracker.getFromPeerTrafficOffset())
-                );
-            }
-            List<SwarmTrafficDelta> deltas = trafficByTorrent.entrySet().stream()
-                    .filter(entry -> entry.getValue().uploadBytes > 0
-                            || entry.getValue().downloadBytes > 0)
-                    .map(entry -> new SwarmTrafficDelta()
-                            .setOccurredAt(nowTime)
-                            .setUserId(userId)
-                            .setUserappId(userAppId)
-                            .setTorrentId(entry.getKey())
-                            .setTorrentSize(entry.getValue().torrentSize)
-                            .setUploadBytes(entry.getValue().uploadBytes)
-                            .setDownloadBytes(entry.getValue().downloadBytes))
-                    .toList();
+        var orderedRows = new ArrayList<>(swarmMap.values());
+        orderedRows.sort(java.util.Comparator.comparingLong(SwarmTracker::getUserappsId)
+                .thenComparing(SwarmTracker::getUserDownloader)
+                .thenComparingLong(SwarmTracker::getTorrentId)
+                .thenComparing(row -> row.getPeerIp().getHostAddress())
+                .thenComparingInt(SwarmTracker::getPeerPort));
+        var careerReport = careerIngestionService.prepareSwarm(userId, orderedRows);
+        Map<Long, TrafficDeltaAccumulator> trafficByTorrent = new HashMap<>();
+        for (SwarmTracker tracker : swarmMap.values()) {
+            TrafficDeltaAccumulator accumulator = trafficByTorrent.computeIfAbsent(
+                    tracker.getTorrentId(),
+                    ignored -> new TrafficDeltaAccumulator(
+                            torrents.getOrDefault(
+                                    tracker.getTorrentId(),
+                                    new TorrentRegistration(tracker.getTorrentId(), 0)
+                            ).size()
+                    )
+            );
+            accumulator.add(
+                    Math.max(0, tracker.getToPeerTrafficOffset()),
+                    Math.max(0, tracker.getFromPeerTrafficOffset())
+            );
+        }
+        List<SwarmTrafficDelta> deltas = trafficByTorrent.entrySet().stream()
+                .filter(entry -> entry.getValue().uploadBytes > 0
+                        || entry.getValue().downloadBytes > 0)
+                .map(entry -> new SwarmTrafficDelta()
+                        .setOccurredAt(nowTime)
+                        .setUserId(userId)
+                        .setUserappId(userAppId)
+                        .setTorrentId(entry.getKey())
+                        .setTorrentSize(entry.getValue().torrentSize)
+                        .setUploadBytes(entry.getValue().uploadBytes)
+                        .setDownloadBytes(entry.getValue().downloadBytes))
+                .toList();
+
+        new TransactionTemplate(platformTransactionManager).executeWithoutResult(status -> {
+            baseMapper.batchUpsert(orderedRows);
+            careerIngestionService.swarmBatch(careerReport);
             if (!deltas.isEmpty()) {
                 swarmTrafficDeltaMapper.batchInsert(deltas);
             }
@@ -290,6 +289,8 @@ public class SwarmTrackerServiceImpl extends ServiceImpl<SwarmTrackerMapper, Swa
                 ipFlagService.observe(observations);
             }
         });
+        careerIngestionService.markSwarmCommitted(careerReport);
+        pointAwardContext.recordConfigured(userId, PointCategory.SWARM_TRACKER, orderedRows.size(), 0);
     }
 
     /**
