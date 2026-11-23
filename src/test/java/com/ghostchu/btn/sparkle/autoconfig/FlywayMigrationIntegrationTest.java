@@ -838,8 +838,8 @@ class FlywayMigrationIntegrationTest {
         jdbc.update("UPDATE userapp SET delete_at = now() WHERE id = 6");
         jdbc.update("""
                 INSERT INTO ban_submission_replay_daily (day, app_id, replay_batches, replays)
-                VALUES (current_date, 1, 150, 12000), (current_date - 29, 2, 151, 151),
-                       (current_date, 3, 1, 12001), (current_date - 30, 4, 151, 12001),
+                VALUES (current_date, 1, 150, 12000), (current_date - 6, 2, 151, 151),
+                       (current_date, 3, 1, 12001), (current_date - 7, 4, 151, 12001),
                        (current_date, 5, 151, 12001), (current_date, 6, 151, 12001)
                 """);
         Flyway.configure().dataSource(url, username, password).load().migrate();
@@ -859,7 +859,7 @@ class FlywayMigrationIntegrationTest {
         var session = new SqlSessionTemplate(new SqlSessionFactoryBuilder().build(configuration));
         var mapper = session.getMapper(BanReplaySuspensionMapper.class);
         var day = jdbc.queryForObject("SELECT current_date", LocalDate.class);
-        var since = day.minusDays(29);
+        var since = day.minusDays(6);
         var transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         try (var deletingOwner = dataSource.getConnection();
              var lock = deletingOwner.createStatement()) {

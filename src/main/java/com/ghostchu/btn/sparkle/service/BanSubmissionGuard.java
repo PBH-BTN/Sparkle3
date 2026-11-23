@@ -41,7 +41,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class BanSubmissionGuard {
-    static final int REPLAY_WINDOW_DAYS = 30;
+    static final int REPLAY_WINDOW_DAYS = 7;
     private static final int BATCH_SIZE = 500;
     private static final int CLEANUP_BATCH_SIZE = 5000;
     private static final String CLEANUP_CRON = "0 */10 * * * *";
