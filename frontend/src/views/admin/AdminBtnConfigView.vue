@@ -23,6 +23,11 @@ const saving = ref(false)
 const updatedAt = ref<string | null>(null)
 const loadError = ref('')
 
+const replayEmailVariables = [
+  'recipientName', 'appId', 'applicationId', 'replayBatches', 'replayLogs',
+  'batchLimit', 'logLimit', 'windowDays', 'suspendedAt',
+].map((name) => ({ name, token: '{{' + name + '}}' }))
+
 const durationFields = new Set([
   'sparkle.ping.reconfigure.interval',
   'sparkle.ping.reconfigure.random-initial-delay',
@@ -307,6 +312,11 @@ onMounted(load)
                   </a-checkbox>
                 </div>
               </template>
+              <a-input
+                v-else-if="section.id === 'banReplaySuspension' && field.field === 'emailSubject'"
+                v-model="form[field.key]"
+                :max-length="255"
+              />
               <a-textarea
                 v-else-if="field.valueType === 'text' || field.valueType === 'list'"
                 v-model="form[field.key]"
@@ -331,6 +341,16 @@ onMounted(load)
               </template>
             </a-form-item>
           </div>
+
+          <details v-if="section.id === 'banReplaySuspension'" class="template-variables">
+            <summary>{{ t('admin.btn.replayEmailVariables.title') }}</summary>
+            <ul>
+              <li v-for="variable in replayEmailVariables" :key="variable.name">
+                <code>{{ variable.token }}</code>
+                {{ t(`admin.btn.replayEmailVariables.${variable.name}`) }}
+              </li>
+            </ul>
+          </details>
         </a-card>
       </a-form>
     </a-spin>
@@ -342,6 +362,15 @@ onMounted(load)
 </template>
 
 <style scoped>
+.template-variables {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+
+.template-variables summary {
+  cursor: pointer;
+}
+
 .btn-config-page {
   width: 100%;
   min-width: 0;

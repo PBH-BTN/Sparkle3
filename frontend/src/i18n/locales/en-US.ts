@@ -523,7 +523,7 @@ export default {
     delete: 'Delete',
     resetConfirm: 'Reset this application secret? The old secret will stop working immediately.',
     deleteConfirm: 'Delete this application? This action cannot be undone.',
-    pausedReason: 'Suspended: {reason}',
+    pausedReason: 'Submissions are suspended. Rules and queries are still available. Reason: {reason}',
     createTitle: 'Create a user application',
     createDescription: 'Give this client an easy-to-recognize name.',
     appName: 'Application name',
@@ -709,7 +709,7 @@ export default {
     quickDisable: 'Disable',
     quickDisableTitle: 'Disable user application #{id}',
     quickDisableHint:
-      'This user application will no longer be able to submit data to BTN. Enter a clear suspension reason.',
+      'This application will be blocked from submitting data, including heartbeats. It can still fetch rules and run queries. Enter a suspension reason.',
     disabledSuccess: 'User application disabled.',
     progress: 'Progress',
     geoIp: 'GeoIP',
@@ -1315,6 +1315,14 @@ export default {
         'ban-submission-cleanup': {
           name: 'Clean up ban submission records',
           description: 'Remove expired ban fingerprints and detection summaries.',
+        },
+        'btn-ban-replay-suspension': {
+          name: 'Check ban log replays',
+          description: 'Check replays over the last 30 UTC days, suspend applications over the limit, and queue notifications.',
+        },
+        'btn-ban-replay-suspension-mail': {
+          name: 'Send replay suspension emails',
+          description: 'Email application owners when their submissions are suspended for exceeding a replay limit.',
         },
         'ip-query-comment-reaudit': {
           name: 'IP comment re-review',
@@ -2570,11 +2578,24 @@ export default {
       clearSecret: 'Clear current secret',
       updatedAt: 'Configuration updated: {time}',
       durationHint: 'Currently about {duration}',
+      replayEmailVariables: {
+        title: 'Variables for the email subject and body',
+        recipientName: 'Application owner’s nickname',
+        appId: 'Client AppId',
+        applicationId: 'Numeric application ID shown in admin',
+        replayBatches: 'Number of submissions containing replays',
+        replayLogs: 'Total replayed logs',
+        batchLimit: 'Submission replay limit at the time of suspension',
+        logLimit: 'Replayed log limit at the time of suspension',
+        windowDays: 'Number of UTC days in the reporting window',
+        suspendedAt: 'Suspension time in UTC',
+      },
       sections: {
         queryIpControls: 'IP query and comment controls',
         protocol: 'Protocol & handshake',
         reconfigure: 'Reconfigure',
         syncBanHistory: 'Ban history submission',
+        banReplaySuspension: 'Automatic suspension for replays',
         syncSwarm: 'Swarm submission',
         ruleIpDenylist: 'IP denylist delivery',
         ruleIpAllowlist: 'IP allowlist delivery',
@@ -2604,6 +2625,7 @@ export default {
           'Controls how often clients refresh remote configuration and their randomized first delay.',
         syncBanHistory:
           'Controls the endpoint, cadence, and proof-of-work requirement for ban submissions.',
+        banReplaySuspension: 'Checks replays over the last 30 UTC days. Exceeding either enabled limit suspends submissions for the application and emails its owner.',
         syncSwarm:
           'Controls swarm submission plus server-side swarm retention and cleanup.',
         ruleIpDenylist: 'Controls how clients fetch the delivered IP denylist.',
@@ -2641,6 +2663,12 @@ export default {
         volumeRiskRecipientUids: 'Volume alert recipient UIDs',
         repeatBanSuppression: 'Block repeated bans',
         repeatBanWindows: 'Repeated-ban window threshold',
+        batchDetectionEnabled: 'Check submissions containing replays',
+        batchLimit: 'Replay submission limit',
+        logDetectionEnabled: 'Check the number of replayed logs',
+        logLimit: 'Replayed log limit',
+        emailSubject: 'Suspension email subject',
+        emailBody: 'Suspension email body',
         endpoint: 'Endpoint',
         powCaptcha: 'Require proof of work',
         dataRetentionTime: 'Swarm retention',
@@ -2702,6 +2730,8 @@ export default {
         queryIpPowCaptcha: 'Applies to IP and CIDR queries, reading comments, and publishing, editing, and deleting comments.',
         repeatBanSuppression: 'Block new logs for targets that reach the repeated-ban threshold. With this off, BTN still records detected events and filters exact replays.',
         repeatBanWindows: 'Number of qualifying submission windows for the same target before BTN records a repeated-ban event.',
+        batchLimit: 'A submission with one or more replayed logs counts once.',
+        logLimit: 'Each replayed log in a submission counts separately.',
         minProtocolVersion: 'Minimum BTN protocol version accepted from clients.',
         maxProtocolVersion: 'Must be greater than or equal to the minimum version.',
         interval:
