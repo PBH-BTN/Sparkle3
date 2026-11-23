@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Message, Modal } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import { adminApi } from '@/api/admin'
 import type { BanSubmissionAppRank, BanSubmissionEvent } from '@/api/adminTypes'
 import PageHeader from '@/components/PageHeader.vue'
@@ -13,6 +13,8 @@ const { formatDate, formatNumber } = useFormatters()
 const rows = ref<BanSubmissionEvent[]>([])
 const loading = ref(false)
 const clearing = ref(false)
+const clearVisible = ref(false)
+const clearError = ref('')
 const error = ref('')
 const ranking = ref<BanSubmissionAppRank[]>([])
 const rankingLoading = ref(false)
@@ -78,24 +80,25 @@ async function loadRanking() {
 }
 
 function confirmClear() {
-  Modal.confirm({
-    title: t('admin.banSubmissions.clear'),
-    content: t('admin.banSubmissions.clearConfirm'),
-    okButtonProps: { status: 'danger' },
-    async onOk() {
-      clearing.value = true
-      try {
-        const { deleted } = await adminApi.clearBanSubmissions()
-        Message.success(t('admin.banSubmissions.cleared', { count: formatNumber(deleted) }))
-        await Promise.all([load(1), loadRanking()])
-      } catch (cause) {
-        Message.error(errorMessage(cause, t('admin.banSubmissions.clearError')))
-        throw cause
-      } finally {
-        clearing.value = false
-      }
-    },
-  })
+  clearError.value = ''
+  clearVisible.value = true
+}
+
+async function clearRecords() {
+  if (clearing.value) return false
+  clearing.value = true
+  clearError.value = ''
+  try {
+    const { deleted } = await adminApi.clearBanSubmissions()
+    Message.success(t('admin.banSubmissions.cleared', { count: formatNumber(deleted) }))
+    await Promise.all([load(1), loadRanking()])
+    return true
+  } catch (cause) {
+    clearError.value = errorMessage(cause, t('admin.banSubmissions.clearError'))
+    return false
+  } finally {
+    clearing.value = false
+  }
 }
 
 onMounted(() => Promise.all([load(1), loadRanking()]))
@@ -110,6 +113,22 @@ onMounted(() => Promise.all([load(1), loadRanking()]))
         </a-button>
       </template>
     </PageHeader>
+
+    <a-modal
+      v-model:visible="clearVisible"
+      :title="t('admin.banSubmissions.clear')"
+      :ok-text="t('common.confirm')"
+      :cancel-text="t('common.cancel')"
+      :ok-button-props="{ status: 'danger' }"
+      :cancel-button-props="{ disabled: clearing }"
+      :closable="!clearing"
+      :esc-to-close="!clearing"
+      :mask-closable="false"
+      :on-before-ok="clearRecords"
+    >
+      <p>{{ t('admin.banSubmissions.clearConfirm') }}</p>
+      <a-alert v-if="clearError" type="error">{{ clearError }}</a-alert>
+    </a-modal>
 
     <section class="table-card surface-card">
       <h2 class="ranking-title">{{ t('admin.banSubmissions.ranking') }}</h2>
