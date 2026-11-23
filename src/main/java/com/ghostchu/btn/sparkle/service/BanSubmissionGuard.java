@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -40,6 +41,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class BanSubmissionGuard {
+    static final int REPLAY_WINDOW_DAYS = 30;
     private static final int BATCH_SIZE = 500;
     private static final int CLEANUP_BATCH_SIZE = 5000;
     private static final String CLEANUP_CRON = "0 */10 * * * *";
@@ -180,7 +182,7 @@ public class BanSubmissionGuard {
     }
 
     public List<AppRank> rankApplications() {
-        return mapper.rankApplications(OffsetDateTime.now(ZoneOffset.UTC).toLocalDate().minusDays(29));
+        return mapper.rankApplications(LocalDate.now(ZoneOffset.UTC).minusDays(REPLAY_WINDOW_DAYS - 1));
     }
 
     @Scheduled(cron = CLEANUP_CRON)
@@ -197,7 +199,7 @@ public class BanSubmissionGuard {
         var eventCutoff = now.minusDays(3);
         // The accepted ban timestamp can be at most seven days old.
         var chunks = mapper.dropExpiredFingerprints(now.minusDays(8));
-        int removed = mapper.deleteReplayDaysBefore(now.toLocalDate().minusDays(29));
+        int removed = mapper.deleteReplayDaysBefore(now.toLocalDate().minusDays(REPLAY_WINDOW_DAYS - 1));
         for (int batch = 0; batch < 20; batch++) {
             int count = mapper.deleteExpiredTargets(stateCutoff, eventCutoff, CLEANUP_BATCH_SIZE);
             removed += count;

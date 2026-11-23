@@ -20,13 +20,15 @@ class BtnConfigCatalogTest {
                 .filter(key -> key.startsWith("sparkle.ping."))
                 .collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(57, keys.size());
+        assertEquals(63, keys.size());
         assertTrue(keys.contains("sparkle.ping.reconfigure.random-initial-delay"));
         assertTrue(keys.contains("sparkle.ping.heartbeat.queue.max-size"));
         assertTrue(keys.contains("sparkle.ping.rule-ip-allowlist.pow-captcha"));
         assertTrue(keys.contains("sparkle.ping.query-ip.iframe-endpoint"));
         assertTrue(keys.contains("sparkle.ping.sync-banhistory.repeat-ban-suppression"));
         assertTrue(keys.contains("sparkle.ping.sync-banhistory.repeat-ban-windows"));
+        assertTrue(keys.contains("sparkle.ping.sync-banhistory.replay-suspension.batch-detection-enabled"));
+        assertTrue(keys.contains("sparkle.ping.sync-banhistory.replay-suspension.log-detection-enabled"));
     }
 
     @Test
@@ -42,6 +44,9 @@ class BtnConfigCatalogTest {
             for (String name : enumerable.getPropertyNames()) {
                 if (name.startsWith("sparkle.ping.")) {
                     yamlKeys.add(name);
+                }
+                if (name.startsWith("sparkle.ping.sync-banhistory.replay-suspension.")) {
+                    assertEquals(BtnConfigCatalog.definition(name).defaultValue(), String.valueOf(source.getProperty(name)));
                 }
             }
         }

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ghostchu.btn.sparkle.mapper.BanReplaySuspensionMapper">
+    <select id="suspendAndQueue" resultType="int" affectData="true" flushCache="true" useCache="false">
+        WITH replay AS (
+            SELECT app_id, SUM(replay_batches)::bigint AS batches, SUM(replays)::bigint AS logs,
+                MAX(COALESCE(last_replay_at, day::timestamp AT TIME ZONE 'UTC')) AS last_replay_at
+            FROM public.ban_submission_replay_daily
+            WHERE day >= #{since}
+            GROUP BY app_id
+            HAVING (#{checkBatches} AND SUM(replay_batches) > #{batchLimit})
+                OR (#{checkLogs} AND SUM(replays) > #{logLimit})
+        ), candidates AS MATERIALIZED (
+            SELECT app.id, replay.batches, replay.logs, replay.last_replay_at
+            FROM replay
+            JOIN public.userapp app ON app.id = replay.app_id
+            JOIN public."user" owner ON owner.id = app.owner
+            WHERE app.delete_at IS NULL
+              AND (app.banned_at IS NULL OR app.unban_at &lt;= CURRENT_TIMESTAMP)
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.ban_replay_application_suspensions previous
+                  WHERE previous.app_id = app.id AND previous.last_replay_at >= replay.last_replay_at
+              )
+            ORDER BY app.id
+            LIMIT #{limit}
+            <!-- Lock the referenced owner without waiting. Account deletion locks the user before the app. -->
+            FOR UPDATE OF app SKIP LOCKED
+            FOR KEY SHARE OF owner SKIP LOCKED
+        ), suspended AS (
+            UPDATE public.userapp app
+            SET banned_at = CURRENT_TIMESTAMP, banned_reason = #{reason}, unban_at = NULL
+            FROM candidates candidate
+            WHERE app.id = candidate.id
+            RETURNING app.id, app.owner, app.banned_at, candidate.batches, candidate.logs, candidate.last_replay_at
+        ), queued AS (
+            INSERT INTO public.ban_replay_application_suspensions (
+                app_id, owner_id, suspended_at, last_replay_at, replay_batches, replay_logs, batch_limit, log_limit
+            )
+            SELECT id, owner, banned_at, last_replay_at, batches, logs, #{batchLimit}, #{logLimit}
+            FROM suspended
+            RETURNING id
+        )
+        SELECT count(*)::integer FROM queued
+    </select>
+
+    <resultMap id="notice" type="com.ghostchu.btn.sparkle.mapper.BanReplaySuspensionMapper$Notice">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="application_id" javaType="_long"/>
+            <arg column="app_id" javaType="string"/>
+            <arg column="email" javaType="string"/>
+            <arg column="nickname" javaType="string"/>
+            <arg column="suspended_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="replay_batches" javaType="_long"/>
+            <arg column="replay_logs" javaType="_long"/>
+            <arg column="batch_limit" javaType="_long"/>
+            <arg column="log_limit" javaType="_long"/>
+            <arg column="mail_attempts" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <select id="claimNotice" resultMap="notice" affectData="true" flushCache="true" useCache="false">
+        WITH due AS (
+            SELECT id FROM public.ban_replay_application_suspensions
+            WHERE mail_status = 'PENDING' AND next_attempt_at &lt;= CURRENT_TIMESTAMP
+            ORDER BY next_attempt_at, id
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        ), claimed AS (
+            UPDATE public.ban_replay_application_suspensions notice
+            SET next_attempt_at = CURRENT_TIMESTAMP + INTERVAL '15 minutes', mail_attempts = notice.mail_attempts + 1
+            FROM due WHERE notice.id = due.id
+            RETURNING notice.*
+        )
+        SELECT claimed.id, claimed.app_id AS application_id, app.app_id, owner.email, owner.nickname,
+            claimed.suspended_at, claimed.replay_batches, claimed.replay_logs,
+            claimed.batch_limit, claimed.log_limit, claimed.mail_attempts
+        FROM claimed
+        LEFT JOIN public.userapp app
+            ON app.id = claimed.app_id AND app.owner = claimed.owner_id AND app.delete_at IS NULL
+        LEFT JOIN public."user" owner ON owner.id = app.owner
+    </select>
+
+    <update id="finishNotice">
+        UPDATE public.ban_replay_application_suspensions SET mail_status = #{status}
+        WHERE id = #{id} AND mail_attempts = #{attempt} AND mail_status = 'PENDING'
+    </update>
+</mapper>

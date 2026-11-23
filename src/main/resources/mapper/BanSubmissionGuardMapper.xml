@@ -115,11 +115,12 @@
     </select>
 
     <insert id="recordReplayBatch">
-        INSERT INTO public.ban_submission_replay_daily AS daily (day, app_id, replay_batches, replays)
-        VALUES (#{day}, #{appId}, 1, #{replays})
+        INSERT INTO public.ban_submission_replay_daily AS daily (day, app_id, replay_batches, replays, last_replay_at)
+        VALUES (#{day}, #{appId}, 1, #{replays}, CURRENT_TIMESTAMP)
         ON CONFLICT (day, app_id) DO UPDATE SET
             replay_batches = daily.replay_batches + 1,
-            replays = daily.replays + EXCLUDED.replays
+            replays = daily.replays + EXCLUDED.replays,
+            last_replay_at = GREATEST(daily.last_replay_at, EXCLUDED.last_replay_at)
     </insert>
 
     <delete id="clearReplayDays">

@@ -145,6 +145,23 @@ sparkle:
       pow-captcha: false
       repeat-ban-suppression: false
       repeat-ban-windows: 5
+      replay-suspension:
+        batch-detection-enabled: false
+        batch-limit: 150
+        log-detection-enabled: false
+        log-limit: 12000
+        email-subject: "Sparkle BTN 应用已停用 / Application suspended"
+        email-body: |-
+          {{recipientName}}，您好：
+
+          您的 BTN 应用 {{appId}} 因重传超过上限，已停止接收上报。该应用仍可获取规则和查询数据。
+          最近 {{windowDays}} 个 UTC 日捕捉到 {{replayBatches}} 次重传，共 {{replayLogs}} 条重传日志。
+          请检查客户端为何反复提交已上报的封禁日志。处理后可联系管理员恢复上报。
+
+          Your BTN application {{appId}} has been suspended from submitting data because it exceeded a replay limit.
+          The application can still fetch rules and query data.
+          In the last {{windowDays}} UTC days, {{replayBatches}} submissions contained {{replayLogs}} replayed logs.
+          Check why the client is resending previously reported bans, then contact an administrator to restore submissions.
       endpoint: "{rooturl}/ping/syncBanHistory"
       random-initial-delay: 3000
       interval: 10000

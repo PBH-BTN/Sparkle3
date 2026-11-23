@@ -21,6 +21,7 @@ import com.ghostchu.btn.sparkle.entity.Rule;
 import com.ghostchu.btn.sparkle.entity.SwarmTracker;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper;
+import com.ghostchu.btn.sparkle.mapper.BanReplaySuspensionMapper;
 import com.ghostchu.btn.sparkle.mapper.ContentModerationMapper;
 import com.ghostchu.btn.sparkle.mapper.HomepageIpFlagMapper;
 import com.ghostchu.btn.sparkle.mapper.SupporterRoleMapper;
@@ -50,6 +51,7 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.security.SparkleUserDetails;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard;
 import com.ghostchu.btn.sparkle.service.BanSubmissionGuard.Candidate;
+import com.ghostchu.btn.sparkle.service.btn.BtnConfigCatalog;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
@@ -696,15 +698,8 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void banSubmissionGuardDeduplicatesAndDetectsAcrossWindows() throws Exception {
-        try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
-            statement.execute("CREATE EXTENSION IF NOT EXISTS timescaledb");
-            statement.execute(new org.springframework.core.io.ClassPathResource("db/migration/V23__app_config_entries.sql")
-                    .getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
-        }
-        var flyway = Flyway.configure().dataSource(url, username, password)
-                .baselineVersion("73").target("79").load();
-        flyway.baseline();
-        assertEquals(6, flyway.migrate().migrationsExecuted);
+        var flyway = Flyway.configure().dataSource(url, username, password).load();
+        flyway.migrate();
         flyway.validate();
 
         var configuration = new Configuration(new Environment("ban-guard-test", new JdbcTransactionFactory(),
@@ -823,6 +818,88 @@ class FlywayMigrationIntegrationTest {
             assertTrue(filterBans(guard, 30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
             assertEquals(1, guard.events(1, 20, 30L, "replay", null, null, null).total());
         }
+    }
+
+    @Test
+    void replaySuspensionsUseBothLimitsAndAtomicallyQueueAnEmail() throws Exception {
+        var flyway = Flyway.configure().dataSource(url, username, password).target("87").load();
+        flyway.migrate();
+        var dataSource = new DriverManagerDataSource(url, username, password);
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("""
+                INSERT INTO "user" (id, avatar, email, nickname, register_at, last_login_at)
+                VALUES (1, '/test.png', 'owner@example.invalid', 'Owner', now(), now())
+                """);
+        jdbc.update("""
+                INSERT INTO userapp (id, app_id, app_secret, created_at, owner, comment)
+                SELECT id, 'test-app-' || id, 'test-secret', now(), 1, '' FROM generate_series(1, 6) id
+                """);
+        jdbc.update("UPDATE userapp SET banned_at = now(), banned_reason = 'manual' WHERE id = 5");
+        jdbc.update("UPDATE userapp SET delete_at = now() WHERE id = 6");
+        jdbc.update("""
+                INSERT INTO ban_submission_replay_daily (day, app_id, replay_batches, replays)
+                VALUES (current_date, 1, 150, 12000), (current_date - 29, 2, 151, 151),
+                       (current_date, 3, 1, 12001), (current_date - 30, 4, 151, 12001),
+                       (current_date, 5, 151, 12001), (current_date, 6, 151, 12001)
+                """);
+        Flyway.configure().dataSource(url, username, password).load().migrate();
+
+        for (var definition : BtnConfigCatalog.definitions()) {
+            if ("banReplaySuspension".equals(definition.section())) {
+                assertEquals(definition.defaultValue(), jdbc.queryForObject(
+                        "SELECT config_value FROM app_config_entries WHERE config_key = ?", String.class, definition.key()));
+            }
+        }
+        var configuration = new Configuration(new Environment("ban-replay-test", new SpringManagedTransactionFactory(), dataSource));
+        for (String resource : List.of("mapper/BanSubmissionGuardMapper.xml", "mapper/BanReplaySuspensionMapper.xml")) {
+            try (var input = getClass().getResourceAsStream("/" + resource)) {
+                new XMLMapperBuilder(input, configuration, resource, configuration.getSqlFragments()).parse();
+            }
+        }
+        var session = new SqlSessionTemplate(new SqlSessionFactoryBuilder().build(configuration));
+        var mapper = session.getMapper(BanReplaySuspensionMapper.class);
+        var day = jdbc.queryForObject("SELECT current_date", LocalDate.class);
+        var since = day.minusDays(29);
+        var transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        try (var deletingOwner = dataSource.getConnection();
+             var lock = deletingOwner.createStatement()) {
+            deletingOwner.setAutoCommit(false);
+            lock.execute("SELECT id FROM \"user\" WHERE id = 1 FOR UPDATE");
+            transaction.executeWithoutResult(status -> {
+                jdbc.execute("SET LOCAL lock_timeout = '2s'");
+                assertEquals(0, mapper.suspendAndQueue(since, true, 150, true, 12_000, "replay", 200));
+            });
+            deletingOwner.rollback();
+        }
+        transaction.executeWithoutResult(status -> {
+            assertEquals(1, mapper.suspendAndQueue(since, true, 150, false, 12_000, "replay", 200));
+            status.setRollbackOnly();
+        });
+        assertNull(mapper.claimNotice());
+        assertNull(jdbc.queryForObject("SELECT banned_at FROM userapp WHERE id = 2", OffsetDateTime.class));
+
+        assertEquals(1, mapper.suspendAndQueue(since, true, 150, false, 12_000, "replay", 200));
+        assertEquals(1, mapper.suspendAndQueue(since, false, 150, true, 12_000, "replay", 200));
+        assertEquals(0, mapper.suspendAndQueue(since, true, 150, true, 12_000, "replay", 200));
+        assertEquals(List.of(2L, 3L), jdbc.queryForList(
+                "SELECT id FROM userapp WHERE banned_reason = 'replay' ORDER BY id", Long.class));
+        assertEquals("manual", jdbc.queryForObject("SELECT banned_reason FROM userapp WHERE id = 5", String.class));
+
+        var first = mapper.claimNotice();
+        var second = mapper.claimNotice();
+        assertEquals("owner@example.invalid", first.email());
+        assertEquals(2L, first.applicationId());
+        assertEquals(151L, first.replayBatches());
+        assertEquals(3L, second.applicationId());
+        assertEquals(12_001L, second.replayLogs());
+        assertNull(mapper.claimNotice());
+        assertEquals(0, mapper.finishNotice(first.id(), first.attempt() + 1, BanReplaySuspensionMapper.MailStatus.SENT));
+        assertEquals(1, mapper.finishNotice(first.id(), first.attempt(), BanReplaySuspensionMapper.MailStatus.SENT));
+
+        jdbc.update("UPDATE userapp SET banned_at = NULL, banned_reason = NULL WHERE id = 2");
+        assertEquals(0, mapper.suspendAndQueue(since, true, 150, true, 12_000, "replay", 200));
+        session.getMapper(BanSubmissionGuardMapper.class).recordReplayBatch(2, day, 1);
+        assertEquals(1, mapper.suspendAndQueue(since, true, 150, true, 12_000, "replay", 200));
     }
 
     private List<Candidate> filterBans(BanSubmissionGuard guard, long appId, List<Candidate> candidates,
@@ -1347,7 +1424,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("87", latest.info().current().getVersion().getVersion());
+        assertEquals("88", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

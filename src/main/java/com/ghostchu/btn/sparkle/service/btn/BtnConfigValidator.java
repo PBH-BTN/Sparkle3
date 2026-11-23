@@ -225,6 +225,10 @@ public final class BtnConfigValidator {
             BtnConfigCatalog.Definition definition,
             String value
     ) throws BusinessException {
+        if ("banReplaySuspension".equals(definition.section()) && "emailSubject".equals(definition.field())
+                && (value.length() > 255 || value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0)) {
+            throw invalid(definition, "email subject must be a single line of at most 255 characters");
+        }
         if (value.length() > 16_384) {
             throw invalid(definition, "value is too long");
         }

@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BtnConfigValidatorTest {
     @Test
+    void replaySuspensionAllowsIndependentLimitsAndValidatesEmailSubject() throws Exception {
+        String section = "banReplaySuspension";
+        String checkBatches = BtnConfigCatalog.key(section, "batchDetectionEnabled");
+        String checkLogs = BtnConfigCatalog.key(section, "logDetectionEnabled");
+        String batchLimit = BtnConfigCatalog.key(section, "batchLimit");
+        String logLimit = BtnConfigCatalog.key(section, "logLimit");
+        String subject = BtnConfigCatalog.key(section, "emailSubject");
+        var values = Map.of(checkBatches, "true", checkLogs, "false", batchLimit, "175", logLimit, "12500",
+                subject, "Application {{appId}} suspended");
+        assertEquals(values, BtnConfigValidator.validate(values, defaults()));
+        assertThrows(BusinessException.class, () -> BtnConfigValidator.validate(Map.of(subject, "line 1\nline 2"), defaults()));
+        assertThrows(BusinessException.class, () -> BtnConfigValidator.validate(Map.of(logLimit, "0"), defaults()));
+    }
+
+    @Test
     void routeListsAllowClearingAndNormalizeKeywords() throws Exception {
         String isps = BtnConfigCatalog.key("rootUrls", "chnRouteIsps");
         String provinces = BtnConfigCatalog.key("rootUrls", "chnRouteProvinces");

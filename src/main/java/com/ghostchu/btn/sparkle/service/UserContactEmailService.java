@@ -9,21 +9,18 @@ import com.ghostchu.btn.sparkle.entity.User;
 import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.service.mail.MailDeliveryException;
 import com.ghostchu.btn.sparkle.service.mail.MailSettingsService;
+import com.ghostchu.btn.sparkle.service.mail.PlainTextMailTemplate;
 import com.ghostchu.btn.sparkle.service.mail.SmtpMailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 @Slf4j
 public class UserContactEmailService {
     private static final int DAILY_LIMIT = 15;
-    private static final Pattern TEMPLATE_VARIABLE =
-            Pattern.compile("\\{\\{([A-Za-z][A-Za-z0-9]*)}}");
 
     private final UserContactEmailDeliveryMapper deliveryMapper;
     private final UserPublicProfileService publicProfileService;
@@ -82,7 +79,7 @@ public class UserContactEmailService {
         }
 
         RuntimeConfigView config = adminConfigService.get();
-        String renderedSubject = renderTemplate(
+        String renderedSubject = PlainTextMailTemplate.render(
                 config.userContactEmailSubjectTemplate(),
                 Map.of(
                         "title", subject,
@@ -92,7 +89,7 @@ public class UserContactEmailService {
                         "recipientId", String.valueOf(recipient.getId())
                 )
         ).replaceAll("[\\r\\n]+", " ").trim();
-        String renderedBody = renderTemplate(
+        String renderedBody = PlainTextMailTemplate.render(
                 config.userContactEmailBodyTemplate(),
                 Map.of(
                         "title", subject,
@@ -147,17 +144,6 @@ public class UserContactEmailService {
             throw new BusinessException(HttpStatus.BAD_GATEWAY,
                     "Unable to send contact email");
         }
-    }
-
-    private String renderTemplate(String template, Map<String, String> values) {
-        Matcher matcher = TEMPLATE_VARIABLE.matcher(template);
-        StringBuilder rendered = new StringBuilder();
-        while (matcher.find()) {
-            String value = values.getOrDefault(matcher.group(1), matcher.group());
-            matcher.appendReplacement(rendered, Matcher.quoteReplacement(value));
-        }
-        matcher.appendTail(rendered);
-        return rendered.toString();
     }
 
     private String displayName(User user) {

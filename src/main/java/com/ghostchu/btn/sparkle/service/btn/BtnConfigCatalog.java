@@ -259,6 +259,23 @@ public final class BtnConfigCatalog {
             Definition.bool("syncBanHistory", "volumeRiskEnabled", false),
             Definition.integer("syncBanHistory", "volumeRiskThreshold", 10_000, 1, 10_000_000),
             Definition.list("syncBanHistory", "volumeRiskRecipientUids", ""),
+            Definition.bool("banReplaySuspension", "batchDetectionEnabled", false),
+            Definition.integer("banReplaySuspension", "batchLimit", 150, 1, 1_000_000_000),
+            Definition.bool("banReplaySuspension", "logDetectionEnabled", false),
+            Definition.integer("banReplaySuspension", "logLimit", 12_000, 1, 1_000_000_000),
+            Definition.freeText("banReplaySuspension", "emailSubject", "Sparkle BTN 应用已停用 / Application suspended"),
+            Definition.freeText("banReplaySuspension", "emailBody", """
+                    {{recipientName}}，您好：
+
+                    您的 BTN 应用 {{appId}} 因重传超过上限，已停止接收上报。该应用仍可获取规则和查询数据。
+                    最近 {{windowDays}} 个 UTC 日捕捉到 {{replayBatches}} 次重传，共 {{replayLogs}} 条重传日志。
+                    请检查客户端为何反复提交已上报的封禁日志。处理后可联系管理员恢复上报。
+
+                    Your BTN application {{appId}} has been suspended from submitting data because it exceeded a replay limit.
+                    The application can still fetch rules and query data.
+                    In the last {{windowDays}} UTC days, {{replayBatches}} submissions contained {{replayLogs}} replayed logs.
+                    Check why the client is resending previously reported bans, then contact an administrator to restore submissions.
+                    """.stripTrailing()),
 
             Definition.text("syncSwarm", "endpoint", "{rooturl}/ping/syncSwarm"),
             Definition.integer("syncSwarm", "interval", 900_000, 100, 86_400_000),
@@ -534,6 +551,7 @@ public final class BtnConfigCatalog {
             case "protocol" -> "sparkle.ping.config";
             case "reconfigure" -> "sparkle.ping.reconfigure";
             case "syncBanHistory" -> "sparkle.ping.sync-banhistory";
+            case "banReplaySuspension" -> "sparkle.ping.sync-banhistory.replay-suspension";
             case "syncSwarm" -> "sparkle.ping.sync-swarm";
             case "ruleIpDenylist" -> "sparkle.ping.rule-ip-denylist";
             case "ruleIpAllowlist" -> "sparkle.ping.rule-ip-allowlist";
