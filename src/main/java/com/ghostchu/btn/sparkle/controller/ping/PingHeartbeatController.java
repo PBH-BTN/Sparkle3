@@ -40,7 +40,7 @@ public class PingHeartbeatController extends BasePingController {
                 && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
-        Userapp userapp = verifyUserApplicationForBatchedPoints();
+        Userapp userapp = verifyUserApplicationForSubmission(false);
         reportVolume.record(BtnReportVolumeService.Module.HEARTBEAT, userapp.getId(), 1);
         heartbeatService.onHeartBeat(
                 userapp.getId(),

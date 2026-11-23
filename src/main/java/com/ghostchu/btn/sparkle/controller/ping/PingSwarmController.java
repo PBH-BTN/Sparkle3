@@ -44,7 +44,7 @@ public class PingSwarmController extends BasePingController {
                 && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
-        Userapp userapp = verifyUserApplication();
+        Userapp userapp = verifyUserApplicationForSubmission(true);
         var swarms = ping.getSwarms();
         reportVolume.record(BtnReportVolumeService.Module.SWARM, userapp.getId(), swarms.size());
         var dictionary = contentModeration.snapshot();

@@ -49,9 +49,9 @@ public class PingIpQueryDetailsController extends BasePingController {
     public Lookup lookup(@RequestParam String query)
             throws
             BusinessException {
-        Userapp app = authenticate("powCaptcha");
+        Userapp app = authenticate("powCaptcha", false);
         LookupResponse lookup = lookupService.lookup(query);
-        return new Lookup(lookup, lookup.commentAccess().publishingEnabled() && eligible(app));
+        return new Lookup(lookup, lookup.commentAccess().publishingEnabled() && !app.isSuspended() && eligible(app));
     }
 
     @GetMapping("/comments")
@@ -61,12 +61,13 @@ public class PingIpQueryDetailsController extends BasePingController {
             @RequestParam(defaultValue = "20") int size
     ) throws
             BusinessException {
-        Userapp app = authenticate("powCaptcha");
-        boolean canPublish = eligible(app);
-        var result = comments.list(canPublish ? app.getOwner() : -1, scope, page, size, false);
+        Userapp app = authenticate("powCaptcha", false);
+        boolean eligibleOwner = eligible(app);
+        var result = comments.list(eligibleOwner ? app.getOwner() : -1, scope, page, size, false);
         var access = result.access();
+        boolean canPublish = eligibleOwner && !app.isSuspended() && access.publishingEnabled();
         return new CommentPage(withAbsoluteAvatars(result.records()), result.current(), result.size(), result.total(), result.pages(),
-                result.scope(), new CommentAccess(access.visible(), access.publishingEnabled() && canPublish,
+                result.scope(), new CommentAccess(access.visible(), canPublish,
                 access.moderationEnabled(), access.maxLength(), access.hourlyLimit()));
     }
 
@@ -74,7 +75,7 @@ public class PingIpQueryDetailsController extends BasePingController {
     public CommentView create(@RequestBody CreateCommentRequest body)
             throws
             BusinessException {
-        long owner = requireEligible(authenticate("powCaptcha"));
+        long owner = requireEligible(authenticate("powCaptcha", true));
         return withAbsoluteAvatar(comments.create(owner, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
 
@@ -82,7 +83,7 @@ public class PingIpQueryDetailsController extends BasePingController {
     public CommentView update(@PathVariable long id, @RequestBody UpdateCommentRequest body)
             throws
             BusinessException {
-        long owner = requireEligible(authenticate("powCaptcha"));
+        long owner = requireEligible(authenticate("powCaptcha", true));
         return withAbsoluteAvatar(comments.update(owner, id, body, request.getRemoteAddr(), request.getHeader("User-Agent")));
     }
 
@@ -91,14 +92,14 @@ public class PingIpQueryDetailsController extends BasePingController {
     public void delete(@PathVariable long id)
             throws
             BusinessException {
-        comments.delete(requireEligible(authenticate("powCaptcha")), id);
+        comments.delete(requireEligible(authenticate("powCaptcha", true)), id);
     }
 
     @PostMapping("/commentCounts")
     public Map<String, Long> count(@RequestBody List<String> ips)
             throws
             BusinessException {
-        return commentCounts.count(authenticate("commentCountPowCaptcha").getId(), ips);
+        return commentCounts.count(authenticate("commentCountPowCaptcha", false).getId(), ips);
     }
 
     private List<CommentView> withAbsoluteAvatars(List<CommentView> records) {
@@ -121,13 +122,13 @@ public class PingIpQueryDetailsController extends BasePingController {
         return routeResolver.resolve(request.getRemoteAddr()).replaceAll("/+$", "");
     }
 
-    private Userapp authenticate(String powSetting)
+    private Userapp authenticate(String powSetting, boolean submission)
             throws AccessDeniedException, UserApplicationBannedException,
             UserApplicationNotFoundException, PowCaptchaFailureException {
         if (config.booleanValue("queryIp", powSetting) && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
-        return verifyUserApplicationForBatchedPoints();
+        return submission ? verifyUserApplicationForSubmission(false) : verifyUserApplicationForRead(false);
     }
 
     private boolean eligible(Userapp app) {

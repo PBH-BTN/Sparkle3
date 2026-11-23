@@ -3,7 +3,6 @@ package com.ghostchu.btn.sparkle.controller.ping;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
 import com.ghostchu.btn.sparkle.exception.PowCaptchaFailureException;
-import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.btn.BtnRuntimeConfigService;
 import com.ghostchu.btn.sparkle.service.btnability.DynamicSparkleBtnAbility;
@@ -26,18 +25,18 @@ public class PingQueryIpController extends BasePingController {
     private BtnRuntimeConfigService configService;
 
     @GetMapping("/ping/queryIp")
-    public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationBannedException, UserApplicationNotFoundException {
+    public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIp(@RequestParam String ip) throws AccessDeniedException, PowCaptchaFailureException, UserApplicationNotFoundException {
         if (configService.booleanValue("queryIp", "powCaptcha") && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
-        var userApps = verifyUserApplication();
+        verifyUserApplicationForRead(true);
         return ResponseEntity.ok(safeQuery(ip));
     }
 
     @GetMapping("/ping/queryIp/widget/data")
     public ResponseEntity<QueryIpServiceImpl.@NotNull IpQueryResult> queryIpWidget(@RequestParam String ip)
-            throws AccessDeniedException, UserApplicationBannedException, UserApplicationNotFoundException {
-        verifyUserApplication();
+            throws AccessDeniedException, UserApplicationNotFoundException {
+        verifyUserApplicationForRead(true);
         return ResponseEntity.ok(safeQuery(ip));
     }
 

@@ -47,7 +47,7 @@ public class PingSubmitBansController extends BasePingController {
                 && !validatePowCaptcha()) {
             throw new PowCaptchaFailureException();
         }
-        Userapp userapp = verifyUserApplication();
+        Userapp userapp = verifyUserApplicationForSubmission(true);
         var bans = ping.getBans();
         reportVolume.record(BtnReportVolumeService.Module.BAN_HISTORY, userapp.getId(), bans.size());
         var dictionary = contentModeration.snapshot();

@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserApplicationBannedException.class)
     public ResponseEntity<@NotNull StdResp<String>> userApplicationBannedException(UserApplicationBannedException e) {
-        return ResponseEntity.status(403).body(new StdResp<>(false, "此用户应用程序已被管理员停用：" + e.getMessage() + "。请与系统管理员联系以获取更多信息。", null));
+        return ResponseEntity.status(403).body(new StdResp<>(false, "此应用的上报已停用：" + e.getMessage() + "。请联系管理员。", null));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

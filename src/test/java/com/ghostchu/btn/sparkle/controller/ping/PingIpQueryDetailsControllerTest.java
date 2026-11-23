@@ -19,9 +19,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -45,8 +47,9 @@ class PingIpQueryDetailsControllerTest {
         request.setRemoteAddr(CLIENT_IP);
         request.addHeader("User-Agent", "test");
         controller.request = request;
-        doReturn(new Userapp().setOwner(42L).setAppId("test-app"))
-                .when(controller).verifyUserApplicationForBatchedPoints();
+        var app = new Userapp().setOwner(42L).setAppId("test-app");
+        doReturn(app).when(controller).verifyUserApplicationForRead(false);
+        doReturn(app).when(controller).verifyUserApplicationForSubmission(false);
         when(users.getById(42L)).thenReturn(new User());
         when(config.text("rootUrls", "rootUrl")).thenReturn("https://global.example/btn/");
     }
@@ -65,6 +68,21 @@ class PingIpQueryDetailsControllerTest {
         assertEquals(hidden, page.records().getLast());
         assertEquals(access, page.access());
         verifyNoInteractions(ipdb);
+    }
+
+    @Test
+    void suspendedApplicationKeepsOwnerCommentVisibility() throws Exception {
+        doReturn(new Userapp().setOwner(42L).setAppId("test-app").setBannedAt(OffsetDateTime.now()))
+                .when(controller).verifyUserApplicationForRead(false);
+        var access = new CommentAccess(true, true, true, 5000, 30);
+        var ownComment = comment(1L, null);
+        when(comments.list(42L, SCOPE, 1, 20, false))
+                .thenReturn(new CommentPage(List.of(ownComment), 1, 20, 1, 1, SCOPE, access));
+
+        var page = controller.comments(SCOPE, 1, 20);
+
+        assertEquals(List.of(ownComment), page.records());
+        assertFalse(page.access().publishingEnabled());
     }
 
     @Test

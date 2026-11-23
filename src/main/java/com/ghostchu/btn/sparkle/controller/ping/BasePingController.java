@@ -48,46 +48,52 @@ public class BasePingController {
     }
 
     @NotNull
-    public Userapp verifyUserApplication() throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
-        return verifyUserApplication(true);
+    protected Userapp verifyUserApplicationForSubmission(boolean recordPoints)
+            throws UserApplicationNotFoundException, UserApplicationBannedException, AccessDeniedException {
+        Userapp app = requireUserApplication();
+        if (app.isSuspended()) {
+            throw new UserApplicationBannedException(app.getBannedReason());
+        }
+        if (recordPoints) {
+            pointsService.recordAppActivity(app.getOwner(), app.getId());
+        }
+        return app;
     }
 
     @NotNull
-    protected Userapp verifyUserApplicationForBatchedPoints()
-            throws UserApplicationNotFoundException,
-            UserApplicationBannedException,
-            AccessDeniedException {
-        return verifyUserApplication(false);
+    protected Userapp verifyUserApplicationForRead(boolean recordPoints)
+            throws UserApplicationNotFoundException, AccessDeniedException {
+        Userapp app = requireUserApplication();
+        if (recordPoints && !app.isSuspended()) {
+            pointsService.recordAppActivity(app.getOwner(), app.getId());
+        }
+        return app;
     }
 
-    private Userapp verifyUserApplication(boolean recordPoints)
-            throws UserApplicationNotFoundException,
-            UserApplicationBannedException,
-            AccessDeniedException {
-        var cred = cred(request);
-        cred.verifyOrThrow();
-        var userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
-        if (userApp == null) {
+    @NotNull
+    private Userapp requireUserApplication() throws UserApplicationNotFoundException, AccessDeniedException {
+        Userapp app = authenticateUserApplication();
+        if (app == null) {
             throw new UserApplicationNotFoundException();
         }
-        if (userApp.isSuspended()) {
-            throw new UserApplicationBannedException(userApp.getBannedReason());
-        }
-        if (recordPoints) {
-            pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
-        }
-        return userApp;
+        return app;
     }
 
     @Nullable
-    public Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
+    protected Userapp verifyUserApplicationFailSafe() throws AccessDeniedException {
+        Userapp app = authenticateUserApplication();
+        if (app != null && !app.isSuspended()) {
+            pointsService.recordAppActivity(app.getOwner(), app.getId());
+        }
+        return app;
+    }
+
+    @Nullable
+    private Userapp authenticateUserApplication() throws AccessDeniedException {
         var cred = cred(request);
         cred.verifyOrThrow();
-        Userapp userApp = userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(), InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
-        if (userApp != null && !userApp.isSuspended()) {
-            pointsService.recordAppActivity(userApp.getOwner(), userApp.getId());
-        }
-        return userApp;
+        return userappService.loginViaCredential(cred.appId(), cred.appSecret(), cred.installationId(),
+                InetAddress.ofLiteral(request.getRemoteAddr()), request.getHeader("User-Agent"));
     }
 
     @Nullable

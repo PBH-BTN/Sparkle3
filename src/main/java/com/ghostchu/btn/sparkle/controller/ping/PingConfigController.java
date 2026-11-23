@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ghostchu.btn.sparkle.controller.ping.dto.BtnConfig;
 import com.ghostchu.btn.sparkle.entity.Userapp;
 import com.ghostchu.btn.sparkle.exception.AccessDeniedException;
-import com.ghostchu.btn.sparkle.exception.UserApplicationBannedException;
 import com.ghostchu.btn.sparkle.exception.UserApplicationNotFoundException;
 import com.ghostchu.btn.sparkle.service.IUserappConfigService;
 import com.ghostchu.btn.sparkle.service.btn.BtnRouteResolver;
@@ -37,15 +36,12 @@ public class PingConfigController extends BasePingController {
     private BtnRuntimeConfigService configService;
 
     @GetMapping("/ping/config")
-    public ResponseEntity<@NotNull String> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationBannedException, UserApplicationNotFoundException, AccessDeniedException {
+    public ResponseEntity<@NotNull String> config(@RequestParam(value = "forceRoute", required = false) String forceRoute) throws UserApplicationNotFoundException, AccessDeniedException {
         Userapp userapp = verifyUserApplicationFailSafe();
         BtnConfig config;
         if (userapp == null) {
             config = userappConfigService.configAnonymousUserapp();
         } else {
-            if (userapp.isSuspended()) {
-                throw new UserApplicationBannedException(userapp.getBannedReason());
-            }
             config = userappConfigService.configLoggedInUserapp(userapp);
         }
         if (forceRoute == null) {
