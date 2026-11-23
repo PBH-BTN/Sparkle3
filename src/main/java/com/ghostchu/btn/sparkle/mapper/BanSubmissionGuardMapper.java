@@ -12,7 +12,9 @@ public interface BanSubmissionGuardMapper {
     record Fingerprint(OffsetDateTime day, String hash) {}
 
     record Target(String hash, String ip, int port, String module, String rule,
-                  OffsetDateTime latest, long replays) {}
+                  OffsetDateTime latest, long additionalEntries) {}
+
+    record TargetObservation(String target, long replays, boolean blocked) {}
 
     record BlockedTarget(String hash, long count) {}
 
@@ -21,10 +23,12 @@ public interface BanSubmissionGuardMapper {
 
     List<String> insertFingerprints(@Param("rows") List<Fingerprint> rows);
 
-    List<String> observe(@Param("appId") long appId, @Param("rows") List<Target> rows,
-                         @Param("now") OffsetDateTime now, @Param("quietCutoff") OffsetDateTime quietCutoff,
-                         @Param("previousWindow") OffsetDateTime previousWindow, @Param("windowMillis") long windowMillis,
-                         @Param("threshold") int threshold, @Param("suppression") boolean suppression);
+    List<TargetObservation> observe(@Param("appId") long appId, @Param("rows") List<Target> rows,
+                                    @Param("now") OffsetDateTime now, @Param("replaySince") OffsetDateTime replaySince,
+                                    @Param("quietCutoff") OffsetDateTime quietCutoff,
+                                    @Param("previousWindow") OffsetDateTime previousWindow,
+                                    @Param("windowMillis") long windowMillis, @Param("threshold") int threshold,
+                                    @Param("suppression") boolean suppression);
 
     void recordSuppressed(@Param("appId") long appId, @Param("rows") List<BlockedTarget> rows);
 
@@ -44,6 +48,5 @@ public interface BanSubmissionGuardMapper {
 
     List<String> dropExpiredFingerprints(@Param("cutoff") OffsetDateTime cutoff);
 
-    int deleteExpiredTargets(@Param("stateCutoff") OffsetDateTime stateCutoff,
-                             @Param("eventCutoff") OffsetDateTime eventCutoff, @Param("limit") int limit);
+    int deleteExpiredTargets(@Param("cutoff") OffsetDateTime cutoff, @Param("limit") int limit);
 }

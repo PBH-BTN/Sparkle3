@@ -37,7 +37,7 @@ class BanReplaySuspensionServiceTest {
         var order = inOrder(mapper, smtp);
         order.verify(mapper).claimNotice();
         order.verify(smtp).send(null, "owner@example.invalid", "Suspended app$1",
-                "A$B: 151/150, 12001/12000 (30 days), #42", null);
+                "A$B: 151/150, 12001/12000 (7 days), #42", null);
         order.verify(mapper).finishNotice(8L, 1, MailStatus.SENT);
     }
 

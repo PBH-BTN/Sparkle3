@@ -27,7 +27,19 @@
         (<include refid="advancesWindow"/>) AND (<include refid="nextWindows"/>) >= #{threshold}
     </sql>
 
-    <select id="observe" resultType="string" affectData="true" flushCache="true" useCache="false">
+    <resultMap id="targetObservation" type="com.ghostchu.btn.sparkle.mapper.BanSubmissionGuardMapper$TargetObservation">
+        <constructor>
+            <idArg column="target" javaType="string"/>
+            <arg column="replays" javaType="_long"/>
+            <arg column="blocked" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="previousReplayTotal">
+        CASE WHEN old.last_seen >= #{replaySince} THEN old.replays ELSE 0 END
+    </sql>
+
+    <select id="observe" resultMap="targetObservation" affectData="true" flushCache="true" useCache="false">
         WITH observed AS (
         INSERT INTO public.ban_submission_target AS state (
             app_id, target, peer_network, peer_port, module_name, rule_name, first_seen, last_seen,
@@ -41,14 +53,14 @@
             incoming.latest,
             CASE WHEN incoming.latest > #{quietCutoff} THEN 1 ELSE 0 END,
             CASE WHEN incoming.latest > #{quietCutoff} THEN 1 ELSE 0 END,
-            incoming.replays
+            incoming.additional_entries
         FROM (VALUES
             <foreach collection="rows" item="row" separator=",">
                 (CAST(#{row.hash} AS uuid), CAST(#{row.ip} AS inet), #{row.port}, #{row.module},
                  CAST(#{row.rule,jdbcType=VARCHAR} AS text), CAST(#{row.latest,jdbcType=TIMESTAMP_WITH_TIMEZONE} AS timestamptz),
-                 #{row.replays})
+                 #{row.additionalEntries})
             </foreach>
-        ) AS incoming(target, ip, port, module, rule, latest, replays)
+        ) AS incoming(target, ip, port, module, rule, latest, additional_entries)
         ORDER BY incoming.target
         ON CONFLICT (app_id, target) DO UPDATE SET
             last_seen = GREATEST(state.last_seen, EXCLUDED.last_seen),
@@ -62,11 +74,13 @@
             detection_hits = CASE WHEN <include refid="detectsRepeat"/>
                 THEN GREATEST(state.detection_hits, CASE WHEN state.detected THEN 1 ELSE 0 END) + 1
                 ELSE state.detection_hits END,
-            replays = state.replays + EXCLUDED.replays
-        RETURNING target, windows, window_seen
+            replays = EXCLUDED.replays + CASE WHEN state.last_seen >= #{replaySince} THEN state.replays + 1 ELSE 0 END
+        RETURNING new.target, new.replays - (<include refid="previousReplayTotal"/>) AS replays,
+            #{suppression} AND new.windows >= #{threshold}
+                AND COALESCE(new.window_seen > #{quietCutoff}, FALSE) AS blocked
         )
-        SELECT target::text FROM observed
-        WHERE #{suppression} AND windows >= #{threshold} AND window_seen > #{quietCutoff}
+        SELECT target::text, replays, blocked FROM observed
+        WHERE replays > 0 OR blocked
     </select>
 
     <update id="recordSuppressed">
@@ -159,13 +173,13 @@
     <delete id="deleteExpiredTargets">
         WITH expired_state AS (
             SELECT app_id, target FROM public.ban_submission_target
-            WHERE NOT detected AND replays = 0 AND last_seen &lt; #{stateCutoff}
+            WHERE NOT detected AND replays = 0 AND last_seen &lt; #{cutoff}
             ORDER BY last_seen
             LIMIT #{limit}
             FOR UPDATE SKIP LOCKED
         ), expired_events AS (
             SELECT app_id, target FROM public.ban_submission_target
-            WHERE (detected OR replays > 0) AND last_seen &lt; #{eventCutoff}
+            WHERE (detected OR replays > 0) AND last_seen &lt; #{cutoff}
             ORDER BY last_seen
             LIMIT #{limit}
             FOR UPDATE SKIP LOCKED

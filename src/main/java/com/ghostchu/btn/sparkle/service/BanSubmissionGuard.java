@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -67,20 +66,16 @@ public class BanSubmissionGuard {
     private static final class Observation {
         private final Candidate candidate;
         private OffsetDateTime latest;
-        private long replays;
+        private long entries;
         private long blocked;
 
         private Observation(Candidate candidate) {
             this.candidate = candidate;
         }
 
-        private boolean needsState(OffsetDateTime cutoff) {
-            return replays > 0 || latest != null && latest.isAfter(cutoff);
-        }
-
         private Target row(String key) {
             return new Target(key, candidate.ip().getHostAddress(), candidate.ban().getPeerPort(),
-                    truncate(candidate.ban().getModule()), truncate(candidate.ban().getRule()), latest, replays);
+                    truncate(candidate.ban().getModule()), truncate(candidate.ban().getRule()), latest, entries - 1);
         }
     }
 
@@ -98,10 +93,8 @@ public class BanSubmissionGuard {
         var observations = new HashMap<String, Observation>();
         for (Candidate candidate : candidates) {
             String target = targetHash(candidate);
-            var observation = observations.computeIfAbsent(target, ignored -> new Observation(candidate));
-            if (unique.putIfAbsent(fingerprint(appId, target, candidate.banAt()), new Entry(candidate, target)) != null) {
-                observation.replays++;
-            }
+            observations.computeIfAbsent(target, ignored -> new Observation(candidate)).entries++;
+            unique.putIfAbsent(fingerprint(appId, target, candidate.banAt()), new Entry(candidate, target));
         }
 
         var fingerprints = new ArrayList<>(unique.keySet());
@@ -120,22 +113,26 @@ public class BanSubmissionGuard {
                 if (observation.latest == null || at.isAfter(observation.latest)) {
                     observation.latest = at;
                 }
-            } else {
-                observation.replays++;
             }
         });
 
         var cutoff = settings.quietCutoff(now);
         var previousWindow = now.minus(settings.windowMillis(), ChronoUnit.MILLIS);
         var targets = observations.entrySet().stream()
-                .filter(entry -> entry.getValue().needsState(cutoff))
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> entry.getValue().row(entry.getKey()))
                 .toList();
+        var replaySince = replaySince(now);
         var blocked = new HashSet<String>();
+        long replays = 0;
         for (var batch : Lists.partition(targets, BATCH_SIZE)) {
-            blocked.addAll(mapper.observe(appId, batch, now, cutoff, previousWindow,
-                    settings.windowMillis(), settings.threshold(), settings.suppression()));
+            for (var result : mapper.observe(appId, batch, now, replaySince, cutoff, previousWindow,
+                    settings.windowMillis(), settings.threshold(), settings.suppression())) {
+                replays += result.replays();
+                if (result.blocked()) {
+                    blocked.add(result.target());
+                }
+            }
         }
 
         var accepted = new ArrayList<Candidate>(newEntries.size());
@@ -153,7 +150,6 @@ public class BanSubmissionGuard {
         for (var batch : Lists.partition(counts, BATCH_SIZE)) {
             mapper.recordSuppressed(appId, batch);
         }
-        long replays = targets.stream().mapToLong(Target::replays).sum();
         if (replays > 0) {
             mapper.recordReplayBatch(appId, now.withOffsetSameInstant(ZoneOffset.UTC).toLocalDate(), replays);
         }
@@ -166,8 +162,11 @@ public class BanSubmissionGuard {
         int current = Math.max(1, page);
         int limit = Math.clamp(size, 1, 100);
         var settings = settings();
-        var query = new EventQuery(appId, kind, status, since, until, settings.threshold(),
-                settings.suppression(), settings.quietCutoff(OffsetDateTime.now(ZoneOffset.UTC)));
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        var cutoff = replaySince(now);
+        var from = since == null || since.isBefore(cutoff) ? cutoff : since;
+        var query = new EventQuery(appId, kind, status, from, until, settings.threshold(),
+                settings.suppression(), settings.quietCutoff(now));
         long total = mapper.countEvents(query);
         long offset = (current - 1L) * limit;
         return new PageResult<>(offset < total ? mapper.listEvents(query, offset, limit) : List.of(),
@@ -182,7 +181,12 @@ public class BanSubmissionGuard {
     }
 
     public List<AppRank> rankApplications() {
-        return mapper.rankApplications(LocalDate.now(ZoneOffset.UTC).minusDays(REPLAY_WINDOW_DAYS - 1));
+        return mapper.rankApplications(replaySince(OffsetDateTime.now(ZoneOffset.UTC)).toLocalDate());
+    }
+
+    private static OffsetDateTime replaySince(OffsetDateTime now) {
+        return now.withOffsetSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.DAYS)
+                .minusDays(REPLAY_WINDOW_DAYS - 1);
     }
 
     @Scheduled(cron = CLEANUP_CRON)
@@ -195,13 +199,12 @@ public class BanSubmissionGuard {
     )
     public void cleanup() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);
-        var stateCutoff = settings().quietCutoff(now);
-        var eventCutoff = now.minusDays(3);
+        var cutoff = replaySince(now);
         // The accepted ban timestamp can be at most seven days old.
         var chunks = mapper.dropExpiredFingerprints(now.minusDays(8));
-        int removed = mapper.deleteReplayDaysBefore(now.toLocalDate().minusDays(REPLAY_WINDOW_DAYS - 1));
+        int removed = mapper.deleteReplayDaysBefore(cutoff.toLocalDate());
         for (int batch = 0; batch < 20; batch++) {
-            int count = mapper.deleteExpiredTargets(stateCutoff, eventCutoff, CLEANUP_BATCH_SIZE);
+            int count = mapper.deleteExpiredTargets(cutoff, CLEANUP_BATCH_SIZE);
             removed += count;
             if (count < CLEANUP_BATCH_SIZE) {
                 break;

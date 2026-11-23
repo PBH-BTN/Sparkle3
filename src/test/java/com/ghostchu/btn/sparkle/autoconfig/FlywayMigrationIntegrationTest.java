@@ -732,7 +732,7 @@ class FlywayMigrationIntegrationTest {
                     start.plusSeconds(30)).size());
             var observed = guard.events(1, 20, 10L, "repeated", "observing", start, null).records().getFirst();
             assertEquals(3, observed.peakWindows());
-            assertEquals(1, observed.replays());
+            assertEquals(4, observed.replays());
             assertEquals("2001:4860::/64", observed.peerNetwork());
             assertEquals(0, observed.suppressed());
 
@@ -743,25 +743,42 @@ class FlywayMigrationIntegrationTest {
             assertEquals(1, blocked.suppressed());
             var rank = guard.rankApplications().getFirst();
             assertEquals("10", rank.appId());
-            assertEquals(1, rank.replayBatches());
-            assertEquals(1, rank.replays());
+            assertEquals(4, rank.replayBatches());
+            assertEquals(5, rank.replays());
             assertTrue(filterBans(guard, 20, List.of(first, first, first), start.plusSeconds(40)).isEmpty());
             var ranks = guard.rankApplications();
-            assertEquals(List.of("20", "10"), ranks.stream().map(row -> row.appId()).toList());
-            assertEquals(1, ranks.getFirst().replayBatches());
-            assertEquals(3, ranks.getFirst().replays());
+            assertEquals(List.of("10", "20"), ranks.stream().map(row -> row.appId()).toList());
+            assertEquals(1, ranks.getLast().replayBatches());
+            assertEquals(3, ranks.getLast().replays());
             assertTrue(filterBans(guard, 10, List.of(first), start.plusSeconds(41)).isEmpty());
             MockMvcBuilders.standaloneSetup(new AdminBanSubmissionController(guard)).build()
                     .perform(get("/api/admin/ban-submissions/ranking"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].appId").value("10"))
-                    .andExpect(jsonPath("$[0].replayBatches").value(2))
-                    .andExpect(jsonPath("$[0].replays").value(2));
+                    .andExpect(jsonPath("$[0].replayBatches").value(5))
+                    .andExpect(jsonPath("$[0].replays").value(6));
             var afterQuiet = start.plusHours(2);
             assertEquals(1, filterBans(guard, 10, List.of(banCandidate(afterQuiet, "2001:4860::8888")), afterQuiet).size());
             assertEquals(1, guard.events(1, 20, 10L, null, "quiet", null, null).total());
             assertTrue(mapper.dropExpiredFingerprints(start.minusDays(8)).isEmpty());
-            assertEquals(0, mapper.deleteExpiredTargets(start.minusDays(4), start.minusDays(30), 5000));
+            assertEquals(0, mapper.deleteExpiredTargets(start.minusDays(4), 5000));
+
+            var currentDay = LocalDate.now(ZoneOffset.UTC).atTime(12, 0).atOffset(ZoneOffset.UTC);
+            var firstIncludedDay = currentDay.minusDays(6);
+            assertEquals(1, filterBans(guard, 40, List.of(banCandidate(firstIncludedDay, "2001:4860::8888")),
+                    firstIncludedDay).size());
+            assertEquals(2, filterBans(guard, 40, List.of(banCandidate(currentDay, "2001:4860::8888"),
+                    banCandidate(currentDay.plusSeconds(1), "2001:4860::8888")), currentDay.plusSeconds(2)).size());
+            var crossDayRank = guard.rankApplications().stream().filter(row -> row.appId().equals("40"))
+                    .findFirst().orElseThrow();
+            assertEquals(1, crossDayRank.replayBatches());
+            assertEquals(2, crossDayRank.replays());
+
+            var excludedDay = currentDay.minusDays(7);
+            assertEquals(1, filterBans(guard, 50, List.of(banCandidate(excludedDay, "2001:4860::8888")),
+                    excludedDay).size());
+            assertEquals(1, filterBans(guard, 50, List.of(banCandidate(currentDay, "2001:4860::8888")), currentDay).size());
+            assertTrue(guard.rankApplications().stream().noneMatch(row -> row.appId().equals("50")));
         }
 
         var batch = IntStream.range(0, 501).mapToObj(port -> {
@@ -798,8 +815,8 @@ class FlywayMigrationIntegrationTest {
                     .andExpect(jsonPath("$.total").value(501))
                     .andExpect(jsonPath("$.records[0].appId").value("30"))
                     .andExpect(jsonPath("$.records[0].peerNetwork").value("1.1.1.0/24"));
-            assertEquals(1, mapper.deleteExpiredTargets(start.plusDays(1), start.minusDays(29), 5000));
-            assertEquals(batch.size(), mapper.deleteExpiredTargets(start.plusDays(31), start.plusDays(1), 5000));
+            assertEquals(0, mapper.deleteExpiredTargets(start, 5000));
+            assertEquals(batch.size() + 1, mapper.deleteExpiredTargets(start.plusDays(1), 5000));
             session.rollback();
 
             var admin = new SparkleUserDetails(new User().setId(1L).setRole("admin"), null);
@@ -816,7 +833,7 @@ class FlywayMigrationIntegrationTest {
             assertTrue(guard.rankApplications().isEmpty());
             assertEquals(0, guard.clearEvents());
             assertTrue(filterBans(guard, 30, List.of(batch.getFirst()), start.plusSeconds(10)).isEmpty());
-            assertEquals(1, guard.events(1, 20, 30L, "replay", null, null, null).total());
+            assertEquals(0, guard.events(1, 20, 30L, "replay", null, null, null).total());
         }
     }
 
