@@ -1296,7 +1296,7 @@ export default {
         },
         'btn-ban-replay-suspension': {
           name: '检查封禁日志重传',
-          description: '检查最近 30 个 UTC 日的重传统计，停用超限的用户应用并排队发送通知。',
+          description: '检查最近 7 个 UTC 日的重传统计，停用超限的用户应用并排队发送通知。',
         },
         'btn-ban-replay-suspension-mail': {
           name: '发送重传停用通知',
@@ -2560,7 +2560,7 @@ export default {
         protocol: '控制 BTN 客户端可接受的协议版本范围。',
         reconfigure: '控制客户端重新拉取远程配置的频率和首轮随机延迟。',
         syncBanHistory: '控制客户端提交封禁记录的接口、频率与 PoW 要求。',
-        banReplaySuspension: '按最近 30 个 UTC 日检查重传。超过任一已开启的上限时，自动停止该应用的上报，并向应用所有者发送邮件。',
+        banReplaySuspension: '按最近 7 个 UTC 日检查重传。超过任一已开启的上限时，自动停止该应用的上报，并向应用所有者发送邮件。',
         syncSwarm: '控制种群上报参数，以及服务端种群数据的保留期限与清理计划。',
         ruleIpDenylist: '控制下发给客户端的 IP 黑名单拉取方式。',
         ruleIpAllowlist: '控制下发给客户端的 IP 白名单拉取方式。',

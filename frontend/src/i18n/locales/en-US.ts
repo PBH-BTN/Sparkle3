@@ -1318,7 +1318,7 @@ export default {
         },
         'btn-ban-replay-suspension': {
           name: 'Check ban log replays',
-          description: 'Check replays over the last 30 UTC days, suspend applications over the limit, and queue notifications.',
+          description: 'Check replays over the last 7 UTC days, suspend applications over the limit, and queue notifications.',
         },
         'btn-ban-replay-suspension-mail': {
           name: 'Send replay suspension emails',
@@ -2625,7 +2625,7 @@ export default {
           'Controls how often clients refresh remote configuration and their randomized first delay.',
         syncBanHistory:
           'Controls the endpoint, cadence, and proof-of-work requirement for ban submissions.',
-        banReplaySuspension: 'Checks replays over the last 30 UTC days. Exceeding either enabled limit suspends submissions for the application and emails its owner.',
+        banReplaySuspension: 'Checks replays over the last 7 UTC days. Exceeding either enabled limit suspends submissions for the application and emails its owner.',
         syncSwarm:
           'Controls swarm submission plus server-side swarm retention and cleanup.',
         ruleIpDenylist: 'Controls how clients fetch the delivered IP denylist.',
