@@ -293,15 +293,6 @@ public final class BtnConfigValidator {
                     "Minimum BTN protocol version must not exceed the maximum version"
             );
         }
-
-        long batchSize = longValue(values, "heartbeatQueue", "batchSize");
-        long maxQueueSize = longValue(values, "heartbeatQueue", "maxSize");
-        if (batchSize > maxQueueSize) {
-            throw new BusinessException(
-                    HttpStatus.BAD_REQUEST,
-                    "Heartbeat queue batch size must not exceed the maximum queue size"
-            );
-        }
     }
 
     private static long longValue(

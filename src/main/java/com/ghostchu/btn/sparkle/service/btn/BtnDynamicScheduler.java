@@ -24,8 +24,6 @@ import org.springframework.scheduling.support.CronExpression;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -33,7 +31,6 @@ import java.util.concurrent.ScheduledFuture;
 @Component
 @Slf4j
 public class BtnDynamicScheduler {
-    private static final String HEARTBEAT_FLUSH_TASK = "heartbeat-queue-flush";
     private static final String HEARTBEAT_CLEANUP_TASK = "heartbeat-cleanup";
     private static final String SWARM_CLEANUP_TASK = "swarm-data-retention";
     private static final String USER_IP_WARNING_TASK = "user-ip-warning";
@@ -91,7 +88,6 @@ public class BtnDynamicScheduler {
     @EventListener(ContextClosedEvent.class)
     public void stopSchedules() {
         stopDynamicSchedules();
-        heartbeatService.stopQueueFlush();
     }
 
     private synchronized void stopDynamicSchedules() {
@@ -122,7 +118,6 @@ public class BtnDynamicScheduler {
         globalpingApiClient.setAccessToken(
                 configService.text("measure", "globalpingToken")
         );
-        refreshHeartbeatFlush();
         refreshCron(
                 HEARTBEAT_CLEANUP_TASK,
                 "heartbeat",
@@ -163,47 +158,6 @@ public class BtnDynamicScheduler {
                 "admin.tasks.items.ban-module-name-cache.name",
                 "admin.tasks.items.ban-module-name-cache.description"
         );
-    }
-
-    private void refreshHeartbeatFlush() {
-        long interval = Math.max(
-                100,
-                configService.longValue("heartbeatQueue", "flushIntervalMs")
-        );
-        long initialDelay = Math.max(
-                0,
-                configService.longValue("heartbeatQueue", "initialDelayMs")
-        );
-        String signature = interval + ":" + initialDelay;
-        taskStatusService.configure(TaskDefinition.fixedDelay(
-                HEARTBEAT_FLUSH_TASK,
-                TaskGroup.MAINTENANCE,
-                TaskKind.SCHEDULED,
-                "admin.tasks.items.heartbeat-queue-flush.name",
-                "admin.tasks.items.heartbeat-queue-flush.description",
-                interval,
-                initialDelay,
-                true
-        ));
-        if (signature.equals(signatures.get(HEARTBEAT_FLUSH_TASK))
-                && futures.containsKey(HEARTBEAT_FLUSH_TASK)) {
-            return;
-        }
-        cancel(HEARTBEAT_FLUSH_TASK);
-        ScheduledFuture<?> future = taskScheduler.scheduleWithFixedDelay(
-                heartbeatService::flushQueuedHeartbeats,
-                Instant.now().plusMillis(initialDelay),
-                Duration.ofMillis(interval)
-        );
-        if (future != null) {
-            futures.put(HEARTBEAT_FLUSH_TASK, future);
-            signatures.put(HEARTBEAT_FLUSH_TASK, signature);
-            log.info(
-                    "Scheduled heartbeat queue flush {}ms after completion, starting in {}ms",
-                    interval,
-                    initialDelay
-            );
-        }
     }
 
     private void refreshCron(

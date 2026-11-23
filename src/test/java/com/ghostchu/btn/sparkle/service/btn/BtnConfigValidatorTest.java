@@ -71,21 +71,6 @@ class BtnConfigValidatorTest {
     }
 
     @Test
-    void rejectsBatchLargerThanQueue() {
-        Map<String, String> values = Map.of(
-                BtnConfigCatalog.key("heartbeatQueue", "batchSize"),
-                "200"
-        );
-        Map<String, String> current = new LinkedHashMap<>(defaults());
-        current.put(BtnConfigCatalog.key("heartbeatQueue", "maxSize"), "100");
-
-        assertThrows(
-                BusinessException.class,
-                () -> BtnConfigValidator.validate(values, current)
-        );
-    }
-
-    @Test
     void rejectsMalformedEndpointAndCron() {
         assertThrows(
                 BusinessException.class,

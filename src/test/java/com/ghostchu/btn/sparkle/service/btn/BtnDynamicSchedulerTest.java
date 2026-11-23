@@ -16,12 +16,10 @@ import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.ScheduledFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,8 +28,7 @@ import static org.mockito.Mockito.when;
 
 class BtnDynamicSchedulerTest {
     @Test
-    @SuppressWarnings("unchecked")
-    void heartbeatFlushUsesFixedDelayAndDoesNotCatchUpMissedRuns() {
+    void schedulesHeartbeatCleanupWithoutAQueueFlush() {
         TaskScheduler taskScheduler = mock(TaskScheduler.class);
         BtnRuntimeConfigService configService = mock(BtnRuntimeConfigService.class);
         UserappsHeartbeatServiceImpl heartbeatService =
@@ -39,17 +36,9 @@ class BtnDynamicSchedulerTest {
         GithubSyncSettingsService githubSyncSettingsService =
                 mock(GithubSyncSettingsService.class);
         TaskStatusService taskStatusService = mock(TaskStatusService.class);
-        when(configService.longValue("heartbeatQueue", "flushIntervalMs"))
-                .thenReturn(5_000L);
-        when(configService.longValue("heartbeatQueue", "initialDelayMs"))
-                .thenReturn(1_000L);
         when(configService.text(anyString(), anyString())).thenReturn("-");
         when(githubSyncSettingsService.schedule()).thenReturn("-");
-        when(taskScheduler.scheduleWithFixedDelay(
-                any(Runnable.class),
-                any(Instant.class),
-                any(Duration.class)
-        )).thenReturn(mock(ScheduledFuture.class));
+        when(configService.text("heartbeat", "cleanupCron")).thenReturn("0 */10 * * * *");
         BtnDynamicScheduler scheduler = new BtnDynamicScheduler(
                 taskScheduler,
                 configService,
@@ -65,24 +54,15 @@ class BtnDynamicSchedulerTest {
 
         scheduler.refreshSchedules();
 
-        verify(taskScheduler).scheduleWithFixedDelay(
-                any(Runnable.class),
-                any(Instant.class),
-                eq(Duration.ofMillis(5_000))
-        );
-        verify(taskScheduler, never()).scheduleAtFixedRate(
-                any(Runnable.class),
-                any(Instant.class),
-                any(Duration.class)
-        );
+        verify(taskScheduler, never()).scheduleWithFixedDelay(
+                any(Runnable.class), any(Instant.class), any(Duration.class));
         ArgumentCaptor<TaskDefinition> definitions =
                 ArgumentCaptor.forClass(TaskDefinition.class);
         verify(taskStatusService, atLeastOnce()).configure(definitions.capture());
         TaskDefinition heartbeat = definitions.getAllValues().stream()
-                .filter(definition -> "heartbeat-queue-flush".equals(definition.id()))
+                .filter(definition -> "heartbeat-cleanup".equals(definition.id()))
                 .findFirst()
                 .orElseThrow();
-        assertEquals(TaskScheduleType.FIXED_DELAY, heartbeat.scheduleType());
-        assertEquals(5_000, heartbeat.intervalMillis());
+        assertEquals(TaskScheduleType.CRON, heartbeat.scheduleType());
     }
 }

@@ -317,7 +317,12 @@ public class DatabaseConfigService {
                 || "sparkle.ranking.database-type".equals(key)
                 || "sparkle.swarm-statistics-track.cron".equals(key)
                 || "sparkle.swarm-statistics-track.duration".equals(key)
-                || isRemovedPointConfigKey(key);
+                || isRemovedPointConfigKey(key)
+                || isRemovedHeartbeatQueueKey(key);
+    }
+
+    public static boolean isRemovedHeartbeatQueueKey(String key) {
+        return key.startsWith("sparkle.ping.heartbeat.queue.");
     }
 
     public static boolean isRemovedPointConfigKey(String key) {

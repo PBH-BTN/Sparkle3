@@ -80,6 +80,7 @@ class BusinessConfigMigrationTest {
             assertTrue(sqlKeys.add(matcher.group(1)), "Duplicate SQL default: " + matcher.group(1));
         }
         sqlKeys.removeIf(DatabaseConfigService::isRemovedPointConfigKey);
+        sqlKeys.removeIf(DatabaseConfigService::isRemovedHeartbeatQueueKey);
 
         assertEquals(yamlKeys, sqlKeys);
     }

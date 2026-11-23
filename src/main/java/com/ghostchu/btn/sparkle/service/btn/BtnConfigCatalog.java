@@ -337,10 +337,6 @@ public final class BtnConfigCatalog {
             Definition.integer("heartbeat", "volumeRiskThreshold", 10, 1, 10_000_000),
             Definition.list("heartbeat", "volumeRiskRecipientUids", ""),
 
-            Definition.integer("heartbeatQueue", "flushIntervalMs", 1_000, 100, 60_000),
-            Definition.integer("heartbeatQueue", "initialDelayMs", 1_000, 0, 600_000),
-            Definition.integer("heartbeatQueue", "batchSize", 2_000, 1, 100_000),
-            Definition.integer("heartbeatQueue", "maxSize", 100_000, 1, 10_000_000),
 
             Definition.text("queryIp", "endpoint", "{rooturl}/ping/queryIp"),
             Definition.text(
@@ -557,7 +553,6 @@ public final class BtnConfigCatalog {
             case "ruleIpAllowlist" -> "sparkle.ping.rule-ip-allowlist";
             case "rulePeerIdentity" -> "sparkle.ping.rule-peer-identity";
             case "heartbeat" -> "sparkle.ping.heartbeat";
-            case "heartbeatQueue" -> "sparkle.ping.heartbeat.queue";
             case "queryIp" -> "sparkle.ping.query-ip";
             case "rootUrls" -> "sparkle";
             case "captchaPow" -> "sparkle.captcha.pow";

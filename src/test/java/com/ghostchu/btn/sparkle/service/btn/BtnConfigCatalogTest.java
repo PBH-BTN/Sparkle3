@@ -20,9 +20,8 @@ class BtnConfigCatalogTest {
                 .filter(key -> key.startsWith("sparkle.ping."))
                 .collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(63, keys.size());
+        assertEquals(59, keys.size());
         assertTrue(keys.contains("sparkle.ping.reconfigure.random-initial-delay"));
-        assertTrue(keys.contains("sparkle.ping.heartbeat.queue.max-size"));
         assertTrue(keys.contains("sparkle.ping.rule-ip-allowlist.pow-captcha"));
         assertTrue(keys.contains("sparkle.ping.query-ip.iframe-endpoint"));
         assertTrue(keys.contains("sparkle.ping.sync-banhistory.repeat-ban-suppression"));
