@@ -109,9 +109,12 @@ pnpm --dir frontend typecheck
 pnpm --dir frontend build
 ```
 
-官方站点的生产前端使用 FastStats，以无 Cookie 模式统计首页、登录、注册、客户端发现、规则预览和排行榜的访问。
-SDK 也记录这些页面上的停留时间、出站链接和来源网址。带查询参数或片段的页面网址、其他页面、开发服务器和自托管域名
-不参与页面统计。未启用浏览器错误上报和 Web Vitals。
+主前端启动时初始化 FastStats，以无 Cookie 模式采集页面浏览、浏览器未捕获错误和 Web Vitals。
+部署后打开 `/login` 即可发送首次页面浏览事件。
+
+在 FastStats 的「Project settings → Source maps」创建上传密钥，并将其设为 GitHub Actions secret
+`FASTSTATS_SOURCEMAP_KEY`。本地构建也可通过同名环境变量提供密钥。配置后，Vite 生成隐藏的
+source map，并在上传成功后删除本地产物。未配置密钥时，构建会跳过 source map 的生成与上传。
 
 ## 后台管理
 
