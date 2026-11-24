@@ -122,6 +122,9 @@ tasks.named<Test>("test") {
 
 val frontendDirectory = layout.projectDirectory.dir("frontend")
 val frontendBuildDirectory = layout.buildDirectory.dir("generated/frontend")
+val fastStatsSourcemapUpload = providers.environmentVariable("FASTSTATS_SOURCEMAP_KEY")
+	.map { it.isNotEmpty() }
+	.orElse(false)
 val pnpmExecutable = if (System.getProperty("os.name").lowercase().contains("windows")) "pnpm.cmd" else "pnpm"
 
 val installFrontendDependencies = tasks.register<Exec>("installFrontendDependencies") {
@@ -141,6 +144,7 @@ val buildFrontend = tasks.register<Exec>("buildFrontend") {
 	dependsOn(installFrontendDependencies)
 	workingDir(frontendDirectory)
 	commandLine(pnpmExecutable, "run", "build")
+	inputs.property("fastStatsSourcemapUpload", fastStatsSourcemapUpload)
 	inputs.files(
 		fileTree(frontendDirectory) {
 			include(

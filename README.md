@@ -109,6 +109,13 @@ pnpm --dir frontend typecheck
 pnpm --dir frontend build
 ```
 
+主前端启动时初始化 FastStats，以无 Cookie 模式采集页面浏览、浏览器未捕获错误和 Web Vitals。
+部署后打开 `/login` 即可发送首次页面浏览事件。
+
+在 FastStats 的「Project settings → Source maps」创建上传密钥，并将其设为 GitHub Actions secret
+`FASTSTATS_SOURCEMAP_KEY`。本地构建也可通过同名环境变量提供密钥。配置后，Vite 生成隐藏的
+source map，并在上传成功后删除本地产物。未配置密钥时，构建会跳过 source map 的生成与上传。
+
 ## 后台管理
 
 角色为 `admin` 的用户可从右上角用户菜单进入 `/admin/dashboard`。角色为 `moderator`
