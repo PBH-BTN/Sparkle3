@@ -191,6 +191,9 @@ importers:
         specifier: 4.6.4
         version: 4.6.4(vue@3.5.45(typescript@5.9.3))
     devDependencies:
+      '@faststats/sourcemap-uploader-plugin':
+        specifier: 0.5.4
+        version: 0.5.4(esbuild@0.28.2)(rollup@4.68.0)(vite@7.3.8(@types/node@24.19.2))
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -392,6 +395,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@faststats/sourcemap-uploader-plugin@0.5.4':
+    resolution: {integrity: sha512-V9G1NOpsnIxJ31IhIDmdSD6Ih3T8Rcbv1NshIW/7NC0Bd6c3HwkCd7aCw0BPJUeP9KrPGX3WfRWmXPnzXMnQzw==}
 
   '@faststats/web@0.16.0':
     resolution: {integrity: sha512-kGSu6NHiTLIa1YTRurO1uVrCkPUkcGlr8Vu9+xyuPI4RM5etl+XMF6nv0OYP1V2twqrtP1fubrGl67YN3jy2xg==}
@@ -1150,6 +1156,21 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@faststats/sourcemap-uploader-plugin@0.5.4(esbuild@0.28.2)(rollup@4.68.0)(vite@7.3.8(@types/node@24.19.2))':
+    dependencies:
+      unplugin: 3.7.0(esbuild@0.28.2)(rollup@4.68.0)(vite@7.3.8(@types/node@24.19.2))
+    transitivePeerDependencies:
+      - '@farmfe/core'
+      - '@rsbuild/core'
+      - '@rspack/core'
+      - bun-types-no-globals
+      - esbuild
+      - rolldown
+      - rollup
+      - unloader
+      - vite
+      - webpack
 
   '@faststats/web@0.16.0(@rrweb/types@2.2.2)(@rrweb/utils@2.2.2)(rrweb@2.2.2)':
     dependencies:

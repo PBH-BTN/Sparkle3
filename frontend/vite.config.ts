@@ -1,8 +1,11 @@
 import { fileURLToPath, URL } from 'node:url'
+import sourcemapUploader from '@faststats/sourcemap-uploader-plugin/vite'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { ArcoResolver } from 'unplugin-vue-components/resolvers'
+
+const sourcemapKey = process.env.FASTSTATS_SOURCEMAP_KEY
 
 export default defineConfig({
   plugins: [
@@ -14,6 +17,11 @@ export default defineConfig({
         }),
       ],
       dts: 'src/components.d.ts',
+    }),
+    sourcemapUploader({
+      authToken: sourcemapKey,
+      enabled: !!sourcemapKey,
+      deleteAfterUpload: true,
     }),
   ],
   resolve: {
@@ -42,7 +50,7 @@ export default defineConfig({
   build: {
     outDir: '../build/generated/frontend',
     emptyOutDir: true,
-    sourcemap: false,
+    sourcemap: sourcemapKey ? 'hidden' : false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
