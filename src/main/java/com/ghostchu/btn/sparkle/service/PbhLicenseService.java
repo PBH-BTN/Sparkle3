@@ -165,7 +165,7 @@ public class PbhLicenseService {
                 expireAt.toInstant().toEpochMilli(),
                 LICENSE_DESCRIPTION,
                 UUID.randomUUID().toString(),
-                null
+                List.of("basic") // basic features
         );
         String key;
         String payloadJson;
