@@ -109,6 +109,10 @@ pnpm --dir frontend typecheck
 pnpm --dir frontend build
 ```
 
+官方站点的生产前端使用 FastStats，以无 Cookie 模式统计首页、登录、注册、客户端发现、规则预览和排行榜的访问。
+SDK 也记录这些页面上的停留时间、出站链接和来源网址。带查询参数或片段的页面网址、其他页面、开发服务器和自托管域名
+不参与页面统计。未启用浏览器错误上报和 Web Vitals。
+
 ## 后台管理
 
 角色为 `admin` 的用户可从右上角用户菜单进入 `/admin/dashboard`。角色为 `moderator`
