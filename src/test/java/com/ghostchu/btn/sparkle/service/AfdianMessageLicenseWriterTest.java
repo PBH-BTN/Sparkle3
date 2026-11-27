@@ -27,6 +27,16 @@ class AfdianMessageLicenseWriterTest {
     }
 
     @Test
+    void rescansNeverRestoreDeletedOrReturnedHistoricalLicenses() throws Exception {
+        when(mapper.existing("key")).thenReturn(existing().setDeletedAt(OffsetDateTime.now()),
+                existing().setSlotReturned(true));
+        assertEquals("DUPLICATE", writer.register("user", "2", decoded(""), 42L));
+        assertEquals("DUPLICATE", writer.register("user", "3", decoded(""), 42L));
+        verify(mapper, never()).insert(any(), anyString(), anyString(), anyString(), any());
+        verify(mapper, never()).matchFromMessage(anyLong(), anyString(), anyString(), any(), any(), anyString());
+    }
+
+    @Test
     void retriesUnmatchedLicenseWhenOrderLaterAppears() throws Exception {
         when(mapper.existing("key")).thenReturn(existing());
         when(mapper.matchStatus(1L)).thenReturn("UNMATCHED");

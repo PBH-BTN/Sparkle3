@@ -8,6 +8,7 @@ import com.ghostchu.btn.sparkle.exception.BusinessException;
 import com.ghostchu.btn.sparkle.mapper.PbhLicenseMapper;
 import com.ghostchu.btn.sparkle.mapper.PbhLicenseRevocationMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PbhLicenseRevocationService {
     static final List<String> FIELDS = List.of("licenseTo", "description", "orderId", "paymentOrderId",
             "paymentGateway", "sku", "source", "type");
@@ -46,17 +48,29 @@ public class PbhLicenseRevocationService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void revoke(UUID licenseId, String key, String reason, long actor) throws BusinessException {
+    public void revoke(UUID licenseId, String key, String reason, long actor,
+                       boolean returnSlot, boolean delete) throws BusinessException {
         if (reason == null || reason.isBlank() || reason.trim().length() > 500) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Provide a revocation reason (up to 500 characters)");
         }
         if ((licenseId == null) == (key == null || key.isBlank())) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Select one license or provide one license key");
         }
+        if (licenseId == null && (returnSlot || delete)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Select an issued license for this operation");
+        }
+        // Use the same lock as issuance and historical imports before changing entitlement accounting.
+        licenses.lockKey("sparkle:pbh-import");
         JsonNode payload;
+        PbhLicense license = null;
         if (licenseId != null) {
-            PbhLicense license = licenses.selectOne(new QueryWrapper<PbhLicense>().eq("license_id", licenseId));
+            license = licenses.selectOne(new QueryWrapper<PbhLicense>().eq("license_id", licenseId)
+                    .isNull("deleted_at").last("FOR UPDATE"));
             if (license == null) throw new BusinessException(HttpStatus.NOT_FOUND, "License not found");
+            if (delete && !returnSlot && !license.isSlotReturned() && "UNMATCHED".equals(license.getImportMatch())) {
+                throw new BusinessException(HttpStatus.CONFLICT,
+                        "Match this historical license to an order or return its slot before deleting it");
+            }
             key = license.getLicenseKey();
             try {
                 payload = json.readTree(license.getLicensePayload());
@@ -84,6 +98,16 @@ public class PbhLicenseRevocationService {
         }
         mapper.revoke(fingerprint(hashes), encoded, reason.trim(), actor);
         mapper.markLicense(key, reason.trim());
+        boolean returned = false;
+        if (returnSlot && mapper.returnSlot(licenseId) > 0) {
+            returned = true;
+            if (license.getSourceOrderNo() != null) {
+                mapper.releaseOrder(license.getProvider(), license.getExternalUserId(), license.getSourceOrderNo());
+            }
+        }
+        if (delete) mapper.deleteLicense(licenseId);
+        log.info("Administrator {} revoked license {}, deleted={}, slotReturned={}", actor,
+                licenseId == null ? fingerprint(hashes) : licenseId, delete, returned);
     }
 
     static Map<String, String> hashes(JsonNode payload) {

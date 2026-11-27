@@ -143,7 +143,7 @@ class PbhLicenseServiceTest {
         ));
         when(exchangeRateService.baseCurrency()).thenReturn("CNY");
 
-        var result = service().adminLicenses(null, null, null, "ALL", 1, 20);
+        var result = service().adminLicenses(null, null, null, null, "ALL", 1, 20);
 
         assertEquals(3, result.total());
         assertEquals(1, result.page());
@@ -164,7 +164,7 @@ class PbhLicenseServiceTest {
         when(licenseMapper.selectPage(any(), any())).thenReturn(page);
         when(exchangeRateService.baseCurrency()).thenReturn("CNY");
 
-        service().adminLicenses(null, "patreon", "DONATION", "ACTIVE", 1, 20);
+        service().adminLicenses(null, null, "patreon", "DONATION", "ACTIVE", 1, 20);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<QueryWrapper<PbhLicense>> wrapper =
@@ -183,16 +183,31 @@ class PbhLicenseServiceTest {
 
         assertThrows(
                 BusinessException.class,
-                () -> service.adminLicenses(null, "unknown", null, null, 1, 20)
+                () -> service.adminLicenses(null, null, "unknown", null, null, 1, 20)
         );
         assertThrows(
                 BusinessException.class,
-                () -> service.adminLicenses(null, null, "SUBSCRIPTION", null, 1, 20)
+                () -> service.adminLicenses(null, null, null, "SUBSCRIPTION", null, 1, 20)
         );
         assertThrows(
                 BusinessException.class,
-                () -> service.adminLicenses(null, null, null, "WHATEVER", 1, 20)
+                () -> service.adminLicenses(null, null, null, null, "WHATEVER", 1, 20)
         );
+    }
+
+    @Test
+    void exactUserFilterIncludesBoundImportsAndExcludesDeletedLicenses() throws Exception {
+        when(licenseMapper.selectPage(any(), any())).thenReturn(new Page<>(1, 20));
+        service().adminLicenses("order", 42L, null, null, null, 1, 20);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<QueryWrapper<PbhLicense>> query = ArgumentCaptor.forClass(QueryWrapper.class);
+        verify(licenseMapper).selectPage(any(), query.capture());
+        String sql = query.getValue().getSqlSegment();
+        assertTrue(sql.contains("deleted_at IS NULL"));
+        assertTrue(sql.contains("btn_user_id ="));
+        assertTrue(sql.contains("b.external_user_id = pbh_licenses.userid"));
+        assertTrue(query.getValue().getParamNameValuePairs().containsValue(42L));
+        assertThrows(BusinessException.class, () -> service().adminLicenses(null, -1L, null, null, null, 1, 20));
     }
 
     private PbhLicenseService service() {

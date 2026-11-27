@@ -15,7 +15,7 @@ import java.util.UUID;
 public interface AfdianMessageLicenseMapper {
     @Select("""
             SELECT license_id::text AS license_id, userid AS external_user_id, issued_at
-            FROM pbh_licenses WHERE import_match = 'UNMATCHED'
+            FROM pbh_licenses WHERE import_match = 'UNMATCHED' AND deleted_at IS NULL AND slot_returned = FALSE
             ORDER BY issued_at, id LIMIT 100
             """)
     List<PendingLicense> pending();
@@ -23,7 +23,7 @@ public interface AfdianMessageLicenseMapper {
     @Select("""
             SELECT *, userid AS external_user_id FROM pbh_licenses
             WHERE license_id = #{licenseId,typeHandler=com.ghostchu.btn.sparkle.converter.UuidTypeHandler}
-              AND import_match = 'UNMATCHED' AND provider = 'AFDIAN'
+              AND import_match = 'UNMATCHED' AND provider = 'AFDIAN' AND deleted_at IS NULL AND slot_returned = FALSE
             """)
     PbhLicense pendingById(UUID licenseId);
 

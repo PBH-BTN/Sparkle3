@@ -65,6 +65,7 @@ public class AfdianMessageLicenseWriter {
         PbhLicense existing = mapper.existing(decoded.key());
         if (existing != null && (!"AFDIAN".equals(existing.getProvider())
                 || !userId.equals(existing.getExternalUserId()))) return "CONFLICT";
+        if (existing != null && (existing.getDeletedAt() != null || existing.isSlotReturned())) return "DUPLICATE";
         if (existing != null) {
             String status = mapper.matchStatus(existing.getId());
             if (!"UNMATCHED".equals(status) && !(receipt != null && "HEURISTIC".equals(status))) return "DUPLICATE";

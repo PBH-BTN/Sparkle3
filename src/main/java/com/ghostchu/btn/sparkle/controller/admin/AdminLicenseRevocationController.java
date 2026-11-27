@@ -24,10 +24,11 @@ public class AdminLicenseRevocationController {
     @PostMapping
     public void revoke(@RequestBody RevokeRequest request,
                        @AuthenticationPrincipal SparkleUserDetails principal) throws BusinessException {
-        service.revoke(request.licenseId(), request.licenseKey(), request.reason(), principal.getUserId());
+        service.revoke(request.licenseId(), request.licenseKey(), request.reason(), principal.getUserId(),
+                Boolean.TRUE.equals(request.returnSlot()), Boolean.TRUE.equals(request.delete()));
     }
 
-    public record RevokeRequest(UUID licenseId, String licenseKey, String reason) {
+    public record RevokeRequest(UUID licenseId, String licenseKey, String reason, Boolean returnSlot, Boolean delete) {
         @Override
         public String toString() { return "RevokeRequest[redacted]"; }
     }

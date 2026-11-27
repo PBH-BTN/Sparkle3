@@ -49,4 +49,7 @@ public class PbhLicense {
     private OffsetDateTime revokedAt;
     @TableField("revoked_reason")
     private String revokedReason;
+    private boolean slotReturned;
+    private OffsetDateTime deletedAt;
+    private String importMatch;
 }

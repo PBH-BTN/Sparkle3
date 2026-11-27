@@ -30,4 +30,24 @@ public interface PbhLicenseRevocationMapper {
             WHERE license_key = #{key} AND revoked_at IS NULL
             """)
     int markLicense(@Param("key") String key, @Param("reason") String reason);
+
+    @Update("""
+            UPDATE pbh_licenses SET slot_returned = TRUE
+            WHERE license_id = #{id} AND slot_returned = FALSE
+            """)
+    int returnSlot(@Param("id") java.util.UUID id);
+
+    @Update("""
+            UPDATE member_transactions t SET license_consumed = FALSE
+            WHERE t.provider = #{provider} AND t.external_user_id = #{userId}
+              AND t.external_transaction_id = #{orderId} AND t.license_consumed = TRUE
+              AND NOT EXISTS (SELECT 1 FROM pbh_licenses l
+                  WHERE l.provider = t.provider AND l.userid = t.external_user_id
+                    AND l.source_order_no = t.external_transaction_id AND l.slot_returned = FALSE)
+            """)
+    int releaseOrder(@Param("provider") String provider, @Param("userId") String userId,
+                     @Param("orderId") String orderId);
+
+    @Update("UPDATE pbh_licenses SET deleted_at = CURRENT_TIMESTAMP WHERE license_id = #{id} AND deleted_at IS NULL")
+    int deleteLicense(@Param("id") java.util.UUID id);
 }

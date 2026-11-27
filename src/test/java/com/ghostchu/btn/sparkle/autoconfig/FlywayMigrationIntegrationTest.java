@@ -158,6 +158,99 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
+    void licenseDeletionAndOptionalSlotReturnsPreserveEntitlements() throws Exception {
+        configureFlyway().dataSource(url, username, password).target("90").load().migrate();
+        var dataSource = new DriverManagerDataSource(url, username, password);
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("""
+                INSERT INTO "user" (id,avatar,email,nickname,register_at,last_login_at)
+                VALUES (42,'','license@example.invalid','License test',now(),now())
+                """);
+        jdbc.update("INSERT INTO member_platform_bindings(provider, external_user_id, btn_user_id, proof) VALUES ('AFDIAN','account',42,'test')");
+        for (String order : List.of("product", "import-product", "import-donation", "donation")) {
+            jdbc.update("""
+                    INSERT INTO member_transactions(provider,external_transaction_id,external_user_id,
+                        transaction_type,amount,currency,amount_base,base_currency,transaction_status,license_consumed)
+                    VALUES ('AFDIAN',?,'account',?,50,'CNY',50,'CNY','PAID',?)
+                    """, order, order.contains("product") ? "PRODUCT" : "DONATION", order.equals("product"));
+        }
+        UUID legacy = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO pbh_licenses(license_id,btn_user_id,provider,userid,source_type,
+                    license_key,license_payload,start_at,expire_at,revoked_at)
+                VALUES (?,42,'AFDIAN','account','DONATION','legacy','{}',now(),now()+interval '1 year',now())
+                """, legacy);
+        configureFlyway().dataSource(url, username, password).load().migrate();
+        assertTrue(jdbc.queryForObject("SELECT slot_returned FROM pbh_licenses WHERE license_id=?", Boolean.class, legacy));
+        var config = new MybatisConfiguration(new Environment("licenses", new SpringManagedTransactionFactory(), dataSource));
+        new MyBatisPlusConfig().configurationCustomizer().customize(config);
+        config.getTypeHandlerRegistry().register(com.ghostchu.btn.sparkle.converter.UuidTypeHandler.class);
+        config.addMapper(com.ghostchu.btn.sparkle.mapper.PbhLicenseMapper.class);
+        config.addMapper(com.ghostchu.btn.sparkle.mapper.PbhLicenseRevocationMapper.class);
+        config.addMapper(com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper.class);
+        config.addMapper(com.ghostchu.btn.sparkle.mapper.AfdianMessageLicenseMapper.class);
+        var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(config));
+        var licenses = session.getMapper(com.ghostchu.btn.sparkle.mapper.PbhLicenseMapper.class);
+        var revocations = session.getMapper(com.ghostchu.btn.sparkle.mapper.PbhLicenseRevocationMapper.class);
+        var transactions = session.getMapper(com.ghostchu.btn.sparkle.mapper.MemberTransactionMapper.class);
+        var imports = session.getMapper(com.ghostchu.btn.sparkle.mapper.AfdianMessageLicenseMapper.class);
+        var service = new com.ghostchu.btn.sparkle.service.PbhLicenseRevocationService(revocations, licenses,
+                new com.ghostchu.btn.sparkle.service.PbhLicenseDecoder(), mock(com.ghostchu.btn.sparkle.service.AfdianSettingsService.class));
+        var tx = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        var ids = new java.util.HashMap<String, UUID>();
+        for (String type : List.of("product", "import-product", "import-product-2", "import-donation", "donation", "unmatched")) {
+            UUID id = UUID.randomUUID();
+            ids.put(type, id);
+            String payload = "{\"licenseVersion\":2,\"licenseTo\":\"Test\",\"orderId\":\"" + id + "\"}";
+            jdbc.update("""
+                    INSERT INTO pbh_licenses(license_id,btn_user_id,provider,userid,source_type,source_order_no,
+                        license_key,license_payload,start_at,expire_at,import_fingerprint,import_match)
+                    VALUES (?,?,'AFDIAN','account',?,?,?,?::jsonb,now(),now()+interval '1 year',?,?)
+                    """, id, type.startsWith("import") || type.equals("unmatched") ? null : 42L,
+                    type.contains("product") ? "PRODUCT" : "DONATION",
+                    type.equals("donation") || type.equals("unmatched") ? null : type.equals("import-product-2") ? "import-product" : type, type, payload,
+                    type.startsWith("import") || type.equals("unmatched") ? id.toString() : null,
+                    type.equals("unmatched") ? "UNMATCHED" : type.startsWith("import") ? "EXACT" : null);
+        }
+        assertEquals(1, licenses.countDonationLicenses(42));
+        assertEquals(1, licenses.countUnmatchedImports(42));
+        assertEquals(0, transactions.countAvailableProductSlots(42));
+        assertEquals(new BigDecimal("50.00"), transactions.sumCompletedDonationBase(42));
+        // Delete a donation without a return: still consumes a slot, but is hidden and revoked.
+        tx.executeWithoutResult(status -> {
+            try { service.revoke(ids.get("donation"), null, "test", 1, false, true); }
+            catch (BusinessException e) { throw new IllegalStateException(e); }
+        });
+        assertEquals(1, licenses.countDonationLicenses(42));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM pbh_licenses WHERE deleted_at IS NOT NULL AND revoked_at IS NOT NULL", Integer.class));
+        for (String type : List.of("product", "import-product", "import-product-2", "import-donation", "unmatched")) {
+            tx.executeWithoutResult(status -> {
+                try { service.revoke(ids.get(type), null, "test", 1, true, false); }
+                catch (BusinessException e) { throw new IllegalStateException(e); }
+            });
+            if (type.equals("import-product")) assertEquals(1, transactions.countAvailableProductSlots(42));
+        }
+        assertEquals(2, transactions.countAvailableProductSlots(42));
+        assertEquals(new BigDecimal("100.00"), transactions.sumCompletedDonationBase(42));
+        assertEquals(0, licenses.countUnmatchedImports(42));
+        assertTrue(imports.pending().isEmpty());
+        assertEquals(6, revocations.count());
+        tx.executeWithoutResult(status -> {
+            try { service.revoke(ids.get("product"), null, "repeat", 1, true, true); }
+            catch (BusinessException e) { throw new IllegalStateException(e); }
+        });
+        assertEquals(6, revocations.count());
+        assertEquals(2, transactions.countAvailableProductSlots(42));
+        assertTrue(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM pbh_licenses WHERE license_id=?", Boolean.class, ids.get("product")));
+        // A failed operation must roll back its revocation and entitlement changes together.
+        assertThrows(IllegalStateException.class, () -> tx.executeWithoutResult(status -> {
+            revocations.returnSlot(ids.get("donation"));
+            throw new IllegalStateException("rollback");
+        }));
+        assertEquals(1, licenses.countDonationLicenses(42));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void careerDeduplicationExpiresInactiveStateAndPreservesFinalStatistics() throws Exception {
         configureFlyway().dataSource(url, username, password).target("88").load().migrate();
@@ -173,7 +266,7 @@ class FlywayMigrationIntegrationTest {
                 """);
         var upgradeStart = OffsetDateTime.now(ZoneOffset.UTC);
         var latest = configureFlyway().dataSource(url, username, password).load();
-        assertEquals(2, latest.migrate().migrationsExecuted);
+        assertEquals(3, latest.migrate().migrationsExecuted);
         latest.validate();
         assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_career_events", Boolean.class, upgradeStart));
         assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_lifetime_traffic_checkpoint", Boolean.class, upgradeStart));
@@ -1001,7 +1094,7 @@ class FlywayMigrationIntegrationTest {
         for (var definition : BtnConfigCatalog.definitions()) {
             if ("banReplaySuspension".equals(definition.section())) {
                 assertEquals(definition.defaultValue(), jdbc.queryForObject(
-                        "SELECT config_value FROM app_config_entries WHERE config_key = ?", String.class, definition.key()));
+                        "SELECT config_value FROM app_config_entries WHERE config_key = ?", String.class, definition.key()).replace("\r\n", "\n"));
             }
         }
         var configuration = new Configuration(new Environment("ban-replay-test", new SpringManagedTransactionFactory(), dataSource));
@@ -1578,7 +1671,7 @@ class FlywayMigrationIntegrationTest {
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("90", latest.info().current().getVersion().getVersion());
+        assertEquals("91", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""

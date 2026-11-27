@@ -202,6 +202,7 @@ public class PbhLicenseService {
         int safeLimit = Math.min(500, Math.max(1, limit));
         List<PbhLicense> licenses = licenseMapper.selectList(
                 new QueryWrapper<PbhLicense>()
+                        .isNull("deleted_at")
                         .orderByDesc("issued_at")
                         .last("LIMIT " + safeLimit)
         );
@@ -232,6 +233,7 @@ public class PbhLicenseService {
 
     public LicensePage adminLicenses(
             String keyword,
+            Long btnUserId,
             String provider,
             String sourceType,
             String status,
@@ -240,7 +242,14 @@ public class PbhLicenseService {
     ) throws BusinessException {
         int page = Math.max(1, requestedPage);
         int size = Math.min(100, Math.max(1, requestedSize));
-        QueryWrapper<PbhLicense> query = new QueryWrapper<>();
+        QueryWrapper<PbhLicense> query = new QueryWrapper<PbhLicense>().isNull("deleted_at");
+        if (btnUserId != null) {
+            if (btnUserId <= 0) throw new BusinessException(HttpStatus.BAD_REQUEST, "Provide a valid user ID");
+            query.and(owner -> owner.eq("btn_user_id", btnUserId).or().apply(
+                    "btn_user_id IS NULL AND import_fingerprint IS NOT NULL AND EXISTS "
+                            + "(SELECT 1 FROM member_platform_bindings b WHERE b.provider = pbh_licenses.provider "
+                            + "AND b.external_user_id = pbh_licenses.userid AND b.btn_user_id = {0})", btnUserId));
+        }
         String term = keyword == null ? "" : keyword.trim();
         if (!term.isBlank()) {
             Long userId = parseNumericId(term);
@@ -322,7 +331,8 @@ public class PbhLicenseService {
                             license.getStartAt(),
                             license.getExpireAt(),
                             license.getRevokedAt(),
-                            license.getRevokedReason()
+                            license.getRevokedReason(),
+                            license.isSlotReturned()
                     );
                 })
                 .toList();
@@ -387,6 +397,7 @@ public class PbhLicenseService {
     private List<LicenseView> licenses(long btnUserId) {
         return licenseMapper.selectList(
                 new QueryWrapper<PbhLicense>()
+                        .isNull("deleted_at")
                         .and(query -> query.eq("btn_user_id", btnUserId).or().apply(
                                 "import_fingerprint IS NOT NULL AND EXISTS (SELECT 1 FROM member_platform_bindings b "
                                         + "WHERE b.btn_user_id = {0} AND b.provider = pbh_licenses.provider "

@@ -78,6 +78,7 @@ public interface MemberTransactionMapper extends BaseMapper<MemberTransaction> {
               AND t.remote_present = TRUE
               AND NOT EXISTS (SELECT 1 FROM pbh_licenses l
                   WHERE l.import_fingerprint IS NOT NULL AND l.import_match <> 'UNMATCHED'
+                    AND l.slot_returned = FALSE
                     AND l.provider = t.provider AND l.userid = t.external_user_id
                     AND l.source_order_no = t.external_transaction_id)
               AND t.license_consumed = FALSE
@@ -97,6 +98,7 @@ public interface MemberTransactionMapper extends BaseMapper<MemberTransaction> {
               AND t.remote_present = TRUE
               AND NOT EXISTS (SELECT 1 FROM pbh_licenses l
                   WHERE l.import_fingerprint IS NOT NULL AND l.import_match <> 'UNMATCHED'
+                    AND l.slot_returned = FALSE
                     AND l.provider = t.provider AND l.userid = t.external_user_id
                     AND l.source_order_no = t.external_transaction_id)
             """)
@@ -115,6 +117,7 @@ public interface MemberTransactionMapper extends BaseMapper<MemberTransaction> {
               AND t.remote_present = TRUE
               AND NOT EXISTS (SELECT 1 FROM pbh_licenses l
                   WHERE l.import_fingerprint IS NOT NULL AND l.import_match <> 'UNMATCHED'
+                    AND l.slot_returned = FALSE
                     AND l.provider = t.provider AND l.userid = t.external_user_id
                     AND l.source_order_no = t.external_transaction_id)
               AND t.license_consumed = FALSE

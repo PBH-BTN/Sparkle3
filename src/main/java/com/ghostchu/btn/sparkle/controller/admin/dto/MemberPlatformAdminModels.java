@@ -87,7 +87,8 @@ public final class MemberPlatformAdminModels {
             OffsetDateTime startAt,
             OffsetDateTime expireAt,
             OffsetDateTime revokedAt,
-            String revokedReason
+            String revokedReason,
+            boolean slotReturned
     ) {
     }
 

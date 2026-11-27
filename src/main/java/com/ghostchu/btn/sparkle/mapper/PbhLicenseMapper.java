@@ -10,7 +10,7 @@ public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
     @Select("""
             SELECT COUNT(*) FROM pbh_licenses l JOIN member_platform_bindings b
               ON b.provider = l.provider AND b.external_user_id = l.userid
-            WHERE b.btn_user_id = #{userId} AND l.import_match = 'UNMATCHED'
+            WHERE b.btn_user_id = #{userId} AND l.import_match = 'UNMATCHED' AND l.slot_returned = FALSE
             """)
     int countUnmatchedImports(@Param("userId") long userId);
 
@@ -43,7 +43,7 @@ public interface PbhLicenseMapper extends BaseMapper<PbhLicense> {
             WHERE btn_user_id = #{userId}
               AND source_type = 'DONATION'
               AND import_fingerprint IS NULL
-              AND revoked_at IS NULL
+              AND slot_returned = FALSE
             """)
     int countDonationLicenses(@Param("userId") long userId);
 }

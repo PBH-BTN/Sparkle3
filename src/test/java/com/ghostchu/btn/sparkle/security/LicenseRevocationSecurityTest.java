@@ -76,7 +76,15 @@ class LicenseRevocationSecurityTest {
             mvc.perform(post(adminPath).servletPath(adminPath).with(auth)
                     .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
                     .contentType("application/json").content(body)).andExpect(status().isOk());
-            verify(service).revoke(null, "key", "reason", 1L);
+            verify(service).revoke(null, "key", "reason", 1L, false, false);
+            var id = java.util.UUID.randomUUID();
+            String deleteBody = "{\"licenseId\":\"" + id + "\",\"reason\":\"reason\",\"returnSlot\":true,\"delete\":true}";
+            mvc.perform(post(adminPath).servletPath(adminPath).with(auth).contentType("application/json").content(deleteBody))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post(adminPath).servletPath(adminPath).with(auth)
+                    .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                    .contentType("application/json").content(deleteBody)).andExpect(status().isOk());
+            verify(service).revoke(id, null, "reason", 1L, true, true);
 
             var supporter = new User().setId(3L).setRoles(new String[]{"user", "supporter"});
             var oldSession = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors

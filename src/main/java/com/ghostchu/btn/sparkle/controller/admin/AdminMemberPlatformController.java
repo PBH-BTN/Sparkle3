@@ -176,6 +176,7 @@ public class AdminMemberPlatformController {
 
     @GetMapping("/licenses")
     public LicensePage licenses(
+            @RequestParam(required = false) Long btnUserId,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
@@ -185,6 +186,7 @@ public class AdminMemberPlatformController {
     ) throws BusinessException {
         return licenseService.adminLicenses(
                 keyword,
+                btnUserId,
                 provider,
                 sourceType,
                 status,
