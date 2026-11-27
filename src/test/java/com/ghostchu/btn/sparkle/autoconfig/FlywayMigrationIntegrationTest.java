@@ -128,6 +128,12 @@ class FlywayMigrationIntegrationTest {
     private String database;
     private String url;
 
+    private org.flywaydb.core.api.configuration.FluentConfiguration configureFlyway() {
+        var configuration = Flyway.configure();
+        new FlywayMigrationConfig(new MockEnvironment()).sparkleFlywayConfigurationCustomizer().customize(configuration);
+        return configuration;
+    }
+
     @BeforeEach
     void createDatabase() throws Exception {
         try (var connection = connect(sourceUrl, username, password);
@@ -153,8 +159,139 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void careerDeduplicationExpiresInactiveStateAndPreservesFinalStatistics() throws Exception {
+        configureFlyway().dataSource(url, username, password).target("88").load().migrate();
+        var dataSource = new DriverManagerDataSource(url, username, password);
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("""
+                INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
+                VALUES (11,'ban','00000000-0000-0000-0000-000000000001',now()-interval '30 days')
+                """);
+        jdbc.update("""
+                INSERT INTO user_lifetime_traffic_checkpoint(user_id,session_key,uploaded,downloaded)
+                VALUES (11,'00000000-0000-0000-0000-000000000001',100,50)
+                """);
+        var upgradeStart = OffsetDateTime.now(ZoneOffset.UTC);
+        var latest = configureFlyway().dataSource(url, username, password).load();
+        assertEquals(2, latest.migrate().migrationsExecuted);
+        latest.validate();
+        assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_career_events", Boolean.class, upgradeStart));
+        assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_lifetime_traffic_checkpoint", Boolean.class, upgradeStart));
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT count(*) FROM pg_index WHERE indisvalid AND indexrelid IN
+                ('user_career_events_expiry_idx'::regclass,'user_lifetime_traffic_checkpoint_expiry_idx'::regclass)
+                """, Integer.class));
+
+        var config = new Configuration(new Environment("test", new JdbcTransactionFactory(), dataSource));
+        config.addMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class);
+        try (var input = getClass().getResourceAsStream("/mapper/CareerBatchMapper.xml")) {
+            new XMLMapperBuilder(input, config, "mapper/CareerBatchMapper.xml", config.getSqlFragments()).parse();
+        }
+        var factory = new SqlSessionFactoryBuilder().build(config);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(com.ghostchu.btn.sparkle.mapper.CareerBatchMapper.class);
+            var runtime = mock(BtnRuntimeConfigService.class);
+            when(runtime.reportingWindowMillis(org.mockito.ArgumentMatchers.anyString())).thenReturn(900_000L);
+            var ingestion = new com.ghostchu.btn.sparkle.service.CareerIngestionService(mapper, runtime,
+                    mock(com.ghostchu.btn.sparkle.service.CareerRedisCache.class));
+            var now = OffsetDateTime.now(ZoneOffset.UTC);
+            var row = new SwarmTracker().setUserappsId(1L).setUserDownloader("retention").setTorrentId(1L)
+                    .setPeerIp(InetAddress.ofLiteral("192.0.2.1")).setPeerPort(6881)
+                    .setFirstTimeSeen(now.minusDays(20)).setLastTimeSeen(now.plusMinutes(30))
+                    .setToPeerTraffic(1000L).setFromPeerTraffic(500L)
+                    .setToPeerTrafficOffset(10L).setFromPeerTrafficOffset(5L).setUserProgress(1);
+            ingestion.swarmBatch(ingestion.prepareSwarm(11, List.of(row)));
+            // A long-lived session must renew both deduplication rows without adding another event.
+            jdbc.update("UPDATE user_career_events SET last_seen=now()-interval '9 days' WHERE kind='swarm'");
+            jdbc.update("UPDATE user_lifetime_traffic_checkpoint SET last_seen=now()-interval '9 days' WHERE session_key<>(?::uuid)",
+                    "00000000-0000-0000-0000-000000000001");
+            row.setLastTimeSeen(now.plusMinutes(31)).setToPeerTraffic(1025L);
+            ingestion.swarmBatch(ingestion.prepareSwarm(11, List.of(row)));
+            ingestion.swarmBatch(ingestion.prepareSwarm(11, List.of(row)));
+            assertEquals(1L, jdbc.queryForObject("SELECT sum(amount) FROM user_career_daily WHERE kind='swarm'", Long.class));
+            assertEquals(35L, jdbc.queryForObject("SELECT sent_self FROM user_lifetime_traffic WHERE user_id=11", Long.class));
+            assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_career_events WHERE kind='swarm'", Boolean.class, row.getLastTimeSeen()));
+            assertTrue(jdbc.queryForObject("SELECT last_seen >= ? FROM user_lifetime_traffic_checkpoint WHERE session_key<>(?::uuid)",
+                    Boolean.class, row.getLastTimeSeen(), "00000000-0000-0000-0000-000000000001"));
+            var totals = jdbc.queryForList("SELECT * FROM user_lifetime_traffic ORDER BY user_id");
+            var daily = jdbc.queryForList("SELECT * FROM user_career_daily ORDER BY user_id,day,kind");
+            var traffic = jdbc.queryForList("SELECT * FROM user_traffic_daily ORDER BY user_id,day");
+            var times = jdbc.queryForList("SELECT user_id,torrent_id,last_seen FROM user_career_torrent_time ORDER BY user_id,torrent_id");
+
+            var cutoff = now.minusDays(7);
+            // The exact cutoff is retained; an older row expires. A locked row is skipped.
+            jdbc.update("UPDATE user_career_events SET last_seen=? WHERE kind='ban'", cutoff.minusSeconds(1));
+            jdbc.update("UPDATE user_lifetime_traffic_checkpoint SET last_seen=? WHERE session_key=(?::uuid)",
+                    cutoff, "00000000-0000-0000-0000-000000000001");
+            try (var writer = dataSource.getConnection()) {
+                writer.setAutoCommit(false);
+                try (var statement = writer.createStatement()) {
+                    statement.executeQuery("SELECT * FROM user_career_events WHERE kind='ban' FOR UPDATE").close();
+                }
+                assertEquals(0, mapper.deleteExpiredEvents(cutoff, 1));
+                assertEquals(0, mapper.deleteExpiredCheckpoints(cutoff, 1));
+                writer.rollback();
+            }
+            assertEquals(1, mapper.deleteExpiredEvents(cutoff, 1));
+            jdbc.update("UPDATE user_lifetime_traffic_checkpoint SET last_seen=? WHERE session_key=(?::uuid)",
+                    cutoff.minusSeconds(1), "00000000-0000-0000-0000-000000000001");
+            try (var writer = dataSource.getConnection()) {
+                writer.setAutoCommit(false);
+                try (var statement = writer.createStatement()) {
+                    statement.executeQuery("SELECT * FROM user_lifetime_traffic_checkpoint FOR UPDATE").close();
+                }
+                assertEquals(0, mapper.deleteExpiredCheckpoints(cutoff, 1));
+                writer.rollback();
+            }
+            assertEquals(1, mapper.deleteExpiredCheckpoints(cutoff, 1));
+            assertEquals(0, mapper.deleteExpiredEvents(cutoff, 1));
+            assertEquals(0, mapper.deleteExpiredCheckpoints(cutoff, 1));
+            // Reports may be up to one hour in the future. Keep state until their replay window also expires.
+            assertEquals(0, mapper.deleteExpiredEvents(now.plusMinutes(15), 1));
+            assertEquals(0, mapper.deleteExpiredCheckpoints(now.plusMinutes(15), 1));
+            assertEquals(totals, jdbc.queryForList("SELECT * FROM user_lifetime_traffic ORDER BY user_id"));
+            assertEquals(daily, jdbc.queryForList("SELECT * FROM user_career_daily ORDER BY user_id,day,kind"));
+            assertEquals(traffic, jdbc.queryForList("SELECT * FROM user_traffic_daily ORDER BY user_id,day"));
+            assertEquals(times, jdbc.queryForList("SELECT user_id,torrent_id,last_seen FROM user_career_torrent_time ORDER BY user_id,torrent_id"));
+
+            // Resuming an expired session starts with this report's delta, never its historical counter.
+            jdbc.update("UPDATE user_career_events SET last_seen=?", cutoff.minusSeconds(1));
+            jdbc.update("UPDATE user_lifetime_traffic_checkpoint SET last_seen=?", cutoff.minusSeconds(1));
+            assertEquals(1, mapper.deleteExpiredEvents(cutoff, 1));
+            assertEquals(1, mapper.deleteExpiredCheckpoints(cutoff, 1));
+            row.setLastTimeSeen(now.plusMinutes(32)).setToPeerTraffic(1100L).setToPeerTrafficOffset(15L);
+            ingestion.swarmBatch(ingestion.prepareSwarm(11, List.of(row)));
+            ingestion.swarmBatch(ingestion.prepareSwarm(11, List.of(row)));
+            assertEquals(2L, jdbc.queryForObject("SELECT sum(amount) FROM user_career_daily WHERE kind='swarm'", Long.class));
+            assertEquals(50L, jdbc.queryForObject("SELECT sent_self FROM user_lifetime_traffic WHERE user_id=11", Long.class));
+        }
+        var settingsConfig = new MybatisConfiguration(new Environment("settings", new JdbcTransactionFactory(), dataSource));
+        settingsConfig.addMapper(com.ghostchu.btn.sparkle.mapper.AppConfigEntryMapper.class);
+        try (var session = new MybatisSqlSessionFactoryBuilder().build(settingsConfig).openSession(true)) {
+            var settings = new com.ghostchu.btn.sparkle.service.DatabaseConfigService(
+                    session.getMapper(com.ghostchu.btn.sparkle.mapper.AppConfigEntryMapper.class),
+                    new MockEnvironment(), mock(RedisTemplate.class));
+            var mvc = MockMvcBuilders.standaloneSetup(
+                            new com.ghostchu.btn.sparkle.controller.admin.AdminDatabaseConfigController(settings, null))
+                    .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                    .setControllerAdvice(new GlobalExceptionHandler()).build();
+            mvc.perform(get("/api/admin/database-config").param("keyword", "sparkle.career.dedup-retention-days"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$[0].value").value("7"))
+                    .andExpect(jsonPath("$[0].hotReload").value(true));
+            mvc.perform(put("/api/admin/database-config").contentType("application/json")
+                            .content("{\"key\":\"sparkle.career.dedup-retention-days\",\"value\":\"6\"}"))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(put("/api/admin/database-config").contentType("application/json")
+                            .content("{\"key\":\"sparkle.career.dedup-retention-days\",\"value\":\"30\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.value").value("30"));
+            assertEquals(30, new com.ghostchu.btn.sparkle.service.CareerDeduplicationService(settings, null).retentionDays());
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void btnBypassConflictsRetryAtomicallyAndNotifyAgainAfterResolution() {
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
         var dataSource = new DriverManagerDataSource(url, username, password);
         var jdbc = new JdbcTemplate(dataSource);
         jdbc.update("""
@@ -217,7 +354,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void btnGeoIpRiskUsesLateReceiptsAndRetriesDeliveryWithIndependentFamilyCooldowns() {
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
         var dataSource = new DriverManagerDataSource(url, username, password);
         var jdbc = new JdbcTemplate(dataSource);
         jdbc.update("""
@@ -296,7 +433,7 @@ class FlywayMigrationIntegrationTest {
     @Test
     @EnabledIfEnvironmentVariable(named = "SPARKLE_BTN_VOLUME_TEST_REDIS_PORT", matches = "[0-9]+")
     void btnReportVolumeCountsByModuleAndCheckpointsInboxDelivery() {
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
         var redisConfig = new RedisStandaloneConfiguration("127.0.0.1",
                 Integer.parseInt(System.getenv("SPARKLE_BTN_VOLUME_TEST_REDIS_PORT")));
         redisConfig.setDatabase(9);
@@ -482,7 +619,7 @@ class FlywayMigrationIntegrationTest {
                     INSERT INTO userapp VALUES (2, NULL, NULL);
                     """);
         }
-        var flyway = Flyway.configure().dataSource(url, username, password).baselineVersion("80").target("81").load();
+        var flyway = configureFlyway().dataSource(url, username, password).baselineVersion("80").target("81").load();
         flyway.baseline();
         assertEquals(1, flyway.migrate().migrationsExecuted);
         flyway.validate();
@@ -581,7 +718,7 @@ class FlywayMigrationIntegrationTest {
                 insert.executeUpdate();
             }
         }
-        var flyway = Flyway.configure().dataSource(url, username, password)
+        var flyway = configureFlyway().dataSource(url, username, password)
                 .baselineVersion("79").target("80").load();
         flyway.baseline();
         assertEquals(1, flyway.migrate().migrationsExecuted);
@@ -647,7 +784,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void contentModerationDictionaryPublishesCommittedVersionsAndRejectsStaleEdits() throws Exception {
-        var flyway = Flyway.configure().dataSource(url, username, password)
+        var flyway = configureFlyway().dataSource(url, username, password)
                 .baselineVersion("76").target("77").load();
         flyway.baseline();
         assertEquals(1, flyway.migrate().migrationsExecuted);
@@ -698,7 +835,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void banSubmissionGuardDeduplicatesAndDetectsAcrossWindows() throws Exception {
-        var flyway = Flyway.configure().dataSource(url, username, password).load();
+        var flyway = configureFlyway().dataSource(url, username, password).load();
         flyway.migrate();
         flyway.validate();
 
@@ -839,7 +976,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void replaySuspensionsUseBothLimitsAndAtomicallyQueueAnEmail() throws Exception {
-        var flyway = Flyway.configure().dataSource(url, username, password).target("87").load();
+        var flyway = configureFlyway().dataSource(url, username, password).target("87").load();
         flyway.migrate();
         var dataSource = new DriverManagerDataSource(url, username, password);
         var jdbc = new JdbcTemplate(dataSource);
@@ -859,7 +996,7 @@ class FlywayMigrationIntegrationTest {
                        (current_date, 3, 1, 12001), (current_date - 7, 4, 151, 12001),
                        (current_date, 5, 151, 12001), (current_date, 6, 151, 12001)
                 """);
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
 
         for (var definition : BtnConfigCatalog.definitions()) {
             if ("banReplaySuspension".equals(definition.section())) {
@@ -934,7 +1071,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void createsTheCompleteSchemaOnAnEmptyDatabase() throws Exception {
-        Flyway flyway = Flyway.configure()
+        Flyway flyway = configureFlyway()
                 .dataSource(url, username, password)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
@@ -1235,7 +1372,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void queuesAuditsAndStreamsUserExports() throws Exception {
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
         try (var connection = connect(url, username, password); var statement = connection.createStatement()) {
             statement.execute("""
                     INSERT INTO userapp (id, app_id, app_secret, created_at, owner, comment)
@@ -1337,7 +1474,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void preservesLegacyRolesAndGrantsSupporterOnceAcrossPlatforms() throws Exception {
-        Flyway.configure().dataSource(url, username, password).target("81").load().migrate();
+        configureFlyway().dataSource(url, username, password).target("81").load().migrate();
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             statement.execute("""
@@ -1346,7 +1483,7 @@ class FlywayMigrationIntegrationTest {
                            (102, 'moderator@example.invalid', 'Moderator', 'moderator', '/img/anonymous-user.png', now(), now())
                     """);
         }
-        Flyway.configure().dataSource(url, username, password).load().migrate();
+        configureFlyway().dataSource(url, username, password).load().migrate();
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             statement.execute("""
@@ -1420,7 +1557,7 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void upgradesAnAlreadyAppliedIncrementalV68WithoutRepair() throws Exception {
-        Flyway.configure().dataSource(url, username, password).target("68")
+        configureFlyway().dataSource(url, username, password).target("68")
                 .locations("classpath:db/migration").load().migrate();
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
@@ -1437,11 +1574,11 @@ class FlywayMigrationIntegrationTest {
                     VALUES (11, '2026-01-01', 'observation', 1);
                     """);
         }
-        Flyway latest = Flyway.configure().dataSource(url, username, password)
+        Flyway latest = configureFlyway().dataSource(url, username, password)
                 .locations("classpath:db/migration").validateOnMigrate(true).load();
         latest.migrate();
         latest.validate();
-        assertEquals("88", latest.info().current().getVersion().getVersion());
+        assertEquals("90", latest.info().current().getVersion().getVersion());
         try (var connection = connect(url, username, password);
              var statement = connection.createStatement()) {
             try (var result = statement.executeQuery("""
@@ -1488,13 +1625,13 @@ class FlywayMigrationIntegrationTest {
 
     @Test
     void adoptsTheCurrentProductionSchemaWithoutReplayingHistoricalMigrations() throws Exception {
-        Flyway flyway = Flyway.configure()
+        Flyway flyway = configureFlyway()
                 .dataSource(url, username, password)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(false)
                 .validateOnMigrate(true)
                 .load();
-        Flyway.configure().dataSource(url, username, password).target("29")
+        configureFlyway().dataSource(url, username, password).target("29")
                 .locations("classpath:db/migration").load().migrate();
 
         try (var connection = DriverManager.getConnection(url, username, password);

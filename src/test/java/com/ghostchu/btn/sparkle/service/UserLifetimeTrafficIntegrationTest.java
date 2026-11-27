@@ -69,7 +69,10 @@ class UserLifetimeTrafficIntegrationTest {
                             """);
                     sql.execute(trackerInsert(100, 40, "2026-11-01Z"));
                 }
-                Flyway latest = Flyway.configure().dataSource(url, username, password).load();
+                var latestConfig = Flyway.configure().dataSource(url, username, password);
+                new com.ghostchu.btn.sparkle.autoconfig.FlywayMigrationConfig(new org.springframework.mock.env.MockEnvironment())
+                        .sparkleFlywayConfigurationCustomizer().customize(latestConfig);
+                Flyway latest = latestConfig.load();
                 latest.migrate();
                 latest.validate();
                 var dataSource = new UnpooledDataSource("org.postgresql.Driver", url, username, password);

@@ -49,10 +49,10 @@ class DailyTrafficPostgresIntegrationTest {
                 statement.execute("CREATE TEMP TABLE userapp(id bigint,owner bigint)");
                 statement.execute("CREATE TEMP TABLE userapps_heartbeat(userapp_id bigint,ip inet,first_seen_at timestamptz,last_seen_at timestamptz)");
                 statement.execute("CREATE TEMP TABLE user_account_deletion_request(user_id bigint,status text)");
-                statement.execute("CREATE TEMP TABLE user_career_events(user_id bigint,kind text,fingerprint uuid,observed_at timestamptz,PRIMARY KEY(user_id,kind,fingerprint))");
+                statement.execute("CREATE TEMP TABLE user_career_events(user_id bigint,kind text,fingerprint uuid,observed_at timestamptz,last_seen timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,kind,fingerprint))");
                 statement.execute("CREATE TEMP TABLE user_career_daily(user_id bigint,day date,kind text,amount bigint,PRIMARY KEY(user_id,kind,day))");
                 statement.execute("CREATE TEMP TABLE user_career_torrent_time(user_id bigint,torrent_id bigint,last_seen timestamptz,was_seeding boolean,seeding tstzmultirange DEFAULT '{}',downloading tstzmultirange DEFAULT '{}',PRIMARY KEY(user_id,torrent_id))");
-                statement.execute("CREATE TEMP TABLE user_lifetime_traffic_checkpoint(user_id bigint,session_key uuid,uploaded bigint,downloaded bigint,upload_delta bigint,download_delta bigint,PRIMARY KEY(user_id,session_key))");
+                statement.execute("CREATE TEMP TABLE user_lifetime_traffic_checkpoint(user_id bigint,session_key uuid,uploaded bigint,downloaded bigint,upload_delta bigint,download_delta bigint,last_seen timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,session_key))");
                 statement.execute("CREATE TEMP TABLE user_lifetime_traffic(user_id bigint PRIMARY KEY,sent_self numeric,received_self numeric,sent_ack numeric,received_ack numeric,tracked_since timestamptz,history_partial boolean,updated_at timestamptz)");
                 try (var input=getClass().getResourceAsStream("/db/migration/V70__user_daily_traffic_statistics.sql")) {
                     statement.execute(new String(Objects.requireNonNull(input).readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).replace("CREATE TABLE","CREATE TEMP TABLE"));

@@ -3,6 +3,7 @@ package com.ghostchu.btn.sparkle.mapper;
 import org.apache.ibatis.annotations.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +15,9 @@ public interface CareerBatchMapper {
 
     int upsertLifetimeTraffic(@Param("rows") List<DailyTrafficDelta> rows);
     int upsertCareerDaily(@Param("rows") List<CareerDailyDelta> rows);
+
+    int deleteExpiredEvents(@Param("cutoff") OffsetDateTime cutoff, @Param("limit") int limit);
+    int deleteExpiredCheckpoints(@Param("cutoff") OffsetDateTime cutoff, @Param("limit") int limit);
 
     record CareerDailyDelta(long userId, LocalDate day, String kind, long amount) { }
 

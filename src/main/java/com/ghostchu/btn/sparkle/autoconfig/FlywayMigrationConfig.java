@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.FlywayException;
 import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
+import org.springframework.boot.flyway.autoconfigure.FlywayConfigurationCustomizer;
+import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -30,6 +32,14 @@ public class FlywayMigrationConfig {
 
     public FlywayMigrationConfig(ConfigurableEnvironment environment) {
         this.environment = environment;
+    }
+
+    @Bean
+    public FlywayConfigurationCustomizer sparkleFlywayConfigurationCustomizer() {
+        // Transactional advisory locks can block CREATE INDEX CONCURRENTLY on Flyway's own snapshot.
+        // Session locks still serialize migrations and release when the connection closes.
+        return configuration -> configuration.getConfigurationExtension(PostgreSQLConfigurationExtension.class)
+                .setTransactionalLock(false);
     }
 
     @Bean

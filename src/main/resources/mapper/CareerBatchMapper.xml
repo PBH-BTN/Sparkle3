@@ -27,13 +27,15 @@
             </foreach>
         ), checkpoint AS (
             INSERT INTO user_lifetime_traffic_checkpoint AS c
-                (user_id,session_key,uploaded,downloaded,upload_delta,download_delta)
-            SELECT user_id,session_key,upload,download,initial_upload,initial_download FROM input ORDER BY torrent_id,session_key
+                (user_id,session_key,uploaded,downloaded,upload_delta,download_delta,last_seen)
+            SELECT user_id,session_key,upload,download,initial_upload,initial_download,GREATEST(now(),at)
+            FROM input ORDER BY torrent_id,session_key
             ON CONFLICT(user_id,session_key) DO UPDATE SET
                 upload_delta=GREATEST(EXCLUDED.uploaded-c.uploaded,0),
                 download_delta=GREATEST(EXCLUDED.downloaded-c.downloaded,0),
                 uploaded=GREATEST(c.uploaded,EXCLUDED.uploaded),
-                downloaded=GREATEST(c.downloaded,EXCLUDED.downloaded)
+                downloaded=GREATEST(c.downloaded,EXCLUDED.downloaded),
+                last_seen=GREATEST(c.last_seen,EXCLUDED.last_seen)
             RETURNING user_id,session_key,upload_delta,download_delta
         ), peers AS MATERIALIZED (
             SELECT DISTINCT ua.owner,i.session_key,i.at,i.observation_key
@@ -42,14 +44,16 @@
             JOIN userapp ua ON ua.id=hb.userapp_id
             WHERE NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
         ), events AS (
-            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
-            SELECT user_id,'swarm' AS kind,session_key,at FROM input
+            INSERT INTO user_career_events AS e(user_id,kind,fingerprint,observed_at,last_seen)
+            SELECT user_id,'swarm' AS kind,session_key,at,GREATEST(now(),at) FROM input
             WHERE (SELECT count(*) FROM checkpoint) >= 0
             UNION ALL
-            SELECT owner,'observation',observation_key,at FROM peers WHERE owner &lt;> #{uid}
+            SELECT owner,'observation',observation_key,at,GREATEST(now(),at) FROM peers WHERE owner &lt;> #{uid}
                 AND (SELECT count(*) FROM checkpoint) >= 0
             ORDER BY 1,2,3
-            ON CONFLICT DO NOTHING RETURNING user_id,kind,observed_at
+            ON CONFLICT(user_id,kind,fingerprint) DO UPDATE SET
+                last_seen=GREATEST(e.last_seen,EXCLUDED.last_seen)
+            RETURNING new.user_id,new.kind,new.observed_at,old.user_id IS NULL AS added
         ), latest AS (
             SELECT DISTINCT ON (user_id,torrent_id) user_id,torrent_id,at,seeding FROM input
             ORDER BY user_id,torrent_id,at DESC,session_key
@@ -97,7 +101,7 @@
             UNION ALL
             SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date,0,0,0,0,0,0,0,
                 CASE WHEN kind='swarm' THEN 1 ELSE 0 END,0,
-                CASE WHEN kind='observation' THEN 1 ELSE 0 END FROM events
+                CASE WHEN kind='observation' THEN 1 ELSE 0 END FROM events WHERE added
         )
         SELECT user_id,day,SUM(upload) AS upload,SUM(download) AS download,
             SUM(upload_ack) AS upload_ack,SUM(download_ack) AS download_ack,SUM(loss) AS loss,
@@ -115,9 +119,9 @@
             JOIN userapp ua ON ua.id=hb.userapp_id WHERE ua.owner &lt;> i.user_id
               AND NOT EXISTS(SELECT 1 FROM user_account_deletion_request d WHERE d.user_id=ua.owner AND d.status='COMPLETED')
         ), added AS (
-            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at)
-            SELECT user_id,'ban',fingerprint,at FROM input
-            UNION ALL SELECT owner,'observation',fingerprint,at FROM observed
+            INSERT INTO user_career_events(user_id,kind,fingerprint,observed_at,last_seen)
+            SELECT user_id,'ban',fingerprint,at,GREATEST(now(),at) FROM input
+            UNION ALL SELECT owner,'observation',fingerprint,at,GREATEST(now(),at) FROM observed
             ORDER BY 1,2,3
             ON CONFLICT DO NOTHING RETURNING user_id,kind,fingerprint,observed_at
         )
@@ -178,4 +182,24 @@
         )
         SELECT user_id,(observed_at AT TIME ZONE 'UTC')::date AS day,kind,COUNT(*) AS amount FROM added GROUP BY 1,2,3 ORDER BY 1,3,2
     </select>
+    <delete id="deleteExpiredEvents">
+        WITH expired AS (
+            SELECT user_id,kind,fingerprint FROM user_career_events
+            WHERE last_seen &lt; #{cutoff}
+            ORDER BY last_seen
+            LIMIT #{limit} FOR UPDATE SKIP LOCKED
+        )
+        DELETE FROM user_career_events AS e USING expired
+        WHERE e.user_id=expired.user_id AND e.kind=expired.kind AND e.fingerprint=expired.fingerprint
+    </delete>
+    <delete id="deleteExpiredCheckpoints">
+        WITH expired AS (
+            SELECT user_id,session_key FROM user_lifetime_traffic_checkpoint
+            WHERE last_seen &lt; #{cutoff}
+            ORDER BY last_seen
+            LIMIT #{limit} FOR UPDATE SKIP LOCKED
+        )
+        DELETE FROM user_lifetime_traffic_checkpoint AS c USING expired
+        WHERE c.user_id=expired.user_id AND c.session_key=expired.session_key
+    </delete>
 </mapper>

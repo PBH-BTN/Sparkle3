@@ -21,6 +21,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -30,6 +31,20 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class DatabaseConfigServiceTest {
+    @Test
+    void validatesDeduplicationRetentionThroughTheGenericConfigEditor() throws BusinessException {
+        String key = CareerDeduplicationService.RETENTION_DAYS_KEY;
+        when(configMapper.selectById(key)).thenReturn(entry(key, "7")
+                .setValueType("number").setSensitive(false));
+        assertTrue(service.isHotReload(key));
+        for (String value : List.of("6", "0", "7.5", "3651")) {
+            assertThrows(BusinessException.class, () -> service.update(key, value, 1L));
+        }
+        verify(configMapper, never()).updateById(any(AppConfigEntry.class));
+        assertTrue(service.update(key, "30", 1L).hotReload());
+        verify(configMapper).updateById(any(AppConfigEntry.class));
+    }
+
     @Test
     void retiredTrafficSettingsAreNotImportedAgainFromLegacyYaml() {
         assertTrue(service.isDeprecatedKey("sparkle.homepage-statistics-refresh.modules.bittorrent-traffic.enabled"));

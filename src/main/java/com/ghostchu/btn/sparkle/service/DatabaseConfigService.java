@@ -35,6 +35,7 @@ import java.util.Set;
 @Slf4j
 public class DatabaseConfigService {
     public static final Set<String> HOT_RELOAD_KEYS = Set.of(
+            CareerDeduplicationService.RETENTION_DAYS_KEY,
             "sparkle.homepage.network-traffic-enabled",
             "sparkle.homepage.network-traffic-staff-only",
             "sparkle.homepage.total-loss-staff-only",
@@ -154,6 +155,11 @@ public class DatabaseConfigService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Sensitive configuration is read-only");
         }
         validateValueType(row.getValueType(), value);
+        if (CareerDeduplicationService.RETENTION_DAYS_KEY.equals(key)
+                && !CareerDeduplicationService.validRetentionDays(value)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "Statistics deduplication retention must be a whole number between 7 and 3650 days");
+        }
         row.setConfigValue(value)
                 .setSource("database")
                 .setUpdatedAt(OffsetDateTime.now())
