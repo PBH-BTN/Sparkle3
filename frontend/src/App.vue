@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n'
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
 import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
 import AppLayout from '@/components/AppLayout.vue'
+import { moderatorRouteNames } from '@/router/adminNavigation'
 import GlobalAnnouncements from '@/components/GlobalAnnouncements.vue'
 import { useSessionStore } from '@/stores/session'
 
@@ -34,16 +35,6 @@ const showLogin = computed(
 const canRenderRoute = computed(
   () => route.name !== 'ranking' || Boolean(session.traffic),
 )
-const moderatorRouteNames = new Set([
-  'admin-tasks',
-  'admin-announcements',
-  'admin-userapps',
-  'admin-github-sync',
-  'admin-btn',
-  'admin-modules',
-  'admin-rules',
-  'admin-messages',
-])
 
 function handleUnauthorized() {
   session.clear()

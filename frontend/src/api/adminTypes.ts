@@ -398,8 +398,8 @@ export interface MailSettingsUpdate {
   pop3PollIntervalSeconds: number
   pop3ConnectionTimeoutSeconds: number
   pop3MaxMessagesPerPoll: number
-  systemSender: MailSenderSettings
-  userSender: MailSenderSettings
+  systemSender?: MailSenderSettings
+  userSender?: MailSenderSettings
 }
 
 export interface MailTestResult {

@@ -13,6 +13,8 @@ import {
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useAdminDraft } from '@/composables/useAdminDraft'
+import AdminRelatedLinks from '@/components/admin/AdminRelatedLinks.vue'
 import { adminApi } from '@/api/admin'
 import type {
   CommunityGroupAdmin,
@@ -21,6 +23,7 @@ import type {
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
+const props = defineProps<{ scope: 'groups' | 'integration' }>()
 const { t } = useI18n()
 const { formatDate } = useFormatters()
 const loading = ref(true)
@@ -54,7 +57,10 @@ const sortedGroups = computed(
   () => [...(data.value?.groups ?? [])].sort((left, right) => left.sortOrder - right.sortOrder),
 )
 
+const draft = useAdminDraft(() => props.scope === 'integration' ? settingsForm : null)
+
 async function load() {
+  if (!(await draft.confirmDiscard())) return
   loading.value = true
   try {
     applySettings(await adminApi.communityGroups())
@@ -70,6 +76,7 @@ function applySettings(settings: CommunityGroupsSettings) {
   settingsForm.apiBaseUrl = settings.apiBaseUrl
   settingsForm.personalAccessToken = ''
   settingsForm.clearToken = false
+  draft.accept()
 }
 
 async function saveSettings() {
@@ -240,7 +247,7 @@ onMounted(load)
 <template>
   <div class="page-stack community-admin-page">
     <PageHeader
-      :title="t('admin.communityGroups.title')"
+      :title="t(`admin.organization.pages.${props.scope === 'groups' ? 'community-groups' : 'community-integration'}`)"
       :description="t('admin.communityGroups.description')"
     >
       <template #actions>
@@ -248,19 +255,19 @@ onMounted(load)
           <template #icon><IconRefresh /></template>
           {{ t('admin.common.refresh') }}
         </a-button>
-        <a-button type="primary" @click="openCreate">
+        <a-button type="primary" v-if="scope === 'groups'" @click="openCreate">
           <template #icon><IconPlus /></template>
           {{ t('admin.communityGroups.create') }}
         </a-button>
       </template>
     </PageHeader>
 
-    <a-alert type="info" show-icon>
+    <a-alert v-if="scope === 'integration'" type="info" show-icon>
       {{ t('admin.communityGroups.githubTokenHint') }}
     </a-alert>
 
     <a-spin :loading="loading" class="community-spin">
-      <a-card class="surface-card">
+      <a-card v-if="scope === 'integration'" class="surface-card">
         <template #title>{{ t('admin.communityGroups.apiSettings') }}</template>
         <a-form :model="settingsForm" layout="vertical">
           <div class="settings-grid">
@@ -300,8 +307,8 @@ onMounted(load)
         </a-form>
       </a-card>
 
-      <a-empty v-if="!sortedGroups.length" :description="t('admin.communityGroups.empty')" />
-      <div v-else class="group-list">
+      <a-empty v-if="scope === 'groups' && !sortedGroups.length" :description="t('admin.communityGroups.empty')" />
+      <div v-else-if="scope === 'groups'" class="group-list">
         <article v-for="group in sortedGroups" :key="group.id" class="group-row">
           <span class="group-type-icon">
             <IconGithub v-if="group.type === 'GITHUB'" />
@@ -338,6 +345,7 @@ onMounted(load)
         </article>
       </div>
     </a-spin>
+    <AdminRelatedLinks :paths="['/admin/community-groups', '/admin/community-integration']" />
 
     <a-modal
       v-model:visible="editorVisible"

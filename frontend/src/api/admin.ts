@@ -103,6 +103,11 @@ function queryString(values: object) {
 }
 
 export const adminApi = {
+  btnConfigEditors: () => request<Record<string, string>>('/api/admin/btn/editors'),
+  settingsSection: (section: string) => request<Record<string, string | number | boolean>>(`/api/admin/settings/${encodeURIComponent(section)}`),
+  updateSettingsSection: (section: string, body: object) => request<Record<string, string | number | boolean>>(`/api/admin/settings/${encodeURIComponent(section)}`, { method: 'PUT', body: JSON.stringify(body) }),
+  btnConfigGroup: (group: string) => request<BtnConfigView>(`/api/admin/btn/groups/${encodeURIComponent(group)}`),
+  updateBtnConfigGroup: (group: string, values: Record<string, string>) => request<BtnConfigView>(`/api/admin/btn/groups/${encodeURIComponent(group)}`, { method: 'PUT', body: JSON.stringify({ values }) }),
   exportSettings: () => request<DataExportSettings>('/api/admin/exports'),
   updateExportSettings: (body: DataExportSettings) =>
     request<DataExportSettings>('/api/admin/exports', { method: 'PUT', body: JSON.stringify(body) }),

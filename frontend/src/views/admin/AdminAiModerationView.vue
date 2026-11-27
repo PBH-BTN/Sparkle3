@@ -11,6 +11,8 @@ import {
   IconSend,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useAdminDraft } from '@/composables/useAdminDraft'
+import AdminRelatedLinks from '@/components/admin/AdminRelatedLinks.vue'
 import { adminApi } from '@/api/admin'
 import type {
   AiModerationAdmin,
@@ -19,9 +21,11 @@ import type {
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
+const props = defineProps<{ scope: 'provider' | 'comments' | 'queue' }>()
 const { t } = useI18n()
 const { formatDate } = useFormatters()
 const loading = ref(true)
+const failed = ref(false)
 const savingProvider = ref(false)
 const savingComments = ref(false)
 const testing = ref(false)
@@ -62,6 +66,8 @@ const jobColumns = computed<TableColumnData[]>(() => [
 
 const metrics = computed(() => data.value?.metrics)
 
+const draft = useAdminDraft(() => props.scope === 'provider' ? providerForm.value : props.scope === 'comments' ? commentForm.value : null)
+
 function applyView(view: AiModerationAdmin) {
   data.value = view
   Object.assign(providerForm.value, {
@@ -76,13 +82,17 @@ function applyView(view: AiModerationAdmin) {
     moderateAvatars: view.settings.moderateAvatars,
   })
   Object.assign(commentForm.value, view.comments)
+  draft.accept()
 }
 
 async function load() {
+  if (!(await draft.confirmDiscard())) return
   loading.value = true
+  failed.value = false
   try {
     applyView(await adminApi.aiModeration())
   } catch (error) {
+    failed.value = true
     Message.error(errorMessage(error, t('common.loadFailed')))
   } finally {
     loading.value = false
@@ -208,8 +218,8 @@ onMounted(load)
 <template>
   <div class="page-stack ai-moderation-page">
     <PageHeader
-      :title="t('admin.aiModeration.title')"
-      :description="t('admin.aiModeration.description')"
+      :title="t(`admin.organization.pages.${props.scope === 'provider' ? 'ai-moderation' : props.scope === 'comments' ? 'comment-policy' : 'moderation-queue'}`)"
+      :description="t(props.scope === 'provider' ? 'admin.aiModeration.providerHint' : props.scope === 'comments' ? 'admin.aiModeration.commentsDescription' : 'admin.aiModeration.jobsTitle')"
     >
       <template #actions>
         <a-button :loading="loading" @click="load">
@@ -219,8 +229,9 @@ onMounted(load)
       </template>
     </PageHeader>
 
-    <a-spin :loading="loading">
-      <div class="metric-grid">
+    <a-alert v-if="failed" type="error">{{ t('admin.organization.loadFailed') }}</a-alert>
+    <a-spin v-else :loading="loading">
+      <div v-if="scope === 'queue'" class="metric-grid">
         <div class="metric-card metric-card--orange">
           <span>{{ t('admin.aiModeration.metrics.pending') }}</span>
           <strong>{{ metrics?.pending ?? 0 }}</strong>
@@ -244,7 +255,7 @@ onMounted(load)
       </div>
 
       <a-row :gutter="16">
-        <a-col :xs="24" :xl="15">
+        <a-col v-if="scope === 'provider'" :span="24">
           <a-card class="surface-card">
             <template #title>{{ t('admin.aiModeration.providerTitle') }}</template>
             <a-alert type="info" show-icon>
@@ -402,7 +413,7 @@ onMounted(load)
           </a-card>
         </a-col>
 
-        <a-col :xs="24" :xl="9">
+        <a-col v-if="scope === 'comments'" :span="24">
           <a-card class="surface-card">
             <template #title>{{ t('admin.aiModeration.commentsTitle') }}</template>
             <p class="section-copy">
@@ -447,7 +458,11 @@ onMounted(load)
               </a-button>
             </a-form>
 
-            <a-divider />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-card v-if="scope === 'queue'" class="surface-card">
             <div class="review-actions">
               <a-popconfirm
                 :content="t('admin.aiModeration.requeueConfirm')"
@@ -471,11 +486,8 @@ onMounted(load)
                 {{ t('admin.aiModeration.retryFailed') }}
               </a-button>
             </div>
-          </a-card>
-        </a-col>
-      </a-row>
-
-      <a-card class="surface-card jobs-card">
+      </a-card>
+      <a-card v-if="scope === 'queue'" class="surface-card jobs-card">
         <template #title>
           <span class="jobs-title">
             <IconCheckCircle />
@@ -516,6 +528,7 @@ onMounted(load)
         <a-empty v-else :description="t('admin.aiModeration.jobsEmpty')" />
       </a-card>
     </a-spin>
+    <AdminRelatedLinks :paths="['/admin/ip-query-comments', '/admin/comment-policy', '/admin/content-moderation', '/admin/ai-moderation', '/admin/moderation-queue']" />
   </div>
 </template>
 

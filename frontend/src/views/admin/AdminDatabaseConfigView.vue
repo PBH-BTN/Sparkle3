@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { adminConfigEditors } from '@/router/adminConfigEditors'
 import { useI18n } from 'vue-i18n'
 import { Message, type TableColumnData } from '@arco-design/web-vue'
 import {
@@ -17,6 +19,8 @@ import type {
 } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
+const router = useRouter()
+const editorPaths = ref<Record<string, string>>({})
 const { t } = useI18n()
 const { formatDate, formatNumber } = useFormatters()
 const entries = ref<DatabaseConfigEntry[]>([])
@@ -48,10 +52,19 @@ const groups = computed(() => summary.value?.groups ?? [])
 async function load() {
   loading.value = true
   try {
-    const [entryResult, summaryResult] = await Promise.all([
+    const [entryResult, summaryResult, btnEditors, modules] = await Promise.all([
       adminApi.databaseConfig(filters.value.keyword, filters.value.group),
       adminApi.databaseConfigSummary(),
+      adminApi.btnConfigEditors(),
+      adminApi.analyseModules(),
     ])
+    editorPaths.value = { ...btnEditors }
+    for (const module of modules) for (const field of module.fields) {
+      const scheduled = module.fields.some((item) => item.type === 'cron')
+      editorPaths.value[field.key] = scheduled && (field.type === 'cron' || field.field === 'enabled')
+        ? `/admin/tasks?module=${encodeURIComponent(module.id)}`
+        : module.id.startsWith('points-') ? '/admin/points-modules' : '/admin/modules'
+    }
     entries.value = entryResult
     summary.value = summaryResult
   } catch (error) {
@@ -80,7 +93,14 @@ async function migrate() {
   }
 }
 
+function ownerPath(key: string) {
+  if (editorPaths.value[key]) return editorPaths.value[key]
+  return adminConfigEditors[key]
+}
+
 function openEdit(entry: DatabaseConfigEntry) {
+  const owner = ownerPath(entry.key)
+  if (owner) { void router.push(owner); return }
   if (entry.sensitive) return
   editing.value = entry
   editedValue.value = entry.value ?? ''
@@ -119,7 +139,7 @@ onMounted(load)
 <template>
   <div class="page-stack">
     <PageHeader
-      :title="t('admin.databaseConfig.title')"
+      :title="t('admin.organization.pages.database-config')"
       :description="t('admin.databaseConfig.description')"
     >
       <template #actions>
@@ -246,13 +266,13 @@ onMounted(load)
             </template>
             <template #actions="{ record }">
               <a-button
-                v-if="!record.sensitive"
+                v-if="!record.sensitive || ownerPath(record.key)"
                 type="text"
                 size="small"
                 @click="openEdit(record)"
               >
                 <template #icon><IconEdit /></template>
-                {{ t('admin.databaseConfig.edit') }}
+                {{ t(ownerPath(record.key) ? 'admin.organization.moduleSettings' : 'admin.databaseConfig.edit') }}
               </a-button>
             </template>
           </a-table>
