@@ -8,11 +8,13 @@ import {
   IconSettings,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useAdminDraft } from '@/composables/useAdminDraft'
 import { adminApi } from '@/api/admin'
 import { ApiError } from '@/api/http'
 import type { BtnConfigField, BtnConfigView } from '@/api/adminTypes'
 import { errorMessage, useFormatters } from '@/utils/format'
 
+const props = defineProps<{ group: string }>()
 const { t } = useI18n()
 const { formatDate, formatDuration } = useFormatters()
 
@@ -86,7 +88,7 @@ const sections = computed(() => {
 })
 
 const missingIpQueryControls = computed(() =>
-  fields.value.length > 0 && ipQueryControlOrder.some((name) =>
+  props.group === 'query' && fields.value.length > 0 && ipQueryControlOrder.some((name) =>
     !fields.value.some((field) => field.section === 'queryIp' && field.field === name),
   ),
 )
@@ -95,11 +97,14 @@ const hasEnvironmentOverrides = computed(() =>
   fields.value.some((field) => field.environmentOverride),
 )
 
+const draft = useAdminDraft(() => form)
+
 async function load() {
+  if (!(await draft.confirmDiscard())) return
   loading.value = true
   loadError.value = ''
   try {
-    applyConfig(await adminApi.btnConfig())
+    applyConfig(await adminApi.btnConfigGroup(props.group))
   } catch (error) {
     loadError.value = errorMessage(error, t('common.loadFailed'))
     if (!(error instanceof ApiError)) Message.error(loadError.value)
@@ -118,12 +123,14 @@ function applyConfig(config: BtnConfigView) {
     form[field.key] = field.sensitive ? '' : (field.value ?? field.defaultValue)
     form[secretClearKey(field.key)] = 'false'
   }
+  draft.accept()
 }
 
 async function save() {
   saving.value = true
   try {
-    const result = await adminApi.updateBtnConfig(
+    const result = await adminApi.updateBtnConfigGroup(
+      props.group,
       Object.fromEntries(
         fields.value.flatMap((field) => {
           if (field.sensitive) {
@@ -198,7 +205,7 @@ onMounted(load)
 
 <template>
   <div class="page-stack btn-config-page">
-    <PageHeader :title="t('admin.btn.title')" :description="t('admin.btn.description')">
+    <PageHeader :title="t(`admin.organization.pages.${props.group}`)" :description="t('admin.organization.independentSave')">
       <template #actions>
         <a-button :loading="loading" @click="load">
           <template #icon><IconRefresh /></template>

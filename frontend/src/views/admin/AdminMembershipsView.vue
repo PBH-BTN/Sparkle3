@@ -9,6 +9,8 @@ import {
   IconSync,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useAdminDraft } from '@/composables/useAdminDraft'
+import AdminRelatedLinks from '@/components/admin/AdminRelatedLinks.vue'
 import LicenseRevocations from '@/components/LicenseRevocations.vue'
 import AfdianMessageImport from '@/components/AfdianMessageImport.vue'
 import { adminApi } from '@/api/admin'
@@ -36,6 +38,8 @@ interface ProviderForm {
   exchangeRate: string
 }
 
+const props = defineProps<{ scope: 'transactions' | 'licenses' | 'reconciliation' | 'policy' | 'providers' }>()
+const failed = ref(false)
 const { t } = useI18n()
 const { formatDate } = useFormatters()
 const loading = ref(true)
@@ -88,7 +92,7 @@ const licenseFilterSize = ref(20)
 
 const providerOptions = computed(() => [
   { label: t('memberships.providers.AFDIAN'), value: 'AFDIAN' },
-  ...(settings.value?.providers ?? [])
+  ...(settings.value?.providers ?? ['PATREON', 'KOFI', 'MIANBAODUO'].map((provider) => ({ provider, supported: true })))
     .filter((provider) => provider.supported)
     .map((provider) => ({
       label: providerLabel(provider.provider),
@@ -143,30 +147,34 @@ const auditColumns = (): TableColumnData[] => [
   { title: t('admin.memberships.detectedAt'), slotName: 'createdAt', width: 165 },
 ]
 
+const draft = useAdminDraft(() => props.scope === 'policy' ? { supporter: supporterForm, currency: currencyForm }
+  : props.scope === 'licenses' ? { license: licenseForm }
+    : props.scope === 'providers' ? { afdian: afdianForm, ...Object.fromEntries(Object.entries(providerForms).map(([id, value]) => [`provider-${id}`, value])) } : {})
+
 async function load() {
+  if (!(await draft.confirmDiscard())) return
   loading.value = true
+  failed.value = false
   try {
-    const [data, afdian, license, reconciliationData, supporter] = await Promise.all([
-      adminApi.memberPlatformSettings(),
-      adminApi.afdianSettings(),
-      adminApi.membershipLicenseSettings(),
-      adminApi.memberPlatformReconciliation({ limit: 50 }),
-      adminApi.supporterSettings(),
-    ])
-    settings.value = data
-    applyAfdian(afdian)
-    applyLicense(license)
-    supporterForm.thresholdCny = supporter.thresholdCny
-    reconciliation.value = reconciliationData
-    currencyForm.baseCurrency = data.baseCurrency
-    currencyForm.exchangeRateApiUrl = data.exchangeRateApiUrl
-    data.providers.forEach(applyProvider)
-    await Promise.all([loadTransactions(), loadLicenses()])
+    if (props.scope === 'transactions') await loadTransactions()
+    if (props.scope === 'licenses') {
+      applyLicense(await adminApi.membershipLicenseSettings())
+      await loadLicenses()
+    }
+    if (props.scope === 'policy') {
+      const [data, supporter] = await Promise.all([adminApi.memberPlatformSettings(), adminApi.supporterSettings()])
+      settings.value = data
+      supporterForm.thresholdCny = supporter.thresholdCny
+      currencyForm.baseCurrency = data.baseCurrency
+      currencyForm.exchangeRateApiUrl = data.exchangeRateApiUrl
+    }
+    if (props.scope === 'providers') await refreshProviders()
+    if (props.scope === 'reconciliation') await loadReconciliation()
+    draft.accept()
   } catch (error) {
+    failed.value = true
     Message.error(errorMessage(error, t('common.loadFailed')))
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 
 async function saveSupporter() {
@@ -179,6 +187,7 @@ async function saveSupporter() {
   try {
     const updated = await adminApi.updateSupporterSettings({ thresholdCny })
     supporterForm.thresholdCny = updated.thresholdCny
+    draft.accept('supporter')
     Message.success(t('admin.common.updated'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -220,6 +229,7 @@ async function saveAfdian() {
         syncEnabled: afdianForm.syncEnabled,
       }),
     )
+    draft.accept('afdian')
     Message.success(t('admin.afdian.saved'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -239,6 +249,7 @@ async function saveLicense() {
         clearPrivateKey: licenseForm.clearPrivateKey,
       }),
     )
+    draft.accept('license')
     Message.success(t('admin.memberships.licenseSaved'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -252,7 +263,7 @@ async function syncAfdianNow() {
   try {
     const result = await adminApi.syncAfdian()
     Message.success(t('admin.afdian.syncDone', { ...result }))
-    await Promise.all([loadTransactions(), loadReconciliation(), refreshProviders()])
+    await loadReconciliation()
   } catch (error) {
     Message.error(errorMessage(error, t('admin.afdian.syncFailed')))
   } finally {
@@ -289,6 +300,7 @@ async function saveProvider(provider: MemberPlatformConfig) {
       exchangeRate: form.exchangeRate.trim(),
     })
     replaceProvider(saved)
+    draft.accept(`provider-${provider.provider}`)
     Message.success(t('admin.memberships.providerSaved'))
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
@@ -321,7 +333,8 @@ async function syncProvider(provider: MemberPlatformConfig) {
             count: result.records,
           }),
     )
-    await Promise.all([loadTransactions(), loadReconciliation()])
+    if (props.scope === 'transactions') await loadTransactions()
+    if (props.scope === 'reconciliation') await loadReconciliation()
   } catch (error) {
     Message.error(
       errorMessage(
@@ -347,12 +360,13 @@ async function saveCurrency() {
       settings.value.baseCurrency = result.baseCurrency
       settings.value.exchangeRateApiUrl = result.exchangeRateApiUrl
     }
+    draft.accept('currency')
     Message.success(
       t('admin.memberships.currencySaved', {
         count: result.recalculatedTransactions,
       }),
     )
-    await Promise.all([loadTransactions(), loadLicenses()])
+    // Ledger and license lists reload when their dedicated pages are opened.
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
@@ -372,7 +386,7 @@ async function syncAll() {
   } else {
     Message.error(t('admin.memberships.syncFailed'))
   }
-  await Promise.all([loadTransactions(), loadReconciliation(), refreshProviders()])
+  await loadReconciliation()
   syncing.value = false
 }
 
@@ -386,7 +400,7 @@ async function refreshProviders() {
     applyAfdian(afdian)
     data.providers.forEach(applyProvider)
   } catch {
-    // The table refresh remains useful even when provider settings fail.
+    throw new Error(t('common.loadFailed'))
   }
 }
 
@@ -468,7 +482,8 @@ async function changeProviderFilter(value: unknown) {
   filterProvider.value = value ? String(value) : ''
   filterPage.value = 1
   try {
-    await Promise.all([loadTransactions(), loadReconciliation()])
+    if (props.scope === 'transactions') await loadTransactions()
+    if (props.scope === 'reconciliation') await loadReconciliation()
   } catch (error) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   }
@@ -531,7 +546,7 @@ onMounted(load)
 <template>
   <div class="page-stack membership-admin-page">
     <PageHeader
-      :title="t('admin.memberships.title')"
+      :title="t(`admin.organization.pages.membership-${props.scope}`)"
       :description="t('admin.memberships.description')"
     >
       <template #actions>
@@ -539,21 +554,22 @@ onMounted(load)
           <template #icon><IconRefresh /></template>
           {{ t('admin.common.refresh') }}
         </a-button>
-        <a-button type="primary" :loading="syncing" @click="syncAll">
+        <a-button v-if="scope === 'reconciliation'" type="primary" :loading="syncing" :disabled="loading || failed" @click="syncAll">
           <template #icon><IconSync /></template>
           {{ t('admin.memberships.syncAll') }}
         </a-button>
       </template>
     </PageHeader>
 
-    <a-alert type="info" show-icon>
+    <a-alert v-if="scope === 'providers'" type="info" show-icon>
       {{ t('admin.memberships.integrationHint') }}
     </a-alert>
 
-    <AfdianMessageImport @completed="load" />
+    <AfdianMessageImport v-if="scope === 'reconciliation'" @completed="load" />
 
-    <a-spin :loading="loading" class="admin-spin">
-      <a-card class="surface-card">
+    <a-alert v-if="failed" type="error">{{ t('admin.organization.loadFailed') }}<template #action><a-button @click="load">{{ t('common.retry') }}</a-button></template></a-alert>
+    <a-spin v-if="!failed" :loading="loading" class="admin-spin">
+      <a-card v-if="scope === 'policy'" class="surface-card">
         <template #title>{{ t('admin.memberships.supporterTitle') }}</template>
         <p class="muted">{{ t('admin.memberships.supporterHint') }}</p>
         <a-form :model="supporterForm" layout="vertical" @submit="saveSupporter">
@@ -567,8 +583,8 @@ onMounted(load)
         </a-form>
       </a-card>
 
-      <div class="provider-grid">
-        <a-card class="surface-card provider-card">
+      <div v-if="scope === 'providers' || scope === 'licenses'" class="provider-grid single-provider">
+        <a-card v-if="scope === 'providers'" class="surface-card provider-card">
           <template #title>
             <div class="provider-title">
               <strong>{{ t('memberships.providers.AFDIAN') }}</strong>
@@ -638,7 +654,7 @@ onMounted(load)
           </a-form>
         </a-card>
 
-        <a-card class="surface-card provider-card">
+        <a-card v-if="scope === 'licenses'" class="surface-card provider-card">
           <template #title>
             <div class="provider-title">
               <strong>{{ t('admin.memberships.licenseTitle') }}</strong>
@@ -690,7 +706,7 @@ onMounted(load)
         </a-card>
       </div>
 
-      <a-card class="surface-card">
+      <a-card v-if="scope === 'policy'" class="surface-card">
         <template #title>{{ t('admin.memberships.currencySettings') }}</template>
         <div class="settings-grid">
           <a-form-item :label="t('admin.memberships.baseCurrency')">
@@ -711,7 +727,7 @@ onMounted(load)
         </a-button>
       </a-card>
 
-      <div class="provider-grid">
+      <div v-if="scope === 'providers'" class="provider-grid">
         <a-card
           v-for="provider in settings?.providers ?? []"
           :key="provider.provider"
@@ -910,7 +926,7 @@ onMounted(load)
         </a-card>
       </div>
 
-      <a-card class="surface-card">
+      <a-card v-if="scope === 'transactions'" class="surface-card">
         <template #title>{{ t('admin.memberships.queryTitle') }}</template>
         <div class="query-bar">
           <a-select
@@ -1002,7 +1018,7 @@ onMounted(load)
         />
       </a-card>
 
-      <a-card class="surface-card">
+      <a-card v-if="scope === 'licenses'" class="surface-card">
         <template #title>{{ t('admin.memberships.licensesTitle') }}</template>
         <div class="query-bar license-query-bar">
           <a-select
@@ -1113,9 +1129,9 @@ onMounted(load)
         />
       </a-card>
 
-      <LicenseRevocations ref="revocationPanel" @revoked="searchLicenses" />
+      <LicenseRevocations v-if="scope === 'licenses'" ref="revocationPanel" @revoked="searchLicenses" />
 
-      <a-card class="surface-card">
+      <a-card v-if="scope === 'reconciliation'" class="surface-card">
         <template #title>{{ t('admin.memberships.reconciliationTitle') }}</template>
         <a-table
           :columns="runColumns()"
@@ -1148,6 +1164,7 @@ onMounted(load)
         </a-table>
       </a-card>
     </a-spin>
+    <AdminRelatedLinks :paths="['/admin/membership-transactions', '/admin/membership-licenses', '/admin/membership-reconciliation', '/admin/membership-policy', '/admin/membership-providers']" />
   </div>
 </template>
 
@@ -1180,6 +1197,8 @@ onMounted(load)
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+
+.single-provider { grid-template-columns: 1fr; }
 
 .provider-title,
 .endpoint-row,

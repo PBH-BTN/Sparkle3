@@ -92,6 +92,37 @@ class IpQueryCommentAdminServiceTest {
     }
 
     @Test
+    void listSupportsAnonymousCommentsWithoutAnAuthorLookup() throws Exception {
+        IpQueryComment comment = comment().setAuthorUserId(null);
+        Page<IpQueryComment> page = new Page<>(1, 20);
+        page.setRecords(List.of(comment));
+        page.setTotal(1);
+        when(commentMapper.selectPage(any(), any())).thenReturn(page);
+        when(jobMapper.selectList(any())).thenReturn(List.of());
+
+        var result = service.list(1, 20, "", "", "", false);
+
+        assertEquals(1, result.records().size());
+        assertEquals(null, result.records().getFirst().authorUserId());
+        assertEquals(null, result.records().getFirst().authorNickname());
+        verify(userService, never()).listByIds(anyList());
+    }
+
+    @Test
+    void anonymousDetailsSupportRevisionsWithoutAnEditor() throws Exception {
+        IpQueryComment comment = comment().setAuthorUserId(null);
+        when(commentMapper.selectById(comment.getId())).thenReturn(comment);
+        when(revisionMapper.selectList(any())).thenReturn(List.of(
+                new IpQueryCommentRevision().setRevision(1).setContent("Anonymous revision")));
+        when(jobMapper.selectList(any())).thenReturn(List.of());
+
+        var result = service.detail(comment.getId());
+
+        assertEquals(null, result.comment().authorNickname());
+        assertEquals(null, result.revisions().getFirst().editorNickname());
+    }
+
+    @Test
     void listMapsAuthorAndLatestReviewJob() throws Exception {
         IpQueryComment comment = comment();
         Page<IpQueryComment> page = new Page<>(1, 20);

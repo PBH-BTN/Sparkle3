@@ -103,7 +103,7 @@ public class IpQueryCommentAdminService {
         List<AdminCommentRow> records = comments.stream()
                 .map(comment -> row(
                         comment,
-                        authors.get(comment.getAuthorUserId()),
+                        comment.getAuthorUserId() == null ? null : authors.get(comment.getAuthorUserId()),
                         jobStatuses.get(comment.getId())
                 ))
                 .toList();
@@ -128,13 +128,13 @@ public class IpQueryCommentAdminService {
         List<AdminCommentRevisionView> history = revisions.stream()
                 .map(revision -> revisionView(
                         revision,
-                        users.get(revision.getEditorUserId())
+                        revision.getEditorUserId() == null ? null : users.get(revision.getEditorUserId())
                 ))
                 .toList();
         return new AdminCommentDetail(
                 row(
                         comment,
-                        users.get(comment.getAuthorUserId()),
+                        comment.getAuthorUserId() == null ? null : users.get(comment.getAuthorUserId()),
                         jobStatuses.get(commentId)
                 ),
                 history

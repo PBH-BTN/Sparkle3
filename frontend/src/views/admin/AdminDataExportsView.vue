@@ -48,7 +48,7 @@ onMounted(load)
 
 <template>
   <div class="page-stack">
-    <PageHeader :title="t('admin.exports.title')" />
+    <PageHeader :title="t('admin.organization.pages.exports')" />
     <a-card class="surface-card">
       <a-spin :loading="loading" class="exports-settings">
         <a-form v-if="settings" :model="settings" layout="vertical" @submit="save">

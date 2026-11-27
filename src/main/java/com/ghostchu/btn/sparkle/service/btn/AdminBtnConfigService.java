@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +45,38 @@ public class AdminBtnConfigService {
                 ))
                 .toList();
         return new BtnConfigView(fields, updatedAt);
+    }
+
+    public BtnConfigView getGroup(String group) throws BusinessException {
+        requireGroup(group);
+        return filterGroup(get(), group);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public BtnConfigView updateGroup(String group, Map<String, String> values, Long operatorId) throws BusinessException {
+        requireGroup(group);
+        if (values == null || values.isEmpty()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "At least one configuration value is required");
+        }
+        for (String key : values.keySet()) {
+            var definition = BtnConfigCatalog.definition(key);
+            if (definition == null || !group.equals(AdminBtnConfigGroups.groupOf(definition))) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "Configuration does not belong to this form");
+            }
+        }
+        return filterGroup(update(values, operatorId), group);
+    }
+
+    private static void requireGroup(String group) throws BusinessException {
+        if (!AdminBtnConfigGroups.GROUPS.contains(group)) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "Configuration group not found");
+        }
+    }
+
+    private static BtnConfigView filterGroup(BtnConfigView view, String group) {
+        return new BtnConfigView(view.fields().stream()
+                .filter(field -> group.equals(AdminBtnConfigGroups.groupOf(BtnConfigCatalog.definition(field.key()))))
+                .toList(), view.updatedAt());
     }
 
     @Transactional(rollbackFor = Exception.class)

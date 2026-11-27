@@ -6,9 +6,10 @@
   "packageManager": "pnpm@12.9.1",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-task-translations.mjs && vue-tsc --noEmit && vite build",
-    "typecheck": "node scripts/check-task-translations.mjs && vue-tsc --noEmit",
-    "preview": "vite preview"
+    "build": "node scripts/check-task-translations.mjs && node scripts/check-admin-migration.mjs && vue-tsc --noEmit && vite build",
+    "typecheck": "node scripts/check-task-translations.mjs && node scripts/check-admin-migration.mjs && vue-tsc --noEmit",
+    "preview": "vite preview",
+    "test:admin": "node scripts/check-admin-migration.mjs && node scripts/test-admin-browser.mjs && node scripts/test-admin-forms.mjs"
   },
   "dependencies": {
     "@arco-design/web-vue": "2.59.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@faststats/sourcemap-uploader-plugin": "0.5.4",
+    "@playwright/test": "^1.65.1",
     "@types/node": "24.19.2",
     "@vitejs/plugin-vue": "6.0.10",
     "typescript": "5.9.3",

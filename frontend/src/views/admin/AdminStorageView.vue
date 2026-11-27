@@ -12,6 +12,8 @@ import {
   IconStorage,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import CareerDeduplicationSettings from '@/components/CareerDeduplicationSettings.vue'
+import AdminRelatedLinks from '@/components/admin/AdminRelatedLinks.vue'
 import { adminApi } from '@/api/admin'
 import type {
   BanHistoryDeletePreview,
@@ -385,6 +387,8 @@ onMounted(load)
         </a-card>
       </template>
     </a-spin>
+    <CareerDeduplicationSettings />
+    <AdminRelatedLinks :paths="['/admin/btn/retention', '/admin/btn/cache', '/admin/tasks']" />
 
     <a-drawer
       v-model:visible="drawerVisible"

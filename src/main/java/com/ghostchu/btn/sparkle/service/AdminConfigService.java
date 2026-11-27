@@ -100,6 +100,25 @@ public class AdminConfigService {
         }
     }
 
+    public void invalidateAfterCommit() {
+        Runnable invalidate = () -> {
+            synchronized (this) {
+                cacheExpiresAt = 0;
+            }
+        };
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            invalidate.run();
+                        }
+                    });
+        } else {
+            invalidate.run();
+        }
+    }
+
     public NetworkTrafficAccess homepageTrafficAccess(User user) {
         if (user == null || user.isSuspended()) {
             return new NetworkTrafficAccess(false, false, false, false, false);

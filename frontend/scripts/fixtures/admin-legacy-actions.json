@@ -1,0 +1,190 @@
+{
+  "AdminAiModerationView": [
+    "aiModeration",
+    "updateAiModeration",
+    "updateIpQueryComments",
+    "testAiModeration",
+    "requeueAllIpQueryComments",
+    "retryAiModerationJobs"
+  ],
+  "AdminAnnouncementsView": [
+    "announcements",
+    "createAnnouncement",
+    "updateAnnouncement",
+    "deleteAnnouncement"
+  ],
+  "AdminBanSubmissionsView": [
+    "banSubmissions",
+    "banSubmissionRanking",
+    "clearBanSubmissions"
+  ],
+  "AdminBtnConfigView": [
+    "btnConfig",
+    "updateBtnConfig"
+  ],
+  "AdminCommunityGroupsView": [
+    "communityGroups",
+    "updateCommunityGroupSettings",
+    "validateCommunityGithubTeams",
+    "createCommunityGroup",
+    "updateCommunityGroup",
+    "deleteCommunityGroup"
+  ],
+  "AdminContentModerationView": [
+    "contentModeration",
+    "saveContentModeration"
+  ],
+  "AdminDashboardView": [
+    "dashboard"
+  ],
+  "AdminDatabaseConfigView": [
+    "databaseConfig",
+    "databaseConfigSummary",
+    "migrateDatabaseConfig",
+    "updateDatabaseConfig"
+  ],
+  "AdminDataExportsView": [
+    "exportSettings",
+    "updateExportSettings"
+  ],
+  "AdminFlarumIntegrationView": [
+    "flarumIntegration",
+    "updateFlarumIntegration"
+  ],
+  "AdminGeoIpCityBlacklistView": [
+    "geoIpCityBlacklist",
+    "geoIpCityBlacklistStatus",
+    "createGeoIpCityBlacklistEntry",
+    "updateGeoIpCityBlacklistEntry",
+    "deleteGeoIpCityBlacklistEntry",
+    "generatedGeoIpCityBlacklistContent",
+    "refreshGeoIpCityBlacklist"
+  ],
+  "AdminGithubSyncView": [
+    "githubSync",
+    "updateGithubSyncSettings",
+    "createGithubSyncTarget",
+    "updateGithubSyncTarget",
+    "deleteGithubSyncTarget",
+    "runGithubSync",
+    "runGithubSyncTarget"
+  ],
+  "AdminHomepageStatisticsView": [
+    "homepageStatistics",
+    "updateHomepageStatisticsConfig",
+    "refreshHomepageStatistics"
+  ],
+  "AdminIpQueryCommentsView": [
+    "ipQueryComments",
+    "ipQueryComment",
+    "createIpQueryComment",
+    "updateIpQueryComment",
+    "reauditIpQueryComment",
+    "deleteIpQueryComment",
+    "restoreIpQueryComment"
+  ],
+  "AdminMembershipsView": [
+    "memberPlatformSettings",
+    "afdianSettings",
+    "membershipLicenseSettings",
+    "memberPlatformReconciliation",
+    "supporterSettings",
+    "updateSupporterSettings",
+    "updateAfdianSettings",
+    "updateMembershipLicenseSettings",
+    "syncAfdian",
+    "updateMemberPlatform",
+    "syncMemberPlatform",
+    "updateMembershipCurrency",
+    "syncMemberPlatforms",
+    "memberPlatformTransactions",
+    "memberPlatformLicenses"
+  ],
+  "AdminMessagesView": [
+    "sendStaffMessage"
+  ],
+  "AdminModulesView": [
+    "analyseModules",
+    "updateAnalyseModule",
+    "runAnalyseModule"
+  ],
+  "AdminNavigationView": [
+    "navigation",
+    "createNavigationItem",
+    "updateNavigationItem",
+    "deleteNavigationItem"
+  ],
+  "AdminRulesView": [
+    "rules",
+    "ruleSummary",
+    "createRule",
+    "updateRule",
+    "deleteRule",
+    "generatedRules"
+  ],
+  "AdminSettingsView": [
+    "config",
+    "mailSettings",
+    "swarmStatisticsStatus",
+    "updateConfig",
+    "updateMailSettings",
+    "testSmtp",
+    "testPop3",
+    "scanMail",
+    "refreshSwarmStatistics"
+  ],
+  "AdminStorageView": [
+    "storage",
+    "updateCompressionPolicy",
+    "updateRetentionPolicy",
+    "previewBanHistoryDelete",
+    "deleteBanHistory"
+  ],
+  "AdminTaskStatusView": [
+    "updateAnalyseModule",
+    "runTask",
+    "taskStatus"
+  ],
+  "AdminUserAppsView": [
+    "applications",
+    "createApplication",
+    "updateApplication",
+    "resetApplicationSecret",
+    "setApplicationBanned",
+    "deleteApplication"
+  ],
+  "AdminUserContactEmailsView": [
+    "userContactEmails"
+  ],
+  "AdminUsersView": [
+    "users",
+    "createUser",
+    "updateUser",
+    "setUserBanned",
+    "adjustUserPoints",
+    "deleteUser"
+  ],
+  "AdminVersionAlertsView": [
+    "versionAlerts",
+    "versionAlertDeliveries",
+    "createVersionAlert",
+    "updateVersionAlert",
+    "deleteVersionAlert",
+    "matchVersionAlert",
+    "testVersionAlert"
+  ],
+  "CareerDeduplicationSettings": [
+    "databaseConfig",
+    "updateDatabaseConfig"
+  ],
+  "LicenseRevocations": [
+    "licenseRevocations",
+    "revokeLicense"
+  ],
+  "AfdianMessageImport": [
+    "afdianMessageImportStatus",
+    "afdianPendingLicenses",
+    "matchAfdianImportedLicense",
+    "startAfdianMessageImport"
+  ]
+}

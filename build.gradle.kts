@@ -169,3 +169,13 @@ tasks.named<ProcessResources>("processResources") {
 		into("static")
 	}
 }
+
+// Opt-in, localhost-only admin browser fixture. This test entry point is excluded from production jars.
+tasks.register<JavaExec>("runAdminBrowserTest") {
+    group = "verification"
+    description = "Runs the admin browser fixture against a dedicated local test database."
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.ghostchu.btn.admincheck.AdminBrowserTestApplication")
+    maxHeapSize = "1024m"
+}

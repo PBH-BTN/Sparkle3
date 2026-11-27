@@ -13,6 +13,7 @@ import {
   IconSearch,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useSessionStore } from '@/stores/session'
 import TablePager from '@/components/TablePager.vue'
 import AdminGeoIpCityBlacklistView from '@/views/admin/AdminGeoIpCityBlacklistView.vue'
 import { adminApi } from '@/api/admin'
@@ -21,10 +22,11 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 const { t } = useI18n()
 const { formatNumber } = useFormatters()
+const session = useSessionStore()
 const route = useRoute()
 const router = useRouter()
 const activeTab = computed({
-  get: () => (route.query.tab === 'geoip' ? 'geoip' : 'manual'),
+  get: () => (session.user?.admin && route.query.tab === 'geoip' ? 'geoip' : 'manual'),
   set: (value: string) => {
     const query = { ...route.query }
     if (value === 'geoip') {
@@ -368,6 +370,7 @@ onMounted(load)
         </div>
       </a-tab-pane>
       <a-tab-pane
+        v-if="session.user?.admin"
         key="geoip"
         :title="t('admin.geoIpCityBlacklist.title')"
       >

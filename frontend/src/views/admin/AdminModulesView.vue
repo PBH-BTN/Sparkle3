@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -16,11 +16,11 @@ import { errorMessage } from '@/utils/format'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const modules = ref<AnalyseModule[]>([])
 const drafts = reactive<Record<string, Record<string, string>>>({})
 const loading = ref(true)
 const savingId = ref<string | null>(null)
-const runningId = ref<string | null>(null)
 const pointsModuleIds = new Set([
   'points-settings',
   'points-fixed-rules',
@@ -32,10 +32,10 @@ const taskManagedModuleIds = new Set([
   'ban-peer-distribution',
 ])
 const isPointsScope = computed(() => route.name === 'admin-points-modules')
-const visibleModules = computed(() => modules.value.filter((module) =>
+const visibleModules = computed(() => modules.value.filter((module) => (!route.query.module || route.query.module === module.id) && (
   isPointsScope.value
     ? pointsModuleIds.has(module.id)
-    : !pointsModuleIds.has(module.id) && !taskManagedModuleIds.has(module.id),
+    : !pointsModuleIds.has(module.id) && !taskManagedModuleIds.has(module.id)),
 ))
 
 function moduleLabel(id: string, suffix: 'name' | 'description') {
@@ -108,11 +108,16 @@ async function load() {
   }
 }
 
+function businessFields(module: AnalyseModule) {
+  const scheduled = module.fields.some((field) => field.type === 'cron')
+  return module.fields.filter((field) => field.type !== 'cron' && (!scheduled || field.field !== 'enabled'))
+}
+
 async function save(module: AnalyseModule) {
   savingId.value = module.id
   try {
     const updated = await adminApi.updateAnalyseModule(module.id, {
-      values: { ...drafts[module.id] },
+      values: Object.fromEntries(businessFields(module).map((field) => [field.field, drafts[module.id][field.field]])),
     })
     const index = modules.value.findIndex((item) => item.id === module.id)
     if (index >= 0) modules.value[index] = updated
@@ -124,18 +129,6 @@ async function save(module: AnalyseModule) {
     Message.error(errorMessage(error, t('common.requestFailed')))
   } finally {
     savingId.value = null
-  }
-}
-
-async function runNow(module: AnalyseModule) {
-  runningId.value = module.id
-  try {
-    await adminApi.runAnalyseModule(module.id)
-    Message.success(t('admin.modules.runStarted'))
-  } catch (error) {
-    Message.error(errorMessage(error, t('common.requestFailed')))
-  } finally {
-    runningId.value = null
   }
 }
 
@@ -165,6 +158,7 @@ onMounted(load)
       {{ t('admin.modules.hotReloadText') }}
     </a-alert>
 
+    <a-alert v-if="route.query.module" type="info">{{ t('admin.organization.moduleSettings') }}<template #action><router-link :to="route.path">{{ t('admin.tasks.filters.all') }}</router-link></template></a-alert>
     <a-spin :loading="loading" class="modules-spin">
       <div class="module-grid">
         <a-card
@@ -190,9 +184,9 @@ onMounted(load)
           <p class="module-description">{{ moduleLabel(module.id, 'description') }}</p>
 
           <a-form :model="drafts[module.id]" layout="vertical" @submit="save(module)">
-            <div class="module-fields">
+            <div v-if="businessFields(module).length" class="module-fields">
               <a-form-item
-                v-for="field in module.fields"
+                v-for="field in businessFields(module)"
                 :key="field.field"
                 :class="{ 'module-field-wide': ['cron', 'text', 'uid-list'].includes(field.type) }"
                 :label="fieldLabel(field)"
@@ -247,17 +241,18 @@ onMounted(load)
               <a-space>
                 <a-button
                   type="outline"
-                  :loading="runningId === module.id"
-                  :disabled="!module.enabled || savingId === module.id"
-                  @click="runNow(module)"
+                  v-if="module.fields.some((field) => field.type === 'cron')"
+                  :disabled="savingId === module.id"
+                  @click="router.push({ path: '/admin/tasks', query: { module: module.id } })"
                 >
                   <template #icon><IconRefresh /></template>
-                  {{ t('admin.modules.runNow') }}
+                  {{ t('admin.organization.taskSettings') }}
                 </a-button>
                 <a-button
                   type="primary"
+                  v-if="businessFields(module).length"
                   :loading="savingId === module.id"
-                  :disabled="runningId === module.id"
+                  :disabled="loading"
                   @click="save(module)"
                 >
                   <template #icon><IconSave /></template>
@@ -289,8 +284,15 @@ onMounted(load)
 }
 
 .module-card {
+  min-width: 0;
   height: 100%;
 }
+
+.module-card :deep(.arco-card-header-title) { min-width: 0; white-space: normal; }
+.module-title, .module-title > span:last-child { min-width: 0; }
+.module-title strong { overflow-wrap: anywhere; }
+.module-icon { flex-shrink: 0; }
+.module-footer :deep(.arco-space) { flex-wrap: wrap; }
 
 .module-title {
   display: inline-flex;

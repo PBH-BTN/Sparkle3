@@ -14,6 +14,9 @@ import {
   IconThunderbolt,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import { useAdminDraft } from '@/composables/useAdminDraft'
+import AdminRelatedLinks from '@/components/admin/AdminRelatedLinks.vue'
+import { useRoute } from 'vue-router'
 import { adminApi } from '@/api/admin'
 import type {
   BackgroundTaskRun,
@@ -25,6 +28,7 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 type TaskTypeFilter = 'ALL' | 'SCHEDULED' | 'EVENT' | 'STARTUP'
 
+const route = useRoute()
 const { t } = useI18n()
 const { formatDate, formatDuration, formatNumber } = useFormatters()
 const data = ref<BackgroundTaskStatusResponse | null>(null)
@@ -34,6 +38,8 @@ const typeFilter = ref<TaskTypeFilter>('ALL')
 const now = ref(Date.now())
 const cronDrafts = reactive<Record<string, string>>({})
 const cronDirty = reactive<Record<string, boolean>>({})
+const draft = useAdminDraft(() => Object.keys(cronDirty).filter((id) => cronDirty[id]))
+draft.accept()
 const savingCronId = ref<string | null>(null)
 const togglingModuleId = ref<string | null>(null)
 const runningTaskId = ref<string | null>(null)
@@ -61,7 +67,7 @@ const taskFilters = computed(() => [
 ])
 
 const visibleTasks = computed(() => {
-  const tasks = data.value?.tasks ?? []
+  const tasks = (data.value?.tasks ?? []).filter((task) => !route.query.module || task.moduleId === route.query.module)
   return typeFilter.value === 'ALL'
     ? tasks
     : tasks.filter((task) => taskCategory(task) === typeFilter.value)
@@ -166,6 +172,13 @@ function currentDuration(task: BackgroundTaskStatus) {
 function triggerLabel(trigger: string | null) {
   if (!trigger) return t('common.notAvailable')
   return t(`admin.tasks.triggers.${trigger}`)
+}
+
+function ownerPath(task: BackgroundTaskStatus) {
+  if (!task.moduleId || ['swarm-peer-distribution', 'ban-peer-distribution'].includes(task.moduleId)) return []
+  if (task.moduleId.startsWith('points-')) return ['/admin/points-modules']
+  if (task.moduleId === 'geoip-city-blacklist') return ['/admin/rules?tab=geoip']
+  return [`/admin/modules?module=${encodeURIComponent(task.moduleId)}`]
 }
 
 function canEditCron(task: BackgroundTaskStatus) {
@@ -322,6 +335,11 @@ onBeforeUnmount(() => {
         </a-radio-group>
       </div>
 
+      <a-alert v-if="route.query.module" type="info">
+        {{ t('admin.organization.taskSettings') }} · {{ route.query.module }}
+        <template #action><router-link to="/admin/tasks">{{ t('admin.tasks.filters.all') }}</router-link></template>
+      </a-alert>
+      <AdminRelatedLinks :paths="['/admin/modules', '/admin/points-modules', '/admin/homepage-statistics', '/admin/traffic-statistics', '/admin/github-sync']" />
       <a-spin :loading="loading" class="tasks-spin">
         <div v-if="visibleTasks.length" class="task-list">
           <article v-for="task in visibleTasks" :key="task.id" class="task-item">
@@ -343,6 +361,7 @@ onBeforeUnmount(() => {
                 </div>
                 <p>{{ t(task.descriptionKey) }}</p>
                 <code>{{ task.schedule }}</code>
+                <AdminRelatedLinks :paths="ownerPath(task)" />
                 <div v-if="task.moduleId" class="module-editor">
                   <div class="module-toggle-row">
                     <span>{{ t('admin.tasks.moduleEnabled') }}</span>
