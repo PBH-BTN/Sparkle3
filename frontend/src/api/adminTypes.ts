@@ -1040,6 +1040,7 @@ export interface MemberLicenseAdmin {
   planId: string | null
   consumedAmount: string
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED'
+  slotReturned: boolean
   issuedAt: string
   startAt: string
   expireAt: string
@@ -1233,6 +1234,8 @@ export interface AdminCommentUpdateInput {
 }
 
 export interface LicenseRevocationInput {
+  returnSlot?: boolean
+  delete?: boolean
   licenseId?: string
   licenseKey?: string
   reason: string

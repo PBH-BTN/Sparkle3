@@ -83,6 +83,8 @@ const filterStatus = ref('')
 const filterRemotePresent = ref<'' | 'true' | 'false'>('')
 const filterPage = ref(1)
 const filterSize = ref(20)
+const licenseLoading = ref(false)
+const licenseFilterUserId = ref('')
 const licenseFilterProvider = ref('')
 const licenseFilterKeyword = ref('')
 const licenseFilterStatus = ref('')
@@ -445,14 +447,24 @@ async function loadReconciliation() {
 }
 
 async function loadLicenses() {
-  licensePage.value = await adminApi.memberPlatformLicenses({
-    provider: licenseFilterProvider.value || undefined,
-    keyword: licenseFilterKeyword.value.trim() || undefined,
-    status: licenseFilterStatus.value || undefined,
-    sourceType: licenseFilterSourceType.value || undefined,
-    page: licenseFilterPage.value,
-    size: licenseFilterSize.value,
-  })
+  const userId = licenseFilterUserId.value.trim()
+  if (userId && (!/^[1-9]\d*$/.test(userId) || BigInt(userId) > 9223372036854775807n)) {
+    throw new Error(t('admin.memberships.licenseUserIdInvalid'))
+  }
+  licenseLoading.value = true
+  try {
+    licensePage.value = await adminApi.memberPlatformLicenses({
+      btnUserId: userId || undefined,
+      provider: licenseFilterProvider.value || undefined,
+      keyword: licenseFilterKeyword.value.trim() || undefined,
+      status: licenseFilterStatus.value || undefined,
+      sourceType: licenseFilterSourceType.value || undefined,
+      page: licenseFilterPage.value,
+      size: licenseFilterSize.value,
+    })
+  } finally {
+    licenseLoading.value = false
+  }
 }
 
 async function searchLicenses() {
@@ -1021,6 +1033,8 @@ onMounted(load)
       <a-card v-if="scope === 'licenses'" class="surface-card">
         <template #title>{{ t('admin.memberships.licensesTitle') }}</template>
         <div class="query-bar license-query-bar">
+          <a-input v-model="licenseFilterUserId" :placeholder="t('admin.memberships.licenseUserIdPlaceholder')"
+            :aria-label="t('admin.memberships.licenseUserIdPlaceholder')" allow-clear @press-enter="searchLicenses" />
           <a-select
             :model-value="licenseFilterProvider"
             :options="[{ label: t('admin.common.all'), value: '' }, ...providerOptions]"
@@ -1067,6 +1081,7 @@ onMounted(load)
         </div>
         <a-table
           :columns="licenseColumns()"
+          :loading="licenseLoading"
           :data="licensePage?.items ?? []"
           :pagination="false"
           :scroll="{ x: 1500 }"
@@ -1099,6 +1114,7 @@ onMounted(load)
             <a-tag :color="licenseStatusColor(record.status)">
               {{ licenseStatusLabel(record.status) }}
             </a-tag>
+            <div v-if="record.slotReturned">{{ t('admin.memberships.slotReturned') }}</div>
           </template>
           <template #licenseIssuedAt="{ record }">
             {{ formatDate(record.issuedAt) }}
@@ -1107,9 +1123,15 @@ onMounted(load)
             {{ formatDate(record.expireAt) }}
           </template>
           <template #licenseActions="{ record }">
-            <a-button status="danger" :disabled="!!record.revokedAt" @click="revocationPanel?.open(record.licenseId)">
-              {{ t('admin.memberships.revokeLicense') }}
-            </a-button>
+            <a-space direction="vertical">
+              <a-button status="danger" :disabled="!!record.revokedAt && record.slotReturned"
+                @click="revocationPanel?.open(record.licenseId, false, record.slotReturned, !!record.revokedAt)">
+                {{ t(record.revokedAt ? 'admin.memberships.returnLicenseSlot' : 'admin.memberships.revokeLicense') }}
+              </a-button>
+              <a-button status="danger" @click="revocationPanel?.open(record.licenseId, true, record.slotReturned)">
+                {{ t('admin.memberships.deleteLicense') }}
+              </a-button>
+            </a-space>
           </template>
           <template #licenseRevoked="{ record }">
             <div v-if="record.revokedAt" class="stack-cell">
@@ -1263,7 +1285,7 @@ onMounted(load)
 }
 
 .license-query-bar {
-  grid-template-columns: 150px minmax(220px, 1fr) 140px 140px auto;
+  grid-template-columns: 150px 150px minmax(220px, 1fr) 140px 140px auto;
 }
 
 .stack-cell {

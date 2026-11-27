@@ -616,6 +616,7 @@ export const adminApi = {
       '/api/admin/memberships/license-revocations?page=' + page,
     ),
   memberPlatformLicenses: (params: {
+    btnUserId?: string
     provider?: string
     keyword?: string
     status?: string
