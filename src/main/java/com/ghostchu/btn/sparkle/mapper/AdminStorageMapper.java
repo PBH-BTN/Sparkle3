@@ -6,6 +6,7 @@ import com.ghostchu.btn.sparkle.service.dto.AdminStorageRows.CompressionStatsRow
 import com.ghostchu.btn.sparkle.service.dto.AdminStorageRows.HypertableRow;
 import com.ghostchu.btn.sparkle.service.dto.AdminStorageRows.PolicyRow;
 import com.ghostchu.btn.sparkle.service.dto.AdminStorageRows.SizeRow;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -125,8 +126,9 @@ public interface AdminStorageMapper {
             @Param("orderBy") SqlOptionValue orderBy
     );
 
-    @Update("SELECT remove_compression_policy(#{relation}::regclass, if_exists => true)")
-    void removeCompressionPolicy(@Param("relation") String relation);
+    @Select(value = "SELECT remove_compression_policy(#{relation}::regclass, if_exists => true)::text", affectData = true)
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
+    String removeCompressionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_compression_policy(
@@ -168,8 +170,9 @@ public interface AdminStorageMapper {
             @Param("orderBy") SqlOptionValue orderBy
     );
 
-    @Update("SELECT remove_retention_policy(#{relation}::regclass, if_exists => true)")
-    void removeRetentionPolicy(@Param("relation") String relation);
+    @Select(value = "SELECT remove_retention_policy(#{relation}::regclass, if_exists => true)::text", affectData = true)
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
+    String removeRetentionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_retention_policy(

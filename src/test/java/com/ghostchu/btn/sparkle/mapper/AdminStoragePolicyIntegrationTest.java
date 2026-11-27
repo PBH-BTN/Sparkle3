@@ -1,5 +1,7 @@
 package com.ghostchu.btn.sparkle.mapper;
 
+import com.ghostchu.btn.sparkle.autoconfig.MyBatisPlusConfig;
+import com.ghostchu.btn.sparkle.service.FooterSqlMetricsInterceptor;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
@@ -32,11 +34,15 @@ class AdminStoragePolicyIntegrationTest {
         try {
             jdbc.queryForObject("SELECT create_hypertable(?::regclass, 'recorded_at')", Object.class, relation);
             var configuration = new Configuration(new Environment("admin-policy-test", new JdbcTransactionFactory(), dataSource));
+            configuration.addInterceptor(new MyBatisPlusConfig().mybatisPlusInterceptor(
+                    new FooterSqlMetricsInterceptor(org.mockito.Mockito.mock(
+                            com.ghostchu.btn.sparkle.service.FooterMetricsService.class))));
             configuration.addMapper(AdminStorageMapper.class);
             try (var session = new SqlSessionFactoryBuilder().build(configuration).openSession(true)) {
                 var mapper = session.getMapper(AdminStorageMapper.class);
                 mapper.addRetentionPolicy(relation, 7, 24);
-                mapper.removeRetentionPolicy(relation);
+                assertEquals("", mapper.removeRetentionPolicy(relation));
+                mapper.addRetentionPolicy(relation, 7, 24);
                 // Repeated saves of a disabled policy must also succeed.
                 mapper.removeRetentionPolicy(relation);
                 mapper.removeCompressionPolicy(relation);
