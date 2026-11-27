@@ -125,8 +125,8 @@ public interface AdminStorageMapper {
             @Param("orderBy") SqlOptionValue orderBy
     );
 
-    @Select("SELECT remove_compression_policy(#{relation}::regclass, if_exists => true)")
-    boolean removeCompressionPolicy(@Param("relation") String relation);
+    @Update("SELECT remove_compression_policy(#{relation}::regclass, if_exists => true)")
+    void removeCompressionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_compression_policy(
@@ -168,8 +168,8 @@ public interface AdminStorageMapper {
             @Param("orderBy") SqlOptionValue orderBy
     );
 
-    @Select("SELECT remove_retention_policy(#{relation}::regclass, if_exists => true)")
-    boolean removeRetentionPolicy(@Param("relation") String relation);
+    @Update("SELECT remove_retention_policy(#{relation}::regclass, if_exists => true)")
+    void removeRetentionPolicy(@Param("relation") String relation);
 
     @Select("""
             SELECT add_retention_policy(
