@@ -96,7 +96,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.4")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.23.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.22.4")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-guava:2.23.0")
     implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.22.4")
