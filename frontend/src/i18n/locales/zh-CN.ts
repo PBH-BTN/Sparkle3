@@ -428,7 +428,7 @@ export default {
     banHistory: '封禁记录统计',
     activeApps: '活动用户应用统计',
     swarmTracker: '种群跟踪统计',
-    allTime: '全时',
+    allTime: '共可查询',
     last30Days: '30 天',
     last14Days: '14 天',
     last7Days: '7 天',

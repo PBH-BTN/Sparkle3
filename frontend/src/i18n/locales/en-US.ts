@@ -442,7 +442,7 @@ export default {
     banHistory: 'Ban history',
     activeApps: 'Active applications',
     swarmTracker: 'Swarm tracking',
-    allTime: 'All time',
+    allTime: 'Available to query',
     last30Days: '30 days',
     last14Days: '14 days',
     last7Days: '7 days',
