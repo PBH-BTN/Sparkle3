@@ -161,10 +161,15 @@ public class MailSettingsService {
                 String.valueOf(normalized.pop3().connectionTimeoutSeconds()));
         values.put(POP3_MAX_MESSAGES,
                 String.valueOf(normalized.pop3().maxMessagesPerPoll()));
-        values.put(SYSTEM_FROM_ADDRESS, normalized.systemSender().address());
-        values.put(SYSTEM_FROM_NAME, normalized.systemSender().name());
-        values.put(USER_FROM_ADDRESS, normalized.userSender().address());
-        values.put(USER_FROM_NAME, normalized.userSender().name());
+        // Sender identities have their own admin form. Omitted identities must not be resubmitted.
+        if (request.systemSender() != null) {
+            values.put(SYSTEM_FROM_ADDRESS, normalized.systemSender().address());
+            values.put(SYSTEM_FROM_NAME, normalized.systemSender().name());
+        }
+        if (request.userSender() != null) {
+            values.put(USER_FROM_ADDRESS, normalized.userSender().address());
+            values.put(USER_FROM_NAME, normalized.userSender().name());
+        }
         for (Map.Entry<String, String> entry : values.entrySet()) {
             databaseConfigService.update(entry.getKey(), entry.getValue(), operatorId);
         }
