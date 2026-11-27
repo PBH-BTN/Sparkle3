@@ -6,7 +6,7 @@
 
 后台采用顶部大类、左侧分项、右侧内容。大类为：首页、全局、界面、用户、内容、BTN、运营、应用、工具、站长。
 
-所有 BTN 配置分组、客户端特征收集、查询评论开关、积分规则、用户应用、版本提醒、用户流量统计和任务中心统一归入「BTN」。原 BTN 配置不再分散到全局、用户或站长；相关参数、开关和执行计划均从 BTN 进入。
+BTN 行为配置、客户端特征收集、用户应用、版本提醒、用户流量统计和任务中心归入「BTN」。按实际职责分类：头像缓存归「站长」，IP 评论区策略归「内容」，积分规则和积分时区归「全局」；历史组件或 API 名称不决定菜单归属。
 
 唯一前端注册表为 `frontend/src/router/adminNavigation.ts`：
 
@@ -36,12 +36,12 @@
 | `settings` | 兼容跳转到 `traffic-statistics`；原内容拆分见下表 |
 | `version-alerts` | BTN → 版本提醒，地址不变 |
 | `users` | 用户 → 用户管理，地址不变 |
-| `points-modules` | BTN → 积分规则；计划和任务启停跳转任务中心 |
+| `points-modules` | 全局 → 积分规则；计划和任务启停跳转任务中心 |
 | `userapps` | BTN → 用户应用，地址不变 |
 | `github-sync` | BTN → GitHub 规则同步，地址不变 |
 | `flarum-integration` | 应用 → Flarum 集成，地址不变 |
 | `content-moderation` | 内容 → 词语过滤，地址不变 |
-| `ai-moderation` | 内容 → AI 审核设置；评论策略到 BTN → `comment-policy`，审核队列和重试到 `moderation-queue` |
+| `ai-moderation` | 内容 → AI 审核设置；评论策略到内容 → `comment-policy`，审核队列和重试到 `moderation-queue` |
 | `ip-query-comments` | 内容 → 评论管理，地址不变 |
 | `btn` | 兼容跳转到 `btn/communication`；全部字段分配到下述 15 个表单 |
 | `modules` | BTN → 自动分析；业务参数留在本页，计划和任务启停跳转任务中心 |
@@ -67,7 +67,7 @@
 
 原表单中一并加载和提交、但没有实际渲染的协议版本和查询 PoW 字段由对应 BTN 表单管理，不再随其他设置重提。
 
-## BTN 字段完整性
+## 旧配置字段完整性
 
 `AdminBtnConfigGroups` 为 `BtnConfigCatalog` 的每个字段指定一个编辑器。配置键和运行时读取方式不变。
 
@@ -80,13 +80,13 @@
 | `query` | BTN：IP 查询、评论计数、限流与查询窗口 |
 | `ranking` | BTN：排行榜计算权重 |
 | `security` | BTN：PoW 与上传安全 |
-| `points-timezone` | BTN：积分时区 |
+| `points-timezone` | 全局：积分时区 |
 | `auto-accounts` | BTN：自动账户 |
 | `ip-warning` | BTN：用户 IP 告警 |
 | `measure` | BTN：网络测量 |
 | `mail-identities` | BTN：系统与用户邮件发件身份 |
 | `retention` | BTN：种群与心跳保留、清理计划 |
-| `cache` | BTN：头像缓存目录、有效期与清理计划 |
+| `cache` | 站长：头像缓存目录、有效期与清理计划 |
 | `maintenance` | BTN：封禁模块名称缓存维护计划 |
 
 业务参数不包含重复的分析任务 Cron 或任务开关。BTN → 任务中心仍支持原有可编辑的模块 Cron、启停和手动执行，固定间隔、事件、启动任务的限制保持不变。Peer 分布的两个模块仍由任务中心独立管理。
@@ -114,7 +114,7 @@ pnpm --dir frontend build
 .\gradlew.bat test --no-daemon
 ```
 
-`check-admin-migration.mjs` 纳入 typecheck/build，检查页面唯一性、分类、懒加载、文件存在性、SPA 注册、28 个原有地址、15 个 BTN 编辑器、拆分页面参数、中英文标签，以及原业务操作和表单控件是否保留。后端 `AdminRouteRegistrationTest` 对照同一清单测试管理员与协管的浏览器入口。
+`check-admin-migration.mjs` 纳入 typecheck/build，检查页面唯一性、分类、懒加载、文件存在性、SPA 注册、28 个原有地址、15 个旧配置编辑器、拆分页面参数、中英文标签，以及原业务操作和表单控件是否保留。后端 `AdminRouteRegistrationTest` 对照同一清单测试管理员与协管的浏览器入口。
 
 真实浏览器联调使用测试类 `com.ghostchu.btn.admincheck.AdminBrowserTestApplication`。该类不进入生产 jar，只接受 localhost 且库名含 test 的专用数据库；使用独立 Redis（127.0.0.1:16388），HTTP 仅监听 127.0.0.1:17799。
 
@@ -163,8 +163,10 @@ pnpm --dir frontend test:admin
 
 ## BTN 归属约束补充
 
-BTN 分类包含 26 个分项，原有 52 个页面、28 个旧地址和权限保持兼容。`check-admin-migration.mjs` 额外校验全部 15 个 BTN 配置编辑器及相关业务入口必须属于 BTN，防止后续再次分散。侧栏较长时会自动滚动到当前分项。
+BTN 分类包含 22 个分项，原有 52 个页面、28 个旧地址和权限保持兼容。`check-admin-migration.mjs` 校验 15 个旧配置编辑器及相关业务入口的实际归属：头像缓存和积分时区分别属于站长和全局，其余 BTN 行为编辑器属于 BTN；IP 评论区策略属于内容，积分规则属于全局。侧栏较长时会自动滚动到当前分项。
 
 客户端特征收集会处理封禁与种群上报，因此从原站点功能入口归入 BTN。生涯去重保留表单移入 BTN → 上报数据保留，继续限制为管理员可见；协管访问该分组时只加载原有授权字段。高级配置对该键的跳转同步调整。
 
 本次归属修正的前端提交为 `0731419`。前端 typecheck/build 与完整浏览器回归通过：285 项页面、导航、布局、语言和权限检查，28 项真实表单/API 操作检查；额外覆盖长侧栏可见性、生涯去重保存、高级配置跳转，以及旧存储页面不再显示该表单。
+
+头像缓存、IP 评论区策略和积分的归属更正见前端提交 `360deb3`：头像缓存归站长，IP 评论区策略归内容，积分规则与积分时区归全局。此次仅调整分类与顺序，52 个页面的地址、路由名称、表单参数和权限保持不变；前端 typecheck/build、完整性检查及 AdminRouteRegistrationTest 均通过。本轮未重跑浏览器/API 联调。
