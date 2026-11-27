@@ -198,8 +198,8 @@ pnpm --dir flarum/extensions/sparkle-btn/js build
 - 新增管理员端点默认只允许 admin；如果协管也应访问，必须同时更新：
   - `src/main/java/com/ghostchu/btn/sparkle/security/AdminPolicy.java`
     的 `canAccessModeratorModule`
-  - `frontend/src/App.vue` 的 `moderatorRouteNames`
-  - `frontend/src/layouts/AdminLayout.vue` 的 `moderatorKeys`
+  - `frontend/src/router/adminNavigation.ts` 中对应条目的 `moderator` 标记；
+    `App.vue` 与 `AdminLayout.vue` 共用该注册表生成权限入口。
 - 不要只靠前端隐藏菜单或路由来授权；服务端 `SecurityConfig`、拦截器和 service 层仍要做必要校验。
 - 浏览器写请求使用 SPA CSRF cookie。统一通过 `frontend/src/api/http.ts` 发出请求，由它读取
   `XSRF-TOKEN` 并写入 `X-XSRF-TOKEN`。新增 `/ping/**`、webhook 等 CSRF 豁免必须有明确协议原因。
@@ -387,7 +387,8 @@ V61/V62 不回填历史；去重检查点不随原始明细清理。升级限制
 1. `/api/admin/**` Controller 和 DTO。
 2. 明确 admin-only 还是 moderator-accessible。
 3. 若允许协管，同步 `AdminPolicy`、`App.vue`、`AdminLayout.vue`。
-4. 后台页面、导航、路由和中英文文案。
+4. 后台页面、导航、路由和中英文文案。入口统一注册在 `frontend/src/router/adminNavigation.ts`，
+   分类方式、字段归属和兼容地址见 `docs/admin-organization.md`。
 5. 权限拒绝、输入边界和审计测试。
 
 ### 新增数据库变更
@@ -463,3 +464,6 @@ V69 移除了旧版首页 BitTorrent 流量承载及专用流量排行的快照/
 控制，默认 7 天，允许 7–3650 天并支持热更新。Swarm 续期不得重复累计事件；清理必须分批自动提交并跳过活动行，
 不能删除最终累计、按日汇总或种子活动区间。升级列默认时间提供缓冲，过期索引通过独立非事务迁移并发创建。
 Flyway 使用会话级 advisory lock；直接构建 Flyway 的集成测试须应用 `FlywayMigrationConfig` 的配置定制器，避免并发索引等待自身事务。
+
+后台采用顶部分类与左侧分项；新入口必须同时通过前端迁移清单检查和后端 SPA/权限注册测试。
+设置应按分组保存，禁止重新引入运行参数、邮件、页脚一起提交的总表单。分析任务计划与任务启停统一在任务中心编辑。
