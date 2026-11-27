@@ -36,8 +36,10 @@ const legacyPaths = ['dashboard', 'tasks', 'ban-submissions', 'homepage-statisti
 for (const path of legacyPaths) assert.ok([...adminPages, ...adminLegacyRedirects].some((entry) => entry.path === `/admin/${path}`), `Lost legacy entry ${path}`)
 const expectedGroups = ['communication', 'reporting', 'rule-delivery', 'reporting-risk', 'query', 'ranking', 'ip-warning', 'measure', 'security', 'auto-accounts', 'retention', 'maintenance', 'points-timezone', 'mail-identities', 'cache']
 assert.deepEqual(adminPages.filter((page) => page.view === 'AdminBtnConfigView').map((page) => page.props.group).sort(), expectedGroups.sort(), 'Lost or duplicated BTN editor')
-for (const page of adminPages.filter((page) => page.view === 'AdminBtnConfigView')) assert.equal(page.category, 'btn', `BTN configuration must stay in BTN: ${page.id}`)
-for (const id of ['site-features', 'comment-policy', 'points-modules', 'userapps', 'version-alerts', 'traffic-statistics', 'tasks', 'rules', 'modules', 'github-sync', 'ban-submissions']) {
+const nonBtnCategories = { cache: 'webmaster', 'comment-policy': 'content', 'points-modules': 'global', 'points-timezone': 'global' }
+for (const [id, category] of Object.entries(nonBtnCategories)) assert.equal(adminPages.find((page) => page.id === id)?.category, category, `Incorrect non-BTN category: ${id}`)
+for (const page of adminPages.filter((page) => page.view === 'AdminBtnConfigView')) assert.equal(page.category, nonBtnCategories[page.id] ?? 'btn', `Incorrect configuration category: ${page.id}`)
+for (const id of ['site-features', 'userapps', 'version-alerts', 'traffic-statistics', 'tasks', 'rules', 'modules', 'github-sync', 'ban-submissions']) {
   assert.equal(adminPages.find((page) => page.id === id)?.category, 'btn', `BTN behavior controls must stay in BTN: ${id}`)
 }
 const scopes = {
@@ -70,4 +72,4 @@ for (const [view, bindings] of Object.entries(controls)) for (const binding of b
   const property = binding.split('.').at(-1)
   assert.ok(sources.includes(renamedControls[property] ?? property), `Lost form control ${view}.${binding}`)
 }
-console.log(`Verified ${adminPages.length} admin pages, ${adminCategories.length} categories, ${legacyPaths.length} legacy URLs, 15 BTN editors and all legacy business actions and form controls`)
+console.log(`Verified ${adminPages.length} admin pages, ${adminCategories.length} categories, ${legacyPaths.length} legacy URLs, 15 legacy configuration editors and all legacy business actions and form controls`)

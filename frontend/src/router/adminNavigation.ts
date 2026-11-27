@@ -65,6 +65,28 @@ export const adminPages: AdminPage[] = [
     'props': {}
   },
   {
+    'id': 'points-modules',
+    'category': 'global',
+    'path': '/admin/points-modules',
+    'name': 'admin-points-modules',
+    'label': 'admin.organization.pages.points-modules',
+    'view': 'AdminModulesView',
+    'moderator': false,
+    'props': {}
+  },
+  {
+    'id': 'points-timezone',
+    'category': 'global',
+    'path': '/admin/btn/points-timezone',
+    'name': 'admin-points-timezone',
+    'label': 'admin.organization.pages.points-timezone',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'points-timezone'
+    }
+  },
+  {
     'id': 'exports',
     'category': 'global',
     'path': '/admin/exports',
@@ -137,6 +159,18 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminIpQueryCommentsView',
     'moderator': false,
     'props': {}
+  },
+  {
+    'id': 'comment-policy',
+    'category': 'content',
+    'path': '/admin/comment-policy',
+    'name': 'admin-comment-policy',
+    'label': 'admin.organization.pages.comment-policy',
+    'view': 'AdminAiModerationView',
+    'moderator': false,
+    'props': {
+      'scope': 'comments'
+    }
   },
   {
     'id': 'content-moderation',
@@ -321,18 +355,6 @@ export const adminPages: AdminPage[] = [
     }
   },
   {
-    'id': 'comment-policy',
-    'category': 'btn',
-    'path': '/admin/comment-policy',
-    'name': 'admin-comment-policy',
-    'label': 'admin.organization.pages.comment-policy',
-    'view': 'AdminAiModerationView',
-    'moderator': false,
-    'props': {
-      'scope': 'comments'
-    }
-  },
-  {
     'id': 'userapps',
     'category': 'btn',
     'path': '/admin/userapps',
@@ -364,28 +386,6 @@ export const adminPages: AdminPage[] = [
     'moderator': true,
     'props': {
       'group': 'ranking'
-    }
-  },
-  {
-    'id': 'points-modules',
-    'category': 'btn',
-    'path': '/admin/points-modules',
-    'name': 'admin-points-modules',
-    'label': 'admin.organization.pages.points-modules',
-    'view': 'AdminModulesView',
-    'moderator': false,
-    'props': {}
-  },
-  {
-    'id': 'points-timezone',
-    'category': 'btn',
-    'path': '/admin/btn/points-timezone',
-    'name': 'admin-points-timezone',
-    'label': 'admin.organization.pages.points-timezone',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'points-timezone'
     }
   },
   {
@@ -432,18 +432,6 @@ export const adminPages: AdminPage[] = [
     'moderator': true,
     'props': {
       'group': 'maintenance'
-    }
-  },
-  {
-    'id': 'cache',
-    'category': 'btn',
-    'path': '/admin/btn/cache',
-    'name': 'admin-cache',
-    'label': 'admin.organization.pages.cache',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'cache'
     }
   },
   {
@@ -621,6 +609,18 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminStorageView',
     'moderator': false,
     'props': {}
+  },
+  {
+    'id': 'cache',
+    'category': 'webmaster',
+    'path': '/admin/btn/cache',
+    'name': 'admin-cache',
+    'label': 'admin.organization.pages.cache',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'cache'
+    }
   },
   {
     'id': 'database-config',
