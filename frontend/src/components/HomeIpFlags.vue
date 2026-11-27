@@ -17,7 +17,7 @@ const metrics = [
 ] as const
 
 const { t, n } = useI18n()
-const days = ref(7)
+const days = ref(30)
 const range = ref<[string, string]>(dateRange(days.value))
 const records = ref<DailyIpFlags[]>([])
 const loading = ref(false)

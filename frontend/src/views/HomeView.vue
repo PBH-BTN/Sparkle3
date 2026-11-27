@@ -38,7 +38,7 @@ const networkStats = ref<HomeNetworkStatisticsResponse | null>(null)
 const networkLoading = ref(false)
 const companionStats = ref<HomeCompanionStatisticsResponse | null>(null)
 const companionLoading = ref(false)
-const selectedDays = ref(7)
+const selectedDays = ref(30)
 const networkSource = ref<StatisticsSource>('ban')
 let statisticsRequestId = 0
 
