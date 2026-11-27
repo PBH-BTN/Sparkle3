@@ -63,7 +63,7 @@ dependencies {
 	implementation("com.baomidou:mybatis-plus-spring-boot4-starter")
 	implementation("com.baomidou:dynamic-datasource-spring-boot-starter:4.6.0")
 	implementation("com.baomidou:lock4j-redis-template-spring-boot-starter:2.2.7")
-	implementation("de.siegmar:fastcsv:4.4.0")
+	implementation("de.siegmar:fastcsv:4.4.1")
 	implementation("com.maxmind.geoip2:geoip2:5.2.0")
 	implementation("org.tukaani:xz:1.12")
 	implementation("com.squareup.okhttp3:okhttp:5.5.1")
