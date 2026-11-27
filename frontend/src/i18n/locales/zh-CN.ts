@@ -1294,6 +1294,10 @@ export default {
           name: '清理封禁上报记录',
           description: '清理已过期的封禁指纹和检测摘要。',
         },
+        'career-deduplication-cleanup': {
+          name: '生涯统计去重清理',
+          description: '分批清理过期去重记录，保留已累计的生涯和每日统计。',
+        },
         'btn-ban-replay-suspension': {
           name: '检查封禁日志重传',
           description: '检查最近 7 个 UTC 日的重传统计，停用超限的用户应用并排队发送通知。',
@@ -2142,6 +2146,12 @@ export default {
       trafficAudienceStaff: '管理员和协管',
       refreshInterval: '自动刷新间隔',
       windowDays: '统计窗口',
+      careerDedupTitle: '生涯统计去重',
+      careerDedupDays: '去重保留天数',
+      careerDedupHelp: '默认 7 天，可设置 7–3650 天。持续上报的会话会续期；过期清理保留已累计的生涯和每日统计。',
+      careerDedupResume: '会话中断超过保留期且去重记录已被清理后，再次上报会重新计一次会话，流量从本次增量接续。增加保留天数不会恢复已清理的记录。',
+      careerDedupInvalid: '请输入 7–3650 之间的整数天数。',
+      careerDedupSaved: '已保存，下次去重清理时生效。',
       minutes: '分钟',
       days: '天',
       refreshNow: '立即刷新全部用户',

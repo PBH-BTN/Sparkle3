@@ -11,6 +11,7 @@ import {
   IconThunderbolt,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import CareerDeduplicationSettings from '@/components/CareerDeduplicationSettings.vue'
 import { adminApi } from '@/api/admin'
 import type {
   MailSettings,
@@ -659,6 +660,8 @@ onBeforeUnmount(() => window.clearTimeout(pollTimer))
           <p class="form-help">{{ t('admin.settings.statisticsHelp') }}</p>
         </a-form>
       </a-card>
+
+      <CareerDeduplicationSettings />
 
       <a-card class="surface-card">
         <template #title>

@@ -1316,6 +1316,10 @@ export default {
           name: 'Clean up ban submission records',
           description: 'Remove expired ban fingerprints and detection summaries.',
         },
+        'career-deduplication-cleanup': {
+          name: 'Career statistics deduplication cleanup',
+          description: 'Remove expired deduplication records in batches while keeping accumulated career and daily statistics.',
+        },
         'btn-ban-replay-suspension': {
           name: 'Check ban log replays',
           description: 'Check replays over the last 7 UTC days, suspend applications over the limit, and queue notifications.',
@@ -2186,6 +2190,12 @@ export default {
       trafficAudienceStaff: 'Administrators and moderators',
       refreshInterval: 'Refresh interval',
       windowDays: 'Statistics window',
+      careerDedupTitle: 'Career statistics deduplication',
+      careerDedupDays: 'Deduplication retention',
+      careerDedupHelp: 'Defaults to 7 days; accepts 7–3650 days. Sessions that keep reporting are renewed. Cleanup preserves accumulated career and daily statistics.',
+      careerDedupResume: 'A session reported again after its retention period and cleanup counts as a new session. Traffic resumes from the current report’s delta. Increasing retention does not restore deleted records.',
+      careerDedupInvalid: 'Enter a whole number between 7 and 3650 days.',
+      careerDedupSaved: 'Saved. The next deduplication cleanup will use this value.',
       minutes: 'minutes',
       days: 'days',
       refreshNow: 'Refresh all users now',
