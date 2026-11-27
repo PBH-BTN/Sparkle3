@@ -8,6 +8,8 @@ import {
   IconSettings,
 } from '@arco-design/web-vue/es/icon'
 import PageHeader from '@/components/PageHeader.vue'
+import CareerDeduplicationSettings from '@/components/CareerDeduplicationSettings.vue'
+import { useSessionStore } from '@/stores/session'
 import { useAdminDraft } from '@/composables/useAdminDraft'
 import { adminApi } from '@/api/admin'
 import { ApiError } from '@/api/http'
@@ -16,6 +18,7 @@ import { errorMessage, useFormatters } from '@/utils/format'
 
 const props = defineProps<{ group: string }>()
 const { t } = useI18n()
+const session = useSessionStore()
 const { formatDate, formatDuration } = useFormatters()
 
 const fields = ref<BtnConfigField[]>([])
@@ -363,6 +366,7 @@ onMounted(load)
     <p class="last-updated">
       {{ t('admin.btn.updatedAt', { time: formatDate(updatedAt) }) }}
     </p>
+    <CareerDeduplicationSettings v-if="group === 'retention' && session.user?.admin" />
   </div>
 </template>
 

@@ -1096,7 +1096,7 @@ export default {
       },
       'pages': {
         'dashboard': 'Overview',
-        'site-features': 'Site features',
+        'site-features': 'Client discovery collection',
         'points-modules': 'Points rules',
         'points-timezone': 'Points timezone',
         'query': 'Query settings',

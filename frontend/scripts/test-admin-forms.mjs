@@ -172,12 +172,21 @@ try {
     }
   })
   await check('career retention settings save', async () => {
-    await open('/admin/storage')
+    await open('/admin/btn/retention')
     const card = page.locator('.arco-card').filter({ hasText: label('admin.settings.careerDedupTitle') }).last()
     await card.locator('input').fill('14')
     await submit('PUT', '/api/admin/database-config', () => button(card, 'admin.databaseConfig.save').click())
     const stored = await request('GET', '/api/admin/database-config?keyword=sparkle.career.dedup-retention-days')
     assert.equal(stored.find((entry) => entry.key === 'sparkle.career.dedup-retention-days').value, '14')
+    await open('/admin/database-config')
+    const search = page.locator('.admin-content .filter-card input').first()
+    await search.fill('sparkle.career.dedup-retention-days')
+    await search.press('Enter')
+    await button(row('sparkle.career.dedup-retention-days'), 'admin.organization.moduleSettings').click()
+    await expect(page).toHaveURL(/\/admin\/btn\/retention$/)
+    await expect(page.getByText(label('admin.settings.careerDedupTitle'), { exact: true })).toBeVisible()
+    await open('/admin/storage')
+    await expect(page.getByText(label('admin.settings.careerDedupTitle'), { exact: true })).toHaveCount(0)
   })
   await check('homepage statistics configuration save', async () => {
     await open('/admin/homepage-statistics')

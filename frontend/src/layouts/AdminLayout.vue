@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { IconArrowLeft, IconMenu, IconSearch } from '@arco-design/web-vue/es/icon'
@@ -12,6 +12,7 @@ const session = useSessionStore()
 const { t } = useI18n()
 const drawerVisible = ref(false)
 const categoryNav = ref<HTMLElement>()
+const sidebar = ref<HTMLElement>()
 const searchSelection = ref<string>()
 const pages = computed(() => adminPages.filter((page) => session.user?.admin || page.moderator))
 const categories = computed(() => adminCategories.filter((category) => pages.value.some((page) => page.category === category.id)))
@@ -37,10 +38,42 @@ function selectCategory(category: string) {
   if (destination) navigate(destination.path)
 }
 
+function syncSidebar() {
+  const selected = sidebar.value?.querySelector('.arco-menu-selected')
+  if (sidebar.value && selected?.getClientRects().length) {
+    const top = Math.max(88, sidebar.value.getBoundingClientRect().top)
+    sidebar.value.style.maxHeight = `${Math.max(160, window.innerHeight - top - 20)}px`
+    const panel = sidebar.value.getBoundingClientRect()
+    const item = selected.getBoundingClientRect()
+    if (item.top < panel.top) sidebar.value.scrollTop -= panel.top - item.top
+    else if (item.bottom > panel.bottom) sidebar.value.scrollTop += item.bottom - panel.bottom
+  }
+}
+
+let sidebarObserver: ResizeObserver | undefined
+let sidebarFrame = 0
+function scheduleSidebar() {
+  cancelAnimationFrame(sidebarFrame)
+  sidebarFrame = requestAnimationFrame(syncSidebar)
+}
+onMounted(() => {
+  sidebarObserver = new ResizeObserver(scheduleSidebar)
+  sidebarObserver.observe(document.body)
+  if (sidebar.value) sidebarObserver.observe(sidebar.value)
+  window.addEventListener('resize', scheduleSidebar)
+  syncSidebar()
+})
+onBeforeUnmount(() => {
+  sidebarObserver?.disconnect()
+  cancelAnimationFrame(sidebarFrame)
+  window.removeEventListener('resize', scheduleSidebar)
+})
+
 watch(currentPage, async (page) => {
   if (!page) return
   await nextTick()
   categoryNav.value?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  syncSidebar()
   try { localStorage.setItem(`sparkle:admin:category:${page.category}`, page.path) } catch { /* Navigation does not require storage. */ }
 }, { immediate: true })
 </script>
@@ -84,7 +117,7 @@ watch(currentPage, async (page) => {
     </div>
 
     <div class="admin-body">
-      <aside class="admin-sidebar surface-card">
+      <aside ref="sidebar" class="admin-sidebar surface-card">
         <strong class="admin-category-title">{{ currentCategory ? t(currentCategory.label) : t('admin.title') }}</strong>
         <a-menu :selected-keys="[route.path]" @menu-item-click="navigate">
           <a-menu-item v-for="item in items" :key="item.path">{{ t(item.label) }}</a-menu-item>

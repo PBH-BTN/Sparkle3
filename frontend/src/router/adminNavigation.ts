@@ -65,76 +65,6 @@ export const adminPages: AdminPage[] = [
     'props': {}
   },
   {
-    'id': 'site-features',
-    'category': 'global',
-    'path': '/admin/site-features',
-    'name': 'admin-site-features',
-    'label': 'admin.organization.pages.site-features',
-    'view': 'AdminRuntimeSettingsView',
-    'moderator': false,
-    'props': {
-      'section': 'features'
-    }
-  },
-  {
-    'id': 'points-modules',
-    'category': 'global',
-    'path': '/admin/points-modules',
-    'name': 'admin-points-modules',
-    'label': 'admin.organization.pages.points-modules',
-    'view': 'AdminModulesView',
-    'moderator': false,
-    'props': {}
-  },
-  {
-    'id': 'points-timezone',
-    'category': 'global',
-    'path': '/admin/btn/points-timezone',
-    'name': 'admin-points-timezone',
-    'label': 'admin.organization.pages.points-timezone',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'points-timezone'
-    }
-  },
-  {
-    'id': 'query',
-    'category': 'global',
-    'path': '/admin/btn/query',
-    'name': 'admin-query',
-    'label': 'admin.organization.pages.query',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'query'
-    }
-  },
-  {
-    'id': 'ranking',
-    'category': 'global',
-    'path': '/admin/btn/ranking',
-    'name': 'admin-ranking',
-    'label': 'admin.organization.pages.ranking',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'ranking'
-    }
-  },
-  {
-    'id': 'security',
-    'category': 'global',
-    'path': '/admin/btn/security',
-    'name': 'admin-security',
-    'label': 'admin.organization.pages.security',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'security'
-    }
-  },
-  {
     'id': 'exports',
     'category': 'global',
     'path': '/admin/exports',
@@ -187,28 +117,6 @@ export const adminPages: AdminPage[] = [
     'props': {}
   },
   {
-    'id': 'userapps',
-    'category': 'users',
-    'path': '/admin/userapps',
-    'name': 'admin-userapps',
-    'label': 'admin.organization.pages.userapps',
-    'view': 'AdminUserAppsView',
-    'moderator': true,
-    'props': {}
-  },
-  {
-    'id': 'auto-accounts',
-    'category': 'users',
-    'path': '/admin/btn/auto-accounts',
-    'name': 'admin-auto-accounts',
-    'label': 'admin.organization.pages.auto-accounts',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'auto-accounts'
-    }
-  },
-  {
     'id': 'community-groups',
     'category': 'users',
     'path': '/admin/community-groups',
@@ -229,18 +137,6 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminIpQueryCommentsView',
     'moderator': false,
     'props': {}
-  },
-  {
-    'id': 'comment-policy',
-    'category': 'content',
-    'path': '/admin/comment-policy',
-    'name': 'admin-comment-policy',
-    'label': 'admin.organization.pages.comment-policy',
-    'view': 'AdminAiModerationView',
-    'moderator': false,
-    'props': {
-      'scope': 'comments'
-    }
   },
   {
     'id': 'content-moderation',
@@ -301,6 +197,18 @@ export const adminPages: AdminPage[] = [
     }
   },
   {
+    'id': 'site-features',
+    'category': 'btn',
+    'path': '/admin/site-features',
+    'name': 'admin-site-features',
+    'label': 'admin.organization.pages.site-features',
+    'view': 'AdminRuntimeSettingsView',
+    'moderator': false,
+    'props': {
+      'section': 'features'
+    }
+  },
+  {
     'id': 'rule-delivery',
     'category': 'btn',
     'path': '/admin/btn/rule-delivery',
@@ -331,18 +239,6 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminModulesView',
     'moderator': true,
     'props': {}
-  },
-  {
-    'id': 'ip-warning',
-    'category': 'btn',
-    'path': '/admin/btn/ip-warning',
-    'name': 'admin-ip-warning',
-    'label': 'admin.organization.pages.ip-warning',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'ip-warning'
-    }
   },
   {
     'id': 'github-sync',
@@ -377,6 +273,18 @@ export const adminPages: AdminPage[] = [
     'props': {}
   },
   {
+    'id': 'ip-warning',
+    'category': 'btn',
+    'path': '/admin/btn/ip-warning',
+    'name': 'admin-ip-warning',
+    'label': 'admin.organization.pages.ip-warning',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'ip-warning'
+    }
+  },
+  {
     'id': 'measure',
     'category': 'btn',
     'path': '/admin/btn/measure',
@@ -387,6 +295,178 @@ export const adminPages: AdminPage[] = [
     'props': {
       'group': 'measure'
     }
+  },
+  {
+    'id': 'security',
+    'category': 'btn',
+    'path': '/admin/btn/security',
+    'name': 'admin-security',
+    'label': 'admin.organization.pages.security',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'security'
+    }
+  },
+  {
+    'id': 'query',
+    'category': 'btn',
+    'path': '/admin/btn/query',
+    'name': 'admin-query',
+    'label': 'admin.organization.pages.query',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'query'
+    }
+  },
+  {
+    'id': 'comment-policy',
+    'category': 'btn',
+    'path': '/admin/comment-policy',
+    'name': 'admin-comment-policy',
+    'label': 'admin.organization.pages.comment-policy',
+    'view': 'AdminAiModerationView',
+    'moderator': false,
+    'props': {
+      'scope': 'comments'
+    }
+  },
+  {
+    'id': 'userapps',
+    'category': 'btn',
+    'path': '/admin/userapps',
+    'name': 'admin-userapps',
+    'label': 'admin.organization.pages.userapps',
+    'view': 'AdminUserAppsView',
+    'moderator': true,
+    'props': {}
+  },
+  {
+    'id': 'auto-accounts',
+    'category': 'btn',
+    'path': '/admin/btn/auto-accounts',
+    'name': 'admin-auto-accounts',
+    'label': 'admin.organization.pages.auto-accounts',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'auto-accounts'
+    }
+  },
+  {
+    'id': 'ranking',
+    'category': 'btn',
+    'path': '/admin/btn/ranking',
+    'name': 'admin-ranking',
+    'label': 'admin.organization.pages.ranking',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'ranking'
+    }
+  },
+  {
+    'id': 'points-modules',
+    'category': 'btn',
+    'path': '/admin/points-modules',
+    'name': 'admin-points-modules',
+    'label': 'admin.organization.pages.points-modules',
+    'view': 'AdminModulesView',
+    'moderator': false,
+    'props': {}
+  },
+  {
+    'id': 'points-timezone',
+    'category': 'btn',
+    'path': '/admin/btn/points-timezone',
+    'name': 'admin-points-timezone',
+    'label': 'admin.organization.pages.points-timezone',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'points-timezone'
+    }
+  },
+  {
+    'id': 'traffic-statistics',
+    'category': 'btn',
+    'path': '/admin/traffic-statistics',
+    'name': 'admin-traffic-statistics',
+    'label': 'admin.organization.pages.traffic-statistics',
+    'view': 'AdminRuntimeSettingsView',
+    'moderator': false,
+    'props': {
+      'section': 'statistics'
+    }
+  },
+  {
+    'id': 'version-alerts',
+    'category': 'btn',
+    'path': '/admin/version-alerts',
+    'name': 'admin-version-alerts',
+    'label': 'admin.organization.pages.version-alerts',
+    'view': 'AdminVersionAlertsView',
+    'moderator': false,
+    'props': {}
+  },
+  {
+    'id': 'retention',
+    'category': 'btn',
+    'path': '/admin/btn/retention',
+    'name': 'admin-retention',
+    'label': 'admin.organization.pages.retention',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'retention'
+    }
+  },
+  {
+    'id': 'maintenance',
+    'category': 'btn',
+    'path': '/admin/btn/maintenance',
+    'name': 'admin-maintenance',
+    'label': 'admin.organization.pages.maintenance',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'maintenance'
+    }
+  },
+  {
+    'id': 'cache',
+    'category': 'btn',
+    'path': '/admin/btn/cache',
+    'name': 'admin-cache',
+    'label': 'admin.organization.pages.cache',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'cache'
+    }
+  },
+  {
+    'id': 'mail-identities',
+    'category': 'btn',
+    'path': '/admin/btn/mail-identities',
+    'name': 'admin-mail-identities',
+    'label': 'admin.organization.pages.mail-identities',
+    'view': 'AdminBtnConfigView',
+    'moderator': true,
+    'props': {
+      'group': 'mail-identities'
+    }
+  },
+  {
+    'id': 'tasks',
+    'category': 'btn',
+    'path': '/admin/tasks',
+    'name': 'admin-tasks',
+    'label': 'admin.organization.pages.tasks',
+    'view': 'AdminTaskStatusView',
+    'moderator': true,
+    'props': {}
   },
   {
     'id': 'announcements',
@@ -406,16 +486,6 @@ export const adminPages: AdminPage[] = [
     'label': 'admin.organization.pages.messages',
     'view': 'AdminMessagesView',
     'moderator': true,
-    'props': {}
-  },
-  {
-    'id': 'version-alerts',
-    'category': 'operations',
-    'path': '/admin/version-alerts',
-    'name': 'admin-version-alerts',
-    'label': 'admin.organization.pages.version-alerts',
-    'view': 'AdminVersionAlertsView',
-    'moderator': false,
     'props': {}
   },
   {
@@ -501,16 +571,6 @@ export const adminPages: AdminPage[] = [
     }
   },
   {
-    'id': 'tasks',
-    'category': 'tools',
-    'path': '/admin/tasks',
-    'name': 'admin-tasks',
-    'label': 'admin.organization.pages.tasks',
-    'view': 'AdminTaskStatusView',
-    'moderator': true,
-    'props': {}
-  },
-  {
     'id': 'homepage-statistics',
     'category': 'tools',
     'path': '/admin/homepage-statistics',
@@ -521,18 +581,6 @@ export const adminPages: AdminPage[] = [
     'props': {}
   },
   {
-    'id': 'traffic-statistics',
-    'category': 'tools',
-    'path': '/admin/traffic-statistics',
-    'name': 'admin-traffic-statistics',
-    'label': 'admin.organization.pages.traffic-statistics',
-    'view': 'AdminRuntimeSettingsView',
-    'moderator': false,
-    'props': {
-      'section': 'statistics'
-    }
-  },
-  {
     'id': 'mail',
     'category': 'webmaster',
     'path': '/admin/mail',
@@ -541,18 +589,6 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminMailSettingsView',
     'moderator': false,
     'props': {}
-  },
-  {
-    'id': 'mail-identities',
-    'category': 'webmaster',
-    'path': '/admin/btn/mail-identities',
-    'name': 'admin-mail-identities',
-    'label': 'admin.organization.pages.mail-identities',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'mail-identities'
-    }
   },
   {
     'id': 'contact-template',
@@ -585,42 +621,6 @@ export const adminPages: AdminPage[] = [
     'view': 'AdminStorageView',
     'moderator': false,
     'props': {}
-  },
-  {
-    'id': 'retention',
-    'category': 'webmaster',
-    'path': '/admin/btn/retention',
-    'name': 'admin-retention',
-    'label': 'admin.organization.pages.retention',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'retention'
-    }
-  },
-  {
-    'id': 'cache',
-    'category': 'webmaster',
-    'path': '/admin/btn/cache',
-    'name': 'admin-cache',
-    'label': 'admin.organization.pages.cache',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'cache'
-    }
-  },
-  {
-    'id': 'maintenance',
-    'category': 'webmaster',
-    'path': '/admin/btn/maintenance',
-    'name': 'admin-maintenance',
-    'label': 'admin.organization.pages.maintenance',
-    'view': 'AdminBtnConfigView',
-    'moderator': true,
-    'props': {
-      'group': 'maintenance'
-    }
   },
   {
     'id': 'database-config',

@@ -71,6 +71,13 @@ try {
     await open(item.path)
     await expect(page.locator('.admin-categories button[aria-current="page"]')).toHaveText(label(`admin.organization.categories.${item.category}`))
     await expect(page.locator('.admin-sidebar .arco-menu-selected')).toHaveText(label(item.label))
+    if (item.category === 'btn') {
+      const bounds = await page.locator('.admin-sidebar').boundingBox()
+      const selected = await page.locator('.admin-sidebar .arco-menu-selected').boundingBox()
+      assert.ok(bounds && selected && selected.y >= bounds.y - 1 && selected.y + selected.height <= bounds.y + bounds.height + 1, 'Selected BTN item must remain visible in the long sidebar')
+      assert.ok(selected.y + selected.height <= (await page.evaluate(() => innerHeight)), 'Selected BTN item must fit inside the viewport')
+      assert.equal(await page.evaluate(() => scrollY), 0, 'Sidebar scrolling must preserve the page position')
+    }
   })
   for (const redirect of adminLegacyRedirects) await check(`legacy ${redirect.path}`, async () => {
     await open(redirect.path)

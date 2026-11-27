@@ -1074,7 +1074,7 @@ export default {
       },
       'pages': {
         'dashboard': '后台概况',
-        'site-features': '站点功能',
+        'site-features': '客户端特征收集',
         'points-modules': '积分规则',
         'points-timezone': '积分时区',
         'query': '查询设置',

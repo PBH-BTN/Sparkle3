@@ -31,10 +31,15 @@ for (const redirect of adminLegacyRedirects) {
 const { adminConfigEditors } = await importTs(join(frontend, 'src/router/adminConfigEditors.ts'))
 for (const [key, path] of Object.entries(adminConfigEditors)) assert.ok(adminPages.some((page) => page.path === path), `Unregistered config editor ${key}`)
 for (const key of ['sparkle.ai.moderation.worker-delay-ms', 'sparkle.github-sync.targets-initialized', 'sparkle.homepage.future-setting']) assert.equal(adminConfigEditors[key], undefined, `Unexposed field must retain its advanced editor: ${key}`)
+assert.equal(adminConfigEditors['sparkle.career.dedup-retention-days'], '/admin/btn/retention', 'BTN ingestion deduplication must link to BTN retention')
 const legacyPaths = ['dashboard', 'tasks', 'ban-submissions', 'homepage-statistics', 'announcements', 'messages', 'community-groups', 'memberships', 'navigation', 'settings', 'version-alerts', 'users', 'points-modules', 'userapps', 'github-sync', 'flarum-integration', 'content-moderation', 'ai-moderation', 'ip-query-comments', 'btn', 'modules', 'rules', 'exports', 'database-config', 'user-contact-emails', 'storage', 'afdian', 'geoip-city-blacklist']
 for (const path of legacyPaths) assert.ok([...adminPages, ...adminLegacyRedirects].some((entry) => entry.path === `/admin/${path}`), `Lost legacy entry ${path}`)
 const expectedGroups = ['communication', 'reporting', 'rule-delivery', 'reporting-risk', 'query', 'ranking', 'ip-warning', 'measure', 'security', 'auto-accounts', 'retention', 'maintenance', 'points-timezone', 'mail-identities', 'cache']
 assert.deepEqual(adminPages.filter((page) => page.view === 'AdminBtnConfigView').map((page) => page.props.group).sort(), expectedGroups.sort(), 'Lost or duplicated BTN editor')
+for (const page of adminPages.filter((page) => page.view === 'AdminBtnConfigView')) assert.equal(page.category, 'btn', `BTN configuration must stay in BTN: ${page.id}`)
+for (const id of ['site-features', 'comment-policy', 'points-modules', 'userapps', 'version-alerts', 'traffic-statistics', 'tasks', 'rules', 'modules', 'github-sync', 'ban-submissions']) {
+  assert.equal(adminPages.find((page) => page.id === id)?.category, 'btn', `BTN behavior controls must stay in BTN: ${id}`)
+}
 const scopes = {
   AdminMembershipsView: ['transactions', 'licenses', 'reconciliation', 'policy', 'providers'],
   AdminAiModerationView: ['provider', 'comments', 'queue'],

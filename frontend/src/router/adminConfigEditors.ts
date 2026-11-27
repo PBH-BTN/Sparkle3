@@ -11,7 +11,7 @@ const groups: Array<[string, string[], string]> = [
   ['sparkle.github-community.', ['api-base-url', 'personal-access-token'], '/admin/community-integration'],
   ['sparkle.github-sync.', ['schedule', 'personal-access-token'], '/admin/github-sync'],
   ['sparkle.exports.', ['max-rows', 'max-file-mib', 'retention-hours', 'download-mbps', 'daily-slots', 'pool-mib', 'prompt-zh', 'prompt-en'], '/admin/exports'],
-  ['sparkle.career.', ['dedup-retention-days'], '/admin/storage'],
+  ['sparkle.career.', ['dedup-retention-days'], '/admin/btn/retention'],
   ['sparkle.afdian.', ['license-donation-amount', 'license-private-key', 'license-valid-years'], '/admin/membership-licenses'],
   ['sparkle.afdian.', ['access-token', 'api-base-url', 'sync-enabled', 'user-id'], '/admin/membership-providers'],
   ['sparkle.memberships.', ['base-currency', 'exchange-rate-api-url', 'supporter-threshold-cny'], '/admin/membership-policy'],
