@@ -346,6 +346,8 @@ V61/V62 不回填历史；去重检查点不随原始明细清理。升级限制
   `SpaController.java` 的映射列表；否则刷新页面可能返回 404。
 - 新后台页面还要检查 `AdminLayout.vue` 导航、普通用户/协管可见性、`App.vue` 路由约束和后端
   `AdminPolicy`。
+- 控制 BTN 行为的配置、业务开关与执行计划统一放在 BTN 分类；原 BTN 配置编辑器不要再按邮件、缓存、
+  用户等关联用途分散到其他分类。分类归属由 `check-admin-migration.mjs` 校验。
 - 64 位字节数、积分和 ID 使用 `BigInt` 或 `useFormatters`，不要直接做会丢精度的 `Number` 运算。
 - ECharts 图优先复用 `EChart.vue` 和 `utils/charts.ts`；日期/字节/百分比优先复用
   `useFormatters` 和 `errorMessage`。

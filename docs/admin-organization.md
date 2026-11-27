@@ -6,6 +6,8 @@
 
 后台采用顶部大类、左侧分项、右侧内容。大类为：首页、全局、界面、用户、内容、BTN、运营、应用、工具、站长。
 
+所有 BTN 配置分组、客户端特征收集、查询评论开关、积分规则、用户应用、版本提醒、用户流量统计和任务中心统一归入「BTN」。原 BTN 配置不再分散到全局、用户或站长；相关参数、开关和执行计划均从 BTN 进入。
+
 唯一前端注册表为 `frontend/src/router/adminNavigation.ts`：
 
 - `adminCategories` 定义顶部大类。
@@ -23,7 +25,7 @@
 | 旧路径（均以 `/admin/` 开头） | 新归属与迁移内容 |
 | --- | --- |
 | `dashboard` | 首页 → 后台概况，地址不变 |
-| `tasks` | 工具 → 任务中心，地址不变 |
+| `tasks` | BTN → 任务中心，地址不变 |
 | `ban-submissions` | BTN → 重复封禁记录，地址不变 |
 | `homepage-statistics` | 工具 → 首页统计更新，地址不变 |
 | `announcements` | 运营 → 公告管理，地址不变 |
@@ -32,14 +34,14 @@
 | `memberships` | 兼容跳转到 `membership-transactions`；拆为交易账本、许可证、同步与对账、支持与结算规则、会员平台接入 |
 | `navigation` | 界面 → 导航设置，地址不变 |
 | `settings` | 兼容跳转到 `traffic-statistics`；原内容拆分见下表 |
-| `version-alerts` | 运营 → 版本提醒，地址不变 |
+| `version-alerts` | BTN → 版本提醒，地址不变 |
 | `users` | 用户 → 用户管理，地址不变 |
-| `points-modules` | 全局 → 积分规则；计划和任务启停跳转任务中心 |
-| `userapps` | 用户 → 用户应用，地址不变 |
+| `points-modules` | BTN → 积分规则；计划和任务启停跳转任务中心 |
+| `userapps` | BTN → 用户应用，地址不变 |
 | `github-sync` | BTN → GitHub 规则同步，地址不变 |
 | `flarum-integration` | 应用 → Flarum 集成，地址不变 |
 | `content-moderation` | 内容 → 词语过滤，地址不变 |
-| `ai-moderation` | 内容 → AI 审核设置；评论策略到 `comment-policy`，审核队列和重试到 `moderation-queue` |
+| `ai-moderation` | 内容 → AI 审核设置；评论策略到 BTN → `comment-policy`，审核队列和重试到 `moderation-queue` |
 | `ip-query-comments` | 内容 → 评论管理，地址不变 |
 | `btn` | 兼容跳转到 `btn/communication`；全部字段分配到下述 15 个表单 |
 | `modules` | BTN → 自动分析；业务参数留在本页，计划和任务启停跳转任务中心 |
@@ -47,7 +49,7 @@
 | `exports` | 全局 → 导出设置，地址不变 |
 | `database-config` | 站长 → 高级配置，已知配置优先跳转业务编辑器 |
 | `user-contact-emails` | 站长 → 用户邮件审计，地址不变 |
-| `storage` | 站长 → 数据与存储，新增原运行设置中的生涯去重保留表单 |
+| `storage` | 站长 → 数据与存储，数据库维护；生涯去重保留期在 BTN → 上报数据保留 |
 
 额外兼容入口：`/admin/afdian` → `/admin/membership-providers`；`/admin/geoip-city-blacklist` → `/admin/rules?tab=geoip`。
 
@@ -55,13 +57,13 @@
 
 | 内容 | 唯一常规编辑位置 |
 | --- | --- |
-| 客户端发现 | 全局 → 站点功能 `/admin/site-features` |
-| 用户流量统计、窗口、刷新间隔与运行状态 | 工具 → 用户流量统计 `/admin/traffic-statistics` |
+| 客户端特征收集 | BTN → 客户端特征收集 `/admin/site-features` |
+| 用户流量统计、窗口、刷新间隔与运行状态 | BTN → 用户流量统计 `/admin/traffic-statistics` |
 | 首页流量显示与各指标可见范围 | 界面 → 首页展示 `/admin/homepage-display` |
 | 页脚支持按钮、链接、声明、备案、时间和性能指标 | 界面 → 页脚设置 `/admin/footer` |
 | SMTP、POP3、测试和收信状态 | 站长 → 邮件服务器 `/admin/mail` |
 | 用户联系邮件标题与正文模板 | 站长 → 用户邮件模板 `/admin/contact-template` |
-| 生涯去重保留期 | 站长 → 数据与存储 `/admin/storage` |
+| 生涯去重保留期 | BTN → 上报数据保留 `/admin/btn/retention`（管理员专属表单） |
 
 原表单中一并加载和提交、但没有实际渲染的协议版本和查询 PoW 字段由对应 BTN 表单管理，不再随其他设置重提。
 
@@ -75,19 +77,19 @@
 | `reporting` | BTN：封禁、种群和心跳上报 |
 | `rule-delivery` | BTN：规则下发接口与拉取参数 |
 | `reporting-risk` | BTN：重复封禁、重传停用、上报量阈值与停用邮件模板 |
-| `query` | 全局：IP 查询、评论计数、限流与查询窗口 |
-| `ranking` | 全局：排行榜计算权重 |
-| `security` | 全局：PoW 与上传安全 |
-| `points-timezone` | 全局：积分时区 |
-| `auto-accounts` | 用户：自动账户 |
+| `query` | BTN：IP 查询、评论计数、限流与查询窗口 |
+| `ranking` | BTN：排行榜计算权重 |
+| `security` | BTN：PoW 与上传安全 |
+| `points-timezone` | BTN：积分时区 |
+| `auto-accounts` | BTN：自动账户 |
 | `ip-warning` | BTN：用户 IP 告警 |
 | `measure` | BTN：网络测量 |
-| `mail-identities` | 站长：系统与用户邮件发件身份 |
-| `retention` | 站长：种群与心跳保留、清理计划 |
-| `cache` | 站长：头像缓存目录、有效期与清理计划 |
-| `maintenance` | 站长：封禁模块名称缓存维护计划 |
+| `mail-identities` | BTN：系统与用户邮件发件身份 |
+| `retention` | BTN：种群与心跳保留、清理计划 |
+| `cache` | BTN：头像缓存目录、有效期与清理计划 |
+| `maintenance` | BTN：封禁模块名称缓存维护计划 |
 
-业务参数不包含重复的分析任务 Cron 或任务开关。任务中心仍支持原有可编辑的模块 Cron、启停和手动执行，固定间隔、事件、启动任务的限制保持不变。Peer 分布的两个模块仍由任务中心独立管理。
+业务参数不包含重复的分析任务 Cron 或任务开关。BTN → 任务中心仍支持原有可编辑的模块 Cron、启停和手动执行，固定间隔、事件、启动任务的限制保持不变。Peer 分布的两个模块仍由任务中心独立管理。
 
 首页统计部分开关同时控制刷新与展示，沿用现有行为；本次没有新增互相独立的展示开关或更改统计口径。
 
@@ -99,7 +101,7 @@
 - 原 `/api/admin/config` 和 `/api/admin/btn` 保持兼容，新的后台表单不再使用它们整组提交。
 - 邮件通道表单不再提交发件身份。邮件 API 省略身份时保留当前身份，密码留空继续沿用既有密码。
 - 每个表单独立处理加载、错误和保存状态。新拆分的设置表单在离开或重新加载前提示未保存修改；会员页面按子表单记录草稿，保存一项不会把其他未保存修改标记为已保存。
-- 移动菜单不改变授权。原 BTN 配置迁出的字段继续允许协管；原管理员专属功能保持专属。GeoIP 页签不向协管显示，也不加载其接口。
+- 移动菜单不改变授权。原 BTN 配置字段继续允许协管；原管理员专属功能保持专属。GeoIP 页签不向协管显示，也不加载其接口。
 - 任务页与分析业务页互相链接，并支持按模块定位。高级配置中有业务编辑器的项目跳转业务页面，其他普通键继续使用原始编辑器；密钥继续只写不回显。
 
 ## 验证入口
@@ -158,3 +160,11 @@ pnpm --dir frontend test:admin
 | 后端 | `7443d7e` | 存储策略与生产 MyBatis 拦截器兼容 |
 | 前端 | `3667083` | 分类导航、设置与页面拆分、关联入口和移动布局 |
 | 前端验证 | `dc0410b` | 完整性清单、浏览器和真实 API 回归工具 |
+
+## BTN 归属约束补充
+
+BTN 分类包含 26 个分项，原有 52 个页面、28 个旧地址和权限保持兼容。`check-admin-migration.mjs` 额外校验全部 15 个 BTN 配置编辑器及相关业务入口必须属于 BTN，防止后续再次分散。侧栏较长时会自动滚动到当前分项。
+
+客户端特征收集会处理封禁与种群上报，因此从原站点功能入口归入 BTN。生涯去重保留表单移入 BTN → 上报数据保留，继续限制为管理员可见；协管访问该分组时只加载原有授权字段。高级配置对该键的跳转同步调整。
+
+本次归属修正的前端提交为 `0731419`。前端 typecheck/build 与完整浏览器回归通过：285 项页面、导航、布局、语言和权限检查，28 项真实表单/API 操作检查；额外覆盖长侧栏可见性、生涯去重保存、高级配置跳转，以及旧存储页面不再显示该表单。
